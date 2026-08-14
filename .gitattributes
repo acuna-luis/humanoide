@@ -1,0 +1,13 @@
+* text=auto
+
+*.sh text eol=lf
+*.xml text eol=lf
+*.md text eol=lf
+*.csv text eol=lf
+*.html text eol=lf
+
+*.pdf binary
+*.docx binary
+*.zip binary
+*.gz binary
+*.xz binary

@@ -1,0 +1,25 @@
+# Paquetes externos conservados localmente (69 GB y 34 GB).
+/cruzrss2_vla_pack-002/
+/utars-udoke-config-v0.2.0_offline-001/
+
+# Este artefacto del SDK supera el límite de 100 MB por archivo de GitHub.
+# Se conserva intacto en disco; para versionarlo será necesario Git LFS.
+/Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/USD/Collected_cruzr_s2_v1.zip
+
+# Estado local, secretos y salidas temporales.
+.env
+.env.*
+!.env.example
+*.log
+*.tmp
+*.swp
+*~
+.cache/
+__pycache__/
+*.py[cod]
+
+# Configuración local de editores y sistema operativo.
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
