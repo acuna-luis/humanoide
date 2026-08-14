@@ -90,6 +90,7 @@ No añadir `--no-daemon` a `ros2 topic pub`: esa variante del CLI no lo acepta.
 | Lidar delantero y trasero | Activos | No |
 | Detector especializado de contenedor `workbin` | Probado | No |
 | Estimación de pose 6D de la caja | Probada | No |
+| Perfiles 6D alternativos para cajas y bandejas | Configuraciones y modelos presentes; no activos | No |
 | Detector AprilTag | Servidor activo; prueba física pendiente | No |
 | Profundidad de una ROI estéreo | Servidor activo; prueba física pendiente | No |
 | ASR, reconocimiento de voz | Probado en inglés | No |
@@ -276,6 +277,50 @@ Un resultado válido debe terminar con `status=4`, `ok: True`,
 ```
 
 Esta orden baja la cabeza; no mueve brazos ni chasis.
+
+### 6.4 Otros perfiles especializados instalados
+
+La imagen del contenedor de percepción contiene más configuraciones y modelos
+especializados. No son detectores generales ni están ejecutándose a la vez. El
+contenedor activo se inicia concretamente con:
+
+```text
+rosa run pose_6d_estimate box_pose_estimator_node -- \
+  -c pose_6d_estimation_640_400_byd.json
+```
+
+Por tanto, sólo el perfil `byd` produce actualmente la detección `workbin` que
+hemos conectado al agarre. Los demás perfiles encontrados son:
+
+| Perfil | Objeto o variante prevista | Geometría principal configurada | Estado en esta unidad |
+|---|---|---:|---|
+| `byd` | Contenedor BYD/`workbin` | 60,3 × 39,7 × 21,7 cm | **Activo y probado** |
+| `foxconn_tray` | Bandeja Foxconn | 38 × 36 × 22 cm | Modelo y configuración presentes; no activo |
+| `jiepu_tray` | Bandeja Jiepu/FSK | 41 × 26 × 24 cm | Modelo y configuración presentes; no activo |
+| `putbox` | Cajas y contenedores | 60,3 × 39,7 × 21,7 cm y tres tamaños auxiliares | Modelo y configuración presentes; no activo |
+| `putcarton` | Caja de cartón grande | 60 × 43 × 41 cm y tres tamaños auxiliares | Modelo y configuración presentes; no activo |
+| `om` | Variante de cajas para el pipeline `box_task` | Los cuatro tamaños del perfil BYD | Configuración presente; no activa |
+| `thor` | Variante de cajas para cámaras estéreo | Los cuatro tamaños del perfil BYD | Configuración presente; no activa |
+
+Los tamaños auxiliares compartidos por varios perfiles son aproximadamente
+`41 × 30,8 × 14 cm`, `40 × 30 × 16 cm` y `60 × 40 × 25 cm`. Que un tamaño
+aparezca en el JSON no demuestra que cualquier caja de esas dimensiones vaya a
+ser reconocida: también intervienen las clases aprendidas, la apariencia, la
+cámara, la iluminación y los filtros de profundidad.
+
+No debe cambiarse en producción el perfil `byd` ni conectar un perfil alternativo
+a los brazos sin seguir esta secuencia:
+
+1. Registrar configuración, imagen y salida actuales del perfil BYD.
+2. Activar el perfil alternativo de forma aislada o en modo de diagnóstico.
+3. Validar únicamente segmentación, clase, pose, frame y estabilidad temporal.
+4. Restaurar y confirmar `byd` antes de volver a utilizar los scripts actuales.
+5. Sólo después de una prueba física supervisada crear tareas de manipulación
+   específicas para el nuevo objeto.
+
+La acción `/cv/waist_front/task/transport_action` ofrece la misma familia de
+percepción desde la cámara de cintura; no constituye por sí sola otro detector
+de objetos.
 
 ## 7. Detector AprilTag
 
@@ -647,13 +692,14 @@ permita presentarlas como funcionalidades listas para usar:
 
 | Interfaz o módulo | Evidencia presente | Qué falta |
 |---|---|---|
+| Perfiles `foxconn_tray`, `jiepu_tray`, `putbox`, `putcarton`, `om` y `thor` | JSON y modelos presentes dentro de `pose_6d_estimate` | Activación aislada, significado oficial de clases, objetos físicos y validación de precisión |
 | Detector de caja con cámara de cintura | `/cv/waist_front/task/transport_action` tiene servidor | Confirmar `camera_name`, frames y resultado con caja real |
 | Guardado de imagen estéreo | `/cv/task/stereo_image_save_action` tiene servidor | Contrato validado de `task_type`, ruta y permisos |
 | Tracking pose 6D | servicios `/cv/task/pose_6d_track_request` y variante de cintura | Valores oficiales de `track_type` y prueba de estabilidad |
 | Imagen semántica de navegación | `/vnav/perception/chassis_front_rgbd/semantic_image` | Confirmar clases, codificación y publicación durante misión |
 | OCR 3D | `/vnav/perception/ocr_3d_markers` | Confirmar modelo, idiomas, activación y resultado real |
-| Reconocimiento de persona/cara | Campos en mensajes genéricos de visión | No se confirmó servidor/modelo específico ni salida anotada |
-| QR y SPS | Campos en `VisionActionTask` | No se confirmó configuración, modelo ni valores de `task_type` |
+| Reconocimiento de persona/cara | `VisionStartTask` contiene campos y resultados genéricos | No se confirmó contenedor, acción o modelo específico ni salida anotada; `/sys/expression/face_control` controla la expresión del robot, no reconoce caras |
+| QR y SPS | Campos en `VisionActionTask`/`VisionStartTask` | No se confirmó configuración, modelo ni valores operativos de `task_type` |
 | Bundle AprilTag | Servicio activo | Crear y validar YAML de bundle |
 | Recarga autónoma | Acción `/vnav/action/recharge` activa | Base compatible, mapa, tolerancias e interlocks validados |
 | Comandos LLM | Acciones `/sys/speech/llm` presentes | Servicio conversacional fiable e integración segura con tareas |
@@ -679,8 +725,10 @@ los contenedores VLA ni las interfaces `/gr00t/trigger_inference` y
 Por tanto:
 
 - el reconocimiento y agarre actuales de la caja no los realiza GR00T;
-- los realiza el detector especializado `workbin` más tareas deterministas de
-  visión, manipulación y navegación;
+- los realiza el perfil activo `byd/workbin` del estimador de pose 6D más tareas
+  deterministas de visión, manipulación y navegación;
+- los perfiles alternativos de cajas y bandejas tampoco son GR00T: son
+  configuraciones/modelos especializados del mismo paquete `pose_6d_estimate`;
 - no existe todavía una orden VLA que pueda incluirse honestamente como ejemplo
   “usable ahora”;
 - instalar el VLA requiere una validación separada de versiones, CUDA, límites
