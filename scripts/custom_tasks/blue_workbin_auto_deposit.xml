@@ -1,0 +1,11 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <!-- Descend until the factory force/collision detector finds support. -->
+            <Action ID="MetaClamp" name="put_collision_cruzr" />
+
+            <!-- Release with the BYD bilateral optimizer. No mobile-base motion. -->
+            <Action ID="MetaClamp" name="byd/open_arm_cruzr" />
+        </Sequence>
+    </BehaviorTree>
+</root>

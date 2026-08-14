@@ -1,0 +1,13 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <!-- Fine recovery step: lower both clamps together by only 5 mm. -->
+            <Parallel threshold="2">
+                <Action ID="MetaMove" type="arm" location="right"
+                    delta_translation="0;0;-0.005" duration="3" />
+                <Action ID="MetaMove" type="arm" location="left"
+                    delta_translation="0;0;-0.005" duration="3" />
+            </Parallel>
+        </Sequence>
+    </BehaviorTree>
+</root>

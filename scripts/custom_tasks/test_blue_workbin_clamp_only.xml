@@ -1,0 +1,14 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <!-- Detect the factory workbin and stop immediately if perception fails. -->
+            <Action ID="MetaLook" start_vision_mode="transport_vision" />
+            <Action ID="MetaLook" task_type="transport" transport_type="grasp"
+                object_name="box" box_size="0.60;0.40;0.22" object_id="0" />
+
+            <!-- Factory BYD-large clamp primitive: approach, 20 N force control,
+                 close and lift 0.06 m. Deliberately omits all mobile-base motion. -->
+            <Action ID="MetaClamp" name="clamp_cruzr_byd_large" />
+        </Sequence>
+    </BehaviorTree>
+</root>

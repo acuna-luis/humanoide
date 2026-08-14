@@ -1,0 +1,21 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <!-- Undo only the 0.06 m lift performed by clamp_cruzr_byd_large. -->
+            <Parallel threshold="2">
+                <Action ID="MetaMove" type="arm" location="right"
+                    delta_translation="0;0;-0.06" duration="3" />
+                <Action ID="MetaMove" type="arm" location="left"
+                    delta_translation="0;0;-0.06" duration="3" />
+            </Parallel>
+
+            <!-- Open both box clamps after the workbin is back on the table. -->
+            <Parallel threshold="2">
+                <Action ID="MetaMove" type="arm" location="right"
+                    delta_translation="0;-0.05;0" duration="4" />
+                <Action ID="MetaMove" type="arm" location="left"
+                    delta_translation="0;0.05;0" duration="4" />
+            </Parallel>
+        </Sequence>
+    </BehaviorTree>
+</root>

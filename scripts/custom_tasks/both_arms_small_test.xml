@@ -1,0 +1,25 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <!-- Movimiento simultaneo y simetrico de hombros: 0.30 rad (~17 grados). -->
+            <Parallel threshold="2">
+                <Action ID="MetaMove" type="arm" location="left"
+                    joint_angles="0.30; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0"
+                    duration="4.0" />
+                <Action ID="MetaMove" type="arm" location="right"
+                    joint_angles="-0.30; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0"
+                    duration="4.0" />
+            </Parallel>
+
+            <!-- Retorno simultaneo a la posicion inicial. -->
+            <Parallel threshold="2">
+                <Action ID="MetaMove" type="arm" location="left"
+                    joint_angles="0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0"
+                    duration="4.0" />
+                <Action ID="MetaMove" type="arm" location="right"
+                    joint_angles="0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0"
+                    duration="4.0" />
+            </Parallel>
+        </Sequence>
+    </BehaviorTree>
+</root>
