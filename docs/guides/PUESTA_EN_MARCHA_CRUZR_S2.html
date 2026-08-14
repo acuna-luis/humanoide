@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Puesta en marcha inicial — Cruzr S2</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 17mm 17mm 18mm 17mm;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #17212b;
+      font-family: "DejaVu Sans", Arial, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.42;
+    }
+    h1, h2, h3 { color: #123b5d; page-break-after: avoid; }
+    h1 { font-size: 25pt; line-height: 1.12; margin: 0 0 5mm; }
+    h2 {
+      font-size: 15pt;
+      margin: 8mm 0 3mm;
+      padding-bottom: 1.5mm;
+      border-bottom: 1px solid #aac2d3;
+    }
+    h3 { font-size: 11.5pt; margin: 5mm 0 2mm; }
+    p { margin: 0 0 3mm; }
+    ul, ol { margin: 1.5mm 0 3mm 6mm; padding-left: 5mm; }
+    li { margin: 1.2mm 0; page-break-inside: avoid; }
+    code {
+      font-family: "DejaVu Sans Mono", monospace;
+      font-size: 9pt;
+      color: #18384f;
+    }
+    pre {
+      margin: 2mm 0 4mm;
+      padding: 3mm 4mm;
+      color: #f5f8fa;
+      background: #243746;
+      border-radius: 2mm;
+      white-space: pre-wrap;
+      font-family: "DejaVu Sans Mono", monospace;
+      font-size: 8.5pt;
+      line-height: 1.35;
+      page-break-inside: avoid;
+    }
+    table { width: 100%; border-collapse: collapse; margin: 3mm 0 5mm; }
+    th, td { border: 1px solid #aec1cf; padding: 2.2mm 2.5mm; vertical-align: top; }
+    th { background: #e9f1f6; color: #123b5d; text-align: left; }
+    .cover {
+      min-height: 238mm;
+      padding-top: 20mm;
+      page-break-after: always;
+    }
+    .kicker {
+      color: #39789e;
+      font-size: 11pt;
+      font-weight: bold;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 6mm;
+    }
+    .subtitle { font-size: 15pt; color: #486170; margin-bottom: 14mm; }
+    .meta {
+      width: 100%;
+      margin-top: 15mm;
+      border-top: 2px solid #39789e;
+    }
+    .meta td { border: 0; border-bottom: 1px solid #d3dfe6; padding: 3mm 1mm; }
+    .meta td:first-child { width: 36%; color: #516774; font-weight: bold; }
+    .purpose {
+      margin-top: 18mm;
+      padding: 6mm;
+      background: #eef5f9;
+      border-left: 4px solid #39789e;
+    }
+    .warning, .stop, .note {
+      margin: 4mm 0;
+      padding: 4mm 5mm;
+      page-break-inside: avoid;
+    }
+    .warning { background: #fff4d8; border-left: 4px solid #e59b18; }
+    .stop { background: #fdebea; border-left: 4px solid #c8443e; }
+    .note { background: #eaf4fb; border-left: 4px solid #3182ad; }
+    .label { font-weight: bold; text-transform: uppercase; letter-spacing: 0.04em; }
+    .checklist { list-style-type: none; padding-left: 0; margin-left: 0; }
+    .checklist li { padding-left: 0; }
+    .page-break { page-break-before: always; }
+    .small { font-size: 8.7pt; color: #516774; }
+    .signature td { height: 15mm; }
+    a { color: #165d88; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div class="kicker">Procedimiento de recepción y verificación</div>
+    <h1>Puesta en marcha inicial<br>Cruzr S2</h1>
+    <div class="subtitle">Arranque seguro, diagnóstico y primera prueba sin carga</div>
+
+    <table class="meta">
+      <tr><td>Fecha prevista</td><td>10 de agosto de 2026</td></tr>
+      <tr><td>Centro / línea</td><td>________________________________________</td></tr>
+      <tr><td>Número de serie</td><td>________________________________________</td></tr>
+      <tr><td>Responsable</td><td>________________________________________</td></tr>
+      <tr><td>Técnico del proveedor</td><td>________________________________________</td></tr>
+    </table>
+
+    <div class="purpose">
+      <strong>Objetivo de esta jornada:</strong> realizar el desembalaje oficial y comprobar el
+      encendido, el autodiagnóstico, la conectividad y la telemetría. No constituye la puesta en
+      producción ni autoriza el VLA, el control directo de motores o las pruebas con carga.
+    </div>
+
+    <div class="stop">
+      <span class="label">Condición esencial</span><br>
+      La primera puesta a cero y el primer movimiento deben realizarse con el procedimiento
+      confirmado por el proveedor, zona excluida y una persona situada junto al E-stop físico.
+    </div>
+  </section>
+
+  <h2 class="page-break">1. Recepción, antes de encender</h2>
+
+  <ul class="checklist">
+    <li>☐ No existen golpes, deformaciones, humedad ni indicadores de vuelco activados.</li>
+    <li>☐ Se han fotografiado el embalaje, el robot, las etiquetas y el número de serie.</li>
+    <li>☐ Se ha contrastado la lista oficial: robot, cargador, mando, manual, certificado de conformidad, garantía e informe de inspección de fábrica.</li>
+    <li>☐ Está disponible el manual de producto Cruzr S2, especialmente su sección 5.2.</li>
+    <li>☐ El cargador suministrado coincide con la especificación del fabricante: 54 V DC / 20 A.</li>
+    <li>☐ Se ha anotado el efector instalado y su referencia: ________________________________.</li>
+    <li>☐ Se ha solicitado la combinación homologada de firmware, <code>HW_TYPE</code> y software para este número de serie.</li>
+  </ul>
+
+  <div class="warning">
+    <span class="label">Manipulación</span><br>
+    El robot pesa aproximadamente 188 kg. El manual prescribe sacarlo rodando por la rampa del
+    flight case; no define puntos de izado. No levantarlo ni sujetarlo por brazos, cabeza o
+    efectores.
+  </div>
+
+  <h2>2. Preparación del área</h2>
+
+  <ul class="checklist">
+    <li>☐ Suelo plano, seco y limpio, con capacidad mínima de 250 kg/m².</li>
+    <li>☐ Espacio mínimo de 2 × 2 m y zona despejada en todo el alcance del robot.</li>
+    <li>☐ Se puede mantener una distancia mínima de 1,5 m durante el funcionamiento.</li>
+    <li>☐ Sin caja, pallet, herramientas ni personas dentro de la zona de movimiento.</li>
+    <li>☐ Dos personas presentes: operador y observador junto al E-stop.</li>
+    <li>☐ Mando cargado y E-stop físico localizado y accesible.</li>
+    <li>☐ Temperatura 0–40 °C, humedad 20–80 % sin condensación e iluminación ≥200 lux.</li>
+    <li>☐ Portátil de servicio conectado únicamente a una red aislada.</li>
+  </ul>
+
+  <h2>3. Desembalaje oficial</h2>
+
+  <ol>
+    <li>Colocar horizontalmente el flight case de transporte y bloquear sus ruedas.</li>
+    <li>Abrir la puerta del flight case.</li>
+    <li>Retirar las correas de amarre y bajar la tabla-rampa vertical.</li>
+    <li>Si el transporte ha durado más de 3 horas, despertar la batería conectando el cargador original a la toma del chasis y a la red.</li>
+    <li>Retirar las protecciones de espuma EPE.</li>
+    <li>Pulsar el botón metálico del chasis para arrancarlo y liberar el freno de la base.</li>
+    <li>Extraer el robot por la rampa; retirar mando y cargador y cerrar el flight case.</li>
+  </ol>
+
+  <div class="stop">
+    <span class="label">Control de la bajada</span><br>
+    La sección 5.2 no especifica número de operarios, elemento de retención ni pendiente máxima
+    de la rampa. Debido a la masa del robot y a que se libera el freno, confirmar el método con el
+    proveedor, mantener libre la trayectoria y no situar a ninguna persona delante o debajo del robot.
+  </div>
+
+  <h2>4. Secuencia de encendido</h2>
+
+  <ol>
+    <li>Comprobar que el E-stop trasero está liberado.</li>
+    <li>Pulsar el botón metálico del chasis; debe iluminarse en verde.</li>
+    <li>Abrir la cubierta trasera y pulsar el botón de control de servos.</li>
+    <li>Comprobar que el botón negro de parada de emergencia de servos, situado dentro de la cubierta, está levantado.</li>
+    <li>Accionar el interruptor de alimentación trasero.</li>
+    <li>Mantener pulsado el botón de arranque trasero durante aproximadamente 5 segundos.</li>
+    <li>Esperar unos 2 minutos, hasta que se ilumine la pantalla y termine el arranque.</li>
+    <li>Encender el mando y esperar el resultado del autodiagnóstico.</li>
+  </ol>
+
+  <div class="stop">
+    <span class="label">Detener inmediatamente si</span><br>
+    Hay movimiento inesperado, inestabilidad, ruido anormal, olor, calentamiento, cable dañado,
+    fallo en pantalla o un E-stop que no enclava o no se libera correctamente.
+  </div>
+
+  <h2>5. Homing y controlador</h2>
+
+  <p>
+    El manual remite al mando para realizar el homing, pero no identifica de forma inequívoca
+    el modo o la tarea de puesta a cero. El proveedor debe confirmar y ejecutar esta primera
+    secuencia. No seleccionar tareas al azar.
+  </p>
+
+  <ol>
+    <li>Confirmar que el autodiagnóstico ha finalizado sin fallos.</li>
+    <li>Ejecutar el homing/posición cero bajo supervisión del proveedor.</li>
+    <li>Una vez confirmado el cero, el manual indica <strong>F abajo + D</strong> para iniciar el controlador de movimiento.</li>
+    <li>No entrar todavía en modo desarrollador ni solicitar el control directo de motores.</li>
+  </ol>
+
+  <div class="warning">
+    <span class="label">Control directo</span><br>
+    Al solicitar el modo <code>sdk</code>, los módulos internos de movimiento dejan de controlar
+    el robot y el desarrollador asume todos los ejes. Esta operación queda expresamente fuera
+    de la puesta en marcha inicial.
+  </div>
+
+  <h2 class="page-break">6. Conexión de diagnóstico</h2>
+
+  <p>Conectar un portátil directamente por Ethernet, sin puentearlo con la red de planta:</p>
+
+  <table>
+    <tr><th>Equipo</th><th>Dirección</th><th>Función</th></tr>
+    <tr><td>Portátil de servicio</td><td><code>192.168.11.99/24</code></td><td>Diagnóstico</td></tr>
+    <tr><td>PC1</td><td><code>192.168.11.2:2222</code></td><td>Control de movimiento x86</td></tr>
+    <tr><td>PC2</td><td><code>192.168.11.3:2222</code></td><td>Jetson Orin, visión y aplicaciones</td></tr>
+  </table>
+
+  <p>
+    En Ubuntu, identificar primero la interfaz Ethernet. Sustituir
+    <code>&lt;INTERFAZ&gt;</code> por el nombre mostrado, por ejemplo <code>enp3s0</code>:
+  </p>
+
+  <pre>nmcli device status
+sudo nmcli connection add type ethernet ifname &lt;INTERFAZ&gt; \
+  con-name cruzr-s2 ipv4.method manual \
+  ipv4.addresses 192.168.11.99/24 ipv4.never-default yes \
+  ipv6.method disabled
+sudo nmcli connection up cruzr-s2
+ip -br address show &lt;INTERFAZ&gt;
+
+ping -c 3 192.168.11.2
+ping -c 3 192.168.11.3
+ssh -p 2222 ubt@192.168.11.2
+ssh -p 2222 ubt@192.168.11.3</pre>
+
+  <p>
+    Utilizar las credenciales iniciales de la sección 2.3 del manual. Registrar primero el
+    mecanismo de recuperación y cambiarlas antes de conectar el robot a cualquier otra red.
+  </p>
+
+  <h2 class="page-break">7. Comprobaciones ROS 2 de solo lectura</h2>
+
+  <pre>source /opt/ros/humble/setup.bash
+ros2 topic list
+ros2 topic info -v /mc/sdk/robot_state
+ros2 topic echo --once /mc/sdk/robot_state
+ros2 topic echo --once /emb/battery_state</pre>
+
+  <ul class="checklist">
+    <li>☐ PC1 y PC2 responden en las direcciones esperadas.</li>
+    <li>☐ La lista de topics queda guardada como evidencia.</li>
+    <li>☐ La posición de las articulaciones es coherente con la postura física.</li>
+    <li>☐ El estado de batería no muestra temperatura, tensión o salud anormales.</li>
+    <li>☐ No existen fallos activos.</li>
+    <li>☐ Se han registrado las versiones de OS, firmware, JetPack, Docker e imágenes.</li>
+  </ul>
+
+  <div class="note">
+    No publicar mensajes en <code>/mc/sdk/robot_command</code>. En esta fase únicamente se leen
+    estados y se documenta la configuración recibida.
+  </div>
+
+  <h2>8. E-stop, primera prueba y apagado</h2>
+
+  <ol>
+    <li>En una prueba planificada, con el robot parado, accionar el E-stop físico trasero.</li>
+    <li>Verificar el comportamiento indicado por el manual: todos los motores quedan bloqueados y dejan de aceptar órdenes externas.</li>
+    <li>Para recuperar el E-stop, apagar el robot y reiniciar la máquina completa.</li>
+    <li>Realizar el primer movimiento mediante el mando y el controlador original.</li>
+    <li>Usar velocidad mínima, sin carga y un solo movimiento cada vez.</li>
+    <li>Validar primero postura/brazos y después un desplazamiento muy corto de la base.</li>
+  </ol>
+
+  <h3>Apagado oficial</h3>
+
+  <ol>
+    <li>Tras llevarlo a home y bajar el mecanismo, entrar en modo damping: selector <strong>F abajo + botón C</strong>.</li>
+    <li>Abrir la cubierta trasera y pulsar el botón de control de servos.</li>
+    <li>Hacer doble pulsación y mantener pulsado el botón de arranque durante 5 segundos; continuar presionando tras el aviso de apagado hasta que pantalla y luces se apaguen.</li>
+    <li>Accionar el interruptor inferior trasero para cortar la alimentación del cuerpo superior.</li>
+    <li>Pulsar el botón metálico del chasis para que quede levantado y se apague su indicador verde.</li>
+  </ol>
+
+  <h3>No ejecutar durante esta jornada</h3>
+
+  <ul>
+    <li>Modo <code>sdk</code> o toma directa de motores.</li>
+    <li>Demos que publiquen comandos articulares.</li>
+    <li>Contenedores VLA/GR00T o inferencia autónoma.</li>
+    <li><code>auto_load_vla_scripts_new.sh</code>.</li>
+    <li>Actualizaciones de firmware, uDoke o imágenes Docker.</li>
+    <li>Pruebas con caja, transporte, elevación o volcado.</li>
+  </ul>
+
+  <h2>9. Criterio de aceptación inicial</h2>
+
+  <table>
+    <tr><th>Comprobación</th><th>Resultado</th><th>Observaciones</th></tr>
+    <tr><td>Sin daños ni accesorios ausentes</td><td>☐ OK &nbsp; ☐ NOK</td><td></td></tr>
+    <tr><td>Desembalaje según sección 5.2</td><td>☐ OK &nbsp; ☐ NOK</td><td></td></tr>
+    <tr><td>Encendido y autodiagnóstico correctos</td><td>☐ OK &nbsp; ☐ NOK</td><td></td></tr>
+    <tr><td>PC1 y PC2 accesibles</td><td>☐ OK &nbsp; ☐ NOK</td><td></td></tr>
+    <tr><td>Batería y sensores coherentes</td><td>☐ OK &nbsp; ☐ NOK</td><td></td></tr>
+    <tr><td>Sin fallos activos</td><td>☐ OK &nbsp; ☐ NOK</td><td></td></tr>
+    <tr><td>E-stop y recuperación verificados</td><td>☐ OK &nbsp; ☐ NOK</td><td></td></tr>
+    <tr><td>Homing confirmado por proveedor</td><td>☐ OK &nbsp; ☐ NOK</td><td></td></tr>
+    <tr><td>Primer movimiento sin carga correcto</td><td>☐ OK &nbsp; ☐ NOK</td><td></td></tr>
+    <tr><td>Apagado completo verificado</td><td>☐ OK &nbsp; ☐ NOK</td><td></td></tr>
+    <tr><td>Configuración y versiones registradas</td><td>☐ OK &nbsp; ☐ NOK</td><td></td></tr>
+  </table>
+
+  <p><strong>Resultado:</strong> ☐ Aceptado para continuar las pruebas &nbsp;&nbsp; ☐ Bloqueado</p>
+  <p><strong>Incidencias / acciones pendientes:</strong></p>
+  <p>________________________________________________________________________________</p>
+  <p>________________________________________________________________________________</p>
+  <p>________________________________________________________________________________</p>
+
+  <table class="signature">
+    <tr><th>Responsable de integración</th><th>Técnico del proveedor</th></tr>
+    <tr><td>Nombre y firma:</td><td>Nombre y firma:</td></tr>
+  </table>
+
+  <h2>10. Paso posterior: integración en la línea</h2>
+
+  <p>
+    La aceptación anterior sólo habilita pruebas controladas. Antes de integrar el robot en la
+    línea deben completarse la evaluación de riesgos, la arquitectura de seguridad, los límites
+    dinámicos, el vallado o escáneres, los enclavamientos, el supervisor de movimiento y las
+    pruebas con carga incremental.
+  </p>
+
+  <p>
+    Como referencias generales se aplican ISO 12100:2010 para evaluación y reducción del riesgo
+    e ISO 10218-1:2025 / ISO 10218-2:2025 para el robot y la integración de la aplicación. La
+    movilidad de la base requiere evaluación adicional y confirmación específica del fabricante.
+  </p>
+
+  <h3>Referencias</h3>
+
+  <p class="small">
+    1. UBTECH, <em>Cruzr S2 Product Manual</em>, versión 1.0, 24-08-2025; secciones 2, 3 y 5.<br>
+    2. UBTECH, <em>Cruzr S2 SDK Secondary Development Document</em>, versión 2.1,
+    23-06-2026; secciones 1, 2.1–2.6, 3.1–3.3 y 5.1/5.5.<br>
+    3. <em>HUMANOID_SDK_TECHNICAL_REVIEW.md</em>, secciones 9 y 12.<br>
+    4. ISO 12100:2010, <em>Safety of machinery — Risk assessment and risk reduction</em>.<br>
+    5. ISO 10218-1:2025 e ISO 10218-2:2025, <em>Robotics — Safety requirements</em>.
+  </p>
+
+  <p class="small">
+    Documento de trabajo para recepción técnica. No sustituye el manual de instalación,
+    mantenimiento o seguridad del fabricante ni la validación de la célula por personal competente.
+  </p>
+</body>
+</html>

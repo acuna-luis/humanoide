@@ -1,0 +1,12 @@
+649a46dd4edd80d2ae738c285d1e563ef4e71aaac8f827793584a1f5783d3d86  Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/Cruzr S2 优必选SDK二次开发文档【对外】6.24.docx
+4cf441de24c0328a7fc4e991f41cbaa17239e9d9eb7bb6a19e8715c0591a30bd  Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/Cruzr S2 优必选SDK二次开发文档【对外】6.24.pdf
+17d4add3aa2ae9992fc8bd40194438fa8f7ebdff087d5c9b7db3e6ad2f44dc2d  Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/SOP Mapping on Web.docx
+7cb7f856223ce99a86d44349be475a2b5925d57ca694ee069a96c808802e297e  Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/URDF/cruzr_s2_description.zip
+7380c52227a9ca99c69121effbbbaff18b9807e72e8759ee3376bd47ac3f4c30  Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/USD/Collected_cruzr_s2_v1.zip
+d741f56106003c54bbc186a97d92edb06070ce03aba58243c93af871391cd915  Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/USD/Collected_hand_v3_usd.zip
+f40f80c1b5fe2aeb56d532af9323becbaebe40f703041266bea0c5fe1a21dea9  Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/Upgrade package/images.sh
+0f3d5a988eebb3b4aaacdbaa776c44708b3544afe522edba475fa09a7639aa3b  Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/Upgrade package/utars-udoke-config-v0.2.0.tar.gz
+ef9cc8127985557d2776fcda39db545400b681a8024161cfeb41f471d4eb7488  Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/Upgrade package/离线包升级SOP.pdf
+252084f61d6e469c241c86afa2ea81e704089af3ec3ffdfd1a5ecb57fa34f1d6  Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/c++/ubt_api_tiny_colcon.0624.tar.xz
+9d325291d642ae0d5a746b50cf7f57a35c0076b369c5306ba73d3abe8a77584b  Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/demo/Cruzer_S2-low-level-demo0624.tar.xz
+63dda30e6be8dd7d0a77f3a6e9841a83f1fd56bc469f1c1256f2e3d15f2939c7  Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/python/ubt_api_tiny_python.0624.tar.xz
