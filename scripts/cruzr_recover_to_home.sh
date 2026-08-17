@@ -314,7 +314,12 @@ REMOTE
 run_recovery() {
   if ((FAST == 1)); then
     info "FAST_MODE: omitiendo auditorías completas previas a la recuperación."
-    detect_manipulation_state
+    if [[ "${CRUZR_AFTER_DEPOSIT:-0}" == "1" ]]; then
+      RETREAT_REQUIRED="true"
+      info "AFTER_DEPOSIT: depósito confirmado por el flujo exterior; se omite el análisis duplicado del registro."
+    else
+      detect_manipulation_state
+    fi
     TASK_LOCKED="true"
   else
     preflight

@@ -1,0 +1,74 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <!--
+              Trayectoria de brazos tomada de production_movie/love.xml.
+              Postura V4 corregida a partir del vídeo de la prueba:
+              - thumb_swing=1.50 cierra la parte inferior del corazón;
+              - index=1.10 cierra el pequeño hueco superior sin recuperar el
+                cruce observado con index=1.00;
+              - middle/ring/little=1.25/1.35/1.45 crea un plegado progresivo
+                detrás del índice, evitando el bloque de tres dedos cerrados.
+              Orden: thumb_swing, thumb_mcp, thumb_pip, index, middle,
+              ring, little.
+            -->
+            <Parallel threshold="4">
+                <Action ID="MetaMove" type="arm" location="left"
+                    joint_angles="0.810475;-0.905206;-0.0159403;-1.90148;2.52035;0.403027;-1.63597"
+                    duration="4.0" />
+                <Action ID="MetaMove" type="arm" location="right"
+                    joint_angles="-0.810949;-0.904958;0.0159329;-1.90055;-2.51987;-0.403825;-1.63618"
+                    duration="4.0" />
+                <Action ID="MetaMove" type="effector" location="left"
+                    eef_joint_commands="1.50;0.0;0.0;1.10;1.25;1.35;1.45"
+                    duration="4.0" />
+                <Action ID="MetaMove" type="effector" location="right"
+                    eef_joint_commands="1.50;0.0;0.0;1.10;1.25;1.35;1.45"
+                    duration="4.0" />
+            </Parallel>
+
+            <Parallel threshold="2">
+                <Action ID="MetaMove" type="arm" location="left"
+                    joint_angles="0.817134;-0.775578;-0.0108862;-1.91441;2.47505;0.316519;-1.51477"
+                    duration="6.0" />
+                <Action ID="MetaMove" type="arm" location="right"
+                    joint_angles="-0.81348;-0.775355;0.0164088;-1.91301;-2.4758;-0.32032;-1.51317"
+                    duration="6.0" />
+            </Parallel>
+
+            <Action ID="MetaCommon" sleep_duration="3.0" />
+
+            <!--
+              Retira primero los brazos sin cambiar ningún dedo. Así no hay
+              barrido de los pulgares ni extensión de los índices junto al
+              torso.
+            -->
+            <Parallel threshold="2">
+                <Action ID="MetaMove" type="arm" location="left"
+                    joint_angles="0.810475;-0.905206;-0.0159403;-1.90148;2.52035;0.403027;-1.63597"
+                    duration="4.0" />
+                <Action ID="MetaMove" type="arm" location="right"
+                    joint_angles="-0.810949;-0.904958;0.0159329;-1.90055;-2.51987;-0.403825;-1.63618"
+                    duration="4.0" />
+            </Parallel>
+
+            <!-- Baja los brazos manteniendo intacta la postura de los dedos. -->
+            <Parallel threshold="2">
+                <Action ID="MetaMove" type="arm" location="left"
+                    joint_angles="0;0;0;0;0;0;0" duration="8.0" />
+                <Action ID="MetaMove" type="arm" location="right"
+                    joint_angles="0;0;0;0;0;0;0" duration="8.0" />
+            </Parallel>
+
+            <!-- Sólo abre completamente las manos cuando los brazos están abajo. -->
+            <Parallel threshold="2">
+                <Action ID="MetaMove" type="effector" location="left"
+                    eef_joint_commands="0.0;0.0;0.0;0.02;0.02;0.02;0.02"
+                    duration="4.0" />
+                <Action ID="MetaMove" type="effector" location="right"
+                    eef_joint_commands="0.0;0.0;0.0;0.02;0.02;0.02;0.02"
+                    duration="4.0" />
+            </Parallel>
+        </Sequence>
+    </BehaviorTree>
+</root>

@@ -13,6 +13,7 @@ readonly VISION_HOST="192.168.11.3"
 readonly MOTION_HOST="192.168.11.2"
 readonly DEFAULT_PASSWORD="aa"
 readonly NAV_CONTAINER="walker-nav.nav_taskmanager-1"
+readonly FREEPNC_CONTAINER="walker-nav.freepnc_task-1"
 readonly ROS_CONTAINER="walker-ros.ros2-1"
 readonly POSE_TOPIC="/mc/odom"
 readonly MAP_POSE_TOPIC="/nav/robot_pose"
@@ -47,8 +48,10 @@ MODE="run"
 ROUTE_PROFILE="full"
 YES=0
 FAST=0
+FLUID_MODE="${CRUZR_FLUID_MODE:-0}"
 RESUME_STAGING_MAP_POSE=""
 RESUME_APPROACH_DISTANCE=""
+NAVIGATE_WAYPOINT=""
 CONNECTION_MODE=""
 CONTROL_INTERFACE=""
 VISION_SSH_HOST=""
@@ -65,6 +68,8 @@ Uso:
   ./scripts/cruzr_blue_workbin_map_route.sh --check [--fast]
   ./scripts/cruzr_blue_workbin_map_route.sh --run [--yes] [--fast]
   ./scripts/cruzr_blue_workbin_map_route.sh --run --short [--yes] [--fast]
+  ./scripts/cruzr_blue_workbin_map_route.sh --navigate-waypoint PUNTO \
+    [--yes] [--fast]
   ./scripts/cruzr_blue_workbin_map_route.sh --resume-to-table \
     --staging-map-pose "X Y YAW" --approach-distance METROS [--yes] [--fast]
 
@@ -94,6 +99,9 @@ Opciones:
   --resume-to-table
            No repite el agarre. Lleva una caja ya sujeta a la premesa
            indicada, la deposita y termina en home.
+  --navigate-waypoint PUNTO
+           Sin mover los brazos, sincroniza automáticamente el mapa instalado,
+           comprueba seguridad y navega al waypoint indicado.
   --staging-map-pose "X Y YAW"
            Pose de premesa registrada por la ejecución interrumpida.
   --approach-distance METROS
@@ -133,6 +141,12 @@ while (($#)); do
     --resume-to-table)
       MODE="resume-to-table"
       ROUTE_PROFILE="short"
+      ;;
+    --navigate-waypoint)
+      (($# >= 2)) || die "--navigate-waypoint necesita el nombre de un punto"
+      MODE="navigate-waypoint"
+      NAVIGATE_WAYPOINT="$2"
+      shift
       ;;
     --yes)
       YES=1
@@ -352,23 +366,26 @@ REMOTE
 
 ensure_map_active() {
   info "[MAPA] Comprobando si '$MAP_NAME' está activo..."
-  ssh_vision bash -s -- "$NAV_CONTAINER" "$MAP_NAME" \
+  ssh_vision bash -s -- "$NAV_CONTAINER" "$FREEPNC_CONTAINER" "$MAP_NAME" \
     "$ROUTE_ACTION" "$ROUTE_TYPE" <<'REMOTE'
 set -Eeuo pipefail
 nav_container="$1"
-map_name="$2"
-route_action="$3"
-route_type="$4"
+freepnc_container="$2"
+map_name="$3"
+route_action="$4"
+route_type="$5"
 map_dir="/etc/walker/map/$map_name"
 
 [[ "$(hostname)" == "vision" ]] || {
   echo "MAP_PREPARE_ERROR: el host remoto no es vision" >&2
   exit 40
 }
-[[ "$(docker inspect --format '{{.State.Running}}' "$nav_container" 2>/dev/null)" == "true" ]] || {
-  echo "MAP_PREPARE_ERROR: el contenedor de navegación no está activo" >&2
-  exit 41
-}
+for container in "$nav_container" "$freepnc_container"; do
+  [[ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null)" == "true" ]] || {
+    echo "MAP_PREPARE_ERROR: el contenedor '$container' no está activo" >&2
+    exit 41
+  }
+done
 [[ -r "$map_dir/umap/umap.json" && -r "$map_dir/user/task.json" ]] || {
   echo "MAP_PREPARE_ERROR: faltan los archivos de $map_name" >&2
   exit 42
@@ -405,12 +422,35 @@ action_succeeded "$map_output" || {
   exit 43
 }
 
-if grep -Fq "\"map_name\" : \"$map_name\"" <<<"$map_output"; then
+map_fingerprint="$(
+  sha256sum "$map_dir/umap/umap.json" "$map_dir/user/task.json" |
+    sha256sum | awk '{print $1}'
+)"
+nav_instance="$(
+  docker inspect --format '{{.Id}}|{{.State.StartedAt}}' \
+    "$nav_container" "$freepnc_container" | sha256sum | awk '{print $1}'
+)"
+cache_key="$(printf '%s' "$map_name" | sha256sum | awk '{print $1}')"
+runtime_cache="/tmp/cruzr_map_runtime_${cache_key}.state"
+runtime_signature="${nav_instance}|${map_fingerprint}"
+cached_signature="$(cat "$runtime_cache" 2>/dev/null || true)"
+map_is_active=0
+grep -Fq "\"map_name\" : \"$map_name\"" <<<"$map_output" && map_is_active=1
+
+if ((map_is_active == 1)) && [[ "$cached_signature" == "$runtime_signature" ]]; then
   echo "MAP_ALREADY_ACTIVE=$map_name"
+  echo "MAP_FINGERPRINT=$map_fingerprint"
   exit 0
 fi
 
-if grep -Eq '\"map_name\"[[:space:]]*:[[:space:]]*\"[^\"]+\"' <<<"$map_output"; then
+if ((map_is_active == 1)); then
+  echo "MAP_RELOAD=$map_name"
+  if [[ -z "$cached_signature" ]]; then
+    echo "MAP_SYNC_REASON=runtime-not-yet-verified"
+  else
+    echo "MAP_SYNC_REASON=map-files-or-navigation-runtime-changed"
+  fi
+elif grep -Eq '\"map_name\"[[:space:]]*:[[:space:]]*\"[^\"]+\"' <<<"$map_output"; then
   previous_map="$(sed -n 's/.*\"map_name\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p' <<<"$map_output" | head -n1)"
   echo "MAP_SWITCH=$previous_map->$map_name"
 else
@@ -466,7 +506,11 @@ if ! action_succeeded "$map_output" || \
   echo "MAP_PREPARE_ERROR: el mapa activo no quedó confirmado" >&2
   exit 47
 fi
+cache_tmp="${runtime_cache}.$$"
+printf '%s\n' "$runtime_signature" >"$cache_tmp"
+mv -f -- "$cache_tmp" "$runtime_cache"
 echo "MAP_ACTIVATED=$map_name"
+echo "MAP_FINGERPRINT=$map_fingerprint"
 echo "MAP_LOCALIZATION=global"
 echo "NAV_STATE=FSM_WAITNAVIGATE"
 REMOTE
@@ -500,14 +544,16 @@ expected=["START","PASO1","PASO2","PASO 3","PASO4","FINISH"]
 points=umap.get("target_points",[])
 by_id={p.get("id"):p for p in points}
 task_ids=[p.get("id") for p in task.get("target_points",[])]
-if task_ids != expected: raise SystemExit(f"Secuencia task.json inesperada: {task_ids}")
-if any(point not in by_id for point in expected): raise SystemExit("Faltan puntos en umap.json")
-for point in expected:
+if task_ids[:len(expected)] != expected:
+    raise SystemExit(f"Secuencia base de task.json inesperada: {task_ids}")
+if any(point not in by_id for point in task_ids):
+    raise SystemExit("Hay puntos de task.json ausentes en umap.json")
+for point in task_ids:
     p=by_id[point]
     if p.get("mode") != "logo_nav": raise SystemExit(f"{point}: modo no permitido")
     if not all(math.isfinite(float(p[key])) for key in ("point_x","point_y","point_yaw")):
         raise SystemExit(f"{point}: coordenadas inválidas")
-print("MAP_POINTS_AVAILABLE="+" -> ".join(expected))
+print("MAP_POINTS_AVAILABLE="+" -> ".join(task_ids))
 PY
 
 action_info="$(docker exec "$nav_container" bash -lc "source /opt/walker/setup.bash; rosa action info '$route_action'; rosa action type '$route_action'")"
@@ -632,6 +678,33 @@ REMOTE
   grep -Eq "navigation_start SUCCEEDED|'desc': '(SUCCESS|SUCCEED)'" <<<"$output" || \
     die "El servidor no confirmó éxito para '$point'."
   info "ROUTE_POINT_OK=$point"
+}
+
+assert_waypoint_available() {
+  local point="$1"
+  ssh_vision python3 - "$MAP_NAME" "$point" <<'PY'
+import json, math, sys
+
+map_name, requested = sys.argv[1:]
+path = f"/etc/walker/map/{map_name}/umap/umap.json"
+with open(path, encoding="utf-8") as stream:
+    data = json.load(stream)
+
+points = {point.get("id"): point for point in data.get("target_points", [])}
+if requested not in points:
+    raise SystemExit(f"Waypoint no encontrado en {path}: {requested}")
+
+point = points[requested]
+if point.get("mode") != "logo_nav":
+    raise SystemExit(f"Waypoint con modo no permitido: {point.get('mode')}")
+values = [float(point[key]) for key in ("point_x", "point_y", "point_yaw")]
+if not all(math.isfinite(value) for value in values):
+    raise SystemExit("Waypoint con coordenadas no finitas")
+print(
+    f"WAYPOINT_AVAILABLE={requested} "
+    f"x={values[0]:.6f} y={values[1]:.6f} yaw={values[2]:.6f}"
+)
+PY
 }
 
 navigation_to_free_pose() {
@@ -806,6 +879,37 @@ EOF
   [[ "$answer" == "EJECUTAR RUTA CON CAJA" ]] || die "Ciclo cancelado."
 }
 
+confirm_waypoint_navigation() {
+  ((YES == 1)) && return 0
+  cat <<EOF
+
+CONFIRMACIÓN DE NAVEGACIÓN
+El robot navegará sin mover los brazos hasta '$NAVIGATE_WAYPOINT'.
+Confirma que está localizado, que el cargador y Ethernet están desconectados,
+que el recorrido está despejado y que otra persona mantiene el paro preparado.
+
+Escribe NAVEGAR A WAYPOINT para continuar:
+EOF
+  local answer
+  read -r answer
+  [[ "$answer" == "NAVEGAR A WAYPOINT" ]] || die "Navegación cancelada."
+}
+
+navigate_waypoint_only() {
+  assert_waypoint_available "$NAVIGATE_WAYPOINT"
+  if [[ "$FLUID_MODE" == "1" && "${CRUZR_TRANSFER_PREFLIGHT_DONE:-0}" == "1" ]]; then
+    info "FLUID_MODE: mapa, batería, paros y cargador ya validados en el preflight general."
+  else
+    map_preflight "$RETURN_MIN_BATTERY_SOC"
+  fi
+  confirm_waypoint_navigation
+  trap 'stop_navigation' EXIT
+  trap 'stop_navigation; exit 130' INT TERM HUP
+  navigation_to_point "$NAVIGATE_WAYPOINT" WAYPOINT
+  trap - EXIT INT TERM HUP
+  info "WAYPOINT_NAVIGATION_OK=$NAVIGATE_WAYPOINT"
+}
+
 run_cycle() {
   confirm_once
 
@@ -883,6 +987,15 @@ main() {
       require_wireless_run
       ensure_map_active || die "No se pudo activar y localizar '$MAP_NAME'. El robot no se movió."
       resume_to_table
+      ;;
+    navigate-waypoint)
+      require_wireless_run
+      if [[ "$FLUID_MODE" == "1" && "${CRUZR_TRANSFER_PREFLIGHT_DONE:-0}" == "1" ]]; then
+        info "FLUID_MODE: se reutiliza el mapa activo confirmado por el flujo exterior."
+      else
+        ensure_map_active || die "No se pudo sincronizar y localizar '$MAP_NAME'. El robot no se movió."
+      fi
+      navigate_waypoint_only
       ;;
     *)
       die "Modo interno desconocido: $MODE"

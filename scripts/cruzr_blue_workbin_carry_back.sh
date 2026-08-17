@@ -4,8 +4,8 @@ set -Eeuo pipefail
 
 # Agarra el contenedor azul, retrocede 0,50 m, vuelve a la pose inicial y
 # deposita la caja de nuevo en el mismo apoyo.
-# La maniobra se divide en dos tramos cerrados de 0,25 m, medidos mediante la
-# odometría del chasis y enviados a través del monitor de velocidad de UBTECH.
+# El retroceso usa un único tramo cerrado de 0,50 m, medido mediante la
+# odometría del chasis y enviado por el monitor de velocidad de UBTECH.
 
 readonly MOTION_HOST="192.168.11.2"
 readonly VISION_HOST="192.168.11.3"
@@ -15,19 +15,34 @@ readonly DEFAULT_PASSWORD="aa"
 readonly NAV_CONTAINER="walker-nav.freepnc_task-1"
 readonly ROS_CONTAINER="walker-ros.ros2-1"
 readonly POSE_TOPIC="/mc/odom"
-readonly SEGMENT_DISTANCE="0.25"
 readonly TOTAL_DISTANCE="0.50"
-readonly BACKWARD_MAX_SPEED="0.05"
 readonly RETURN_MAX_SPEED="0.08"
-readonly APPROACH_MAX_SPEED="0.08"
-readonly APPROACH_MAX_STEP="0.30"
+FLUID_MODE="${CRUZR_FLUID_MODE:-0}"
+if [[ "$FLUID_MODE" == "1" ]]; then
+  BACKWARD_MAX_SPEED="0.08"
+  APPROACH_MAX_SPEED="0.12"
+  APPROACH_DEPTH_TOLERANCE="0.050"
+  APPROACH_CENTER_TOLERANCE="0.035"
+  APPROACH_MAX_STEP="0.42"
+  APPROACH_MAX_ITERATIONS="5"
+  APPROACH_SETTLE_SECONDS="0.20"
+else
+  BACKWARD_MAX_SPEED="0.05"
+  APPROACH_MAX_SPEED="0.08"
+  APPROACH_DEPTH_TOLERANCE="0.020"
+  APPROACH_CENTER_TOLERANCE="0.030"
+  APPROACH_MAX_STEP="0.30"
+  APPROACH_MAX_ITERATIONS="8"
+  APPROACH_SETTLE_SECONDS="0.60"
+fi
+readonly FLUID_MODE BACKWARD_MAX_SPEED APPROACH_MAX_SPEED \
+  APPROACH_DEPTH_TOLERANCE APPROACH_CENTER_TOLERANCE APPROACH_MAX_STEP \
+  APPROACH_MAX_ITERATIONS APPROACH_SETTLE_SECONDS
 readonly APPROACH_MAX_TOTAL="1.20"
 # La detección que produjo el agarre estable midió z=0,966 m. En este mensaje
 # z es la profundidad óptica; la distancia euclídea no sirve como consigna
 # porque también contiene la altura de la cámara sobre la caja.
 readonly APPROACH_TARGET_DEPTH="0.966"
-readonly APPROACH_DEPTH_TOLERANCE="0.020"
-readonly APPROACH_CENTER_TOLERANCE="0.030"
 readonly APPROACH_MAX_LATERAL_STEP="0.10"
 readonly APPROACH_BACKOFF_CLEARANCE="0.12"
 readonly APPROACH_YAW_TOLERANCE_DEG="2.0"
@@ -64,6 +79,9 @@ LAST_SEGMENT_DISTANCE=""
 INITIAL_POSE=""
 RETURN_TARGET_POSE=""
 ADVANCE_DISTANCE=""
+RELATIVE_MOVE=""
+RELATIVE_ROTATION=""
+BACKWARD_DISTANCE=""
 
 usage() {
   cat <<'EOF'
@@ -77,6 +95,9 @@ Uso:
   ./scripts/cruzr_blue_workbin_carry_back.sh --grasp-only [--yes] [--fast]
   ./scripts/cruzr_blue_workbin_carry_back.sh --return-held-to-pose "X Y YAW" [--yes] [--fast]
   ./scripts/cruzr_blue_workbin_carry_back.sh --advance-held-distance METROS [--yes] [--fast]
+  ./scripts/cruzr_blue_workbin_carry_back.sh --move-relative "AVANCE LATERAL" [--yes] [--fast]
+  ./scripts/cruzr_blue_workbin_carry_back.sh --rotate-relative GRADOS [--yes] [--fast]
+  ./scripts/cruzr_blue_workbin_carry_back.sh --backward-distance METROS [--yes] [--fast]
 
 Modos:
   sin opción     Equivale a --run y solicita confirmación antes de mover.
@@ -98,6 +119,15 @@ Modos:
   --advance-held-distance METROS
                 Con una caja ya agarrada, avanza esa distancia desde la pose
                 actual y se detiene sin depositarla (máximo 0,65 m).
+  --move-relative "AVANCE LATERAL"
+                Corrección local pequeña mediante un arco frontal y termina
+                con el rumbo inicial. No mueve los brazos (uso interno).
+  --rotate-relative GRADOS
+                Gira localmente un máximo de 10 grados. No mueve los brazos
+                (uso interno del alineador AprilTag).
+  --backward-distance METROS
+                Retrocede entre 0,02 y 0,15 m. No mueve los brazos (uso
+                interno del alineador AprilTag).
 
 Opciones:
   --yes         Omite la única confirmación inicial.
@@ -147,6 +177,24 @@ while (($#)); do
       (($# >= 2)) || die "--advance-held-distance necesita una distancia en metros"
       MODE="advance-held-distance"
       ADVANCE_DISTANCE="$2"
+      shift
+      ;;
+    --move-relative)
+      (($# >= 2)) || die "--move-relative necesita \"AVANCE LATERAL\" en metros"
+      MODE="move-relative"
+      RELATIVE_MOVE="$2"
+      shift
+      ;;
+    --rotate-relative)
+      (($# >= 2)) || die "--rotate-relative necesita un ángulo en grados"
+      MODE="rotate-relative"
+      RELATIVE_ROTATION="$2"
+      shift
+      ;;
+    --backward-distance)
+      (($# >= 2)) || die "--backward-distance necesita una distancia en metros"
+      MODE="backward-distance"
+      BACKWARD_DISTANCE="$2"
       shift
       ;;
     --yes)
@@ -489,7 +537,7 @@ stop_base_silent() {
 }
 
 run_backward_segment() {
-  local target_distance="${1:-$SEGMENT_DISTANCE}"
+  local target_distance="${1:-$TOTAL_DISTANCE}"
   local max_speed="${2:-$BACKWARD_MAX_SPEED}"
   local output
   local measured
@@ -502,7 +550,7 @@ pose_topic="$2"
 distance="$3"
 max_speed="$4"
 
-timeout 18 docker exec -i "$container" bash -s -- \
+timeout 24 docker exec -i "$container" bash -s -- \
   "$pose_topic" "$distance" "$max_speed" <<'INNER'
 set -Eeo pipefail
 set +u
@@ -524,7 +572,7 @@ pose_topic = sys.argv[1]
 target_distance = float(sys.argv[2])
 max_speed = float(sys.argv[3])
 distance_tolerance = 0.008
-max_runtime = 12.0
+max_runtime = max(12.0, target_distance / max_speed * 2.6)
 max_lateral_error = 0.040
 max_yaw_error = math.radians(5.0)
 min_speed = 0.020
@@ -887,11 +935,14 @@ measure_box_pose() {
 
   if ! output="$(run_grasp_script --measure-box-fast)"; then
     [[ -n "$output" ]] && printf '%s\n' "$output" >&2
-    die "La detección visual de la caja no superó sus validaciones."
+    return 1
   fi
   printf '%s\n' "$output" >&2
   pose="$(awk -F= '/^BOX_POSE_CAMERA=/ {print $2; exit}' <<<"$output")"
-  [[ -n "$pose" ]] || die "La visión no devolvió BOX_POSE_CAMERA."
+  if [[ -z "$pose" ]]; then
+    warn "La visión no devolvió BOX_POSE_CAMERA."
+    return 1
+  fi
   printf '%s\n' "$pose"
 }
 
@@ -1278,15 +1329,29 @@ approach_box_before_arms() {
   local total="0.0"
   local iteration
   local displacement
+  local measurement_attempt
+  local measurement_ok
 
   trap 'stop_base_silent' EXIT INT TERM HUP
 
   info "[APROXIMACIÓN 1/3] Bajando únicamente la cabeza..."
   run_grasp_script --prepare-vision --yes
 
-  for iteration in 1 2 3 4 5 6 7 8; do
-    info "[APROXIMACIÓN 2/3] Midiendo caja (iteración $iteration/8)..."
-    pose="$(measure_box_pose)"
+  for ((iteration=1; iteration<=APPROACH_MAX_ITERATIONS; iteration++)); do
+    info "[APROXIMACIÓN 2/3] Midiendo caja (iteración $iteration/$APPROACH_MAX_ITERATIONS)..."
+    measurement_ok=0
+    for measurement_attempt in 1 2 3; do
+      if pose="$(measure_box_pose)"; then
+        measurement_ok=1
+        break
+      fi
+      warn "Par visual transitorio descartado (intento ${measurement_attempt}/3)."
+      if ((measurement_attempt < 3)); then
+        sleep "$APPROACH_SETTLE_SECONDS"
+      fi
+    done
+    ((measurement_ok == 1)) || \
+      die "La detección visual de la caja no fue estable tras tres pares nuevos."
     read -r camera_x camera_y camera_z camera_yaw_deg <<<"$pose"
     [[ -n "$camera_x" && -n "$camera_y" && -n "$camera_z" && -n "$camera_yaw_deg" ]] || \
       die "La pose visual de la caja está incompleta."
@@ -1390,6 +1455,10 @@ PY
         ;;
     esac
     stop_base
+    # Permite que la base y la imagen se estabilicen antes de comparar el
+    # siguiente par de poses. No se reutiliza una lectura tomada durante el
+    # final de la corrección anterior.
+    sleep "$APPROACH_SETTLE_SECONDS"
     total="$(python3 -c 'import sys; print(f"{float(sys.argv[1]) + float(sys.argv[2]):.6f}")' \
       "$total" "$displacement")"
     info "APPROACH_ACCUMULATED=${total} m"
@@ -1398,7 +1467,7 @@ PY
     fi
   done
 
-  die "No se alcanzó la pose de agarre tras ocho correcciones visuales."
+  die "No se alcanzó la pose de agarre tras ${APPROACH_MAX_ITERATIONS} correcciones visuales."
 }
 
 confirm_once() {
@@ -1426,42 +1495,29 @@ verify_grasp() {
 }
 
 run_round_trip() {
-  local first_distance
-  local second_distance
   local total
 
   trap 'stop_base_silent' EXIT INT TERM HUP
 
-  info "[1/6] Guardando la pose inicial estable..."
+  info "[1/5] Guardando la pose inicial estable..."
   capture_initial_pose
 
-  info "[2/6] Retrocediendo el primer tramo de ${SEGMENT_DISTANCE} m..."
-  run_backward_segment
-  first_distance="$LAST_SEGMENT_DISTANCE"
-
-  info "Comprobación intermedia de paros, cargador y navegación..."
-  flow_safety_check
-
-  info "[3/6] Retrocediendo el segundo tramo de ${SEGMENT_DISTANCE} m..."
-  run_backward_segment
-  second_distance="$LAST_SEGMENT_DISTANCE"
-
+  info "[2/5] Retrocediendo en un único tramo odométrico de ${TOTAL_DISTANCE} m..."
+  run_backward_segment "$TOTAL_DISTANCE" "$BACKWARD_MAX_SPEED"
+  total="$LAST_SEGMENT_DISTANCE"
   stop_base
-
-  total="$(python3 -c 'import sys; print(f"{float(sys.argv[1]) + float(sys.argv[2]):.3f}")' \
-    "$first_distance" "$second_distance")"
   info "RETROCESO_COMPLETADO=${total} m"
 
-  info "[4/6] Confirmando que el agarre continúa vigente..."
+  info "[3/5] Confirmando que el agarre continúa vigente..."
   verify_grasp
   flow_safety_check
 
-  info "[5/6] Regresando a la pose inicial a un máximo de ${RETURN_MAX_SPEED} m/s..."
+  info "[4/5] Regresando a la pose inicial a un máximo de ${RETURN_MAX_SPEED} m/s..."
   return_to_initial_pose
   stop_base
   trap - EXIT INT TERM HUP
 
-  info "[6/6] Depositando sobre la mesa original y abriendo los cogedores..."
+  info "[5/5] Depositando sobre la mesa original y abriendo los cogedores..."
   if ((FAST == 0)); then
     verify_grasp
   else
@@ -1493,8 +1549,6 @@ handoff_to_automatic_home() {
 }
 
 run_retreat_only() {
-  local first_distance
-  local second_distance
   local total
 
   trap 'stop_base_silent' EXIT INT TERM HUP
@@ -1502,22 +1556,14 @@ run_retreat_only() {
   info "[1/4] Confirmando odometría estable..."
   capture_initial_pose
 
-  info "[2/4] Separándose de la mesa: primer tramo de ${SEGMENT_DISTANCE} m..."
-  run_backward_segment
-  first_distance="$LAST_SEGMENT_DISTANCE"
-
-  info "[3/4] Revalidando paros, cargador y canal de movimiento..."
-  flow_safety_check
-
-  info "[4/4] Separándose de la mesa: segundo tramo de ${SEGMENT_DISTANCE} m..."
-  run_backward_segment
-  second_distance="$LAST_SEGMENT_DISTANCE"
+  info "[2/4] Separándose de la mesa en un único tramo odométrico de ${TOTAL_DISTANCE} m..."
+  run_backward_segment "$TOTAL_DISTANCE" "$BACKWARD_MAX_SPEED"
+  total="$LAST_SEGMENT_DISTANCE"
   stop_base
   trap - EXIT INT TERM HUP
 
-  total="$(python3 -c 'import sys; print(f"{float(sys.argv[1]) + float(sys.argv[2]):.3f}")' \
-    "$first_distance" "$second_distance")"
-  info "RETREAT_COMPLETED=${total} m"
+  info "[3/4] Retroceso verificado continuamente por odometría."
+  info "[4/4] RETREAT_COMPLETED=${total} m"
   info "La base quedó detenida detrás de la pose inicial; no se movieron los brazos."
 }
 
@@ -1588,6 +1634,112 @@ PY
   trap - EXIT INT TERM HUP
   verify_grasp
   info "ADVANCE_HELD_COMPLETED=${ADVANCE_DISTANCE} m; la caja continúa sujeta."
+}
+
+confirm_base_correction() {
+  ((YES == 1)) && return 0
+  cat <<'EOF'
+
+CONFIRMACIÓN DE CORRECCIÓN LOCAL
+La orden moverá solamente el chasis una distancia o un ángulo pequeños.
+Confirma que Ethernet y cargador están desconectados, la envolvente completa
+del robot y de una posible caja está despejada y el paro está preparado.
+
+Escribe CORREGIR BASE para continuar:
+EOF
+  local answer
+  read -r answer
+  [[ "$answer" == "CORREGIR BASE" ]] || die "Corrección local cancelada."
+}
+
+run_move_relative() {
+  local forward
+  local lateral
+
+  read -r forward lateral <<<"$RELATIVE_MOVE"
+  [[ -n "$forward" && -n "$lateral" ]] || \
+    die "--move-relative necesita exactamente dos valores: \"AVANCE LATERAL\"."
+  RELATIVE_MOVE="$(python3 - "$forward" "$lateral" <<'PY'
+import math
+import sys
+
+try:
+    forward, lateral = map(float, sys.argv[1:])
+except ValueError as exc:
+    raise SystemExit(f"Corrección relativa inválida: {exc}")
+distance = math.hypot(forward, lateral)
+bearing = abs(math.atan2(lateral, forward))
+if not all(math.isfinite(value) for value in (forward, lateral)):
+    raise SystemExit("La corrección contiene un valor no finito")
+if not 0.025 <= forward <= 0.20:
+    raise SystemExit("El avance debe estar entre 0,025 y 0,20 m")
+if abs(lateral) > 0.08:
+    raise SystemExit("La corrección lateral supera 0,08 m")
+if distance > 0.21 or bearing > math.radians(45.0):
+    raise SystemExit("La corrección no pertenece al arco frontal permitido")
+print(f"{forward:.6f} {lateral:.6f}")
+PY
+)"
+  read -r forward lateral <<<"$RELATIVE_MOVE"
+
+  flow_safety_check
+  confirm_base_correction
+  capture_initial_pose
+  set_relative_goal "$forward" "$lateral"
+  trap 'stop_base_silent' EXIT INT TERM HUP
+  info "Corrigiendo base: avance=${forward} m, lateral=${lateral} m..."
+  run_forward_arc_to_goal "0.05" "0.012"
+  stop_base
+  trap - EXIT INT TERM HUP
+  info "RELATIVE_MOVE_COMPLETED=forward:${forward},lateral:${lateral}"
+}
+
+run_rotate_relative_mode() {
+  RELATIVE_ROTATION="$(python3 - "$RELATIVE_ROTATION" <<'PY'
+import math
+import sys
+
+try:
+    angle = float(sys.argv[1])
+except ValueError as exc:
+    raise SystemExit(f"Ángulo inválido: {exc}")
+if not math.isfinite(angle) or not 0.7 <= abs(angle) <= 10.0:
+    raise SystemExit("El giro debe estar entre 0,7 y 10 grados en valor absoluto")
+print(f"{angle:.6f}")
+PY
+)"
+  flow_safety_check
+  confirm_base_correction
+  trap 'stop_base_silent' EXIT INT TERM HUP
+  info "Corrigiendo orientación de la base: ${RELATIVE_ROTATION} grados..."
+  rotate_base_relative "$RELATIVE_ROTATION"
+  stop_base
+  trap - EXIT INT TERM HUP
+  info "RELATIVE_ROTATION_COMPLETED=${RELATIVE_ROTATION} deg"
+}
+
+run_backward_distance_mode() {
+  BACKWARD_DISTANCE="$(python3 - "$BACKWARD_DISTANCE" <<'PY'
+import math
+import sys
+
+try:
+    distance = float(sys.argv[1])
+except ValueError as exc:
+    raise SystemExit(f"Distancia inválida: {exc}")
+if not math.isfinite(distance) or not 0.02 <= distance <= 0.15:
+    raise SystemExit("El retroceso debe estar entre 0,02 y 0,15 m")
+print(f"{distance:.6f}")
+PY
+)"
+  flow_safety_check
+  confirm_base_correction
+  trap 'stop_base_silent' EXIT INT TERM HUP
+  info "Creando espacio para la alineación: retroceso=${BACKWARD_DISTANCE} m..."
+  run_backward_segment "$BACKWARD_DISTANCE" "0.04"
+  stop_base
+  trap - EXIT INT TERM HUP
+  info "BACKWARD_DISTANCE_COMPLETED=${BACKWARD_DISTANCE} m"
 }
 
 main() {
@@ -1664,6 +1816,18 @@ main() {
     advance-held-distance)
       require_wireless_run
       run_advance_held_distance
+      ;;
+    move-relative)
+      require_wireless_run
+      run_move_relative
+      ;;
+    rotate-relative)
+      require_wireless_run
+      run_rotate_relative_mode
+      ;;
+    backward-distance)
+      require_wireless_run
+      run_backward_distance_mode
       ;;
     *)
       die "Modo interno desconocido: $MODE"

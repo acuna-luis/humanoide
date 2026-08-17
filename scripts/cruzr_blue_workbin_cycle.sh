@@ -60,6 +60,7 @@ readonly DEPOSIT_TEMPLATE="$TEMPLATE_DIR/blue_workbin_auto_deposit.xml"
 MODE="check"
 YES=0
 FAST=0
+FLUID_MODE="${CRUZR_FLUID_MODE:-0}"
 HOLD_SECONDS="$DEFAULT_HOLD_SECONDS"
 CONNECTION_MODE=""
 GRASP_REPORT=""
@@ -573,8 +574,8 @@ import math
 import sys
 
 samples = [[float(value) for value in sample.split()] for sample in sys.argv[1:]]
-if len(samples) not in (2, 3) or any(len(sample) != 7 for sample in samples):
-    raise SystemExit("Se requieren dos o tres poses de visión")
+if len(samples) not in (1, 2, 3) or any(len(sample) != 7 for sample in samples):
+    raise SystemExit("Se requieren entre una y tres poses de visión")
 
 for index, (x, y, z, qx, qy, qz, qw) in enumerate(samples, 1):
     if abs(x) > 0.55:
@@ -649,11 +650,53 @@ verify_clamp_log() {
   local log_excerpt
   log_excerpt="$(ssh_motion bash -s -- <<'REMOTE'
 set -Eeuo pipefail
-latest="$(find /etc/walker/log/motion -maxdepth 1 -type f -name 'robot_app*.log' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
 marker="BTree task: 'cruzr/blue_workbin_clamp_only' is start"
-line="$(grep -nF "$marker" "$latest" | tail -n1 | cut -d: -f1 || true)"
-[[ -n "$line" ]] || exit 60
-tail -n "+$line" "$latest"
+
+# El proceso puede rotar robot_app.log justo entre el fin de la acción y esta
+# comprobación. Además, algunas líneas tardan unos segundos en volcarse. Busca
+# el último inicio de agarre en varios archivos consecutivos y espera a que las
+# medidas finales estén disponibles antes de devolver el segmento completo.
+for attempt in 1 2 3 4 5; do
+  mapfile -t records < <(
+    find /etc/walker/log/motion -maxdepth 1 -type f \
+      -name 'robot_app*.log' -printf '%T@\t%p\n' |
+      sort -n | tail -n 12
+  )
+
+  marker_index=-1
+  marker_line=""
+  for ((index=${#records[@]} - 1; index >= 0; index--)); do
+    file="${records[index]#*$'\t'}"
+    line="$(grep -nF "$marker" "$file" | tail -n1 | cut -d: -f1 || true)"
+    if [[ -n "$line" ]]; then
+      marker_index="$index"
+      marker_line="$line"
+      break
+    fi
+  done
+
+  if ((marker_index >= 0)); then
+    segment="$({
+      file="${records[marker_index]#*$'\t'}"
+      tail -n "+$marker_line" "$file"
+      for ((index=marker_index + 1; index < ${#records[@]}; index++)); do
+        file="${records[index]#*$'\t'}"
+        cat "$file"
+      done
+    })"
+
+    if grep -qF "left-right-arm tool's distance on base:" <<<"$segment" && \
+       grep -qF "left_force_base" <<<"$segment"; then
+      printf '__CRUZR_CLAMP_LOG_SEGMENT__\n%s\n' "$segment"
+      exit 0
+    fi
+  fi
+
+  ((attempt < 5)) && sleep 1
+done
+
+echo "No se encontró un registro completo del último agarre tras 5 intentos" >&2
+exit 60
 REMOTE
 )"
 
@@ -662,11 +705,11 @@ import re
 import sys
 
 text = sys.stdin.read()
-marker = "BTree task: \x27cruzr/blue_workbin_clamp_only\x27 is start"
-index = text.rfind(marker)
+sentinel = "__CRUZR_CLAMP_LOG_SEGMENT__"
+index = text.find(sentinel)
 if index < 0:
-    raise SystemExit("No se encontró el inicio del agarre en el registro")
-segment = text[index:]
+    raise SystemExit("No se recibió el segmento completo del último agarre")
+segment = text[index + len(sentinel):]
 
 release_markers = (
     "Start MetaClamp: put_collision_cruzr",
@@ -832,9 +875,14 @@ main() {
 
   # La aproximación ya ejecutó sus comprobaciones generales. Este modo evita
   # repetir batería, acciones y hashes en cada corrección visual; aun así exige
-  # dos detecciones coherentes y no publica movimiento.
+  # dos detecciones coherentes en modo normal. El modo fluido usa una pose para
+  # las correcciones intermedias; antes del agarre se conservan dos muestras.
   if [[ "$MODE" == "measure-box-fast" ]]; then
-    collect_detection_samples 2
+    if [[ "$FLUID_MODE" == "1" ]]; then
+      collect_detection_samples 1
+    else
+      collect_detection_samples 2
+    fi
     validate_approach_samples "${VISION_SAMPLES[@]}"
     exit 0
   fi

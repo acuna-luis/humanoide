@@ -1,0 +1,10 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Parallel threshold="2">
+            <Action ID="MetaMove" type="arm" location="left"
+                joint_angles="0;0;0;0;0;0;0" duration="8.0" />
+            <Action ID="MetaMove" type="arm" location="right"
+                joint_angles="0;0;0;0;0;0;0" duration="8.0" />
+        </Parallel>
+    </BehaviorTree>
+</root>

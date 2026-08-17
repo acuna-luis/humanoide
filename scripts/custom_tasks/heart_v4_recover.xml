@@ -1,0 +1,31 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <!--
+              Recuperación desde la pose de love: primero retrae el pulgar
+              izquierdo a la posición que usa production_movie/post_love.xml.
+              Sólo si la alcanza, baja ambos brazos manteniendo esa posición.
+              Las manos se abren cuando los brazos ya están en cero.
+            -->
+            <Action ID="MetaMove" type="effector" location="left"
+                eef_joint_commands="0.95;0.0;0.0;0.02;0.02;0.02;0.02"
+                duration="3.0" />
+
+            <Parallel threshold="2">
+                <Action ID="MetaMove" type="arm" location="left"
+                    joint_angles="0;0;0;0;0;0;0" duration="8.0" />
+                <Action ID="MetaMove" type="arm" location="right"
+                    joint_angles="0;0;0;0;0;0;0" duration="8.0" />
+            </Parallel>
+
+            <Parallel threshold="2">
+                <Action ID="MetaMove" type="effector" location="left"
+                    eef_joint_commands="0.0;0.0;0.0;0.02;0.02;0.02;0.02"
+                    duration="4.0" />
+                <Action ID="MetaMove" type="effector" location="right"
+                    eef_joint_commands="0.0;0.0;0.0;0.02;0.02;0.02;0.02"
+                    duration="4.0" />
+            </Parallel>
+        </Sequence>
+    </BehaviorTree>
+</root>
