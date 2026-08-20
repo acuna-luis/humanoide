@@ -23,7 +23,8 @@ if [[ "$FLUID_MODE" == "1" ]]; then
   APPROACH_MAX_SPEED="0.12"
   APPROACH_DEPTH_TOLERANCE="0.050"
   APPROACH_CENTER_TOLERANCE="0.035"
-  APPROACH_MAX_STEP="0.42"
+  APPROACH_MAX_STEP="0.60"
+  APPROACH_MAX_LATERAL_STEP="0.30"
   APPROACH_MAX_ITERATIONS="5"
   APPROACH_SETTLE_SECONDS="0.20"
 else
@@ -31,21 +32,25 @@ else
   APPROACH_MAX_SPEED="0.08"
   APPROACH_DEPTH_TOLERANCE="0.020"
   APPROACH_CENTER_TOLERANCE="0.030"
-  APPROACH_MAX_STEP="0.30"
+  APPROACH_MAX_STEP="0.55"
+  APPROACH_MAX_LATERAL_STEP="0.30"
   APPROACH_MAX_ITERATIONS="8"
   APPROACH_SETTLE_SECONDS="0.60"
 fi
 readonly FLUID_MODE BACKWARD_MAX_SPEED APPROACH_MAX_SPEED \
   APPROACH_DEPTH_TOLERANCE APPROACH_CENTER_TOLERANCE APPROACH_MAX_STEP \
-  APPROACH_MAX_ITERATIONS APPROACH_SETTLE_SECONDS
+  APPROACH_MAX_LATERAL_STEP APPROACH_MAX_ITERATIONS APPROACH_SETTLE_SECONDS
 readonly APPROACH_MAX_TOTAL="1.20"
 # La detección que produjo el agarre estable midió z=0,966 m. En este mensaje
 # z es la profundidad óptica; la distancia euclídea no sirve como consigna
 # porque también contiene la altura de la cámara sobre la caja.
 readonly APPROACH_TARGET_DEPTH="0.966"
-readonly APPROACH_MAX_LATERAL_STEP="0.10"
 readonly APPROACH_BACKOFF_CLEARANCE="0.12"
-readonly APPROACH_YAW_TOLERANCE_DEG="2.0"
+readonly APPROACH_MAX_BACKOFF_STEP="0.30"
+# El yaw del detector workbin fluctúa varios grados incluso con la caja
+# inmóvil. Cuatro grados conservan la alineación útil de las abrazaderas y
+# evitan que el chasis persiga ruido entre dos mediciones consecutivas.
+readonly APPROACH_YAW_TOLERANCE_DEG="4.0"
 readonly RETURN_POSITION_TOLERANCE="0.03"
 readonly RETURN_YAW_TOLERANCE="0.0524"
 readonly GRASP_SCRIPT_NAME="cruzr_blue_workbin_cycle.sh"
@@ -1361,7 +1366,8 @@ approach_box_before_arms() {
       "$APPROACH_TARGET_DEPTH" "$APPROACH_DEPTH_TOLERANCE" \
       "$APPROACH_CENTER_TOLERANCE" "$APPROACH_MAX_STEP" \
       "$APPROACH_MAX_LATERAL_STEP" "$APPROACH_BACKOFF_CLEARANCE" \
-      "$APPROACH_YAW_TOLERANCE_DEG" "$APPROACH_MAX_TOTAL" "$total" <<'PY'
+      "$APPROACH_MAX_BACKOFF_STEP" "$APPROACH_YAW_TOLERANCE_DEG" \
+      "$APPROACH_MAX_TOTAL" "$total" <<'PY'
 import math
 import sys
 
@@ -1376,6 +1382,7 @@ import sys
     max_step,
     max_lateral,
     backoff_clearance,
+    max_backoff_step,
     yaw_tolerance_deg,
     max_total,
     total,
@@ -1393,11 +1400,22 @@ elif abs(depth_error) <= tolerance and abs(x) <= center_tolerance:
         )
     print(f"READY 0.000000 0.000000 {z:.6f}")
 else:
-    # La base no puede trasladarse de lado. Si está demasiado cerca para una
-    # curva de centrado, primero crea espacio retrocediendo.
-    required_forward = max(backoff_clearance, 2.0 * abs(lateral_error))
-    if abs(x) > center_tolerance and depth_error < required_forward:
-        backoff = max(0.04, min(max_step, required_forward - depth_error))
+    # La base diferencial necesita avance para producir un desplazamiento
+    # lateral y recuperar el rumbo. Calculamos ese espacio una vez y después
+    # permitimos un arco amplio hacia la pose de agarre. El margen de 3 cm
+    # evita cadenas de retrocesos mínimos debidas al error de odometría.
+    required_forward = max(
+        backoff_clearance,
+        1.25 * abs(lateral_error) + 0.03,
+    )
+    if (
+        abs(x) > center_tolerance
+        and depth_error + 0.03 < required_forward
+    ):
+        backoff = max(
+            0.04,
+            min(max_backoff_step, required_forward - depth_error),
+        )
         action, forward, lateral = "BACKOFF", backoff, 0.0
         displacement = backoff
     elif depth_error < -tolerance:

@@ -1,0 +1,107 @@
+Subject: Cruzr S2 v0.2.0 upgrade results and technical findings
+
+Dear Viki, Mr. Zhu and Lucio,
+
+We have completed the offline upgrade of our Cruzr S2 to software version
+v0.2.0 on both the Motion and Vision computers.
+
+The robot remained stationary during the complete procedure, with empty
+clamps, the charger disconnected, the work area clear and the emergency stop
+available. No navigation, manipulation or VLA movement command was issued.
+
+Upgrade procedure and result
+
+- The official offline package and configuration archive passed their
+  integrity checks.
+- Complete backups of the Motion and Vision configurations and map data were
+  created before applying the upgrade.
+- All required offline images were imported on the correct computer and
+  architecture.
+- The standard "udoke replace" procedure was attempted three times. In every
+  attempt, the server received upload-begin but did not receive upload-confirm,
+  and the connection was closed after the heartbeat timeout. No partial upgrade
+  was applied.
+- We therefore followed the manual fallback procedure included in the official
+  offline upgrade SOP: pre-installation scripts, configuration replacement,
+  UDoke deployment and post-installation scripts.
+- Both computers now report software version v0.2.0.
+- The clamp configuration was preserved as HW_TYPE=cruzr_s2_v1 on all relevant
+  Motion services.
+- Manipulation, motion-control, navigation and box-vision action servers are
+  available.
+- The robot web and navigation interfaces are accessible.
+- The existing test_route_01 map was preserved and its checksum is unchanged.
+  The map is currently stored but not active after the upgrade, so it will be
+  selected and the robot localized again before the next navigation test.
+
+Final safety readings
+
+- Battery SOC: 80.6% and 80.8%
+- Battery temperature: 34 degrees Celsius on both packs
+- Charger input: disconnected
+- Emergency stop: released
+- Servo emergency stop: released
+- Both complete battery serial numbers are reported correctly
+
+VLA package status
+
+The supplied VLA inference and control images, checkpoint-40000 and associated
+workspaces have been installed and verified on the corresponding computers.
+For safety, both VLA containers remain stopped with automatic restart disabled.
+The VLA has not been activated and no VLA control command has reached the robot.
+We intend to validate inference in observation/shadow mode before allowing any
+physical control.
+
+Technical findings requiring your confirmation
+
+1. main.x86 and main.orin template services
+
+The generated v0.2.0 configuration starts main.x86 and main.orin with an
+"always" restart policy but without a command. Both exit normally with code 0
+and are then restarted continuously. They appear to be configuration templates
+rather than operational services. We disabled their automatic restart and left
+them stopped; all inherited operational services continue running normally.
+
+Could you please confirm whether these two template services should be excluded
+or stopped in a normal v0.2.0 deployment?
+
+2. Cloud MQTT client segmentation fault
+
+The v0.2.0 cloud MQTT client repeatedly crashes with a segmentation fault while
+processing the battery-state callback. To prevent a continuous crash loop, we
+stopped this optional client and disabled its automatic restart. The separate
+local/upilot MQTT service remains stable, and local navigation, manipulation,
+vision and remote-control functions remain available.
+
+Could you please provide a corrected image or configuration for the cloud MQTT
+client?
+
+3. Vision Netdata health check
+
+The Vision Netdata container is running, but Docker reports it as unhealthy
+because its health check cannot connect to the local port 19999 endpoint.
+
+Please confirm the intended Netdata configuration and whether this health-check
+failure is known in v0.2.0.
+
+4. GPU frequency
+
+The official Vision GPU configuration script completed successfully, but it
+reported a current GPU frequency of 1.224 GHz while its target was 1.122 GHz.
+The persistent GPU configuration script was already at the expected version.
+
+Please confirm the correct target frequency for this Cruzr S2 hardware revision.
+
+5. Final reboot and map state
+
+The upgrade and required service restarts completed without a full robot reboot.
+Please confirm whether a complete power cycle, additional calibration or any
+other final commissioning step is required after using the documented manual
+fallback procedure. Please also confirm whether returning to an inactive map
+state after the upgrade is expected.
+
+Apart from the items listed above, the v0.2.0 platform is operational and the
+robot configuration, map data and clamp hardware settings have been preserved.
+
+Best regards,
+Luis Acuna

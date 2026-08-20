@@ -71,7 +71,35 @@ readonly MAX_VERTICAL_ERROR="0.050"
 # variación acoplada Y/Z. La pendiente corresponde a una inclinación de unos
 # 25 grados y fue confirmada entre MESA2_PRE y MESA2_DROP_TARGET.
 readonly GROUND_Y_PER_Z="0.466"
-readonly MAX_TRANSLATION_TOTAL="0.45"
+APRILTAG_EXTENDED="${CRUZR_APRILTAG_EXTENDED:-0}"
+[[ "$APRILTAG_EXTENDED" == "0" || "$APRILTAG_EXTENDED" == "1" ]] || {
+  echo "CRUZR_APRILTAG_EXTENDED debe ser 0 o 1" >&2
+  exit 2
+}
+if ((APRILTAG_EXTENDED == 1)); then
+  # La corrección lateral de una base diferencial necesita crear primero un
+  # arco con un pequeño retroceso. El presupuesto cuenta recorrido absoluto,
+  # no desplazamiento neto, por lo que 0,75 m interrumpía ciclos convergentes.
+  MAX_TRANSLATION_TOTAL="1.10"
+  if ((FLUID_MODE == 1)); then
+    ALIGNMENT_MAX_ITERATIONS="8"
+  else
+    ALIGNMENT_MAX_ITERATIONS="12"
+  fi
+else
+  MAX_TRANSLATION_TOTAL="0.45"
+  ALIGNMENT_MAX_ITERATIONS="$MAX_ITERATIONS"
+fi
+readonly APRILTAG_EXTENDED MAX_TRANSLATION_TOTAL ALIGNMENT_MAX_ITERATIONS
+readonly COARSE_CAPTURE_DZ="0.40"
+# La alineación fina admite pasos de 0,12/0,18 m. Un margen de entrada de
+# 0,05 m evita ordenar un tramo mínimo de 0,10 m solo por ruido o por la
+# tolerancia de parada odométrica cuando dz está apenas sobre 0,40 m.
+readonly COARSE_CAPTURE_HYSTERESIS="0.05"
+readonly COARSE_POSITION_STD_MAX="0.010"
+readonly COARSE_MAX_TOTAL="1.20"
+readonly COARSE_MAX_ITERATIONS="5"
+readonly MAX_AMBIGUOUS_ORIENTATION_SAMPLES="3"
 
 readonly CARRY_SCRIPT_NAME="cruzr_blue_workbin_carry_back.sh"
 readonly CYCLE_SCRIPT_NAME="cruzr_blue_workbin_cycle.sh"
@@ -107,6 +135,7 @@ Uso:
   ./scripts/cruzr_apriltag_mesa2_align.sh --measure-held-target [--fast]
   ./scripts/cruzr_apriltag_mesa2_align.sh --align-empty [--yes] [--fast]
   ./scripts/cruzr_apriltag_mesa2_align.sh --align-held [--yes] [--fast]
+  ./scripts/cruzr_apriltag_mesa2_align.sh --coarse-held [--yes] [--fast]
 
 Modos:
   --check       Comprueba contenedor, servicio y tópico AprilTag. No mueve.
@@ -122,6 +151,9 @@ Modos:
                 candidata de calibración con carga. No mueve.
   --align-empty Alinea solamente el chasis durante las pruebas sin caja.
   --align-held  Exige un agarre vigente antes y después de alinear el chasis.
+  --coarse-held Con la caja sujeta, usa el tag para avanzar solamente lo que
+                falta hasta dejar el error frontal dentro de 0,40 m. No abre
+                los cogedores y no sustituye la alineación fina posterior.
 
 La cabeza debe encontrarse en la misma postura move_head_lower utilizada en
 la calibración. El script nunca mueve los brazos ni ordena abrir los cogedores.
@@ -146,7 +178,7 @@ warn() {
 
 while (($#)); do
   case "$1" in
-    --check|--check-visible|--measure|--measure-held|--measure-held-target|--align-empty|--align-held)
+    --check|--check-visible|--measure|--measure-held|--measure-held-target|--align-empty|--align-held|--coarse-held)
       MODE="${1#--}"
       ;;
     --yes)
@@ -333,8 +365,20 @@ stop_detector_silent() {
 
 measure_tag_pose() {
   local count="${1:-$SAMPLE_COUNT}"
+  local allow_orientation_ambiguity="${2:-0}"
+  local position_std_max="${3:-0.004}"
+  [[ "$allow_orientation_ambiguity" == "0" || "$allow_orientation_ambiguity" == "1" ]] || \
+    die "allow_orientation_ambiguity debe ser 0 o 1."
+  python3 - "$position_std_max" <<'PY' >/dev/null
+import math
+import sys
+value = float(sys.argv[1])
+if not math.isfinite(value) or not 0.004 <= value <= 0.010:
+    raise SystemExit("position_std_max debe estar entre 0.004 y 0.010 m")
+PY
   ssh_vision bash -s -- "$ROS_CONTAINER" "$TAG_TOPIC" "$TAG_ID" "$TAG_SIZE" \
-    "$TAG_FRAME" "$CAMERA_FRAME" "$count" <<'REMOTE'
+    "$TAG_FRAME" "$CAMERA_FRAME" "$count" "$allow_orientation_ambiguity" \
+    "$position_std_max" <<'REMOTE'
 set -Eeuo pipefail
 container="$1"
 shift
@@ -354,10 +398,21 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_task_msgs.msg import AprilTagDetectionArray
 
-topic, expected_id, expected_size, expected_tag_frame, expected_camera_frame, count = sys.argv[1:]
+(
+    topic,
+    expected_id,
+    expected_size,
+    expected_tag_frame,
+    expected_camera_frame,
+    count,
+    allow_orientation_ambiguity,
+    position_std_max,
+) = sys.argv[1:]
 expected_id = int(expected_id)
 expected_size = float(expected_size)
 count = int(count)
+allow_orientation_ambiguity = bool(int(allow_orientation_ambiguity))
+position_std_max = float(position_std_max)
 
 
 class Collector(Node):
@@ -447,11 +502,13 @@ for q in quaternions:
     angles.append(math.degrees(2.0 * math.acos(dot)))
 margin_min = min(sample[7] for sample in samples)
 
-if max(std) > 0.004:
+if max(std) > position_std_max:
     raise RuntimeError(
-        "Pose AprilTag inestable: desviación=" + ",".join(f"{v*1000:.2f}" for v in std) + " mm"
+        "Pose AprilTag inestable: desviación="
+        + ",".join(f"{v*1000:.2f}" for v in std)
+        + f" mm; límite={position_std_max*1000:.1f} mm"
     )
-if max(angles) > 2.0:
+if max(angles) > 2.0 and not allow_orientation_ambiguity:
     raise RuntimeError(f"Orientación AprilTag inestable: {max(angles):.2f} grados")
 
 print(
@@ -463,6 +520,11 @@ print(
     + ",".join(f"{value*1000:.3f}" for value in std)
     + f",max_angle_deg:{max(angles):.3f},margin_min:{margin_min:.3f}"
 )
+if max(angles) > 2.0:
+    print(
+        "TAG_ORIENTATION_AMBIGUOUS="
+        f"spread_deg:{max(angles):.3f},policy:position_only_candidate"
+    )
 PY
 INNER
 REMOTE
@@ -470,6 +532,7 @@ REMOTE
 
 compute_plan() {
   local pose="$1"
+  local orientation_fallback="${2:-0}"
   local target_x="$TARGET_X"
   local target_y="$TARGET_Y"
   local target_z="$TARGET_Z"
@@ -478,7 +541,7 @@ compute_plan() {
   local target_qz="$TARGET_QZ"
   local target_qw="$TARGET_QW"
 
-  if [[ "$MODE" == "align-held" || "$MODE" == "measure-held" ]]; then
+  if [[ "$MODE" == "align-held" || "$MODE" == "measure-held" || "$MODE" == "coarse-held" ]]; then
     target_x="$HELD_TARGET_X"
     target_y="$HELD_TARGET_Y"
     target_z="$HELD_TARGET_Z"
@@ -492,7 +555,7 @@ compute_plan() {
     "$target_qx" "$target_qy" "$target_qz" "$target_qw" \
     "$POSITION_TOLERANCE" "$VERTICAL_TOLERANCE" "$YAW_TOLERANCE_DEG" \
     "$SWING_TOLERANCE_DEG" "$MAX_SWING_DEG" "$MAX_VERTICAL_ERROR" \
-    "$GROUND_Y_PER_Z" "$MAX_FORWARD_STEP" <<'PY'
+    "$GROUND_Y_PER_Z" "$MAX_FORWARD_STEP" "$orientation_fallback" <<'PY'
 import math
 import sys
 
@@ -507,7 +570,8 @@ target = tuple(map(float, sys.argv[2:9]))
     max_vertical,
     ground_y_per_z,
     max_forward_step,
-) = map(float, sys.argv[9:])
+) = map(float, sys.argv[9:-1])
+orientation_fallback = int(sys.argv[-1])
 if len(current) != 7:
     raise SystemExit("TAG_POSE debe contener posición y cuaternión")
 
@@ -571,7 +635,14 @@ print(
     f"swing_deg:{swing_deg:.3f},vertical_residual_mm:{vertical_residual*1000:.2f}"
 )
 
-if swing_deg > max_swing:
+if orientation_fallback:
+    # La PnP de un único marcador plano puede alternar entre dos soluciones
+    # angulares aun cuando la traslación sea estable. En fallback no se envía
+    # ningún giro derivado de ese cuaternión ambiguo.
+    base_yaw_deg = 0.0
+    print("ORIENTATION_POLICY=position_vertical_fallback")
+
+if swing_deg > max_swing and not orientation_fallback:
     print("PLAN=FAIL_HEAD 0 0")
 elif abs(vertical_residual) > max_vertical:
     print("PLAN=FAIL_VERTICAL 0 0")
@@ -581,7 +652,7 @@ elif (
     and abs(dz) <= pos_tol
     and abs(vertical_residual) <= vertical_tol
     and abs(base_yaw_deg) <= yaw_tol
-    and swing_deg <= swing_tol
+    and (swing_deg <= swing_tol or orientation_fallback)
 ):
     print("PLAN=READY 0 0")
 elif abs(base_yaw_deg) > yaw_tol:
@@ -660,7 +731,9 @@ run_visibility_check() {
 
   set_detector true
   trap 'stop_detector_silent' EXIT INT TERM HUP
-  output="$(measure_tag_pose)"
+  # Para visibilidad solo importan ID, frame, margen y traslación estable. Un
+  # AprilTag plano puede alternar de rama angular sin dejar de ser visible.
+  output="$(measure_tag_pose "$SAMPLE_COUNT" 1 "$COARSE_POSITION_STD_MAX")"
   printf '%s\n' "$output"
   pose="$(awk -F= '/^TAG_POSE=/ {print $2; exit}' <<<"$output")"
   [[ -n "$pose" ]] || die "El tag 113 no produjo una pose estable."
@@ -689,6 +762,97 @@ run_held_target_measurement() {
   trap - EXIT INT TERM HUP
 }
 
+compute_coarse_plan() {
+  local pose="$1"
+  python3 - "$pose" "$HELD_TARGET_X" "$HELD_TARGET_Y" "$HELD_TARGET_Z" \
+    "$GROUND_Y_PER_Z" "$COARSE_CAPTURE_DZ" "$COARSE_CAPTURE_HYSTERESIS" <<'PY'
+import math
+import sys
+
+current = tuple(map(float, sys.argv[1].split()))
+tx, ty, tz, ground_y_per_z, capture_dz, capture_hysteresis = map(float, sys.argv[2:])
+if len(current) != 7:
+    raise SystemExit("TAG_POSE debe contener siete valores")
+cx, cy, cz = current[:3]
+dx, dy, dz = cx - tx, cy - ty, cz - tz
+vertical_residual = dy + ground_y_per_z * dz
+print(
+    f"COARSE_TAG_ERROR=x_mm:{dx*1000:.2f},y_mm:{dy*1000:.2f},"
+    f"z_mm:{dz*1000:.2f},vertical_residual_mm:{vertical_residual*1000:.2f}"
+)
+if abs(dx) > 0.45:
+    print("COARSE_PLAN=FAIL_LATERAL 0")
+elif abs(vertical_residual) > 0.080:
+    print("COARSE_PLAN=FAIL_VERTICAL 0")
+elif dz < -0.05:
+    print("COARSE_PLAN=FAIL_TOO_CLOSE 0")
+elif dz <= capture_dz + capture_hysteresis:
+    print("COARSE_PLAN=READY 0")
+else:
+    # Conserva capture_dz para que la alineación fina corrija el lateral y la
+    # pose final. advance-held-distance admite como máximo 0,65 m por tramo.
+    advance = max(0.10, min(0.65, dz - capture_dz))
+    print(f"COARSE_PLAN=ADVANCE {advance:.6f}")
+PY
+}
+
+run_coarse_alignment() {
+  local iteration output pose plan_output plan advance total="0.0"
+
+  confirm_alignment
+  carry_args --check
+  cycle_args --verify-grasp
+  set_detector true
+  trap 'stop_detector_silent' EXIT INT TERM HUP
+
+  for ((iteration=1; iteration<=COARSE_MAX_ITERATIONS; iteration++)); do
+    info "[APRILTAG GRUESO] Medición ${iteration}/${COARSE_MAX_ITERATIONS}..."
+    output="$(measure_tag_pose "$SAMPLE_COUNT" 1 "$COARSE_POSITION_STD_MAX")"
+    printf '%s\n' "$output"
+    pose="$(awk -F= '/^TAG_POSE=/ {print $2; exit}' <<<"$output")"
+    [[ -n "$pose" ]] || die "No se obtuvo TAG_POSE durante la aproximación gruesa."
+    plan_output="$(compute_coarse_plan "$pose")"
+    printf '%s\n' "$plan_output"
+    read -r plan advance <<<"$(awk -F= '/^COARSE_PLAN=/ {print $2; exit}' <<<"$plan_output")"
+
+    case "$plan" in
+      READY)
+        stop_detector_silent
+        trap - EXIT INT TERM HUP
+        cycle_args --verify-grasp
+        info "MESA2_APRILTAG_COARSE_OK=iterations:${iteration},translation:${total}m"
+        return 0
+        ;;
+      ADVANCE)
+        total="$(python3 - "$total" "$advance" "$COARSE_MAX_TOTAL" <<'PY'
+import sys
+total, advance, maximum = map(float, sys.argv[1:])
+total += advance
+if total > maximum + 1e-6:
+    raise SystemExit(f"La aproximación gruesa superaría {maximum:.2f} m")
+print(f"{total:.6f}")
+PY
+)"
+        carry_args --advance-held-distance "$advance" --yes
+        ;;
+      FAIL_LATERAL)
+        die "El tag está demasiado desplazado lateralmente para una aproximación recta."
+        ;;
+      FAIL_VERTICAL)
+        die "La geometría vertical del tag no corresponde a la postura calibrada."
+        ;;
+      FAIL_TOO_CLOSE)
+        die "El robot ya está más cerca de la mesa que la referencia de depósito."
+        ;;
+      *)
+        die "Plan AprilTag grueso desconocido: $plan"
+        ;;
+    esac
+    sleep "$ALIGNMENT_SETTLE_SECONDS"
+  done
+  die "La aproximación gruesa no entró en el rango fino tras ${COARSE_MAX_ITERATIONS} correcciones."
+}
+
 run_alignment() {
   local output
   local pose
@@ -701,6 +865,8 @@ run_alignment() {
   local previous_yaw=""
   local current_yaw
   local last_action=""
+  local ambiguous_orientation_samples=0
+  local orientation_fallback=0
 
   confirm_alignment
   # Valida una vez odometría, monitor de velocidad, paros y cargador. Las
@@ -717,16 +883,43 @@ run_alignment() {
   set_detector true
   trap 'stop_detector_silent' EXIT INT TERM HUP
 
-  for ((iteration=1; iteration<=MAX_ITERATIONS; iteration++)); do
-    info "[APRILTAG] Medición ${iteration}/${MAX_ITERATIONS}..."
-    output="$(measure_tag_pose)"
-    printf '%s\n' "$output"
-    pose="$(awk -F= '/^TAG_POSE=/ {print $2; exit}' <<<"$output")"
-    [[ -n "$pose" ]] || die "No se obtuvo TAG_POSE. La base queda detenida."
-    plan_output="$(compute_plan "$pose")"
-    printf '%s\n' "$plan_output"
-    read -r plan value1 value2 <<<"$(awk -F= '/^PLAN=/ {print $2; exit}' <<<"$plan_output")"
-    [[ -n "$plan" ]] || die "No se obtuvo un plan de corrección."
+  for ((iteration=1; iteration<=ALIGNMENT_MAX_ITERATIONS; iteration++)); do
+    while :; do
+      info "[APRILTAG] Medición ${iteration}/${ALIGNMENT_MAX_ITERATIONS}..."
+      output="$(measure_tag_pose "$SAMPLE_COUNT" 1)"
+      printf '%s\n' "$output"
+      pose="$(awk -F= '/^TAG_POSE=/ {print $2; exit}' <<<"$output")"
+      [[ -n "$pose" ]] || die "No se obtuvo TAG_POSE. La base queda detenida."
+      if [[ "$orientation_fallback" == "0" ]] && \
+         grep -q '^TAG_ORIENTATION_AMBIGUOUS=' <<<"$output"; then
+        orientation_fallback=1
+        warn "El propio lote contiene las dos ramas PnP del tag: se usarán posición y residual vertical; no se enviarán giros derivados del cuaternión."
+      fi
+      plan_output="$(compute_plan "$pose" "$orientation_fallback")"
+      printf '%s\n' "$plan_output"
+      read -r plan value1 value2 <<<"$(awk -F= '/^PLAN=/ {print $2; exit}' <<<"$plan_output")"
+      [[ -n "$plan" ]] || die "No se obtuvo un plan de corrección."
+
+      if [[ "$plan" != "FAIL_HEAD" || "$orientation_fallback" == "1" ]]; then
+        break
+      fi
+
+      ambiguous_orientation_samples=$((ambiguous_orientation_samples + 1))
+      if ((ambiguous_orientation_samples < MAX_AMBIGUOUS_ORIENTATION_SAMPLES)); then
+        warn "Solución angular AprilTag ambigua descartada (${ambiguous_orientation_samples}/${MAX_AMBIGUOUS_ORIENTATION_SAMPLES}); adquiriendo una muestra nueva."
+        sleep "$ALIGNMENT_SETTLE_SECONDS"
+        continue
+      fi
+
+      orientation_fallback=1
+      warn "Tres soluciones angulares alternativas consecutivas: se conservan posición y residual vertical; no se enviarán giros derivados del tag planar."
+      plan_output="$(compute_plan "$pose" "$orientation_fallback")"
+      printf '%s\n' "$plan_output"
+      read -r plan value1 value2 <<<"$(awk -F= '/^PLAN=/ {print $2; exit}' <<<"$plan_output")"
+      [[ -n "$plan" && "$plan" != "FAIL_HEAD" ]] || \
+        die "No se pudo resolver la ambigüedad angular AprilTag."
+      break
+    done
 
     current_yaw="$(sed -n 's/.*base_yaw_deg:\([-+0-9.]*\).*/\1/p' <<<"$plan_output")"
     if [[ "$last_action" == "ROTATE" && -n "$previous_yaw" && -n "$current_yaw" ]]; then
@@ -753,7 +946,7 @@ PY
         return 0
         ;;
       FAIL_HEAD)
-        die "La orientación indica que la cabeza no coincide con move_head_lower."
+        die "La postura observada no es compatible con move_head_lower."
         ;;
       FAIL_VERTICAL)
         die "El error vertical del tag supera ${MAX_VERTICAL_ERROR} m; no se corregirá con el chasis."
@@ -796,7 +989,7 @@ PY
     sleep "$ALIGNMENT_SETTLE_SECONDS"
   done
 
-  die "No se alcanzó MESA2_DROP_TARGET tras ${MAX_ITERATIONS} correcciones."
+  die "No se alcanzó MESA2_DROP_TARGET tras ${ALIGNMENT_MAX_ITERATIONS} correcciones."
 }
 
 main() {
@@ -834,6 +1027,11 @@ main() {
         detector_preflight
       fi
       run_alignment
+      ;;
+    coarse-held)
+      require_wireless_run
+      detector_preflight
+      run_coarse_alignment
       ;;
     *)
       die "Modo interno desconocido: $MODE"

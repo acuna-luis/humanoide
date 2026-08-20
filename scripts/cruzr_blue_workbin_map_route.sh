@@ -29,6 +29,18 @@ readonly STAGING_YAW_TOLERANCE="0.14"
 readonly MIN_BATTERY_SOC="30.0"
 readonly RETURN_MIN_BATTERY_SOC="25.0"
 
+# Una ruta completa puede necesitar varios minutos, pero los orquestadores que
+# conocen la distancia pueden reducir este límite mediante el entorno.  El
+# valor se valida antes de enviar cualquier objetivo para evitar que un error
+# permanente del planificador quede oculto tras un "context canceled" tardío.
+NAVIGATION_TIMEOUT_SECONDS="${CRUZR_NAV_TIMEOUT_SECONDS:-420}"
+[[ "$NAVIGATION_TIMEOUT_SECONDS" =~ ^[0-9]+$ ]] && \
+  ((NAVIGATION_TIMEOUT_SECONDS >= 30 && NAVIGATION_TIMEOUT_SECONDS <= 900)) || {
+  printf 'ERROR: CRUZR_NAV_TIMEOUT_SECONDS debe estar entre 30 y 900.\n' >&2
+  exit 1
+}
+readonly NAVIGATION_TIMEOUT_SECONDS
+
 CRUZR_SSH_PASSWORD="${CRUZR_SSH_PASSWORD:-$DEFAULT_PASSWORD}"
 export CRUZR_SSH_PASSWORD
 
@@ -49,9 +61,15 @@ ROUTE_PROFILE="full"
 YES=0
 FAST=0
 FLUID_MODE="${CRUZR_FLUID_MODE:-0}"
+ROUTE_CONTEXT="${CRUZR_ROUTE_CONTEXT:-map-round-trip}"
+[[ "$ROUTE_CONTEXT" == "map-round-trip" || "$ROUTE_CONTEXT" == "table-transfer" ]] || {
+  printf 'ERROR: CRUZR_ROUTE_CONTEXT debe ser map-round-trip o table-transfer.\n' >&2
+  exit 2
+}
 RESUME_STAGING_MAP_POSE=""
 RESUME_APPROACH_DISTANCE=""
 NAVIGATE_WAYPOINT=""
+NAVIGATE_BACKOFF_DISTANCE=""
 CONNECTION_MODE=""
 CONTROL_INTERFACE=""
 VISION_SSH_HOST=""
@@ -69,6 +87,8 @@ Uso:
   ./scripts/cruzr_blue_workbin_map_route.sh --run [--yes] [--fast]
   ./scripts/cruzr_blue_workbin_map_route.sh --run --short [--yes] [--fast]
   ./scripts/cruzr_blue_workbin_map_route.sh --navigate-waypoint PUNTO \
+    [--yes] [--fast]
+  ./scripts/cruzr_blue_workbin_map_route.sh --navigate-waypoint-backoff PUNTO METROS \
     [--yes] [--fast]
   ./scripts/cruzr_blue_workbin_map_route.sh --resume-to-table \
     --staging-map-pose "X Y YAW" --approach-distance METROS [--yes] [--fast]
@@ -102,6 +122,10 @@ Opciones:
   --navigate-waypoint PUNTO
            Sin mover los brazos, sincroniza automáticamente el mapa instalado,
            comprueba seguridad y navega al waypoint indicado.
+  --navigate-waypoint-backoff PUNTO METROS
+           Navega a una pose libre situada METROS detrás del waypoint según
+           su orientación. Evita usar como objetivo el área inflada de una
+           mesa; no realiza la aproximación final ni mueve los brazos.
   --staging-map-pose "X Y YAW"
            Pose de premesa registrada por la ejecución interrumpida.
   --approach-distance METROS
@@ -147,6 +171,13 @@ while (($#)); do
       MODE="navigate-waypoint"
       NAVIGATE_WAYPOINT="$2"
       shift
+      ;;
+    --navigate-waypoint-backoff)
+      (($# >= 3)) || die "--navigate-waypoint-backoff necesita PUNTO y METROS"
+      MODE="navigate-waypoint-backoff"
+      NAVIGATE_WAYPOINT="$2"
+      NAVIGATE_BACKOFF_DISTANCE="$3"
+      shift 2
       ;;
     --yes)
       YES=1
@@ -364,6 +395,43 @@ REMOTE
   set -e
 }
 
+navigation_failure_diagnostic() {
+  local since_epoch="$1"
+  local point="$2"
+  local logs=""
+  local current_pose=""
+
+  set +e
+  logs="$(ssh_vision docker logs --since "$since_epoch" "$FREEPNC_CONTAINER" 2>&1)"
+  current_pose="$(read_map_localization_pose 2>/dev/null)"
+  set -e
+
+  # Quita únicamente códigos ANSI; se conservan los textos exactos del
+  # planificador para que soporte pueda correlacionarlos con sus estados.
+  logs="$(sed -r 's/\x1B\[[0-9;]*[mK]//g' <<<"$logs")"
+  [[ -n "$current_pose" ]] && info "NAV_FAILURE_MAP_POSE=$current_pose"
+
+  if grep -q 'LOCATE_LOST' <<<"$logs"; then
+    info "NAV_FAILURE_CLASS=LOCALIZATION_LOST"
+    return 0
+  fi
+  if grep -Eq 'GOAL_ON_DYNAMIC_OBSTACLE|GOAL_ONDYNAMICOBSTACLE|7214003' <<<"$logs"; then
+    info "NAV_FAILURE_CLASS=DYNAMIC_OBSTACLE"
+    info "NAV_FAILURE_DETAIL=goal_or_path_blocked_by_dynamic_costmap"
+    return 0
+  fi
+  if grep -Eq 'START_ONOBSTACLE|7218011|起点有静态障碍物' <<<"$logs"; then
+    info "NAV_FAILURE_CLASS=START_ON_STATIC_OBSTACLE"
+    return 0
+  fi
+  if grep -Eq 'controller failed to compute velocity commands|failed to find a plan' <<<"$logs"; then
+    info "NAV_FAILURE_CLASS=PLANNER_NO_PATH"
+    return 0
+  fi
+  info "NAV_FAILURE_CLASS=UNKNOWN"
+  info "NAV_FAILURE_POINT=$point"
+}
+
 ensure_map_active() {
   info "[MAPA] Comprobando si '$MAP_NAME' está activo..."
   ssh_vision bash -s -- "$NAV_CONTAINER" "$FREEPNC_CONTAINER" "$MAP_NAME" \
@@ -437,10 +505,29 @@ cached_signature="$(cat "$runtime_cache" 2>/dev/null || true)"
 map_is_active=0
 grep -Fq "\"map_name\" : \"$map_name\"" <<<"$map_output" && map_is_active=1
 
-if ((map_is_active == 1)) && [[ "$cached_signature" == "$runtime_signature" ]]; then
-  echo "MAP_ALREADY_ACTIVE=$map_name"
-  echo "MAP_FINGERPRINT=$map_fingerprint"
-  exit 0
+if ((map_is_active == 1)); then
+  set +e
+  state_output="$(nav_action check_state '{}' 8 2>&1)"
+  state_status=$?
+  set -e
+
+  if ((state_status == 0)) && grep -q 'status=4' <<<"$state_output" && \
+     grep -q 'FSM_WAITNAVIGATE' <<<"$state_output"; then
+    cache_tmp="${runtime_cache}.$$"
+    printf '%s\n' "$runtime_signature" >"$cache_tmp"
+    mv -f -- "$cache_tmp" "$runtime_cache"
+    echo "MAP_ALREADY_ACTIVE=$map_name"
+    echo "MAP_FINGERPRINT=$map_fingerprint"
+    echo "NAV_STATE=FSM_WAITNAVIGATE"
+    exit 0
+  fi
+
+  if grep -q 'FSM_RELOCATING' <<<"$state_output"; then
+    echo "$state_output"
+    echo "MAP_LOCALIZATION_REQUIRED: el mapa está cargado, pero el robot sigue sin pose." >&2
+    echo "Use Localización forzada en la interfaz web y marque la pose y orientación reales del robot." >&2
+    exit 48
+  fi
 fi
 
 if ((map_is_active == 1)); then
@@ -477,12 +564,22 @@ print(json.dumps({
 },separators=(",",":")))
 PY
 )"
-relocation_output="$(nav_action relocation_start "$relocation_arg" 60)"
+set +e
+relocation_output="$(nav_action relocation_start "$relocation_arg" 60 2>&1)"
+relocation_status=$?
+set -e
 echo "$relocation_output"
-action_succeeded "$relocation_output" || {
+if ((relocation_status != 0)) || ! action_succeeded "$relocation_output"; then
+  state_output="$(nav_action check_state '{}' 8 2>&1 || true)"
+  echo "$state_output"
+  if grep -q 'FSM_RELOCATING' <<<"$state_output"; then
+    echo "MAP_LOCALIZATION_REQUIRED: la relocalización global continúa sin obtener una pose." >&2
+    echo "Use Localización forzada en la interfaz web y marque la pose y orientación reales del robot." >&2
+    exit 48
+  fi
   echo "MAP_PREPARE_ERROR: la relocalización global no terminó correctamente" >&2
   exit 45
-}
+fi
 
 ready=0
 for _ in $(seq 1 20); do
@@ -646,14 +743,17 @@ verify_start_area() {
 }
 
 navigation_to_point() {
-  local point="$1" direction="$2" output encoded_point
+  local point="$1" direction="$2" output encoded_point nav_started_epoch
   info "[$direction] Navegando a '$point'..."
+  nav_started_epoch="$(date +%s)"
   encoded_point="$(printf '%s' "$point" | base64 -w0)"
-  output="$(ssh_vision bash -s -- "$NAV_CONTAINER" "$MAP_NAME" "$encoded_point" <<'REMOTE'
+  output="$(ssh_vision bash -s -- "$NAV_CONTAINER" "$MAP_NAME" "$encoded_point" \
+    "$NAVIGATION_TIMEOUT_SECONDS" <<'REMOTE'
 set -Eeuo pipefail
 container="$1"
 map_name="$2"
 point="$(printf '%s' "$3" | base64 -d)"
+timeout_seconds="$4"
 payload="$(python3 - "$map_name" "$point" <<'PY'
 import json, sys
 print(json.dumps({
@@ -664,12 +764,13 @@ print(json.dumps({
 },separators=(",",":")))
 PY
 )"
-timeout 420 docker exec "$container" bash -lc \
+timeout "$timeout_seconds" docker exec "$container" bash -lc \
   "source /opt/walker/setup.bash; rosa action send_goal /vnav/task/command unav_task_msgs/action/Task '$payload'"
 REMOTE
 )" || {
     printf '%s\n' "$output" >&2
     stop_navigation
+    navigation_failure_diagnostic "$nav_started_epoch" "$point"
     die "La navegación a '$point' falló. La caja permanece sujeta."
   }
   printf '%s\n' "$output"
@@ -707,15 +808,47 @@ print(
 PY
 }
 
+waypoint_backoff_pose() {
+  local point="$1" distance="$2"
+  ssh_vision python3 - "$MAP_NAME" "$point" "$distance" <<'PY'
+import json, math, sys
+
+map_name, requested, raw_distance = sys.argv[1:]
+distance = float(raw_distance)
+if not math.isfinite(distance) or not 0.50 <= distance <= 2.00:
+    raise SystemExit("El retroceso de waypoint debe estar entre 0,50 y 2,00 m")
+
+path = f"/etc/walker/map/{map_name}/umap/umap.json"
+with open(path, encoding="utf-8") as stream:
+    data = json.load(stream)
+point = next((item for item in data.get("target_points", [])
+              if item.get("id") == requested), None)
+if point is None:
+    raise SystemExit(f"Waypoint no encontrado: {requested}")
+x = float(point["point_x"])
+y = float(point["point_y"])
+yaw = float(point["point_yaw"])
+values = (x, y, yaw)
+if not all(math.isfinite(value) for value in values):
+    raise SystemExit("Waypoint con coordenadas no finitas")
+safe_x = x - distance * math.cos(yaw)
+safe_y = y - distance * math.sin(yaw)
+print(f"{safe_x:.9f} {safe_y:.9f} {yaw:.9f}")
+PY
+}
+
 navigation_to_free_pose() {
-  local pose="$1" label="$2" output encoded_pose
+  local pose="$1" label="$2" output encoded_pose nav_started_epoch
   info "[$label] Navegando a la pose de mapa guardada..."
+  nav_started_epoch="$(date +%s)"
   encoded_pose="$(printf '%s' "$pose" | base64 -w0)"
-  output="$(ssh_vision bash -s -- "$NAV_CONTAINER" "$MAP_NAME" "$encoded_pose" <<'REMOTE'
+  output="$(ssh_vision bash -s -- "$NAV_CONTAINER" "$MAP_NAME" "$encoded_pose" \
+    "$NAVIGATION_TIMEOUT_SECONDS" <<'REMOTE'
 set -Eeuo pipefail
 container="$1"
 map_name="$2"
 pose="$(printf '%s' "$3" | base64 -d)"
+timeout_seconds="$4"
 payload="$(python3 - "$map_name" "$pose" <<'PY'
 import json, math, sys
 values=tuple(map(float, sys.argv[2].split()))
@@ -737,12 +870,13 @@ print(json.dumps({
 },separators=(",",":")))
 PY
 )"
-timeout 420 docker exec "$container" bash -lc \
+timeout "$timeout_seconds" docker exec "$container" bash -lc \
   "source /opt/walker/setup.bash; rosa action send_goal /vnav/task/command unav_task_msgs/action/Task '$payload'"
 REMOTE
 )" || {
     printf '%s\n' "$output" >&2
     stop_navigation
+    navigation_failure_diagnostic "$nav_started_epoch" "free_pose:$label"
     die "La navegación a la pose de mesa falló. La caja permanece sujeta."
   }
   printf '%s\n' "$output"
@@ -758,6 +892,10 @@ verify_grasp() {
 }
 
 report_selected_route() {
+  if [[ "$ROUTE_CONTEXT" == "table-transfer" ]]; then
+    info "ROUTE_SELECTED=mesa1 -> MESA2_PRE (directo, sin PASO1) -> mesa2 -> home"
+    return 0
+  fi
   if [[ "$ROUTE_PROFILE" == "short" ]]; then
     info "ROUTE_SELECTED=START -> PASO1 -> mesa -> depósito -> home"
   else
@@ -910,6 +1048,24 @@ navigate_waypoint_only() {
   info "WAYPOINT_NAVIGATION_OK=$NAVIGATE_WAYPOINT"
 }
 
+navigate_waypoint_backoff_only() {
+  local safe_pose
+  assert_waypoint_available "$NAVIGATE_WAYPOINT"
+  safe_pose="$(waypoint_backoff_pose "$NAVIGATE_WAYPOINT" "$NAVIGATE_BACKOFF_DISTANCE")"
+  info "WAYPOINT_BACKOFF_POSE=$safe_pose distance=${NAVIGATE_BACKOFF_DISTANCE}m"
+  if [[ "$FLUID_MODE" == "1" && "${CRUZR_TRANSFER_PREFLIGHT_DONE:-0}" == "1" ]]; then
+    info "FLUID_MODE: mapa, batería, paros y cargador ya validados en el preflight general."
+  else
+    map_preflight "$RETURN_MIN_BATTERY_SOC"
+  fi
+  confirm_waypoint_navigation
+  trap 'stop_navigation' EXIT
+  trap 'stop_navigation; exit 130' INT TERM HUP
+  navigation_to_free_pose "$safe_pose" "BACKOFF_${NAVIGATE_WAYPOINT}"
+  trap - EXIT INT TERM HUP
+  info "WAYPOINT_BACKOFF_NAVIGATION_OK=${NAVIGATE_WAYPOINT}:${NAVIGATE_BACKOFF_DISTANCE}m"
+}
+
 run_cycle() {
   confirm_once
 
@@ -996,6 +1152,15 @@ main() {
         ensure_map_active || die "No se pudo sincronizar y localizar '$MAP_NAME'. El robot no se movió."
       fi
       navigate_waypoint_only
+      ;;
+    navigate-waypoint-backoff)
+      require_wireless_run
+      if [[ "$FLUID_MODE" == "1" && "${CRUZR_TRANSFER_PREFLIGHT_DONE:-0}" == "1" ]]; then
+        info "FLUID_MODE: se reutiliza el mapa activo confirmado por el flujo exterior."
+      else
+        ensure_map_active || die "No se pudo sincronizar y localizar '$MAP_NAME'. El robot no se movió."
+      fi
+      navigate_waypoint_backoff_only
       ;;
     *)
       die "Modo interno desconocido: $MODE"

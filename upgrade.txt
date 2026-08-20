@@ -1,0 +1,178 @@
+CRUZR S2 SOFTWARE UPGRADE REPORT
+Date: 20 August 2026
+
+1. Executive summary
+
+The Cruzr S2 software was successfully upgraded to version v0.2.0 on both
+internal computers (Motion and Vision). The official offline package and the
+vendor's documented manual fallback procedure were used.
+
+The robot remained stationary throughout the work. The clamps were empty, the
+working area was clear, the charger was disconnected, and the physical
+emergency stop was available. No manipulation, navigation, or VLA movement
+commands were issued during the upgrade.
+
+The existing clamp configuration and map data were preserved. The supplied VLA
+software was also installed in a disabled state for later validation.
+
+2. Package validation and backups
+
+- The complete v0.2.0 offline archive passed its gzip integrity check.
+- Offline archive SHA-256:
+  d66372c9f233580a6ebfa7d3ec5f11045fc2bedf61c12562eb2bf4b3c05445d9
+- Configuration archive SHA-256:
+  0f3d5a988eebb3b4aaacdbaa776c44708b3544afe522edba475fa09a7639aa3b
+- The official offline upgrade SOP was reviewed before making changes.
+- Pre-upgrade backups were created for both Motion and Vision.
+- The backups include the system configuration, map data, UDock/UDoke
+  configuration, container definitions, software version, network information,
+  and relevant Docker metadata.
+- Backup integrity was verified with SHA-256 checksums.
+
+3. Upgrade procedure
+
+1. The offline Docker images were imported on the correct architecture:
+   - Motion: x86_64/amd64 images.
+   - Vision: aarch64/arm64 images.
+2. All images referenced by the v0.2.0 configuration were confirmed to be
+   available locally; no online image download was required.
+3. The standard "udoke replace" procedure was attempted three times.
+4. On every attempt, the upgrade host received the upload-begin request but did
+   not receive upload confirmation. The connection was then closed because the
+   heartbeat was missing. No partial configuration was applied by these failed
+   attempts.
+5. Because this failure is explicitly covered by the official SOP, the
+   documented manual fallback procedure was used:
+   - The configuration package was extracted and verified.
+   - The installed UDoke version was confirmed as 0.8.7 on both computers.
+   - The official pre-installation scripts were executed.
+   - The v0.2.0 board configuration was installed.
+   - The services were recreated using the vendor's UDoke deployment command.
+   - The official post-installation scripts were executed.
+6. The Vision static-transform service was restarted independently to apply the
+   calibration fix without rebooting or moving the robot.
+
+4. Upgrade results
+
+- Motion software version: v0.2.0
+- Vision software version: v0.2.0
+- Motion integration image: zs2_motion-v0.2.0
+- Vision integration image: zs2_vision-v0.2.0
+- Clamp hardware configuration preserved on all relevant Motion services:
+  HW_TYPE=cruzr_s2_v1
+- Manipulation action server: available
+- Motion-control startup action server: available
+- Navigation command action server: available
+- Box-transport vision action server: available
+- Robot web interface: HTTP 200 response
+- Navigation web interface: HTTP 200 response
+- Motion free disk space after completion: approximately 59 GB
+- Vision free disk space after completion: approximately 539 GB
+
+5. Safety and hardware validation
+
+Final readings after the upgrade:
+
+- Battery 1 SOC: 80.6%
+- Battery 2 SOC: 80.8%
+- Battery temperatures: 34 degrees Celsius on both packs
+- Battery state: discharging normally
+- Charger input: 0 (disconnected)
+- Emergency-stop state: 0
+- Servo emergency-stop state: 0
+- Both complete battery serial numbers were reported.
+- The main Motion services were running with zero restarts.
+- The navigation, box-pose estimation, static-transform, and local control
+  services were running.
+
+6. Map preservation
+
+The existing test_route_01 map was preserved. Its two principal map files were
+present and readable after the upgrade.
+
+Post-upgrade map fingerprint:
+358d20fa1ec5450ccb2d3b814a8d52b9e264e35feaf8b535409f569de204bf70
+
+This fingerprint exactly matches the value recorded before the upgrade.
+
+The map is currently stored but not active. The navigation state is
+FSM_WAITSETMAP. Before autonomous navigation is used again, test_route_01 must
+be selected and the robot must be localized using its real physical position
+and orientation.
+
+7. VLA installation status
+
+The UBTECH-supplied VLA package was installed after the base v0.2.0 platform
+passed its safety and service checks.
+
+- The checkpoint-40000 files and both model shards were verified.
+- The inference image was installed on Vision with arm64 architecture.
+- The control image was installed on Motion with amd64 architecture.
+- The temporary remote transfer copy of the control-image archive was removed
+  after successful import to recover disk space. The original source archive
+  remains available outside the robot.
+- Inference container state: created, not running, restart policy disabled.
+- Control container state: created, not running, restart policy disabled.
+- VLA movement commands published during installation: 0
+
+The VLA is installed but intentionally disabled. It must not be started until
+the supplied movement executor has been reviewed and inference has been tested
+in observation/shadow mode.
+
+8. Findings and non-critical issues
+
+8.1 Template-container restart loop
+
+The generated v0.2.0 configuration defines the main.x86 and main.orin template
+services with an "always" restart policy but without an executable command.
+They therefore exited normally with code 0 and were repeatedly restarted by
+Docker. These are configuration templates, not operational dependencies. Their
+automatic restart policy was disabled and both were left stopped. All services
+that inherit their configuration remain operational.
+
+8.2 Cloud MQTT client crash
+
+The new cloud MQTT client repeatedly terminated with a segmentation fault while
+processing the battery-state callback. This is a binary software fault in the
+v0.2.0 package, not a battery or clamp fault. The optional cloud MQTT client was
+stopped and its automatic restart policy was disabled to prevent a crash loop.
+The separate local/upilot MQTT service remains running. Local manipulation,
+navigation, cameras, web access, and remote-control functions do not depend on
+the disabled cloud client.
+
+8.3 Netdata health status
+
+The Vision Netdata container is running but reports "unhealthy" because its
+health check cannot connect to the local port 19999 endpoint. This affects the
+monitoring dashboard only and does not affect robot control or perception.
+
+8.4 Network time and GPU script observations
+
+- The post-installation time script could not resolve the external NTP host,
+  but it completed using its documented timeout and Docker remained available.
+- The Vision GPU configuration script completed successfully but reported a
+  current GPU frequency of 1.224 GHz instead of its 1.122 GHz target. The
+  persistent GPU configuration was already at the expected script version.
+
+9. Recommended follow-up actions
+
+1. Report the cloud MQTT segmentation fault to UBTECH and request a corrected
+   v0.2.0 image or configuration.
+2. Ask UBTECH whether the main.x86/main.orin template services should be
+   excluded from normal deployment.
+3. Ask UBTECH for the intended Netdata health-check configuration and confirm
+   the expected GPU frequency for this hardware revision.
+4. Load test_route_01 and perform localization before any navigation test.
+5. Re-run a stationary safety preflight before testing manipulation.
+6. Validate the VLA in observation/shadow mode before permitting any command to
+   reach the robot controller.
+7. Do not manually start either VLA container until the control path has been
+   reviewed and a supervised test procedure has been approved.
+
+10. Final status
+
+The Cruzr S2 base platform upgrade to v0.2.0 is complete. The robot's clamp
+configuration, map data, web interface, safety topics, manipulation services,
+vision services, and navigation services were preserved and validated. The VLA
+components are installed but safely disabled. No robot movement occurred during
+the upgrade.
