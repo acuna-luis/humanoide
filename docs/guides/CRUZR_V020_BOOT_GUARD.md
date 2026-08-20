@@ -20,6 +20,9 @@ At every Vision-computer boot, the guard:
 2. waits for Control Center to publish its version and verifies that the
    installed system is exactly v0.2.0;
 3. waits for the Motion computer's x86 self-check services and motion actions;
+   because DDS may advertise stale names before the x86 server is functional,
+   readiness requires three successful lightweight `file_presence_check`
+   responses separated by 15 seconds;
 4. reads the latest Control Center state;
 5. exits without changes if the state is already `JoystickMode`;
 6. proceeds only when the state is exactly `Fault` and both emergency stops and

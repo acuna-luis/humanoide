@@ -103,7 +103,9 @@ the robot enters JoystickMode.
 
 We installed a local, reversible boot-readiness guard on Vision. It does not
 change uDoke, Docker Compose, maps, calibration, HW_TYPE or VLA state. It waits
-for the exact v0.2.0 version and Motion readiness, acts only on the confirmed
+for the exact v0.2.0 version and Motion readiness. Readiness requires three
+successful x86 file-presence service responses rather than trusting DDS names,
+which can appear before the server is functional. It acts only on the confirmed
 Fault pattern with all safety inputs clear, restarts Control Center once and
 requires successful self-check and StartMotion before returning the head to its
 official home pose. The controlled recovery test completed successfully.

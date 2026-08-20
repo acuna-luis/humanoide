@@ -167,8 +167,11 @@ not faulty; the same self-check passed once the Motion graph was available.
 A reversible systemd boot-readiness guard was installed on Vision. It does not
 modify uDoke, Docker Compose, maps, calibration, HW_TYPE or VLA state. It waits
 for Control Center to publish the exact v0.2.0 version and for the Motion x86
-services and actions to become available. It exits without changes when the
-robot is already in JoystickMode. It only handles the confirmed v0.2.0 pattern
+services and actions to become available. Because DDS can advertise the x86
+service names before the server accepts requests, readiness requires three
+successful lightweight file-presence responses separated by 15 seconds. It
+exits without changes when the robot is already in JoystickMode. It only
+handles the confirmed v0.2.0 pattern
 when the latest state is exactly Fault and emergency-stop, servo-stop and
 charger inputs all report zero. It then restarts Control Center once, requires
 a passed self-check, successful StartMotion and JoystickMode, rechecks the

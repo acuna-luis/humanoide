@@ -17,6 +17,8 @@ VERSION_TIMEOUT_SECONDS="${VERSION_TIMEOUT_SECONDS:-120}"
 STATE_TIMEOUT_SECONDS="${STATE_TIMEOUT_SECONDS:-75}"
 RECOVERY_TIMEOUT_SECONDS="${RECOVERY_TIMEOUT_SECONDS:-150}"
 POLL_SECONDS="${POLL_SECONDS:-5}"
+X86_PROBE_COUNT="${X86_PROBE_COUNT:-3}"
+X86_PROBE_INTERVAL_SECONDS="${X86_PROBE_INTERVAL_SECONDS:-15}"
 AUTO_HEAD_HOME="${AUTO_HEAD_HOME:-1}"
 
 MODE="${1:---check}"
@@ -96,7 +98,7 @@ ros_graph() {
   ' 2>/dev/null
 }
 
-graph_is_ready() {
+graph_is_advertised() {
   local graph
   graph="$(ros_graph)" || return 1
   grep -qx '/self_check/x86/file_presence_check' <<<"$graph" &&
@@ -105,13 +107,34 @@ graph_is_ready() {
     grep -qx '/mc/manipulation/action' <<<"$graph"
 }
 
+x86_file_service_responds() {
+  local output
+  output="$(timeout 15 docker exec "$ROS_CONTAINER" bash -lc '
+    source /opt/ros/humble/setup.bash
+    export ROS2CLI_DISABLE_DAEMON=1
+    timeout 12 ros2 service call \
+      /self_check/x86/file_presence_check \
+      sys_task_msgs/srv/SelfCheckTask \
+      "{param: \"{}\"}"
+  ' 2>/dev/null)" || return 1
+  grep -q 'SelfCheckTask_Response(passed=True' <<<"$output"
+}
+
 wait_for_graph() {
   local deadline=$((SECONDS + READY_TIMEOUT_SECONDS))
+  local consecutive=0
   while (( SECONDS < deadline )); do
-    if graph_is_ready; then
-      return 0
+    if graph_is_advertised && x86_file_service_responds; then
+      consecutive=$((consecutive + 1))
+      log "X86_READINESS_PROBE=$consecutive/$X86_PROBE_COUNT"
+      if (( consecutive >= X86_PROBE_COUNT )); then
+        return 0
+      fi
+      sleep "$X86_PROBE_INTERVAL_SECONDS"
+    else
+      consecutive=0
+      sleep "$POLL_SECONDS"
     fi
-    sleep "$POLL_SECONDS"
   done
   return 1
 }
@@ -211,7 +234,7 @@ safety="$(read_safe_startup_state || true)"
 
 log "VERSION=$version"
 log "CONTROL_STATE=${state:-unknown}"
-log "GRAPH_READY=1"
+log "GRAPH_READY=1 functional_x86_probes=$X86_PROBE_COUNT"
 log "SAFETY_STATE=${safety:-unknown} format=estop,servo_estop,charger"
 
 if [[ "$MODE" == "--check" ]]; then
