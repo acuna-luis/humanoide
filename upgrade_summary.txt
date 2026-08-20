@@ -92,16 +92,34 @@ The persistent GPU configuration script was already at the expected version.
 
 Please confirm the correct target frequency for this Cruzr S2 hardware revision.
 
-5. Final reboot and map state
+5. v0.2.0 startup synchronization defect
 
-The upgrade and required service restarts completed without a full robot reboot.
-Please confirm whether a complete power cycle, additional calibration or any
-other final commissioning step is required after using the documented manual
-fallback procedure. Please also confirm whether returning to an inactive map
-state after the upgrade is expected.
+Two complete power cycles showed that Vision starts Control Center before
+Motion publishes its x86 self-check services. The initial self-check then fails
+with both x86 checks reported as "Service not available", Control Center enters
+Fault, the face circle becomes red and the head remains lowered. Repeating the
+self-check after the Motion graph is ready succeeds, StartMotion succeeds and
+the robot enters JoystickMode.
+
+We installed a local, reversible boot-readiness guard on Vision. It does not
+change uDoke, Docker Compose, maps, calibration, HW_TYPE or VLA state. It waits
+for the exact v0.2.0 version and Motion readiness, acts only on the confirmed
+Fault pattern with all safety inputs clear, restarts Control Center once and
+requires successful self-check and StartMotion before returning the head to its
+official home pose. The controlled recovery test completed successfully.
+
+Could you please provide the official UBTECH correction for the cross-computer
+startup ordering and confirm whether a later v0.2.0 build already resolves it?
+
+6. Map state after upgrade
+
+Please confirm whether returning to an inactive map state after the upgrade is
+expected. The existing map data and checksums were preserved.
 
 Apart from the items listed above, the v0.2.0 platform is operational and the
 robot configuration, map data and clamp hardware settings have been preserved.
+The post-upgrade power-cycle recovery finished in JoystickMode with the head at
+home. The VLA remains stopped and disabled.
 
 Best regards,
 Luis Acuna

@@ -1,0 +1,15 @@
+[Unit]
+Description=Cruzr S2 v0.2.0 cross-computer boot readiness guard
+Documentation=file:/usr/local/share/doc/cruzr-v020-boot-guard.md
+Wants=network-online.target
+After=network-online.target docker.service udoke-slave.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/cruzr-v020-boot-guard --run
+TimeoutStartSec=780
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -154,6 +154,32 @@ monitoring dashboard only and does not affect robot control or perception.
   current GPU frequency of 1.224 GHz instead of its 1.122 GHz target. The
   persistent GPU configuration was already at the expected script version.
 
+8.5 v0.2.0 cross-computer boot race
+
+A complete power cycle reproduced a deterministic startup race. Vision started
+Control Center approximately 90 seconds before Motion had published the x86
+self-check services. The first self-check therefore reported
+`/self_check/x86/file_presence_check` and `/self_check/x86/system_check` as
+unavailable, entered `Fault`, displayed a red face circle and left the head in
+its lowered boot pose. The hardware, calibration files and motion services were
+not faulty; the same self-check passed once the Motion graph was available.
+
+A reversible systemd boot-readiness guard was installed on Vision. It does not
+modify uDoke, Docker Compose, maps, calibration, HW_TYPE or VLA state. It waits
+for Control Center to publish the exact v0.2.0 version and for the Motion x86
+services and actions to become available. It exits without changes when the
+robot is already in JoystickMode. It only handles the confirmed v0.2.0 pattern
+when the latest state is exactly Fault and emergency-stop, servo-stop and
+charger inputs all report zero. It then restarts Control Center once, requires
+a passed self-check, successful StartMotion and JoystickMode, rechecks the
+safety inputs, and executes only the official move_head_home task.
+
+The recovery path was validated after a real power cycle. Its final results
+were: self-check passed, StartMotion successful, JoystickMode reached,
+move_head_home successful and RECOVERY_COMPLETE=1. The service is enabled for
+future boots, has finite timeouts, never retries indefinitely and automatically
+skips system versions other than v0.2.0.
+
 9. Recommended follow-up actions
 
 1. Report the cloud MQTT segmentation fault to UBTECH and request a corrected
@@ -168,6 +194,9 @@ monitoring dashboard only and does not affect robot control or perception.
    reach the robot controller.
 7. Do not manually start either VLA container until the control path has been
    reviewed and a supervised test procedure has been approved.
+8. Ask UBTECH for an official correction to the v0.2.0 cross-computer startup
+   ordering. Disable and review the local boot guard before any future platform
+   upgrade.
 
 10. Final status
 
@@ -175,4 +204,6 @@ The Cruzr S2 base platform upgrade to v0.2.0 is complete. The robot's clamp
 configuration, map data, web interface, safety topics, manipulation services,
 vision services, and navigation services were preserved and validated. The VLA
 components are installed but safely disabled. No robot movement occurred during
-the upgrade.
+the upgrade. A subsequent controlled power-cycle test identified the v0.2.0
+startup race described above; the reversible guard recovered it successfully
+and left the robot in JoystickMode with the head at home.
