@@ -85,6 +85,8 @@ AprilTag está documentada en
 La preparación del PICO 4 Ultra Enterprise, la captura de demostraciones y el
 flujo dataset → entrenamiento → shadow están documentados en
 [docs/vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md](docs/vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md).
+La [versión PDF](docs/vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.pdf) está maquetada
+para compartir por correo.
 
 ## Seguridad
 

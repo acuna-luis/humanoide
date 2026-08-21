@@ -1,5 +1,9 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+> Versión documental 1.1 — 21 de agosto de 2026. Estado: guía técnica del
+> proyecto basada en evidencias locales; los puntos marcados «Pendiente DSA»
+> requieren confirmación del proveedor.
+
 ## 1. Propósito y alcance
 
 Esta guía define cómo usar el Cruzr S2 real y un PICO 4 Ultra Enterprise para
@@ -533,11 +537,60 @@ No interpretar `120 FPS` como 120 imágenes nuevas por segundo hasta verificar
 los archivos. Si se remuestrea, documentar algoritmo, reloj maestro y política
 de interpolación/retención.
 
-## 13. Elegir entre nuevo checkpoint y continuación
+## 13. Elegir el punto de partida del VLA
 
-### Continuar `checkpoint-40000`
+### 13.1 Modelo, fine-tuning y checkpoint no son lo mismo
 
-Adecuado cuando se mantienen:
+Un **checkpoint** es una instantánea de los pesos y la configuración de un
+modelo en un momento del entrenamiento. Tanto un modelo continuado como uno
+entrenado desde cero acabarán guardándose en checkpoints. Por tanto, la decisión
+real no es «usar o no un checkpoint», sino elegir de qué pesos partir:
+
+1. continuar el checkpoint de cajas entregado por DSA;
+2. partir del modelo fundacional preentrenado GR00T N1.5, sin heredar el ajuste
+   de cajas de DSA;
+3. partir de pesos aleatorios y entrenar arquitectura, visión, lenguaje y
+   acción desde cero.
+
+La segunda opción es normalmente lo que se quiere decir en este proyecto por
+«crear un VLA nuevo». No reutiliza `checkpoint-40000`, pero sí aprovecha el
+conocimiento visual y lingüístico del modelo fundacional.
+
+### 13.2 Para qué fue hecho el checkpoint actual
+
+El `checkpoint-40000` suministrado está especializado en:
+
+- Cruzr S2 con abrazaderas laterales pasivas;
+- una sola cámara RGB;
+- estado y acción articulares de 20 dimensiones;
+- aproximaciones que parten de una postura VLA-ready compatible;
+- recoger y depositar una caja grande;
+- niveles inferior y medio de la escena de entrenamiento;
+- cuatro instrucciones en inglés correspondientes a esas combinaciones.
+
+No fue hecho para:
+
+- controlar el chasis como parte de la salida aprendida;
+- accionar manos, dedos o una pinza eléctrica;
+- consumir fuerza/par como entrada, aunque esos datos existan en el dataset;
+- utilizar profundidad, point cloud o varias cámaras;
+- cualquier caja, estante o altura sin límite;
+- tareas generales como botellas, herramientas, botones o ensamblaje.
+
+Puede generalizar moderadamente dentro de la distribución cubierta por sus
+demostraciones, pero no debe presentarse como un manipulador universal.
+
+### 13.3 Comparación de las tres estrategias
+
+| Estrategia | Punto de partida | Recomendada cuando | Coste y riesgo |
+|---|---|---|---|
+| continuar DSA | `checkpoint-40000` | misma cámara, abrazaderas, acción 20D y tareas de cajas relacionadas | menor cantidad de datos y convergencia rápida; riesgo de olvidar tareas antiguas |
+| nuevo VLA de dominio | `nvidia/GR00T-N1.5-3B` | nuevo efector, nueva salida, modalidades o tareas alejadas del demo de cajas | más datos y validación; conserva conocimiento fundacional |
+| desde cero real | pesos aleatorios | arquitectura incompatible, restricción legal/licencia o dominio sin un preentrenado aprovechable | dataset multimodal y cómputo enormes; mayor riesgo, casi nunca recomendado aquí |
+
+### 13.4 A. Continuar `checkpoint-40000`
+
+Es el camino preferente cuando se mantienen:
 
 - abrazaderas;
 - una cámara RGB;
@@ -545,24 +598,89 @@ Adecuado cuando se mantienen:
 - familia de tareas de cajas;
 - cinemática y postura inicial compatibles.
 
-Mezclar demostraciones antiguas con nuevas para reducir olvido catastrófico.
-Continuar únicamente con una tarea nueva puede degradar las cuatro tareas
-anteriores.
+Ejemplos adecuados:
 
-### Crear un nuevo perfil/checkpoint
+- más tamaños o colores de cajas dentro de la capacidad mecánica;
+- nuevas posiciones laterales o yaw;
+- otras alturas alcanzables con las mismas abrazaderas;
+- variaciones de iluminación y entorno industrial;
+- transferencia de caja entre mesas una vez separada la navegación de la
+  política de manipulación.
 
-Necesario o preferible al introducir:
+Procedimiento:
 
-- manos con dedos o pinza accionada;
+1. conservar una copia inmutable de `checkpoint-40000`;
+2. grabar episodios nuevos con exactamente el mismo contrato 1 RGB/20D;
+3. mezclar demostraciones antiguas y nuevas;
+4. continuar el fine-tuning con tasa de aprendizaje conservadora;
+5. evaluar tanto las tareas nuevas como las cuatro antiguas;
+6. rechazar el candidato si mejora lo nuevo pero degrada lo anterior por debajo
+   del criterio acordado.
+
+Continuar únicamente con datos nuevos puede provocar olvido catastrófico.
+
+### 13.5 B. Crear un VLA nuevo desde GR00T N1.5
+
+Es la recomendación para una política que **no dependa del ajuste previo de
+cajas**, pero aproveche el modelo fundacional. Debe elegirse al introducir:
+
+- manos v4 con articulaciones de dedos;
+- pinza accionada o un nuevo efector;
 - otra dimensión u orden de acción;
 - acciones de chasis dentro de la política;
-- más cámaras, profundidad o nubes de puntos;
-- estado condicionado por fuerza;
-- tareas muy alejadas de manipulación de cajas.
+- varias cámaras, profundidad u otras observaciones;
+- fuerza/par como entrada real del modelo;
+- tareas alejadas: botellas, herramientas, picking de piezas, pulsadores,
+  clasificación o ensamblaje.
 
-Se puede inicializar el backbone desde GR00T N1.5 o reutilizar pesos compatibles,
-pero no se puede llamar compatible a un checkpoint 20D que no emite los ejes
-de dedos.
+Procedimiento:
+
+1. definir el nuevo contrato de observación, estado y acción antes de grabar;
+2. crear un nuevo `DataConfig` con nombres, orden, unidades, normalización y
+   horizonte explícitos;
+3. instrumentar el recorder para exportar exactamente ese contrato;
+4. grabar un piloto y validar extremo a extremo el loader;
+5. ampliar un dataset equilibrado, con train/validation/test separados por
+   sesión y condición;
+6. inicializar desde `nvidia/GR00T-N1.5-3B`, no desde `checkpoint-40000`;
+7. entrenar un nuevo directorio de experimento y no sobrescribir pesos DSA;
+8. validar offline, en shadow y físicamente mediante la progresión de la
+   sección 15.
+
+Si el nuevo espacio incluye dedos, el dataset debe registrar su estado y su
+comando; no es posible aprenderlos a partir de episodios 20D que nunca los
+contuvieron.
+
+### 13.6 C. Entrenar desde pesos aleatorios
+
+Entrenar «desde cero real» implica no utilizar ni `checkpoint-40000` ni GR00T
+N1.5 preentrenado. Habría que aprender representación visual, comprensión de
+lenguaje y control a partir de los datos propios.
+
+Sólo tiene sentido si:
+
+- la arquitectura necesaria es incompatible con GR00T;
+- una restricción de licencia o propiedad intelectual prohíbe pesos externos;
+- se dispone de un corpus multimodal masivo y cómputo suficiente;
+- existe un equipo capaz de entrenar y mantener un foundation model;
+- las alternativas preentrenadas han sido evaluadas y fallan por razones
+  demostrables.
+
+No se recomienda para el Cruzr S2 actual. Las demostraciones que se pueden
+recoger con un solo robot son apropiadas para fine-tuning, pero no suelen ser
+suficientes para crear desde cero la capacidad visual-lingüística de un VLA.
+
+### 13.7 Decisiones recomendadas para este proyecto
+
+| Caso | Decisión recomendada |
+|---|---|
+| cajas nuevas con abrazaderas y 1 RGB | continuar `checkpoint-40000` mezclando datos antiguos |
+| depositar cajas a más alturas con las mismas abrazaderas | continuar el checkpoint si la cinemática y la vista siguen siendo válidas |
+| manos v4 y manipulación con dedos | nuevo DataConfig y nuevo fine-tuning desde GR00T N1.5 |
+| botella con pinza de dos dedos | nuevo perfil desde GR00T N1.5; detector tradicional puede ser mejor si el entorno es fijo |
+| fuerza como entrada aprendida | nuevo perfil/modelo desde GR00T N1.5 y dataset con fuerza sincronizada |
+| navegación entre mesas | mantener navegación LiDAR tradicional; usar VLA sólo para la manipulación, salvo proyecto de investigación específico |
+| investigación de una arquitectura completamente propia | desde cero sólo con presupuesto, datos y justificación extraordinarios |
 
 ## 14. Entrenamiento fuera del robot
 

@@ -7,6 +7,7 @@ checkpoint de forma gradual.
 ## Documentos
 
 - [Guía de teleoperación, datos y entrenamiento](CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md): arquitectura, compatibilidad v0.2.0, procedimiento completo y criterios de decisión.
+- [Guía en PDF](CRUZR_S2_VLA_TELEOP_DATA_GUIDE.pdf): versión maquetada para compartir.
 - [Checklist de sesión](templates/TELEOP_SESSION_CHECKLIST.md): lista imprimible para preparar, grabar y cerrar una sesión.
 - [Manifiesto de ejemplo](templates/session_manifest.example.yaml): metadatos que deben acompañar cada sesión.
 - [Registro de episodios](templates/episode_log.csv): cabecera CSV para aceptar o rechazar cada demostración.
@@ -18,3 +19,9 @@ Teleoperar, grabar y entrenar son tres fases distintas. El flujo XR bruto del
 PICO sirve para controlar y diagnosticar, pero no es por sí solo un dataset
 LeRobot sincronizado. No se inicia una campaña grande hasta inspeccionar una
 exportación piloto extremo a extremo.
+
+## Regenerar el PDF
+
+```bash
+./scripts/docs/build_vla_guide_pdf.sh
+```
