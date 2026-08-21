@@ -10,8 +10,8 @@ readonly SCRIPT_PATH="$(readlink -f -- "$0")"
 readonly SCRIPT_DIR="$(dirname -- "$SCRIPT_PATH")"
 readonly REPO_ROOT="$(readlink -f -- "$SCRIPT_DIR/../..")"
 readonly PACK_ROOT="$REPO_ROOT/cruzrss2_vla_pack-002"
-readonly VISION_HOST="192.168.42.2"
-readonly MOTION_HOST="192.168.11.2"
+VISION_HOST="${CRUZR_VISION_HOST:-}"
+MOTION_HOST="${CRUZR_MOTION_HOST:-192.168.11.2}"
 readonly ROBOT_USER="walker"
 readonly DEFAULT_PASSWORD="aa"
 readonly REMOTE_ROOT="/home/walker/cruzr-vla"
@@ -141,13 +141,25 @@ assert_local_package() {
   [[ -s "$CHECKPOINT/model-00001-of-00002.safetensors" ]] || die "Falta el shard 1."
   [[ -s "$CHECKPOINT/model-00002-of-00002.safetensors" ]] || die "Falta el shard 2."
   [[ -s "$CHECKPOINT/model.safetensors.index.json" ]] || die "Falta el índice de shards."
+  [[ -s "$CHECKPOINT/experiment_cfg/metadata.json" ]] || die "Falta metadata.json del checkpoint."
+  [[ -s "$CHECKPOINT/experiment_cfg/metadata_cyf.json" ]] || die "Falta metadata_cyf.json del checkpoint."
   [[ -s "$INFERENCE_TAR" ]] || die "Falta la imagen de inferencia."
   [[ -s "$CONTROL_TAR" ]] || die "Falta la imagen de control."
 }
 
 assert_hosts() {
+  if [[ -z "$VISION_HOST" ]]; then
+    if nc -z -w2 192.168.11.3 22; then
+      VISION_HOST="192.168.11.3"
+    elif nc -z -w2 192.168.42.2 22; then
+      VISION_HOST="192.168.42.2"
+    else
+      die "No se alcanza vision ni por Ethernet (192.168.11.3) ni por Wi-Fi (192.168.42.2)."
+    fi
+  fi
   nc -z -w3 "$VISION_HOST" 22 || die "No se alcanza vision en $VISION_HOST:22."
   nc -z -w3 "$MOTION_HOST" 22 || die "No se alcanza motion en $MOTION_HOST:22."
+  info "CONTROL_HOSTS=vision:$VISION_HOST,motion:$MOTION_HOST"
 }
 
 check_remote() {
@@ -200,6 +212,9 @@ stage_payload() {
     --include='/model-00001-of-00002.safetensors' \
     --include='/model-00002-of-00002.safetensors' \
     --include='/model.safetensors.index.json' \
+    --include='/experiment_cfg/' \
+    --include='/experiment_cfg/metadata.json' \
+    --include='/experiment_cfg/metadata_cyf.json' \
     --exclude='*'
 
   info "[3/3] Sincronizando workspace de control con motion..."
@@ -278,16 +293,18 @@ verify_installation() {
     test -s '$REMOTE_ROOT/additional/checkpoint-40000/config.json'
     test -s '$REMOTE_ROOT/additional/checkpoint-40000/model-00001-of-00002.safetensors'
     test -s '$REMOTE_ROOT/additional/checkpoint-40000/model-00002-of-00002.safetensors'
+    test -s '$REMOTE_ROOT/additional/checkpoint-40000/experiment_cfg/metadata.json'
+    test -s '$REMOTE_ROOT/additional/checkpoint-40000/experiment_cfg/metadata_cyf.json'
     test -s '$REMOTE_ROOT/additional/vla-onboard/install/setup.bash'
     docker image inspect '$INFERENCE_IMAGE' >/dev/null
-    test \"\$(docker inspect '$INFERENCE_CONTAINER' --format '{{.State.Status}}')\" = created
+    test \"\$(docker inspect '$INFERENCE_CONTAINER' --format '{{.State.Status}}')\" != running
     test \"\$(docker inspect '$INFERENCE_CONTAINER' --format '{{.HostConfig.RestartPolicy.Name}}')\" = no
     echo 'VISION_VLA_OK=files,image,container-stopped'
   "
   run_ssh "$MOTION_HOST" "
     test -s '$REMOTE_ROOT/additional/vla-motionx86/install/setup.bash'
     docker image inspect '$CONTROL_IMAGE' >/dev/null
-    test \"\$(docker inspect '$CONTROL_CONTAINER' --format '{{.State.Status}}')\" = created
+    test \"\$(docker inspect '$CONTROL_CONTAINER' --format '{{.State.Status}}')\" != running
     test \"\$(docker inspect '$CONTROL_CONTAINER' --format '{{.HostConfig.RestartPolicy.Name}}')\" = no
     echo 'MOTION_VLA_OK=files,image,container-stopped'
   "

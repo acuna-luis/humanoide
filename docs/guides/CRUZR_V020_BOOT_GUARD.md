@@ -19,21 +19,32 @@ At every Vision-computer boot, the guard:
 1. waits for the Vision ROS and Control Center containers;
 2. waits for Control Center to publish its version and verifies that the
    installed system is exactly v0.2.0;
+   it reads the current persistent ROSA log and therefore does not depend on
+   Docker JSON logs surviving an unclean power cut;
 3. waits for the Motion computer's x86 self-check services and motion actions;
    because DDS may advertise stale names before the x86 server is functional,
    readiness requires three successful lightweight `file_presence_check`
    responses separated by 15 seconds;
-4. reads the latest Control Center state;
-5. exits without changes if the state is already `JoystickMode`;
-6. proceeds only when the state is exactly `Fault` and both emergency stops and
-   the charger report `0`;
-7. restarts only `walker-system.control_center-1`;
-8. requires self-check success, `StartMotion` success and `JoystickMode`;
-9. sends the official `cruzr/move_head_home` task after rechecking the safety
+4. requires two successful rounds of real image samples from all six cameras
+   used by the vendor self-check;
+5. reads the latest Control Center state and classifies the original failure;
+6. exits without changes if the state is already `JoystickMode`;
+7. proceeds only when the state is exactly `Fault`, the log matches the known
+   v0.2.0 readiness race, power/servo/overcurrent checks passed and both
+   emergency stops and the charger report `0`;
+8. restarts only `walker-system.control_center-1`;
+9. waits for a new container start timestamp and a new persistent log before
+   evaluating recovery, preventing stale `Fault` data from the old process;
+10. requires self-check success, `StartMotion` success and `JoystickMode`;
+11. sends the official `cruzr/move_head_home` task after rechecking the safety
    inputs.
 
 The service has finite timeouts and performs at most one recovery per boot. It
 does not retry indefinitely and does not bypass a failed safety input.
+
+Do not use the internal `KEY1` as a standalone normal shutdown control. Use the
+approved shutdown sequence for the robot; an abrupt body-computer power cut can
+corrupt Docker JSON logs and interrupt filesystem writes.
 
 ## Files installed on Vision
 

@@ -1,0 +1,327 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+# Gestiona una validación VLA sin movimiento. El contenedor de control sólo
+# ejecuta el validador read-only; nunca se inicia el ejecutor entregado por el
+# proveedor y cualquier publicador en /mc/sdk/robot_command aborta la sesión.
+
+readonly SCRIPT_PATH="$(readlink -f -- "$0")"
+readonly SCRIPT_DIR="$(dirname -- "$SCRIPT_PATH")"
+readonly REPO_ROOT="$(readlink -f -- "$SCRIPT_DIR/../..")"
+readonly RUNTIME_LOCAL="$SCRIPT_DIR/runtime"
+readonly GROOT_OVERLAY_LOCAL="$REPO_ROOT/cruzrss2_vla_pack-002/codes-S2/vision/docker_files/gr00t_model/gr00t"
+readonly DATA_CONFIG_SHA256="94c53e7b4a306903812104fd503642f8c0e68051bb257ff2388ae5ff8855ef38"
+readonly EAGLE_BACKBONE_SHA256="553d642fe1b5f7fca0b4d09a719a8df76ee21cca864d6292336c7656c5bc0b50"
+readonly GROOT_N1_SHA256="1b4a9653f3818f7417f2e99aa558be0abf19dc1cd05e3d026a987dde294f8138"
+readonly POLICY_SHA256="458eef19a9da229190c730b9d1c0d2e0c2fa851b949f661ed9c1e5e6bdbe2c1f"
+readonly METADATA_LOCAL="$REPO_ROOT/cruzrss2_vla_pack-002/weight/checkpoint-40000/experiment_cfg/metadata.json"
+readonly METADATA_CYF_LOCAL="$REPO_ROOT/cruzrss2_vla_pack-002/weight/checkpoint-40000/experiment_cfg/metadata_cyf.json"
+readonly METADATA_SHA256="46287335b211cd24a12991481e0f1121e74b4dd3c49b9a25d6fc62ce7de9a572"
+readonly METADATA_CYF_SHA256="07b3c1010d24218482aefc817f7456ab077aa89ff6bce03826ea4902bfb3958b"
+readonly ROBOT_USER="walker"
+readonly DEFAULT_PASSWORD="aa"
+readonly MOTION_HOST="${CRUZR_MOTION_HOST:-192.168.11.2}"
+readonly REMOTE_ROOT="/home/walker/cruzr-vla"
+readonly RUNTIME_REMOTE="$REMOTE_ROOT/additional/safe-runtime"
+readonly CONTROL_CONTAINER="cruzr-vla-control"
+readonly INFERENCE_CONTAINER="cruzr-vla-inference"
+readonly CONTROL_IMAGE="vla_control_node_sdk:latest"
+readonly INFERENCE_IMAGE="vla_inference_node_sdk:latest"
+
+CRUZR_SSH_PASSWORD="${CRUZR_SSH_PASSWORD:-$DEFAULT_PASSWORD}"
+export CRUZR_SSH_PASSWORD
+
+if [[ "${CRUZR_INTERNAL_ASKPASS:-0}" == "1" ]]; then
+  printf '%s\n' "$CRUZR_SSH_PASSWORD"
+  exit 0
+fi
+
+MODE="status"
+SHADOW_DURATION=180
+TASK_ID=0
+INFERENCE_DURATION=8
+
+usage() {
+  cat <<'EOF'
+Uso:
+  ./scripts/vla/run_ubtech_vla_shadow.sh --deploy
+  ./scripts/vla/run_ubtech_vla_shadow.sh --check
+  ./scripts/vla/run_ubtech_vla_shadow.sh --start-shadow [--shadow-duration 180]
+  ./scripts/vla/run_ubtech_vla_shadow.sh --start-inference
+  ./scripts/vla/run_ubtech_vla_shadow.sh --trigger [--task-id 0] [--inference-duration 8]
+  ./scripts/vla/run_ubtech_vla_shadow.sh --status
+  ./scripts/vla/run_ubtech_vla_shadow.sh --stop
+
+--trigger sólo solicita inferencia si el validador shadow está activo y el
+canal /mc/sdk/robot_command tiene cero publicadores. No mueve el robot.
+EOF
+}
+
+die() {
+  printf 'ERROR: %s\n' "$*" >&2
+  exit 1
+}
+
+while (($#)); do
+  case "$1" in
+    --deploy|--check|--start-shadow|--start-inference|--trigger|--status|--stop)
+      MODE="${1#--}"
+      ;;
+    --shadow-duration)
+      shift
+      SHADOW_DURATION="${1:?Falta duración shadow}"
+      ;;
+    --task-id)
+      shift
+      TASK_ID="${1:?Falta task ID}"
+      ;;
+    --inference-duration)
+      shift
+      INFERENCE_DURATION="${1:?Falta duración de inferencia}"
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      die "Opción desconocida: $1"
+      ;;
+  esac
+  shift
+done
+
+[[ "$TASK_ID" =~ ^[0-3]$ ]] || die "task-id debe estar entre 0 y 3."
+[[ "$SHADOW_DURATION" =~ ^[0-9]+([.][0-9]+)?$ ]] || die "Duración shadow inválida."
+[[ "$INFERENCE_DURATION" =~ ^[0-9]+([.][0-9]+)?$ ]] || die "Duración de inferencia inválida."
+
+for command_name in nc readlink rsync setsid ssh; do
+  command -v "$command_name" >/dev/null 2>&1 || die "Falta '$command_name'."
+done
+
+ssh_options=(
+  -o ConnectTimeout=10
+  -o ConnectionAttempts=1
+  -o ServerAliveInterval=15
+  -o ServerAliveCountMax=3
+  -o PreferredAuthentications=password
+  -o PubkeyAuthentication=no
+  -o NumberOfPasswordPrompts=2
+  -o StrictHostKeyChecking=accept-new
+)
+
+run_ssh() {
+  local host="$1"
+  shift
+  CRUZR_INTERNAL_ASKPASS=1 \
+  SSH_ASKPASS="$SCRIPT_PATH" \
+  SSH_ASKPASS_REQUIRE=force \
+  DISPLAY="${DISPLAY:-:0}" \
+  setsid -w ssh "${ssh_options[@]}" "$ROBOT_USER@$host" "$@"
+}
+
+run_rsync() {
+  local source_path="$1"
+  local host="$2"
+  local destination_path="$3"
+  shift 3
+  local ssh_command="ssh"
+  local option
+  for option in "${ssh_options[@]}"; do
+    printf -v ssh_command '%s %q' "$ssh_command" "$option"
+  done
+  CRUZR_INTERNAL_ASKPASS=1 \
+  SSH_ASKPASS="$SCRIPT_PATH" \
+  SSH_ASKPASS_REQUIRE=force \
+  DISPLAY="${DISPLAY:-:0}" \
+  setsid -w rsync --archive --exclude='__pycache__/' --exclude='*.swp' -e "$ssh_command" \
+    "$@" "$source_path" "$ROBOT_USER@$host:$destination_path"
+}
+
+resolve_vision_host() {
+  if [[ -n "${CRUZR_VISION_HOST:-}" ]]; then
+    printf '%s\n' "$CRUZR_VISION_HOST"
+  elif nc -z -w2 192.168.11.3 22; then
+    printf '%s\n' 192.168.11.3
+  elif nc -z -w2 192.168.42.2 22; then
+    printf '%s\n' 192.168.42.2
+  else
+    die "No se alcanza vision por Ethernet ni por Wi-Fi."
+  fi
+}
+
+VISION_HOST="$(resolve_vision_host)"
+readonly VISION_HOST
+
+command_publisher_count() {
+  run_ssh "$MOTION_HOST" "docker exec walker-ros.ros2-1 bash -lc '
+    source /opt/ros/humble/setup.bash
+    export ROS2CLI_DISABLE_DAEMON=1
+    ros2 topic info /mc/sdk/robot_command
+  '" | awk '/Publisher count:/ {print $3; found=1} END {if (!found) print "unknown"}'
+}
+
+assert_command_path_absent() {
+  local count
+  count="$(command_publisher_count)"
+  [[ "$count" == "0" ]] || die "El canal de movimiento tiene publicadores: $count. Se aborta."
+  printf 'COMMAND_PATH_SAFE=publishers:0\n'
+}
+
+assert_containers() {
+  run_ssh "$MOTION_HOST" "docker image inspect '$CONTROL_IMAGE' >/dev/null; docker container inspect '$CONTROL_CONTAINER' >/dev/null"
+  run_ssh "$VISION_HOST" "docker image inspect '$INFERENCE_IMAGE' >/dev/null; docker container inspect '$INFERENCE_CONTAINER' >/dev/null"
+}
+
+deploy_runtime() {
+  [[ -s "$RUNTIME_LOCAL/cruzr_s2_shadow_validator.py" ]] || die "Falta el validador local."
+  [[ -d "$GROOT_OVERLAY_LOCAL" ]] || die "Falta el overlay GR00T suministrado por UBTECH."
+  [[ "$(sha256sum "$GROOT_OVERLAY_LOCAL/experiment/data_config.py" | awk '{print $1}')" == "$DATA_CONFIG_SHA256" ]] || die "data_config.py no coincide."
+  [[ "$(sha256sum "$GROOT_OVERLAY_LOCAL/model/backbone/eagle_backbone.py" | awk '{print $1}')" == "$EAGLE_BACKBONE_SHA256" ]] || die "eagle_backbone.py no coincide."
+  [[ "$(sha256sum "$GROOT_OVERLAY_LOCAL/model/gr00t_n1.py" | awk '{print $1}')" == "$GROOT_N1_SHA256" ]] || die "gr00t_n1.py no coincide."
+  [[ "$(sha256sum "$GROOT_OVERLAY_LOCAL/model/policy.py" | awk '{print $1}')" == "$POLICY_SHA256" ]] || die "policy.py no coincide."
+  [[ "$(sha256sum "$METADATA_LOCAL" | awk '{print $1}')" == "$METADATA_SHA256" ]] || die "metadata.json no coincide."
+  [[ "$(sha256sum "$METADATA_CYF_LOCAL" | awk '{print $1}')" == "$METADATA_CYF_SHA256" ]] || die "metadata_cyf.json no coincide."
+  python3 "$RUNTIME_LOCAL/test_cruzr_s2_shadow_validator.py"
+  run_ssh "$MOTION_HOST" "install -d '$RUNTIME_REMOTE'"
+  run_rsync "$RUNTIME_LOCAL/" "$MOTION_HOST" "$RUNTIME_REMOTE/"
+  run_ssh "$VISION_HOST" "install -d '$RUNTIME_REMOTE'"
+  run_rsync "$RUNTIME_LOCAL/" "$VISION_HOST" "$RUNTIME_REMOTE/"
+  run_ssh "$VISION_HOST" "install -d '$RUNTIME_REMOTE/vendor-overrides'"
+  run_rsync "$GROOT_OVERLAY_LOCAL/" "$VISION_HOST" "$RUNTIME_REMOTE/vendor-overrides/gr00t/" --delete
+  run_ssh "$VISION_HOST" "
+    test \"\$(sha256sum '$RUNTIME_REMOTE/vendor-overrides/gr00t/experiment/data_config.py' | awk '{print \$1}')\" = '$DATA_CONFIG_SHA256'
+    test \"\$(sha256sum '$RUNTIME_REMOTE/vendor-overrides/gr00t/model/backbone/eagle_backbone.py' | awk '{print \$1}')\" = '$EAGLE_BACKBONE_SHA256'
+    test \"\$(sha256sum '$RUNTIME_REMOTE/vendor-overrides/gr00t/model/gr00t_n1.py' | awk '{print \$1}')\" = '$GROOT_N1_SHA256'
+    test \"\$(sha256sum '$RUNTIME_REMOTE/vendor-overrides/gr00t/model/policy.py' | awk '{print \$1}')\" = '$POLICY_SHA256'
+    install -d '$REMOTE_ROOT/additional/checkpoint-40000/experiment_cfg'
+  "
+  run_rsync "$METADATA_LOCAL" "$VISION_HOST" "$REMOTE_ROOT/additional/checkpoint-40000/experiment_cfg/metadata.json"
+  run_rsync "$METADATA_CYF_LOCAL" "$VISION_HOST" "$REMOTE_ROOT/additional/checkpoint-40000/experiment_cfg/metadata_cyf.json"
+  run_ssh "$VISION_HOST" "test \"\$(sha256sum '$REMOTE_ROOT/additional/checkpoint-40000/experiment_cfg/metadata.json' | awk '{print \$1}')\" = '$METADATA_SHA256'; test \"\$(sha256sum '$REMOTE_ROOT/additional/checkpoint-40000/experiment_cfg/metadata_cyf.json' | awk '{print \$1}')\" = '$METADATA_CYF_SHA256'"
+  run_ssh "$MOTION_HOST" "docker run --rm --network none --entrypoint bash \
+    -v '$REMOTE_ROOT/additional:/home/ubt/additional:ro' '$CONTROL_IMAGE' -lc '
+      set -e
+      source /home/ubt/additional/vla-motionx86/install/setup.bash
+      export PYTHONDONTWRITEBYTECODE=1
+      export PYTHONPYCACHEPREFIX=/tmp/cruzr-vla-pycache
+      python3 -m py_compile /home/ubt/additional/safe-runtime/cruzr_s2_shadow_validator.py
+      python3 -m py_compile /home/ubt/additional/safe-runtime/cruzr_s2_inference_shadow.py
+      python3 /home/ubt/additional/safe-runtime/test_cruzr_s2_shadow_validator.py
+    '"
+  run_ssh "$VISION_HOST" "docker run --rm --network none --entrypoint bash \
+    -v '$REMOTE_ROOT/additional:/home/ubt/additional:ro' '$INFERENCE_IMAGE' -lc '
+      set -e
+      source /home/ubt/additional/vla-onboard/install/setup.bash
+      export PYTHONPYCACHEPREFIX=/tmp/cruzr-vla-pycache
+      python3 -m py_compile /home/ubt/additional/safe-runtime/cruzr_s2_inference_shadow.py
+    '"
+  printf 'SHADOW_RUNTIME_DEPLOYED=vision:%s,motion:%s\n' "$VISION_HOST" "$MOTION_HOST"
+}
+
+check_installation() {
+  assert_containers
+  assert_command_path_absent
+  run_ssh "$MOTION_HOST" "test -s '$RUNTIME_REMOTE/cruzr_s2_shadow_validator.py'; test -s '$RUNTIME_REMOTE/cruzr_s2_vla_profile.json'"
+  run_ssh "$VISION_HOST" "test -s '$REMOTE_ROOT/additional/checkpoint-40000/config.json'; test -s '$REMOTE_ROOT/additional/vla-onboard/src/gr00t_control/gr00t_inference.py'; test \"\$(sha256sum '$RUNTIME_REMOTE/vendor-overrides/gr00t/experiment/data_config.py' | awk '{print \$1}')\" = '$DATA_CONFIG_SHA256'; test \"\$(sha256sum '$RUNTIME_REMOTE/vendor-overrides/gr00t/model/backbone/eagle_backbone.py' | awk '{print \$1}')\" = '$EAGLE_BACKBONE_SHA256'; test \"\$(sha256sum '$REMOTE_ROOT/additional/checkpoint-40000/experiment_cfg/metadata.json' | awk '{print \$1}')\" = '$METADATA_SHA256'"
+  printf 'SHADOW_CHECK_OK=vision:%s,motion:%s,movement:none\n' "$VISION_HOST" "$MOTION_HOST"
+}
+
+start_shadow() {
+  check_installation
+  run_ssh "$MOTION_HOST" "
+    state=\$(docker inspect '$CONTROL_CONTAINER' --format '{{.State.Status}}')
+    if [ \"\$state\" != running ]; then docker start '$CONTROL_CONTAINER' >/dev/null; fi
+    docker exec '$CONTROL_CONTAINER' bash -lc '
+      pkill -f \"[c]ruzr_s2_shadow_validator.py\" 2>/dev/null || true
+      install -d /home/ubt/additional/safe-runtime/logs
+      : > /home/ubt/additional/safe-runtime/logs/shadow-process.log
+      rm -f /home/ubt/additional/safe-runtime/logs/shadow.jsonl
+    '
+    docker exec -d '$CONTROL_CONTAINER' bash -lc '
+      source /home/ubt/additional/vla-motionx86/install/setup.bash
+      export ROS2CLI_DISABLE_DAEMON=1
+      exec python3 /home/ubt/additional/safe-runtime/cruzr_s2_shadow_validator.py \
+        --duration $SHADOW_DURATION \
+        --log /home/ubt/additional/safe-runtime/logs/shadow.jsonl \
+        > /home/ubt/additional/safe-runtime/logs/shadow-process.log 2>&1
+    '
+    sleep 2
+    docker exec '$CONTROL_CONTAINER' pgrep -af '[c]ruzr_s2_shadow_validator.py'
+    docker exec '$CONTROL_CONTAINER' tail -n 20 /home/ubt/additional/safe-runtime/logs/shadow-process.log
+  "
+  assert_command_path_absent
+  printf 'SHADOW_STARTED=duration:%ss,publisher:none\n' "$SHADOW_DURATION"
+}
+
+start_inference() {
+  check_installation
+  run_ssh "$VISION_HOST" "
+    state=\$(docker inspect '$INFERENCE_CONTAINER' --format '{{.State.Status}}')
+    if [ \"\$state\" != running ]; then docker start '$INFERENCE_CONTAINER' >/dev/null; fi
+    docker exec '$INFERENCE_CONTAINER' bash -lc '
+      pkill -f \"[c]ruzr_s2_inference_shadow.py\" 2>/dev/null || true
+      install -d /home/ubt/additional/safe-runtime-logs
+      : > /home/ubt/additional/safe-runtime-logs/inference-process.log
+    '
+    docker exec -d '$INFERENCE_CONTAINER' bash -lc '
+      source /home/ubt/additional/vla-onboard/install/setup.bash
+      export ROS2CLI_DISABLE_DAEMON=1
+      cd /home/ubt/additional/vla-onboard/src/gr00t_control
+      exec python3 /home/ubt/additional/safe-runtime/cruzr_s2_inference_shadow.py \
+        > /home/ubt/additional/safe-runtime-logs/inference-process.log 2>&1
+    '
+  "
+  assert_command_path_absent
+  printf 'INFERENCE_START_REQUESTED=vision:%s,movement:none\n' "$VISION_HOST"
+}
+
+assert_shadow_running() {
+  run_ssh "$MOTION_HOST" "test \"\$(docker inspect '$CONTROL_CONTAINER' --format '{{.State.Status}}')\" = running; docker exec '$CONTROL_CONTAINER' pgrep -f '[c]ruzr_s2_shadow_validator.py' >/dev/null" || \
+    die "El validador shadow no está activo."
+}
+
+assert_inference_running() {
+  run_ssh "$VISION_HOST" "test \"\$(docker inspect '$INFERENCE_CONTAINER' --format '{{.State.Status}}')\" = running; docker exec '$INFERENCE_CONTAINER' pgrep -f '[c]ruzr_s2_inference_shadow.py' >/dev/null" || \
+    die "La inferencia no está activa."
+}
+
+trigger_inference() {
+  assert_shadow_running
+  assert_inference_running
+  assert_command_path_absent
+  run_ssh "$VISION_HOST" "docker exec '$INFERENCE_CONTAINER' bash -lc '
+    source /home/ubt/additional/vla-onboard/install/setup.bash
+    export ROS2CLI_DISABLE_DAEMON=1
+    ros2 action send_goal /gr00t/trigger_inference mc_task_msgs/action/InferenceTask \
+      \"{task_id: $TASK_ID, max_inference_duration: $INFERENCE_DURATION, end_threshold: 0.1}\" --feedback
+  '"
+  assert_command_path_absent
+  run_ssh "$MOTION_HOST" "docker exec '$CONTROL_CONTAINER' tail -n 80 /home/ubt/additional/safe-runtime/logs/shadow-process.log"
+  printf 'INFERENCE_SHADOW_TRIGGER_COMPLETED=task:%s,duration:%ss,movement:none\n' "$TASK_ID" "$INFERENCE_DURATION"
+}
+
+show_status() {
+  assert_containers
+  printf 'VISION_HOST=%s\nMOTION_HOST=%s\n' "$VISION_HOST" "$MOTION_HOST"
+  run_ssh "$VISION_HOST" "docker inspect '$INFERENCE_CONTAINER' --format 'INFERENCE_CONTAINER={{.State.Status}}'; if [ \"\$(docker inspect '$INFERENCE_CONTAINER' --format '{{.State.Status}}')\" = running ]; then docker exec '$INFERENCE_CONTAINER' pgrep -af '[c]ruzr_s2_inference_shadow.py' || true; docker exec '$INFERENCE_CONTAINER' tail -n 15 /home/ubt/additional/safe-runtime-logs/inference-process.log 2>/dev/null || true; fi"
+  run_ssh "$MOTION_HOST" "docker inspect '$CONTROL_CONTAINER' --format 'CONTROL_CONTAINER={{.State.Status}}'; if [ \"\$(docker inspect '$CONTROL_CONTAINER' --format '{{.State.Status}}')\" = running ]; then docker exec '$CONTROL_CONTAINER' pgrep -af '[c]ruzr_s2_shadow_validator.py' || true; docker exec '$CONTROL_CONTAINER' tail -n 20 /home/ubt/additional/safe-runtime/logs/shadow-process.log 2>/dev/null || true; fi"
+  assert_command_path_absent
+}
+
+stop_session() {
+  run_ssh "$VISION_HOST" "state=\$(docker inspect '$INFERENCE_CONTAINER' --format '{{.State.Status}}'); if [ \"\$state\" = running ]; then docker stop --time 20 '$INFERENCE_CONTAINER' >/dev/null; fi; docker inspect '$INFERENCE_CONTAINER' --format 'INFERENCE_CONTAINER={{.State.Status}}'"
+  run_ssh "$MOTION_HOST" "state=\$(docker inspect '$CONTROL_CONTAINER' --format '{{.State.Status}}'); if [ \"\$state\" = running ]; then docker stop --time 5 '$CONTROL_CONTAINER' >/dev/null; fi; docker inspect '$CONTROL_CONTAINER' --format 'CONTROL_CONTAINER={{.State.Status}}'"
+  assert_command_path_absent
+  printf 'SHADOW_SESSION_STOPPED=yes\n'
+}
+
+case "$MODE" in
+  deploy) deploy_runtime ;;
+  check) check_installation ;;
+  start-shadow) start_shadow ;;
+  start-inference) start_inference ;;
+  trigger) trigger_inference ;;
+  status) show_status ;;
+  stop) stop_session ;;
+esac

@@ -1,0 +1,11 @@
+Hello Viki, Mr. Zhu and Lucio,
+
+While validating the normal shutdown procedure after upgrading our Cruzr S2 to v0.2.0, we found a discrepancy between the official Product Manual, the hardware delivered and the current software behaviour.
+
+Section 5.3.2 of the manual says to enter damping mode, press a physical “Servo Control Button”, then double-click and hold the rear Start button for five seconds, wait until the screen and lights are off, press the white upper-body power switch, and finally switch off the chassis. However, our delivered unit does not have an identifiable Servo Control Button matching Figure 5-3-5.
+
+In v0.2.0, the official `/emb/pm_shutdown` request is accepted and Control Center changes from `JoystickMode` to `WaitShutdownReady`. The installed Control Center binary and its runtime log then explicitly state in Chinese: “After ensuring safety, press the emergency-stop button to continue the shutdown process.” The robot remains powered on until that confirmation is provided. This emergency-stop requirement is not included in the manual’s normal shutdown section.
+
+Could you please confirm the approved shutdown SOP for our hardware revision and serial number, whether pressing the emergency stop is intentionally mandatory on every v0.2.0 shutdown, and provide an updated annotated control diagram/manual? Please also confirm exactly when it is safe to press the white KEY1 switch and the chassis power button.
+
+For safety, the robot is currently seated, in damping mode and waiting in `WaitShutdownReady`; we have not yet pressed the emergency stop, KEY1 or the chassis button.
