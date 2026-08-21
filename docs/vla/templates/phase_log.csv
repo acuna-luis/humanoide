@@ -1,0 +1,1 @@
+session_id,mission_id,sequence,phase,controller,started_at,ended_at,start_map_x,start_map_y,start_map_yaw,end_map_x,end_map_y,end_map_yaw,goal_id,action_name,target_id,status_code,result,episode_id,tag_id,tag_error_before_m,tag_error_after_m,workbin_detection_id,safety_event,sidecar_uri,notes

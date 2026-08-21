@@ -6,12 +6,14 @@ riesgos ni una función de seguridad certificada.
 ## Identificación
 
 - [ ] Session ID: `____________________________`
+- [ ] Mission ID inicial: `____________________________`
 - [ ] Fecha/hora/zona: `____________________________`
 - [ ] Responsable técnico: `____________________________`
 - [ ] Teleoperador: `____________________________`
 - [ ] Observador con paro: `____________________________`
 - [ ] Tarea/task ID: `____________________________`
 - [ ] Número de episodios previsto: `____________________________`
+- [ ] Caja(s), origen y destino: `____________________________`
 
 ## 1. Configuración congelada
 
@@ -23,6 +25,10 @@ riesgos ni una función de seguridad certificada.
 - [ ] Hash de configuraciones e instaladores registrado.
 - [ ] Checkpoint/base de datos identificados.
 - [ ] Cámara, resolución y topics registrados.
+- [ ] Mapa, fingerprint y versión de layout registrados.
+- [ ] Waypoints origen/destino y poses registrados.
+- [ ] AprilTags, tamaños negros, frames y objetivos registrados.
+- [ ] Catálogo de cajas con dimensiones, masa, material y carga completado.
 - [ ] No se realizarán actualizaciones durante la sesión.
 - [ ] Espacio libre suficiente, incluyendo temporales y copia.
 
@@ -77,6 +83,13 @@ riesgos ni una función de seguridad certificada.
 - [ ] Reset `A` entendido: no resetea el elevador.
 - [ ] Robot devuelto a postura inicial canónica.
 - [ ] Imagen, estado, acción, fuerza y timestamps recibidos.
+- [ ] `/mc/odom` y `/nav/robot_pose` recibidos en el sidecar.
+- [ ] Goals/resultados de `/vnav/task/command` quedan registrados.
+- [ ] Detecciones workbin y AprilTag quedan registradas con calidad/pose.
+- [ ] Comandos finos de base y pose real quedan registrados.
+- [ ] Paros, cargador, batería y perfil de costmap quedan registrados.
+- [ ] Se verificó que el exportador contiene la acción 20D, no sólo estado.
+- [ ] Se verificó que `Image2m` exporta píxeles decodificables.
 
 ## 6. Piloto de captura
 
@@ -92,7 +105,22 @@ riesgos ni una función de seguridad certificada.
 
 No continuar con una sesión grande si falla cualquiera de estos puntos.
 
-## 7. Por cada episodio
+## 7. Por cada misión caja origen → destino
+
+- [ ] `mission_id`, `box_id`, origen, destino, mapa y layout asignados.
+- [ ] Sidecar iniciado antes de NAV_PICK_PRE.
+- [ ] NAV_PICK_PRE registra waypoint, goal ID, status y poses inicial/final.
+- [ ] ALIGN_PICK registra pose/error antes, correcciones y error después.
+- [ ] PICK enlaza un `episode_id` 20D y termina con agarre estable.
+- [ ] RETREAT_PICK registra odometría y perfil de percepción de carga.
+- [ ] NAV_DROP_PRE usa el waypoint directo previsto y registra resultado.
+- [ ] ALIGN_DROP registra tag, calidad, correcciones y error residual.
+- [ ] PLACE enlaza un `episode_id` 20D y termina con apoyo estable.
+- [ ] RETREAT_HOME restaura percepción/costmap y alcanza estado seguro.
+- [ ] `mission_log.csv` y `phase_log.csv` completos.
+- [ ] Un fallo queda atribuido a navegación, alineación, VLA o seguridad.
+
+## 8. Por cada episodio PICK/PLACE
 
 - [ ] Objeto colocado en la celda planificada.
 - [ ] Pose/condición real registrada.
@@ -104,8 +132,10 @@ No continuar con una sesión grande si falla cualquiera de estos puntos.
 - [ ] Episode ID y resultado anotados inmediatamente.
 - [ ] Fallos enviados a cuarentena, no a train.
 - [ ] Retake guardado con un ID nuevo.
+- [ ] `mission_id`, fase, `box_id` y estación enlazados.
+- [ ] `B` no quedó activo durante la navegación autónoma.
 
-## 8. Cierre de sesión
+## 9. Cierre de sesión
 
 - [ ] Teleoperación terminada en modo de cuerpo completo en sitio.
 - [ ] No queda una captura abierta.
@@ -117,6 +147,8 @@ No continuar con una sesión grande si falla cualquiera de estos puntos.
 - [ ] Outliers y muestra visual revisados.
 - [ ] Episodios aceptados, rechazados y pendientes contabilizados.
 - [ ] Incidencias y cambios de configuración documentados.
+- [ ] Todas las misiones enlazan sus episodios PICK/PLACE o explican la ausencia.
+- [ ] Perfil de percepción/costmap restaurado y hash verificado.
 - [ ] Manifiesto firmado/cerrado.
 
 ## Resultado

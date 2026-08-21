@@ -1,0 +1,1 @@
+session_id,mission_id,box_id,pick_station_id,drop_station_id,pick_waypoint_id,drop_waypoint_id,pick_tag_id,drop_tag_id,map_name,map_fingerprint,layout_version,route_profile,started_at,ended_at,pick_episode_id,place_episode_id,result,failure_phase,safety_incident,cargo_profile_restored,qc_status,notes

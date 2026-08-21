@@ -171,7 +171,7 @@ def main() -> int:
     <div class="eyebrow">Cruzr S2 · VLA · Teleoperación</div>
     <h1>__TITLE__</h1>
     <div class="subtitle">Compatibilidad v0.2.0, PICO 4 Ultra Enterprise, captura de demostraciones, diseño de datasets y estrategia de entrenamiento.</div>
-    <div class="meta">Versión documental 1.1<br>21 de agosto de 2026</div>
+    <div class="meta">Versión documental 1.2<br>21 de agosto de 2026</div>
   </section>
   <nav class="toc">
     <h1>Contenido</h1>

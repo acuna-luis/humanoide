@@ -11,6 +11,8 @@ checkpoint de forma gradual.
 - [Checklist de sesión](templates/TELEOP_SESSION_CHECKLIST.md): lista imprimible para preparar, grabar y cerrar una sesión.
 - [Manifiesto de ejemplo](templates/session_manifest.example.yaml): metadatos que deben acompañar cada sesión.
 - [Registro de episodios](templates/episode_log.csv): cabecera CSV para aceptar o rechazar cada demostración.
+- [Registro de misiones](templates/mission_log.csv): enlaza caja, estaciones, ruta y episodios PICK/PLACE.
+- [Registro de fases](templates/phase_log.csv): navegación, alineación, manipulación y recovery de cada misión.
 - [Activación segura del checkpoint suministrado](../guides/CRUZR_S2_VLA_SAFE_ENABLEMENT.md): estado del shadow mode y bloqueos actuales para movimiento físico.
 
 ## Regla esencial

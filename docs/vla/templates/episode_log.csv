@@ -1,1 +1,1 @@
-session_id,episode_id,task_id,instruction,object_id,height_m,lateral_offset_m,depth_offset_m,yaw_deg,lighting,operator_id,started_at,ended_at,duration_s,result,qc_status,rejection_reason,collision,estop,force_anomaly,visual_loss,retake_of,notes
+session_id,mission_id,episode_id,phase,task_id,instruction,box_id,box_length_m,box_width_m,box_height_m,box_mass_kg,station_id,station_height_m,lateral_offset_m,depth_offset_m,yaw_deg,lighting,operator_id,started_at,ended_at,duration_s,result,qc_status,rejection_reason,collision,estop,force_anomaly,visual_loss,retake_of,notes

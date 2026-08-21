@@ -1,12 +1,12 @@
 # Copiar como <session_id>/session_manifest.yaml y reemplazar todos los TODO.
 # No almacenar contraseñas, tokens ni datos personales innecesarios.
-schema_version: "1.0"
+schema_version: "1.1"
 session:
   id: "TODO_YYYYMMDD_SITE_TASK_RUNNN"
   started_at: "TODO_ISO8601_WITH_TIMEZONE"
   ended_at: null
   site: "TODO"
-  purpose: "teleoperation_dataset_pilot"
+  purpose: "hybrid_box_transfer_teleoperation_dataset"
   status: "open" # open | quarantined | qc_passed | released
 
 people:
@@ -89,6 +89,99 @@ capture:
         - "controller.txt"
         - "body.csv"
         - "motion.txt"
+  sidecar:
+    enabled: true
+    continuous_across_mission: true
+    phase_events_explicit: true
+    topics:
+      odometry: "/mc/odom"
+      map_pose: "/nav/robot_pose"
+      base_command_requested: "/cmd_vel_navi"
+      base_command_effective: "/mc/cmd_vel"
+      apriltag_results: "/sensor/camera/stereo/april_tag/results"
+      estop: "/emb/estop_key_state"
+      servo_estop: "/emb/servo_estop_key_state"
+      charger: "/emb/chrg_input_status"
+      battery: "/emb/battery_state"
+      tf: "/tf"
+      tf_static: "/tf_static"
+    actions:
+      navigation: "/vnav/task/command"
+      workbin_detection: "/cv/task/transport_action"
+    action_stream_20d_confirmed_with_dsa: false
+    image2m_pixels_verified_in_export: false
+
+map_and_layout:
+  map_name: "TODO"
+  map_fingerprint_sha256: "TODO"
+  layout_version: "TODO"
+  costmap_profile_default_sha256: "TODO"
+  cargo_perception_profile_sha256: "TODO"
+  cargo_profile_restored_after_test: false
+  waypoints:
+    - id: "MESA1_PRE"
+      mode: "logo_nav"
+      x_m: null
+      y_m: null
+      yaw_rad: null
+    - id: "MESA2_PRE"
+      mode: "logo_nav"
+      x_m: null
+      y_m: null
+      yaw_rad: null
+
+box_catalog:
+  - box_id: "TODO_BOX_001"
+    family: "workbin"
+    dimensions_m: {length: 0.60, width: 0.40, height: 0.22}
+    measured_mass_kg: null
+    material: "rigid_plastic"
+    rigidity: "rigid"
+    color: "blue"
+    load_state: "empty"
+    center_of_mass_note: "TODO"
+    allowed_contact_surfaces: ["left_side", "right_side"]
+    detector_profile: "byd_workbin_0.60x0.40x0.22"
+    detector_dimensions_m: {x: 0.60, y: 0.40, z: 0.22}
+
+station_catalog:
+  - station_id: "MESA1"
+    role: "pick"
+    height_m: null
+    approach_waypoint: "MESA1_PRE"
+    apriltag:
+      enabled: true
+      id: 112
+      family: "tag36h11"
+      black_square_size_m: 0.075
+      frame: "mesa1_tag112"
+      target_pose_reference: "TODO"
+  - station_id: "MESA2"
+    role: "drop"
+    height_m: null
+    approach_waypoint: "MESA2_PRE"
+    apriltag:
+      enabled: true
+      id: 113
+      family: "tag36h11"
+      black_square_size_m: 0.0735
+      frame: "mesa2_tag113"
+      target_pose_reference: "TODO"
+
+mission_plan:
+  route_profile: "direct_mesa1_to_mesa2"
+  include_unnecessary_intermediate_waypoints: false
+  phases:
+    - "NAV_PICK_PRE"
+    - "ALIGN_PICK"
+    - "PICK"
+    - "RETREAT_PICK"
+    - "NAV_DROP_PRE"
+    - "ALIGN_DROP"
+    - "PLACE"
+    - "RETREAT_HOME"
+  vla_recorded_phases: ["PICK", "PLACE"]
+  sidecar_recorded_phases: ["NAV_PICK_PRE", "ALIGN_PICK", "PICK", "RETREAT_PICK", "NAV_DROP_PRE", "ALIGN_DROP", "PLACE", "RETREAT_HOME"]
 
 policy_target:
   base_model: "nvidia/GR00T-N1.5-3B"
@@ -141,6 +234,13 @@ quality_control:
   accepted_episodes: 0
   rejected_episodes: 0
   pending_episodes: 0
+  mission_phase_sequence_passed: false
+  navigation_goals_linked: false
+  apriltag_pre_post_errors_stored: false
+  workbin_detections_stored: false
+  costmap_profile_restoration_passed: false
+  accepted_missions: 0
+  rejected_missions: 0
 
 provenance:
   repository_commit: "TODO"

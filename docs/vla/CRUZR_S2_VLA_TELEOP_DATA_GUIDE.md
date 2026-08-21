@@ -1,6 +1,6 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
-> Versión documental 1.1 — 21 de agosto de 2026. Estado: guía técnica del
+> Versión documental 1.2 — 21 de agosto de 2026. Estado: guía técnica del
 > proyecto basada en evidencias locales; los puntos marcados «Pendiente DSA»
 > requieren confirmación del proveedor.
 
@@ -224,6 +224,141 @@ timestamps. Es útil para diagnóstico y archivo, pero no reemplaza la captura
 sincronizada de imagen, estado y acción del robot ni produce por sí solo el
 dataset LeRobot esperado por GR00T.
 
+### 6.1 Arquitectura recomendada para cajas, waypoints y AprilTags
+
+Para mover cajas diferentes con abrazaderas entre puestos, la arquitectura
+preferente es **híbrida**:
+
+```text
+orquestador de misión
+  ├─ NAV_PICK_PRE   -> LiDAR + mapa + waypoint
+  ├─ ALIGN_PICK    -> workbin o AprilTag + movimiento fino del chasis
+  ├─ PICK          -> VLA de manipulación 20D con abrazaderas
+  ├─ RETREAT_PICK  -> trayectoria odométrica validada
+  ├─ NAV_DROP_PRE  -> LiDAR + mapa + waypoint
+  ├─ ALIGN_DROP    -> AprilTag + movimiento fino del chasis
+  ├─ PLACE         -> VLA de manipulación 20D con abrazaderas
+  └─ RETREAT_HOME  -> trayectoria y home deterministas
+```
+
+La navegación, los waypoints y el servo visual AprilTag no se introducen como
+20 articulaciones falsas dentro del checkpoint actual. Se ejecutan con sus
+controladores especializados y se registran como fases enlazadas de una misma
+misión. Esto conserva la evitación de obstáculos y permite depurar por separado
+localización, alineación y manipulación.
+
+Sólo un proyecto posterior que quiera control end-to-end de la base debe añadir
+velocidades/pose del chasis al espacio de acción y crear un nuevo perfil desde
+GR00T N1.5. Ese cambio no es compatible con `checkpoint-40000` y exige una
+capa de seguridad independiente.
+
+### 6.2 Capas que deben grabarse
+
+Una grabación completa se divide en tres productos sincronizados:
+
+1. **dataset de aprendizaje**: imagen, estado y acción de los episodios PICK y
+   PLACE;
+2. **sidecar de misión**: navegación, waypoints, odometría, AprilTag, workbin,
+   seguridad y cambios de fase;
+3. **XR bruto**: pose y botones del PICO para auditoría de la demostración.
+
+| Capa | Fuente verificada o prevista | Qué conservar | Uso |
+|---|---|---|---|
+| RGB del modelo | `/sensor/camera/stereo/color/raw` | frames, timestamps, resolución, codec y frames únicos | entrada VLA |
+| estado articular | `/mc/whole_joint_states` | nombres, posiciones y timestamps; seleccionar orden 20D | entrada VLA |
+| acción teleoperada | exportador oficial/cadena de teleoperación, pendiente confirmar | objetivo articular 20D realmente enviado, no el estado posterior | salida supervisada |
+| fuerza/par | `/mc/ft_states/L_hand_ft`, `/mc/ft_states/R_hand_ft` | wrench completo y timestamps | QC, contacto y seguridad; no entrada del checkpoint actual |
+| PICO | `/pico_vr/pose_data`, `/pico_vr/hand_data`, `/pico_vr/joy_data`, `/pico_vr/tele_data` | poses, mandos, botones, modo y timestamp | trazabilidad XR |
+| teleoperación | `/mc/teleoperation/enable`, `/mc/teleoperation/mode_status`, `/teleop/enable` | enable/disable y cambios de modo | fronteras y diagnóstico |
+| odometría | `/mc/odom` | pose y twist reales | movimiento local y retrocesos |
+| localización | `/nav/robot_pose` | pose de mapa y, si existe, covarianza/calidad | posición global |
+| comando fino de base | `/cmd_vel_navi` y salida efectiva `/mc/cmd_vel`, tras confirmar tipos | velocidad solicitada y aplicada | reproducir y auditar alineación |
+| navegación | acción `/vnav/task/command` | comando, goal ID, waypoint, inicio, feedback disponible, resultado y status | sidecar de ruta |
+| mapa | archivos del mapa activo | nombre, hash, waypoint ID, x, y, yaw y modo | reproducibilidad espacial |
+| AprilTag | `/sensor/camera/stereo/april_tag/results` | ID, tamaño configurado, frame, pose, margen, hamming y estabilidad | alineación fina |
+| detector de caja | acción `/cv/task/transport_action` | `box_size` solicitado, `object_name`, `box_pose`, resultado y status | localización de agarre |
+| transformaciones | `/tf` y `/tf_static`, si están disponibles en el dominio de captura | transforms usados y frames | reconstruir relaciones geométricas |
+| seguridad | `/emb/estop_key_state`, `/emb/servo_estop_key_state`, `/emb/chrg_input_status` | cambios y estado en cada frontera | rechazo/aborto |
+| energía | `/emb/battery_state` | SOC de ambos packs al inicio/final y eventos | trazabilidad operativa |
+| percepción de tránsito | perfil de costmap activo y sus hashes | fuentes activas/suprimidas, tiempos y restauración | explicar bloqueos por la propia carga |
+
+El dato crítico que aún debe confirmar DSA es cuál es la salida oficial que
+contiene la **acción teleoperada 20D** y cómo la sincroniza el centro de captura.
+Guardar sólo `/mc/whole_joint_states` produciría observaciones, no necesariamente
+los objetivos que el operador ordenó.
+
+`shm_msgs/msg/Image2m` usa la infraestructura de imagen compartida del robot.
+Antes de confiar en `ros2 bag`, se debe demostrar con un episodio piloto que el
+bag contiene píxeles decodificables y no sólo metadatos de memoria compartida.
+El exportador del proveedor sigue siendo la fuente preferente para el dataset
+entrenable; rosbag2 puede actuar como sidecar para topics estándar.
+
+### 6.3 Reloj común y eventos de fase
+
+Cada muestra o evento debe quedar asociado al menos a:
+
+- `session_id`;
+- `mission_id`;
+- `phase_id` y número de secuencia;
+- `episode_id` cuando la fase sea PICK o PLACE;
+- timestamp de la fuente;
+- timestamp monotónico del PC de captura;
+- host y reloj de origen.
+
+El orquestador debe emitir un evento al entrar y salir de cada fase, incluyendo
+el objetivo, resultado y causa de fallo. No basta reconstruir las fases a
+partir de la imagen. Se debe medir el offset entre los relojes de motion,
+vision, PC y PICO al inicio y final, y registrar si hubo resincronización.
+
+### 6.4 Catálogo de cajas y puestos
+
+Cada caja necesita un `box_id` persistente y estos metadatos:
+
+- dimensiones exteriores `L x W x H` y masa real;
+- material, rigidez, color, textura y transparencia;
+- estado: vacía/cargada y distribución aproximada del centro de masa;
+- superficies de contacto permitidas y posibles asas/salientes;
+- deformación o deslizamiento observado;
+- detector/perfil usado y dimensiones configuradas;
+- fuerza/par máximos observados, sin confundirlos con una fuerza comandada;
+- fotografía/referencia visual y versión física.
+
+Cada puesto de recogida o depósito necesita:
+
+- `station_id`, altura, borde y superficie útil;
+- mapa y fingerprint;
+- waypoint de preaproximación con pose `x, y, yaw`;
+- pose fina objetivo;
+- AprilTag ID, familia, tamaño negro medido, frame y transformación relativa
+  a la zona de apoyo;
+- tolerancias de aceptación y envolvente libre;
+- versión del layout. Si se mueve mesa, tag o waypoint, crear una versión
+  nueva y no mezclarla silenciosamente con datos anteriores.
+
+### 6.5 Estructura de datos de una misión
+
+```text
+session_id/
+  session_manifest.yaml
+  boxes/box_catalog.yaml
+  stations/station_catalog.yaml
+  missions/mission_log.csv
+  missions/phase_log.csv
+  episodes/pick_<episode_id>/...       # LeRobot o exportación fuente
+  episodes/place_<episode_id>/...
+  sidecar/navigation/...
+  sidecar/apriltag/...
+  sidecar/workbin/...
+  sidecar/safety/...
+  sidecar/xr_raw/...
+  qc/...
+  sha256sums.txt
+```
+
+Los logs de misión y fase enlazan el recorrido completo con los episodios VLA,
+pero sólo PICK y PLACE se convierten en muestras 20D para continuar el
+checkpoint actual.
+
 ## 7. Preparación del PC de datos y del PICO
 
 ### 7.1 PC de datos
@@ -384,10 +519,89 @@ Una propuesta inicial:
 - 15 % test bloqueado;
 - al menos un objeto, una posición o una sesión completa no vistos en train.
 
+### 9.4 Matriz optimizada para cajas con abrazaderas
+
+La campaña debe variar primero aquello que afecta al contacto de las
+abrazaderas. Una matriz inicial puede cruzar:
+
+| Factor | Ejemplo de niveles | Motivo |
+|---|---|---|
+| anchura de agarre | estrecha, nominal, ancha dentro del alcance | cambia pose y contacto de brazos |
+| altura | baja, media, alta alcanzable | cambia cinemática y visibilidad |
+| offset lateral | izquierda, centro, derecha | prueba corrección visual |
+| profundidad | cerca, nominal, lejos dentro del rango | prueba aproximación |
+| yaw | negativo, cero, positivo | prueba orientación de contacto |
+| rigidez | plástico rígido, cartón autorizado | cambia deformación y fuerza observada |
+| masa | vacía, ligera, media autorizada | cambia fuerza y estabilidad |
+| destino | dos o más alturas/estaciones | prueba generalización de depósito |
+
+No usar un producto cartesiano completo desde el primer día. Elegir una caja
+nominal y variar un factor por vez; después añadir combinaciones difíciles.
+Mantener fuera de train al menos una caja física y una versión de layout para
+test real.
+
+El detector `workbin` actual está validado alrededor de una caja de
+`0,60 x 0,40 x 0,22 m` y recibe esas dimensiones en
+`/cv/task/transport_action`. No se debe asumir que detectará cajas muy
+diferentes. Para ampliar la familia hay tres opciones:
+
+1. calibrar/crear perfiles deterministas adicionales del detector;
+2. usar AprilTags o geometría de puesto para la alineación y dejar que el VLA
+   aprenda la variación de caja;
+3. entrenar un nuevo detector de pose de caja y mantener el VLA sólo para la
+   manipulación.
+
+Para un entorno industrial estable, las opciones 1 o 3 suelen ser más
+verificables. El VLA aporta más valor cuando la apariencia y pose del objeto
+varían dentro de un rango que resulta costoso parametrizar.
+
 ## 10. Procedimiento de grabación de una sesión
 
 Usar también el
 [checklist imprimible](templates/TELEOP_SESSION_CHECKLIST.md).
+
+### 10.1 Secuencia de una misión caja mesa 1 → mesa 2
+
+El sidecar se inicia antes del primer movimiento y termina después de retirar
+los brazos y volver a un estado seguro. Una misión genera dos episodios de
+aprendizaje, PICK y PLACE:
+
+1. **Crear `mission_id`** y seleccionar `box_id`, estación origen, estación
+   destino, mapa y layout.
+2. **Iniciar sidecar continuo**: eventos de fase, odometría, pose de mapa,
+   navegación, AprilTag, workbin, seguridad, fuerza y XR.
+3. **NAV_PICK_PRE**: enviar el waypoint de origen y guardar payload, goal ID,
+   pose inicial/final, trayectoria/resultado y tiempos.
+4. **ALIGN_PICK**: registrar pose de caja y/o tag antes de corregir, todos los
+   `/cmd_vel_navi`, pose real y error residual. Con el flujo actual, `workbin`
+   centra el agarre; un tag de mesa puede aportar referencia de estación.
+5. **PICK**: activar `B` justo antes de la demostración de brazos, grabar RGB,
+   estado 20D, acción 20D, fuerzas e instrucción. Cerrar `B` tras mantener la
+   caja suspendida y estable. Enlazar `pick_episode_id` con la misión.
+6. **RETREAT_PICK**: grabar el retroceso odométrico, pose antes/después y
+   perfil de percepción de carga. No incluir este tramo en la acción 20D.
+7. **NAV_DROP_PRE**: navegar directamente al waypoint de la mesa destino, por
+   ejemplo `MESA2_PRE`, sin introducir `PASO1` si no es necesario. Registrar
+   goal, ruta, pose y resultado.
+8. **ALIGN_DROP**: iniciar el detector AprilTag con ID, tamaño y frame
+   versionados. Guardar pose/calidad de cada muestra, error inicial, cada
+   corrección de chasis y error final aceptado.
+9. **PLACE**: activar `B`, teleoperar el depósito, registrar el contrato 20D y
+   cerrar tras apoyo estable/liberación. Enlazar `place_episode_id`.
+10. **RETREAT_HOME**: guardar apertura, retroceso, home, restauración del
+    costmap/percepción y estado final.
+11. **Cerrar misión**: resultado, fase fallida si existe, episodios aceptados,
+    hashes e incidencias.
+
+El botón `B` no debe permanecer activo durante toda la ruta si se va a
+continuar `checkpoint-40000`: el loader interpretaría comandos de chasis y
+esperas como si pertenecieran a la trayectoria articular de manipulación. El
+sidecar sí permanece continuo y proporciona la visión completa de la misión.
+
+Si se desea enseñar mediante PICO también la conducción manual, conservar ese
+tramo como dataset separado `base_teleop`. Para convertirlo en política
+aprendida se debe crear un nuevo DataConfig con acción de base, no agregarlo al
+dataset 20D actual.
 
 ### Fase A: congelar configuración
 
@@ -395,7 +609,8 @@ Usar también el
    [`session_manifest.example.yaml`](templates/session_manifest.example.yaml).
 2. Registrar versión del robot, hashes de configuración, `HW_TYPE`,
    `TELE_DEVICE`, `transmit`, efector, carga y operador.
-3. Registrar mapa/escena, cámaras, resolución y topics.
+3. Registrar mapa/fingerprint, layout, waypoints, estaciones, cajas, cámaras,
+   resolución y topics.
 4. Confirmar que no hay cambios de software pendientes durante la sesión.
 5. Reservar espacio: el dataset suministrado equivale aproximadamente a
    7,8 GB por hora de vídeo. Mantener al menos tres veces la estimación por
@@ -423,6 +638,10 @@ Usar también el
 7. Volver a la postura inicial canónica.
 8. Confirmar que imagen, estado, acción y fuerzas están llegando y que los
    timestamps avanzan.
+9. Confirmar que `/mc/odom`, `/nav/robot_pose`, eventos de navegación,
+   workbin/AprilTag y topics de seguridad llegan al sidecar.
+10. Ejecutar un ciclo sin caja o por fases y comprobar que cada transición
+    aparece en `phase_log.csv`.
 
 ### Fase D: grabar un episodio
 
@@ -438,6 +657,7 @@ Usar también el
 9. Volver a postura segura y preparar el siguiente episodio fuera de captura.
 10. Clasificar inmediatamente el episodio como aceptado, rechazado o pendiente
     en [`episode_log.csv`](templates/episode_log.csv).
+11. Registrar `mission_id`, fase PICK/PLACE, `box_id`, estación y pose real.
 
 Evitar pausas largas, conversaciones, reposicionamientos manuales o resets
 dentro del episodio. No concatenar dos intentos bajo un mismo episodio.
@@ -464,6 +684,9 @@ forma explícita. Por ello:
 5. Copiar a almacenamiento secundario antes de borrar temporales.
 6. Ejecutar QC automático y revisar una muestra visual el mismo día.
 7. Firmar el manifiesto con incidencias y episodios aceptados/rechazados.
+8. Comprobar que `mission_log.csv` referencia dos episodios válidos o explica
+   por qué falta alguno.
+9. Confirmar que el perfil temporal de percepción/costmap quedó restaurado.
 
 ## 11. Contrato mínimo del dataset
 
@@ -490,6 +713,31 @@ perfil 20D: usa dimensiones heredadas de 17/16 y omite elementos. No debe
 usarse para este robot/checkpoint sin aclaración del proveedor o una corrección
 versionada y probada.
 
+### 11.1 Contrato del sidecar de misión
+
+El sidecar no entra directamente en `Utars_1RGBDataConfig`, pero debe poder
+reconstruir la misión:
+
+| Campo | Requisito |
+|---|---|
+| misión | `mission_id`, sesión, caja, origen, destino, resultado y fase fallida |
+| fases | secuencia, controlador, inicio, fin, resultado y episode ID asociado |
+| mapa | nombre, fingerprint, versión de layout y pose inicial/final |
+| waypoint | ID, `x`, `y`, `yaw`, modo y payload enviado |
+| navegación | goal ID, status, duración, pose final y clasificación de fallo |
+| base | `/mc/odom`, `/nav/robot_pose`, comando deseado y movimiento efectivo |
+| AprilTag | ID, familia, tamaño, frame, pose/calidad por muestra y error pre/post |
+| workbin | dimensiones solicitadas, nombre, pose, status y muestras usadas |
+| seguridad | paros, cargador, bumpers/colisión disponibles e incidentes |
+| percepción | perfil de costmap, fuentes activas/suprimidas y restauración |
+| enlaces | `pick_episode_id`, `place_episode_id` y hashes de sus datos |
+
+Las plantillas
+[`mission_log.csv`](templates/mission_log.csv) y
+[`phase_log.csv`](templates/phase_log.csv) definen una base mínima. Los
+payloads completos y secuencias de alta frecuencia deben guardarse en archivos
+sidecar, no dentro de una celda CSV.
+
 ## 12. Control de calidad antes de entrenar
 
 ### 12.1 Gates automáticos por episodio
@@ -510,7 +758,30 @@ versionada y probada.
 Los umbrales finales deben derivarse de tasas reales y límites del robot. No
 se deben copiar umbrales genéricos sin medir el pipeline.
 
-### 12.2 Revisión humana
+### 12.2 Gates de misión híbrida
+
+Antes de declarar una misión utilizable:
+
+- todas las fases previstas existen y están ordenadas;
+- NAV_PICK_PRE y NAV_DROP_PRE terminaron con status de éxito y pose coherente;
+- mapa, fingerprint, waypoint y layout coinciden con el manifiesto;
+- el error de localización no se perdió durante el recorrido;
+- ALIGN_PICK/ALIGN_DROP guardan pose antes y después, y todas las correcciones;
+- el AprilTag usado coincide en ID, tamaño y frame con la estación;
+- workbin devuelve el objeto y una pose estable cuando esa detección es parte
+  del flujo;
+- PICK y PLACE enlazan episodios que superaron el QC 20D;
+- la caja no se deslizó ni generó una fuerza anómala no anotada;
+- ningún paro, bumper o evento de seguridad fue ignorado;
+- el perfil de percepción de carga se restauró al terminar o abortar;
+- un fallo de navegación no se etiqueta como fallo de VLA y viceversa.
+
+Una misión fallida puede contener un episodio PICK válido. Se puede admitir
+ese episodio en el dataset de manipulación si su frontera, resultado y datos son
+correctos, manteniendo la misión global como fallida. La decisión debe quedar
+explícita en ambos logs.
+
+### 12.3 Revisión humana
 
 Reproducir como mínimo:
 
@@ -523,7 +794,7 @@ Comprobar que la vista disponible para el modelo permite inferir el objeto y
 el resultado. Si el teleoperador ve algo que la cámara del modelo no ve, la
 demostración puede ser imposible de aprender.
 
-### 12.3 Auditoría de frecuencia
+### 12.4 Auditoría de frecuencia
 
 Registrar por separado:
 
@@ -751,16 +1022,23 @@ No activar el ejecutor SDK incompleto ni usar el perfil Walker de 30 DOF.
 ## 17. Piloto recomendado antes de una campaña completa
 
 1. Mantener abrazaderas, `HW_TYPE=cruzr_s2_v1`, `pico` y `local`.
-2. Definir una sola tarea sencilla y una sola altura.
-3. Grabar 10 episodios exitosos y 2 fallidos en cuarentena.
-4. Exportar y comprobar video, 20D estado, 20D acción, fuerza, task y
-   timestamps.
-5. Reproducir visualmente los 10 episodios.
-6. Convertir a LeRobot y ejecutar todos los gates de QC.
-7. Probar que el loader `Utars_1RGBDataConfig` carga el lote.
-8. Hacer un overfit del subconjunto fuera del robot.
-9. Ejecutar inferencia offline y luego shadow.
-10. Sólo entonces ampliar posiciones, objetos y episodios.
+2. Usar una caja nominal, `MESA1_PRE`, `MESA2_PRE` y los tags versionados.
+3. Ejecutar una misión sin caja y verificar todas las fases del sidecar.
+4. Ejecutar una misión con caja sin entrenar: comprobar navegación directa,
+   errores AprilTag pre/post y restauración del perfil de percepción.
+5. Grabar 10 misiones exitosas. Cada una debe producir un PICK y un PLACE
+   aceptados, además del sidecar continuo.
+6. Conservar 2 misiones fallidas en cuarentena, etiquetando la fase causal.
+7. Exportar y comprobar video, 20D estado, **20D acción**, fuerza, task,
+   timestamps, goals de navegación, poses, workbin y AprilTag.
+8. Reproducir visualmente los 20 episodios y reconstruir al menos dos misiones
+   completas desde sus logs.
+9. Convertir PICK/PLACE a LeRobot y ejecutar QC de episodio y misión.
+10. Probar que `Utars_1RGBDataConfig` carga el lote sin usar los comandos de
+    chasis como parte de la acción.
+11. Hacer un overfit del subconjunto fuera del robot.
+12. Ejecutar inferencia offline y luego shadow desde la pose ready correcta.
+13. Sólo entonces ampliar cajas, alturas, layouts y número de episodios.
 
 ## 18. Preguntas abiertas para DSA
 
@@ -769,14 +1047,16 @@ No activar el ejecutor SDK incompleto ni usar el perfil Walker de 30 DOF.
 2. ¿Qué aplicación/servicio produce el dataset LeRobot y dónde lo exporta?
 3. ¿Cuál es el reloj maestro y cómo se sincronizan 90 Hz XR, RGB y 120 FPS
    declarados?
-4. ¿Qué significado exacto tiene cada campo 20D y en qué unidades?
-5. ¿Cómo se marca oficialmente el éxito o rechazo de un episodio?
-6. ¿Se puede capturar fuerza/par como entrada de entrenamiento soportada?
-7. ¿Cuál es el data config oficial para manos v4 y cuál es su acción?
-8. ¿Cuál es la postura oficial VLA ready y dónde se define
+4. ¿Qué topic/archivo contiene la acción teleoperada 20D previa a la
+   respuesta mecánica, y cómo se relaciona con `/mc/whole_joint_states`?
+5. ¿Qué significado exacto tiene cada campo 20D y en qué unidades?
+6. ¿Cómo se marca oficialmente el éxito o rechazo de un episodio?
+7. ¿Se puede capturar fuerza/par como entrada de entrenamiento soportada?
+8. ¿Cuál es el data config oficial para manos v4 y cuál es su acción?
+9. ¿Cuál es la postura oficial VLA ready y dónde se define
    `clamp_s2_joints_trajectory`?
-9. ¿Qué ejecutor 20D y límites recomienda DSA para Cruzr S2?
-10. ¿Qué GPU/VRAM y versión exacta de GR00T recomiendan para continuar
+10. ¿Qué ejecutor 20D y límites recomienda DSA para Cruzr S2?
+11. ¿Qué GPU/VRAM y versión exacta de GR00T recomiendan para continuar
     `checkpoint-40000`?
 
 ## 19. Fuentes locales y trazabilidad
