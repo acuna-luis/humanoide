@@ -11,6 +11,7 @@ la puesta en marcha del humanoide UBTECH Cruzr S2.
 │   ├── guides/       # Guías de operación y documentos generados
 │   ├── reports/      # Revisión técnica, inventario y matriz de capacidades
 │   ├── support/      # Preguntas y seguimiento con UBTECH
+│   ├── vla/          # Teleoperación, datasets y evolución de checkpoints
 │   └── vendor/       # Manual de producto recibido del proveedor
 ├── scripts/
 │   ├── custom_tasks/ # Behavior Trees XML instalados por los scripts
@@ -80,6 +81,10 @@ El catálogo de funciones y ejemplos está en
 La transferencia de una caja entre dos mesas mediante navegación y alineación
 AprilTag está documentada en
 [docs/guides/TRANSFERENCIA_CAJA_ENTRE_MESAS_CON_APRILTAG.md](docs/guides/TRANSFERENCIA_CAJA_ENTRE_MESAS_CON_APRILTAG.md).
+
+La preparación del PICO 4 Ultra Enterprise, la captura de demostraciones y el
+flujo dataset → entrenamiento → shadow están documentados en
+[docs/vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md](docs/vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md).
 
 ## Seguridad
 

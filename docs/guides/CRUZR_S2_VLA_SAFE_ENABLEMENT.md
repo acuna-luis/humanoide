@@ -1,5 +1,9 @@
 # Integración segura del VLA suministrado para Cruzr S2
 
+Para preparar el PICO 4 Ultra Enterprise, diseñar sesiones, capturar episodios
+y decidir entre continuar este checkpoint o crear un nuevo perfil, consulte
+[Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA](../vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md).
+
 ## Estado verificado
 
 El checkpoint GR00T N1.5 suministrado está instalado y puede cargarse sobre el

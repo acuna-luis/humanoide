@@ -2,6 +2,13 @@
 /cruzrss2_vla_pack-002/
 /utars-udoke-config-v0.2.0_offline-001/
 
+# Instaladores y SOP de teleoperación conservados localmente. El índice
+# utats/README.md sí se versiona; los binarios se obtienen del proveedor.
+/utats/*.apk
+/utats/*.deb
+/utats/*.zip
+/utats/*.pdf
+
 # Este artefacto del SDK supera el límite de 100 MB por archivo de GitHub.
 # Se conserva intacto en disco; para versionarlo será necesario Git LFS.
 /Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/USD/Collected_cruzr_s2_v1.zip

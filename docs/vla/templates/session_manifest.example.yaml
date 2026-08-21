@@ -1,0 +1,157 @@
+# Copiar como <session_id>/session_manifest.yaml y reemplazar todos los TODO.
+# No almacenar contraseñas, tokens ni datos personales innecesarios.
+schema_version: "1.0"
+session:
+  id: "TODO_YYYYMMDD_SITE_TASK_RUNNN"
+  started_at: "TODO_ISO8601_WITH_TIMEZONE"
+  ended_at: null
+  site: "TODO"
+  purpose: "teleoperation_dataset_pilot"
+  status: "open" # open | quarantined | qc_passed | released
+
+people:
+  technical_lead_id: "TODO_PSEUDONYM_OR_INTERNAL_ID"
+  teleoperator_id: "TODO_PSEUDONYM_OR_INTERNAL_ID"
+  safety_observer_id: "TODO_PSEUDONYM_OR_INTERNAL_ID"
+
+robot:
+  model: "Cruzr S2"
+  serial: "TODO"
+  motion_image: "zs2_motion-v0.2.0"
+  vision_image: "zs2_vision-v0.2.0"
+  exact_dac_build_confirmed: false
+  exact_dac_build_note: "Pending DSA confirmation"
+  hw_type: "cruzr_s2_v1"
+  end_effector: "passive_side_clamps"
+  tele_device: "pico"
+  transmit: "local"
+  charger_disconnected: true
+  initial_battery_soc_percent: [null, null]
+  final_battery_soc_percent: [null, null]
+  config_hashes:
+    motion_environment_sha256: "TODO"
+    controller_config_sha256: "TODO"
+
+xr:
+  headset: "PICO 4 Ultra Enterprise"
+  system_version: "TODO"
+  xrobotoolkit_pico_version: "1.1.1"
+  xrobotoolkit_pc_service_version: "1.0.0"
+  ubt_controller_version: "5.3.0"
+  ubt_remote_control_version: "4.1.0"
+  transport: "usb_shared_network"
+  wifi_disabled_during_run: true
+  configured_push_rate_hz: 90
+  mode: "head_and_controller" # or full_body_high_accuracy
+  tracker_count: 0
+  tracker_layout: "none"
+  calibrated_this_session: true
+  calibration_notes: "TODO"
+
+capture:
+  recorder_name: "TODO_CONFIRM_VENDOR_CAPTURE_CENTER"
+  recorder_version: "TODO"
+  export_format: "TODO_EXPECTED_LEROBOT_V2_1"
+  clock_master: "TODO"
+  synchronization_method: "TODO"
+  output_root_logical_name: "TODO_SESSION_ID"
+  modalities:
+    rgb:
+      topic: "/sensor/camera/stereo/color/raw"
+      type: "shm_msgs/msg/Image2m"
+      width: 960
+      height: 576
+      measured_rate_hz: null
+      declared_dataset_fps: null
+      codec_actual: "TODO_INSPECT_EXPORTED_VIDEO"
+    state:
+      source_topic: "/mc/whole_joint_states"
+      dimensions: 20
+      order_profile: "utars_1rgb_20d_v1"
+      units: "TODO_CONFIRM_RAD_OR_VENDOR_CONTRACT"
+      measured_rate_hz: null
+    action:
+      dimensions: 20
+      order_profile: "utars_1rgb_20d_v1"
+      units: "TODO_CONFIRM_RAD_OR_VENDOR_CONTRACT"
+      measured_rate_hz: null
+    force_torque:
+      stored: true
+      used_by_current_model: false
+      left_topic: "/mc/ft_states/L_hand_ft"
+      right_topic: "/mc/ft_states/R_hand_ft"
+      dimensions: 12
+    xr_raw:
+      stored: true
+      expected_files:
+        - "head.txt"
+        - "hand.txt"
+        - "controller.txt"
+        - "body.csv"
+        - "motion.txt"
+
+policy_target:
+  base_model: "nvidia/GR00T-N1.5-3B"
+  starting_checkpoint: "checkpoint-40000"
+  data_config: "Utars_1RGBDataConfig"
+  observation_rgb_count: 1
+  state_dimensions: 20
+  action_dimensions: 20
+  action_horizon: 10
+  force_conditioned: false
+  chassis_controlled: false
+  fingers_controlled: false
+
+task_catalog:
+  - task_id: 4
+    instruction: "Pick up the blue workbin from the table."
+    initial_state: "Official ready pose at the marked pre-pick zone"
+    success_condition: "Workbin suspended stably for one second without slip"
+    abort_condition: "Collision, excessive force, visual loss, unstable clamp or E-stop"
+
+variation_plan:
+  object_family: "blue_workbin"
+  object_ids: ["TODO"]
+  heights_m: [null]
+  lateral_offsets_m: [null]
+  depth_offsets_m: [null]
+  yaw_degrees: [null]
+  lighting_conditions: ["TODO"]
+  backgrounds: ["TODO"]
+  target_successful_episodes_per_cell: 10
+
+safety:
+  risk_assessment_reference: "TODO"
+  force_protection_left_enabled: true
+  force_protection_right_enabled: true
+  estop_observer_present: true
+  exclusion_zone_established: true
+  payload_authorized: true
+  incidents: []
+
+quality_control:
+  pilot_episode_opened: false
+  video_decode_passed: false
+  dimensions_passed: false
+  timestamp_monotonicity_passed: false
+  synchronization_passed: false
+  unique_rgb_frame_rate_measured: false
+  automatic_qc_report: null
+  human_review_complete: false
+  accepted_episodes: 0
+  rejected_episodes: 0
+  pending_episodes: 0
+
+provenance:
+  repository_commit: "TODO"
+  data_config_sha256: "TODO"
+  recorder_config_sha256: "TODO"
+  files_inventory_sha256: "TODO_AFTER_SESSION"
+  primary_storage_uri: "TODO_INTERNAL_URI"
+  backup_storage_uri: "TODO_INTERNAL_URI"
+
+closure:
+  notes: "TODO"
+  released_for_training: false
+  approved_by: null
+  approved_at: null
