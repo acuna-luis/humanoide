@@ -11,6 +11,7 @@ la puesta en marcha del humanoide UBTECH Cruzr S2.
 │   ├── guides/       # Guías de operación y documentos generados
 │   ├── reports/      # Revisión técnica, inventario y matriz de capacidades
 │   ├── support/      # Preguntas y seguimiento con UBTECH
+│   ├── teleoperation/ # Estado operativo PICO, PC y robot
 │   ├── vla/          # Teleoperación, datasets y evolución de checkpoints
 │   └── vendor/       # Manual de producto recibido del proveedor
 ├── scripts/
@@ -87,6 +88,11 @@ flujo dataset → entrenamiento → shadow están documentados en
 [docs/vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md](docs/vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md).
 La [versión PDF](docs/vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.pdf) está maquetada
 para compartir por correo.
+
+El estado técnico vivo de la conexión PICO → PC → robot, incluidas las
+versiones, incompatibilidades, pruebas fallidas, workarounds y gates de
+reanudación, se conserva en
+[docs/teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md](docs/teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md).
 
 ## Seguridad
 

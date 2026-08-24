@@ -6,6 +6,7 @@ checkpoint de forma gradual.
 
 ## Documentos
 
+- [Fuente de verdad operativa PICO/PC/robot](../teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md): estado real del enlace, versiones, fallos reproducidos, workarounds y gates pendientes antes de mover.
 - [Guía de teleoperación, datos y entrenamiento](CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md): arquitectura, compatibilidad v0.2.0, procedimiento completo y criterios de decisión.
 - [Guía en PDF](CRUZR_S2_VLA_TELEOP_DATA_GUIDE.pdf): versión maquetada para compartir.
 - [Checklist de sesión](templates/TELEOP_SESSION_CHECKLIST.md): lista imprimible para preparar, grabar y cerrar una sesión.

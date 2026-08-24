@@ -1,0 +1,5 @@
+# PICO 4 Ultra / Ultra Enterprise USB access for UBTECH teleoperation.
+#
+# The vendor ID is shared by PICO devices. Grant the active desktop user and
+# members of plugdev access to ADB and the XR runtime without using root ADB.
+SUBSYSTEM=="usb", ATTR{idVendor}=="2d40", MODE="0660", GROUP="plugdev", TAG+="uaccess"
