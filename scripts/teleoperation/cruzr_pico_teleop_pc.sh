@@ -4,8 +4,8 @@ set -Eeuo pipefail
 
 motion_ip="${CRUZR_MOTION_IP:-192.168.11.2}"
 vision_ip="${CRUZR_VISION_IP:-192.168.11.3}"
-pico_ip="${PICO_IP:-192.168.67.197}"
-pc_pico_ip="${PICO_PC_IP:-192.168.67.183}"
+pico_ip="${PICO_IP:-}"
+pc_pico_ip="${PICO_PC_IP:-}"
 pico_serial="${PICO_SERIAL:-PA94Y0MGKB070822G}"
 robot_iface="${CRUZR_IFACE:-eno1}"
 robot_pc_ip="${CRUZR_PC_IP:-192.168.11.250}"
@@ -13,6 +13,8 @@ backend_unit="ubt-controller.service"
 ui_unit="ubt-remote-control.service"
 backend_log="/opt/ubt/ubt_controller/logs/ubt_controller.log"
 required_arm="clamp"
+patched_backend_sha256="0f0d341424f30042cc9189ff215d09007de91f443e4b9b0debaeffa81cda28eb"
+backend_executable="/opt/ubt/ubt_controller/ubt_controller"
 
 die() {
   printf 'ERROR: %s\n' "$*" >&2
@@ -33,9 +35,12 @@ Uso:
 
 --check    Sólo lectura; valida PC, red, PICO y backend.
 --open-ui  Abre la interfaz después del backend. No inicia la publicación.
---run      Exige confirmación física, abre la interfaz y envía explícitamente
-           arm_type=clamp. La web del robot debe mostrar 遥操模式 y el
-           operador debe pulsar Y cuando se indique.
+--run      Exige confirmación física y arma directamente el backend corregido
+           con arm_type=clamp, sin depender de Electron. La web del robot debe
+           mostrar 遥操模式. En esta unidad, el operador debe apretar por
+           completo el gatillo izquierdo cuando se indique: el PC lo reasigna
+           a la función Y oficial porque X/Y no entregan el clic de forma
+           fiable. Sólo es válido con las abrazaderas pasivas instaladas.
 --stop     Solicita EXIT_REMOTE_CONTROL y cierra la interfaz.
 
 Este script sólo cambia/ejecuta componentes del PC. Nunca desactiva el
@@ -49,6 +54,34 @@ ensure_cmd() {
 
 adb_state() {
   adb devices | awk -v serial="$pico_serial" '$1 == serial {print $2; exit}'
+}
+
+endpoint_ip() {
+  sed -E \
+    -e 's/^\[::ffff:([^]]+)\]:[0-9]+$/\1/' \
+    -e 's/^([^:]+):[0-9]+$/\1/' <<<"$1"
+}
+
+discover_pico_stream() {
+  local endpoints local_endpoint peer_endpoint detected_pc_ip detected_pico_ip
+  endpoints="$(ss -Htn | awk '
+    $1 == "ESTAB" && $4 ~ /:63901$/ {print $4, $5; exit}
+  ')"
+  [[ -n "$endpoints" ]] || return 1
+  read -r local_endpoint peer_endpoint <<<"$endpoints"
+  detected_pc_ip="$(endpoint_ip "$local_endpoint")"
+  detected_pico_ip="$(endpoint_ip "$peer_endpoint")"
+  [[ "$detected_pc_ip" =~ ^[0-9]+(\.[0-9]+){3}$ ]] || return 1
+  [[ "$detected_pico_ip" =~ ^[0-9]+(\.[0-9]+){3}$ ]] || return 1
+
+  if [[ -n "$pc_pico_ip" && "$pc_pico_ip" != "$detected_pc_ip" ]]; then
+    die "PICO_PC_IP=$pc_pico_ip no coincide con el stream activo $detected_pc_ip."
+  fi
+  if [[ -n "$pico_ip" && "$pico_ip" != "$detected_pico_ip" ]]; then
+    die "PICO_IP=$pico_ip no coincide con el stream activo $detected_pico_ip."
+  fi
+  pc_pico_ip="$detected_pc_ip"
+  pico_ip="$detected_pico_ip"
 }
 
 has_established_pico_stream() {
@@ -85,6 +118,7 @@ check_pc() {
   ensure_cmd systemctl
   ensure_cmd python3
   ensure_cmd jq
+  ensure_cmd sha256sum
 
   [[ "$(adb_state)" == "device" ]] || die "PICO no autorizado por ADB ($pico_serial)."
   adb -s "$pico_serial" shell pidof com.xrobotoolkit.client >/dev/null 2>&1 ||
@@ -100,6 +134,7 @@ check_pc() {
   systemctl is-active --quiet "$backend_unit" || die "$backend_unit no está activo."
   ss -Hlnt | grep -q ':8082 ' || die "El backend no escucha en TCP 8082."
   ss -Hlnt | grep -q ':63901 ' || die "XRoboToolkit PC Service no escucha en TCP 63901."
+  discover_pico_stream || die "PICO no mantiene ningún flujo TCP hacia el servicio XR en 63901."
   has_established_pico_stream || die "PICO no mantiene el flujo TCP hacia $pc_pico_ip:63901."
   latest_log_has_pico || die "El backend activo todavía no ha descubierto el PICO."
 
@@ -107,6 +142,10 @@ check_pc() {
   environment="$(systemctl show "$backend_unit" -p Environment --value)"
   [[ " $environment " == *" arm=$required_arm "* ]] ||
     die "El backend no está fijado a arm=$required_arm; reinstale el drop-in del PC."
+  local backend_sha256
+  backend_sha256="$(sha256sum "$backend_executable" | awk '{print $1}')"
+  [[ "$backend_sha256" == "$patched_backend_sha256" ]] ||
+    die "El backend no contiene la corrección clamp validada (SHA-256=$backend_sha256)."
 
   local detect_json vr_status operation_type
   detect_json="$(backend_detect_json)"
@@ -123,6 +162,8 @@ check_pc() {
   info "PICO_STREAM_OK=$pico_ip->$pc_pico_ip:63901"
   info "PICO_TRACKING_OK=vr_status:$vr_status"
   info "BACKEND_OK=ubt-controller:5.3.0,arm:$required_arm,ws:8082"
+  info "CLAMP_PATCH_OK=WebsocketServer.collect:GRIPPER->CLAMP"
+  info "PICO_BUTTON_WORKAROUND_OK=left-trigger-bool->vendor-Y"
   info "UI_PACKAGE_OK=ubt-remote-control:4.1.0"
 }
 
@@ -179,6 +220,15 @@ open_ui() {
     ((SECONDS < deadline)) || die "La interfaz no conectó al backend TCP 8082."
     sleep 1
   done
+  sleep 2
+  local detect_json operation_type enable_control
+  detect_json="$(backend_detect_json)"
+  operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
+  enable_control="$(jq -r '.content.enable_control' <<<"$detect_json")"
+  if [[ "$operation_type" != "1" || "$enable_control" != "0" ]]; then
+    stop_all
+    die "La UI alteró el estado remoto al abrirse; STOP enviado (operation_type=$operation_type, enable_control=$enable_control)."
+  fi
   info "UI_CONNECTED=local-ws:8082"
   info "UI_NOTE=no pulse todavía el botón chino de inicio ni Y"
 }
@@ -193,7 +243,7 @@ stop_all() {
 }
 
 run_gate() {
-  open_ui
+  check_pc
 
   cat <<'EOF'
 
@@ -208,6 +258,16 @@ EOF
   read -r confirmation
   [[ "$confirmation" == "TELEOPERACION SEGURA Y MODO REMOTO" ]] ||
     die "Confirmación incorrecta; no se inició la publicación."
+
+  cat <<'EOF'
+
+PREPARACIÓN INMEDIATA
+Mantenga ambos controladores neutros. Empiece a apretar y soltar completamente
+el gatillo izquierdo una vez por segundo y pulse Enter mientras continúa. El
+PC armará la sesión y capturará el primer flanco posterior al armado dentro de
+los 8 segundos permitidos por el watchdog original del fabricante.
+EOF
+  read -r _
 
   local start_line
   start_line="$(wc -l < "$backend_log")"
@@ -225,8 +285,30 @@ EOF
 
   info "ARM_TYPE_CONFIRMED=clamp"
   info "PUBLISHER_ARMED=1"
-  info "PULSE Y UNA VEZ AHORA; después pulse Enter en esta terminal."
-  read -r _
+  info "ENABLE_CONTROL_BEFORE_TRIGGER=0"
+  info "PRESS_LEFT_TRIGGER_NOW=1"
+
+  local enabled=0 detect_json operation_type enable_control
+  local enable_deadline=$((SECONDS + 8))
+  while ((SECONDS < enable_deadline)); do
+    detect_json="$(backend_detect_json)"
+    operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
+    enable_control="$(jq -r '.content.enable_control' <<<"$detect_json")"
+    if [[ "$operation_type" == "2" && "$enable_control" == "1" ]]; then
+      enabled=1
+      break
+    fi
+    if [[ "$operation_type" == "1" ]]; then
+      stop_all
+      die "El robot cerró la sesión antes de detectar la habilitación."
+    fi
+    sleep 0.25
+  done
+  if [[ "$enabled" != "1" ]]; then
+    stop_all
+    die "No se detectó una nueva pulsación del gatillo/enable_control=1 dentro de 8 s."
+  fi
+  info "ENABLE_CONTROL_CONFIRMED=1"
 
   info "MONITORING_HEARTBEAT_GATE=60s"
   local monitor_deadline=$((SECONDS + 60))
@@ -234,6 +316,13 @@ EOF
     if tail -n "+$((start_line + 1))" "$backend_log" | grep -q 'No heartbeat for 10 seconds'; then
       stop_all
       die "El watchdog no recibió heartbeat; STOP enviado y UI cerrada."
+    fi
+    detect_json="$(backend_detect_json)"
+    operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
+    enable_control="$(jq -r '.content.enable_control' <<<"$detect_json")"
+    if [[ "$operation_type" != "2" || "$enable_control" != "1" ]]; then
+      stop_all
+      die "La sesión perdió habilitación (operation_type=$operation_type, enable_control=$enable_control)."
     fi
     sleep 1
   done

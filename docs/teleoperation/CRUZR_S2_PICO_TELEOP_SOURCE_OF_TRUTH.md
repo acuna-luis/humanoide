@@ -12,13 +12,13 @@ Es la fuente de verdad para la conexión **PICO → PC → robot**. La guía de
 captura, dataset y VLA sigue estando en
 [`../vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md`](../vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md).
 
-> **Bloqueo vigente:** DSA indicó el 24 de agosto que antes de teleoperar hay
-> que seleccionar **遥操模式 / Remote control mode** en la esquina superior
-> derecha de `http://192.168.11.3`. El selector ya se verificó visualmente;
-> falta validar ese modo junto con
-> `Head + Controllers / Send data / Working`, `vr_status=1`, efector `clamp` y
-> heartbeat estable durante 60 segundos. No se debe eliminar ni ampliar el
-> watchdog de 10 segundos.
+> **Relevo vigente:** la sesión está detenida. El último estado robot
+> verificado fue brazos en `home` y Control Center en `JoystickMode`. Al
+> redactar el relevo, el PC no tenía portadora Ethernet y el PICO no aparecía
+> por ADB; el estado físico de apagado no quedó confirmado. Antes de continuar,
+> seguir el documento fechado
+> [`CRUZR_S2_PICO_TELEOP_HANDOFF_2026-08-24.md`](CRUZR_S2_PICO_TELEOP_HANDOFF_2026-08-24.md).
+> No se ha eliminado, ampliado ni falsificado el watchdog.
 
 ## 1. Convenciones de evidencia
 
@@ -40,46 +40,51 @@ certifican su propia capa. No equivalen a “teleoperación lista para mover”.
 
 | Capa | Estado | Evidencia resumida |
 |---|---|---|
-| PICO físico y USB | **VERIFICADO** | ADB autorizado y enlace TCP XR activo |
-| Aplicación XR del PICO | **VERIFICADO Y ARMADO** | XRoboToolkit 1.1.1 en `Head + Controllers / Send data / Working`; preflight devuelve `vr_status=1` |
-| Servicio XR del PC | **VERIFICADO** | `RoboticsServiceProcess` activo, PICO conectado a TCP 63901 |
+| PICO físico y USB | **HISTÓRICAMENTE VERIFICADO; DESCONECTADO AL CIERRE** | ADB y el enlace XR funcionaron; el snapshot final no mostró dispositivo ADB |
+| Aplicación XR del PICO | **REQUIERE RECONEXIÓN** | XRoboToolkit 1.1.1 llegó a `Working`/`vr_status=1`; después del reinicio quedó sin red hacia el PC |
+| Servicio XR del PC | **ACTIVO SIN PICO AL CIERRE** | `RoboticsServiceProcess` escucha; no había peer PICO en TCP 63901 |
 | Backend UBT del PC | **VERIFICADO** | `ubt-controller` 5.3.0 activo y escuchando en TCP 8082 |
-| Ethernet PC ↔ robot | **VERIFICADO** | PC `192.168.11.250/24`; Motion `.2`; Vision/señalización `.3` |
+| Ethernet PC ↔ robot | **HISTÓRICAMENTE VERIFICADO; SIN PORTADORA AL CIERRE** | perfil PC `192.168.11.250/24`; `eno1` terminó `DOWN/NO-CARRIER` |
 | Configuración de efector | **VERIFICADO EN ROBOT Y PC** | `HW_TYPE=cruzr_s2_v1`; backend PC fijado a `arm=clamp` |
 | Configuración PICO del robot | **VERIFICADO** | `TELE_DEVICE=pico`, `transmit=local` |
 | Tarea Cruzr/PICO correcta | **VERIFICADO** | `teleoperation/cruzr_clamp_pico_teleoperation` |
 | Modo web del robot | **VERIFICADO VISUALMENTE** | La web mostró `遥操模式`; DSA confirma que es obligatorio |
 | Señalización y DataChannel | **VERIFICADO** | DataChannel llegó a estado abierto durante diagnóstico |
 | Flujo XR hacia el robot | **VERIFICADO** | El robot registró recepción de tele-data y habilitación temporal |
-| Heartbeat de aplicación robot → PC | **FALLA REPRODUCIDA** | El PC no recibe `{"type":"heartbeat"}` |
-| Teleoperación sostenida | **NO VALIDADA** | El watchdog envía STOP por ausencia de heartbeat |
-| Movimiento físico mediante PICO | **BLOQUEADO** | No se autoriza hasta corregir heartbeat/build |
+| Botón de habilitación | **WORKAROUND INSTALADO, NO VALIDADO E2E** | el gatillo izquierdo se mapea al booleano Y; la última captura no observó flanco físico |
+| Heartbeat de aplicación robot → PC | **FALLA REPRODUCIDA** | el PC no recibió el heartbeat esperado; el robot devolvió `enable=0` aproximadamente cada 11,1 s |
+| Teleoperación sostenida | **NO VALIDADA** | falta gate monitorizado de 60 s |
+| Movimiento físico mediante PICO | **PENDIENTE DEL GATE** | sólo prueba mínima tras confirmar habilitación y watchdog |
 | Grabación de episodios con `B` | **PENDIENTE** | No existe aún exportación auditada extremo a extremo |
 | PICO directo al robot sin PC | **NO SOPORTADO/NO VERIFICADO** | El material recibido requiere el PC intermedio |
 
-Tras la corrección del PC y el preflight final realizados el 24 de agosto:
+Tras la corrección del PC y el último preflight completo realizado el 24 de
+agosto:
 
 - `ubt-controller.service` está activo;
 - el PICO permanece autorizado por ADB;
-- existe una sesión TCP XR entre `192.168.67.197` y
-  `192.168.67.183:63901` y el snapshot final devolvió `vr_status=1`;
+- llegó a existir una sesión TCP XR y el snapshot devolvió `vr_status=1`;
 - `RoboticsServiceProcess` y `ubt_controller` están activos;
 - la unidad del backend tiene `Environment=arm=clamp`;
 - no está abierta la interfaz Electron `ubt-remote-control`;
 - no hay un cliente diagnóstico WebSocket persistente;
-- no se ha enviado una nueva orden de movimiento.
+- no se obtuvo una teleoperación física sostenida;
+- se detuvo TeleopMode, se esperó la reinicialización de Motion y se ejecutó
+  `cruzr/home` correctamente;
+- la web se devolvió manualmente a `JoystickMode`;
+- el snapshot de cierre mostró `eno1` sin portadora y PICO ausente de ADB.
 
 ## 3. Arquitectura que se ha verificado
 
 ```text
 PICO 4 Ultra Enterprise
   Android 14 / XRoboToolkit-PICO 1.1.1
-  IP USB compartida observada: 192.168.67.197
+  IP USB compartida histórica: variable según la sesión
                  │
                  │ USB + red compartida + ADB
                  ▼
 PC Ubuntu 24.04.4 LTS
-  IP PICO: 192.168.67.183
+  IP hacia PICO: variable; se perdió al reiniciar el visor
   IP Ethernet robot: 192.168.11.250
   ├─ RoboticsServiceProcess 1.0.0.0  (TCP 63901)
   ├─ ubt_controller 5.3.0             (WebSocket local TCP 8082)
@@ -160,15 +165,25 @@ La instalación del 21 de agosto usó deliberadamente el paquete
 sólo fue entregado con nombre `ubuntu22.04`, aunque su binario funciona en el
 PC 24.04. Esta combinación necesita confirmación formal de DSA.
 
-El binario ejecutable instalado de `ubt_controller` coincide byte por byte con
-el `.deb` entregado:
+El binario original entregado se conserva como backup con este SHA-256:
 
 ```text
 3a094a007842d859ce95974d74fddf74714e1a49a9a75ca32e82fd6ce7b789fa
 ```
 
-No se ha parcheado el binario cerrado. Sí se han ajustado de forma reversible
-su configuración, wrapper y unidad systemd; se documentan en la sección 8.
+El ejecutable activo fue reconstruido de forma reproducible a partir de ese
+backup, modificando sólo dos objetos Python embebidos; SHA-256 activo al
+cierre:
+
+```text
+0f0d341424f30042cc9189ff215d09007de91f443e4b9b0debaeffa81cda28eb
+```
+
+Los cambios son `GRIPPER → CLAMP` en la selección del efector y el mapeo del
+gatillo izquierdo al booleano que el proveedor asigna a Y. No se modifica el
+robot ni se fuerza `enable_control`; se conserva el watchdog. El mapping está
+validado estructuralmente, pero todavía no se observó un flanco físico extremo
+a extremo. Véase la sección 8.
 
 ### 4.3 PICO
 
@@ -179,14 +194,20 @@ su configuración, wrapper y unidad systemd; se documentan en la sección 8.
 | Android | 14 | **VERIFICADO** |
 | Aplicación | `com.xrobotoolkit.client` | **VERIFICADO** |
 | XRoboToolkit | 1.1.1 | **VERIFICADO** |
-| IP compartida observada | `192.168.67.197` | **VERIFICADO** en la sesión actual |
-| Estado de aplicación | `Working` | **OBSERVADO** |
-| Modo de envío | `Head + Controller` | **OBSERVADO** |
+| IP compartida observada | varias subredes `192.168.67.x` y `192.168.106.x` | **HISTÓRICO**, no fijar en scripts |
+| Estado de aplicación | llegó a `Working`; terminó sin reconectar | **OBSERVADO** |
+| Modo de envío | `Head + Controllers` | **OBSERVADO antes del reinicio** |
 | Controladores | poses enviadas; neutros antes de pruebas | **OBSERVADO** |
 | `QuestTool_v3.5.3.apk` | recibido, no identificado como componente activo | **NO UTILIZADO** |
 
 `Working` significa que el PICO está unido al servicio XR del PC. No confirma
 heartbeat del robot, tarea de manipulación activa ni autorización para mover.
+
+Después de reiniciar el visor, el USB volvió como MTP/ADB o
+MTP/accessory/ADB, sin recrear la interfaz Ethernet USB anterior. El PICO no
+tenía una Wi-Fi asociada y XRoboToolkit quedó sin ruta hacia el PC. Los intentos
+de forzar RNDIS mediante `svc usb setFunctions` no produjeron una interfaz de
+red y no deben usarse como procedimiento de reconexión.
 
 ### 4.4 Hashes de los instaladores recibidos
 
@@ -290,12 +311,13 @@ recibieron muestra durante cinco segundos.
 
 | Control PICO | Función indicada por SOP | Validación actual |
 |---|---|---|
-| `Y` | iniciar/detener teleoperación | intentado; el heartbeat impide mantenerla |
-| `X` | alternar modo en sitio/móvil | **PENDIENTE** |
+| `Y` | iniciar/detener teleoperación | contacto capacitivo observado; clic mecánico `key.b_y` no fiable |
+| `X` | alternar modo en sitio/móvil | clic aislado no reproducible; no está reasignado en el backend activo |
 | `A` | reset del tren superior en modo en sitio | pulsado; no corrige el enlace; efecto físico no caracterizado |
 | `B` | iniciar/detener captura de episodio | **PENDIENTE** |
 | grip izquierdo/derecho | seguimiento de ese brazo y cintura | **PENDIENTE**, no usar antes del gate |
-| triggers | cerrar/abrir manos activas | no aplicable a abrazaderas pasivas; confirmar con DSA |
+| gatillo izquierdo | cierre/apertura de mano activa según SOP | con abrazaderas pasivas se mapea experimentalmente a Y; flanco aún no validado E2E |
+| gatillo derecho | cierre/apertura de mano activa según SOP | sin cambios; no usar con abrazaderas para habilitar |
 | joysticks en sitio | cintura y elevador | **PENDIENTE** |
 | joysticks en modo móvil | traslación y giro del chasis | **PENDIENTE** |
 | clics de joystick | alternar protección de fuerza por brazo | **NO PROBAR** hasta confirmar estado/indicación |
@@ -401,15 +423,27 @@ mostraron una rutina evidente que publique el heartbeat de aplicación. Esto es
 coherente con que la build genérica `v0.2.0` carezca de una pieza incluida en
 `v0.2.0-dac-beta.2`.
 
-### 6.5 Resultado de la prueba física
+### 6.5 Resultado de las pruebas de botones
 
-- Se pulsó y mantuvo `Y` en diferentes intentos con controladores neutros,
-  grips y gatillos libres, abrazaderas vacías, zona despejada y paro listo.
-- Se comprobó que el PICO permanecía `Working`.
-- El enlace llegó al robot, pero no se sostuvo la habilitación.
-- No se obtuvo una teleoperación física continua y validada.
-- Repetir `Y` no corrige la ausencia de heartbeat y no debe usarse como método
-  de diagnóstico.
+- Android/Stationservice reporta por separado contacto capacitivo y clic.
+- En una prueba aislada anterior, X mantenido llegó a producir
+  `key.a_x=1`, pero el resultado no ha sido reproducible.
+- Al pulsar Y durante dos segundos apareció contacto `touch.b_y=1`, pero
+  `key.b_y` permaneció en cero. Por tanto se estaba tocando el botón correcto,
+  pero su clic no llegó a la aplicación.
+- En las pruebas posteriores, Stationservice mantuvo `key.a_x=0` también al
+  pulsar X. Una escucha directa de `get_X_button()`, `get_Y_button()`,
+  `get_A_button()` y `get_B_button()` en el SDK del PC terminó con
+  `BUTTONS_SEEN=NONE`, mientras el tracking de poses seguía disponible.
+- Durante esa misma ventana Android registró una transición temporal a
+  `HandTrackingActive` y después a `ControllerActive`. Esto sitúa el fallo
+  actual antes del backend del robot: estado/modo de entrada de XRoboToolkit,
+  controlador PICO o transporte de botones PICO → XRoboToolkit PC Service.
+- El backend usa `get_Y_button()` para `left_joystick.b_button`, y ese campo
+  llama a `enable_operation_switch()`. El workaround X/Y no puede habilitar
+  operación si el SDK recibe ambos botones permanentemente en falso.
+- Aún no se ha obtenido una teleoperación física continua y validada después
+  del workaround X/Y.
 
 ## 7. Diagnóstico de causa
 
@@ -461,8 +495,9 @@ Hasta entonces no se considerará resuelto.
 
 ## 8. Workarounds y cambios locales aplicados
 
-Todos son reversibles. Ninguno modifica el binario cerrado de
-`ubt_controller`.
+Todos son reversibles. El binario original de `ubt_controller` permanece
+respaldado; los dos cambios de bytecode del PC se generan mediante un script
+versionado y validan estructura, runtime y orden de lecturas antes de instalar.
 
 ### 8.1 Regla udev para PICO
 
@@ -580,13 +615,32 @@ pantalla activa con un socket ya muerto. Se reprodujo que reiniciar sólo la app
 envío: hay que volver a seleccionar `Head + Controllers`, pulsar `Send data` y
 verificar `Working`; TCP establecido por sí solo no equivale a `vr_status=1`.
 
+### 8.10 Corrección del efector y workaround del pulsador Y
+
+El script
+[`../../scripts/teleoperation/patch_ubt_controller_clamp.py`](../../scripts/teleoperation/patch_ubt_controller_clamp.py)
+reconstruye el archivo PYZ de PyInstaller con Python 3.10 y aplica:
+
+1. `WebsocketServer.collect`: cambia la selección automática
+   `ARM_TYPE.GRIPPER` por `ARM_TYPE.CLAMP`.
+2. Con `--swap-pico-x-y`, `PicoPublisher.publish_joysticks`: intercambia
+   `get_X_button()` y `get_Y_button()`.
+
+El segundo cambio hace que X físico produzca el mismo `b_button` que el SOP
+asigna a Y. Y pasa al campo X y, al estar averiado/no registrado, queda
+inactivo. No se sintetiza el clic, no se llama directamente a
+`enable_operation_switch()` y no se altera heartbeat, STOP ni control de
+colisiones. Para revertir, reinstalar el backup vendor y reiniciar únicamente
+`ubt-controller.service` con el robot en STOP.
+
 ## 9. Acciones intentadas que no solucionan el problema
 
 | Acción | Resultado | Decisión |
 |---|---|---|
-| Pulsar `Y` una vez | no mantiene teleoperación | no repetir hasta corregir build |
-| Mantener `Y` pulsado | no aporta heartbeat | **DESCARTADO** como solución |
-| Pulsar `Y` sin pedal | backend intenta habilitar, luego STOP | configuración aceptada, heartbeat sigue ausente |
+| Pulsar `Y` una vez | sólo contacto capacitivo; no hay clic mecánico | **DESCARTADO** en este mando |
+| Mantener `Y` pulsado | `key.b_y` sigue en cero | **DESCARTADO** en este mando |
+| Pulsar `X` dos segundos | un evento `key.a_x=1` aislado; después `key.a_x=0` y `BUTTONS_SEEN=NONE` | no considerar resuelto; recuperar modo `ControllerActive` y repetir escucha directa |
+| Configurar operación sin pedal | backend acepta `enable_foot_switch=0` | soporte de configuración verificado; prueba física pendiente |
 | Reiniciar servicio del PC | restaura detección PICO | útil para discovery, no corrige build |
 | Ver `Working` en PICO | confirma sólo PICO ↔ PC | no usar como autorización de movimiento |
 | Pulsar `A` | no resuelve heartbeat | `A` es reset de tren superior, no reparación de enlace |
@@ -608,7 +662,7 @@ verificar `Working`; TCP establecido por sí solo no equivale a `vr_status=1`.
 | Datos con números inválidos | locale del servicio | coma decimal española | mantener `LC_NUMERIC=C` |
 | No conecta con robot | ping `.2/.3`, config WS | IP/ruta/cable/config | restaurar `192.168.11.250/24`; no tocar ROS |
 | DataChannel no abre | logs de señalización/RTM | canal, servidor o cliente duplicado | una sola UI; revisar `.3:4000` y `channel_name` |
-| `Y` parece activar y se corta | log `No heartbeat...` | heartbeat app ausente | STOP, no repetir; corregir build DAC |
+| `Y` no habilita | comparar `touch.b_y`/`key.b_y` | pulsador mecánico Y no registrado | usar X sólo con el workaround documentado; pedir revisión del mando |
 | PC recibe `enable=0` repetidamente | log backend | watchdog sin heartbeat | no confundir con E-stop físico |
 | Topic existe pero `echo` no devuelve | `ros2 topic info/echo` | endpoints sin muestras activas | no considerar listo sólo por discovery DDS |
 | PICO se duerme/desconecta | ADB/TCP desaparecen | suspensión/USB | neutralizar, parar, reconectar y reiniciar servicio |
@@ -623,7 +677,7 @@ verificar `Working`; TCP establecido por sí solo no equivale a `vr_status=1`.
 3. Envolvente completa de brazos/cabeza despejada.
 4. Controladores PICO neutros; triggers y grips libres.
 5. Nadie tocando el robot y una persona con el paro físico preparado.
-6. No pulsar `Y` durante diagnóstico de sólo lectura.
+6. No pulsar X ni Y durante diagnóstico de sólo lectura.
 
 ### 11.2 Snapshot de sólo lectura
 
