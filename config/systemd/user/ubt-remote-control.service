@@ -1,0 +1,15 @@
+[Unit]
+Description=UBTECH PICO teleoperation user interface (on demand)
+After=graphical-session.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:1
+Environment=XAUTHORITY=%h/.Xauthority
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+ExecStart=/opt/ubt-remote-control/ubt-remote-control --disable-gpu --disable-gpu-compositing --in-process-gpu
+# The packaged Electron build may terminate its GPU helper with SIGTRAP while
+# closing.  Treat that shutdown-only condition as clean; never auto-restart the
+# UI because connecting it can arm the local teleoperation data path.
+SuccessExitStatus=5 SIGTRAP
+Restart=no
