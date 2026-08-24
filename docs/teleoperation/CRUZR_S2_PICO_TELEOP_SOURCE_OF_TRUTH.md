@@ -475,9 +475,9 @@ No encaja con un fallo simple de USB, ADB, PICO, Ethernet o DataChannel porque:
 ### 7.2 Causas compatibles con la evidencia
 
 La respuesta posterior de DSA añadió un prerrequisito que no estaba reflejado
-en las pruebas iniciales: seleccionar `遥操模式` en la web del robot. La primera
-causa que se debe descartar es, por tanto, que el robot estuviera en modo de
-operación normal y no en modo de teleoperación.
+en las pruebas iniciales: seleccionar `遥操模式` en la web del robot. Ese modo
+se seleccionó y Control Center confirmó `TeleopMode`; no resolvió por sí solo
+la habilitación ni el heartbeat.
 
 La segunda causa posible sigue siendo una incompatibilidad entre el robot
 genérico `v0.2.0` y el conjunto de PC exigido para adquisición de datos. El SOP
@@ -492,7 +492,9 @@ define una matriz exacta:
 Los dos componentes del PC coinciden. La build exacta del robot no está
 instalada o, como mínimo, no puede demostrarse con el material actual. La
 ausencia del heartbeat de aplicación es consistente con esa diferencia, pero
-no la demuestra hasta repetir la prueba con `遥操模式` activo.
+no demuestra por sí sola la build causante. También existe un desfase
+observado entre callbacks del robot (~11,1 s) y el watchdog del PC (10 s) que
+DSA debe explicar.
 
 ### 7.3 Qué debe confirmar DSA
 
