@@ -12,11 +12,13 @@ Es la fuente de verdad para la conexión **PICO → PC → robot**. La guía de
 captura, dataset y VLA sigue estando en
 [`../vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md`](../vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md).
 
-> **Bloqueo vigente:** no iniciar movimiento con `Y` ni arrancar una tarea de
-> teleoperación física hasta recibir y validar la compilación exacta
-> `utars-udoke-config-v0.2.0-dac-beta.2`, o una confirmación escrita de DSA con
-> hashes/componentes equivalentes, y superar una prueba de heartbeat estable.
-> No se debe eliminar ni ampliar el watchdog de 10 segundos.
+> **Bloqueo vigente:** DSA indicó el 24 de agosto que antes de teleoperar hay
+> que seleccionar **遥操模式 / Remote control mode** en la esquina superior
+> derecha de `http://192.168.11.3`. El selector ya se verificó visualmente;
+> falta validar ese modo junto con
+> `Head + Controllers / Send data / Working`, `vr_status=1`, efector `clamp` y
+> heartbeat estable durante 60 segundos. No se debe eliminar ni ampliar el
+> watchdog de 10 segundos.
 
 ## 1. Convenciones de evidencia
 
@@ -39,13 +41,14 @@ certifican su propia capa. No equivalen a “teleoperación lista para mover”.
 | Capa | Estado | Evidencia resumida |
 |---|---|---|
 | PICO físico y USB | **VERIFICADO** | ADB autorizado y enlace TCP XR activo |
-| Aplicación XR del PICO | **VERIFICADO** | XRoboToolkit 1.1.1, `Head + Controller` enviando |
+| Aplicación XR del PICO | **VERIFICADO Y ARMADO** | XRoboToolkit 1.1.1 en `Head + Controllers / Send data / Working`; preflight devuelve `vr_status=1` |
 | Servicio XR del PC | **VERIFICADO** | `RoboticsServiceProcess` activo, PICO conectado a TCP 63901 |
 | Backend UBT del PC | **VERIFICADO** | `ubt-controller` 5.3.0 activo y escuchando en TCP 8082 |
 | Ethernet PC ↔ robot | **VERIFICADO** | PC `192.168.11.250/24`; Motion `.2`; Vision/señalización `.3` |
-| Configuración de efector | **VERIFICADO** | `HW_TYPE=cruzr_s2_v1`, abrazaderas |
+| Configuración de efector | **VERIFICADO EN ROBOT Y PC** | `HW_TYPE=cruzr_s2_v1`; backend PC fijado a `arm=clamp` |
 | Configuración PICO del robot | **VERIFICADO** | `TELE_DEVICE=pico`, `transmit=local` |
 | Tarea Cruzr/PICO correcta | **VERIFICADO** | `teleoperation/cruzr_clamp_pico_teleoperation` |
+| Modo web del robot | **VERIFICADO VISUALMENTE** | La web mostró `遥操模式`; DSA confirma que es obligatorio |
 | Señalización y DataChannel | **VERIFICADO** | DataChannel llegó a estado abierto durante diagnóstico |
 | Flujo XR hacia el robot | **VERIFICADO** | El robot registró recepción de tele-data y habilitación temporal |
 | Heartbeat de aplicación robot → PC | **FALLA REPRODUCIDA** | El PC no recibe `{"type":"heartbeat"}` |
@@ -54,13 +57,14 @@ certifican su propia capa. No equivalen a “teleoperación lista para mover”.
 | Grabación de episodios con `B` | **PENDIENTE** | No existe aún exportación auditada extremo a extremo |
 | PICO directo al robot sin PC | **NO SOPORTADO/NO VERIFICADO** | El material recibido requiere el PC intermedio |
 
-Tras el último reinicio del servicio del PC:
+Tras la corrección del PC y el preflight final realizados el 24 de agosto:
 
 - `ubt-controller.service` está activo;
 - el PICO permanece autorizado por ADB;
-- existe una sesión TCP XR estable entre `192.168.67.197` y
-  `192.168.67.183:63901`;
+- existe una sesión TCP XR entre `192.168.67.197` y
+  `192.168.67.183:63901` y el snapshot final devolvió `vr_status=1`;
 - `RoboticsServiceProcess` y `ubt_controller` están activos;
+- la unidad del backend tiene `Environment=arm=clamp`;
 - no está abierta la interfaz Electron `ubt-remote-control`;
 - no hay un cliente diagnóstico WebSocket persistente;
 - no se ha enviado una nueva orden de movimiento.
@@ -366,6 +370,13 @@ puede aparecer antes de diez segundos desde la pulsación de `Y`; los diez
 segundos se miden desde el último heartbeat válido, no necesariamente desde el
 último START.
 
+**Hipótesis actualizada tras la respuesta de DSA:** las reproducciones
+anteriores se hicieron sin haber confirmado el selector web obligatorio
+`遥操模式`. Por tanto, la ausencia del heartbeat ya no debe atribuirse sólo a la
+build genérica: primero hay que repetir una única prueba con el modo remoto
+seleccionado, `vr_status=1` y `arm=clamp`. La incompatibilidad de build sigue
+siendo una hipótesis si el heartbeat falta también en esas condiciones.
+
 ### 6.4 Los dos “heartbeats” no son equivalentes
 
 El robot registra cada diez segundos:
@@ -414,11 +425,16 @@ No encaja con un fallo simple de USB, ADB, PICO, Ethernet o DataChannel porque:
 - el robot devuelve mensajes `tele_operation`;
 - el watchdog específico de heartbeat es quien ordena STOP.
 
-### 7.2 Causa más probable
+### 7.2 Causas compatibles con la evidencia
 
-**INFERENCIA FUERTE:** incompatibilidad entre el robot genérico `v0.2.0` y el
-conjunto de PC exigido para adquisición de datos. El SOP define una matriz
-exacta:
+La respuesta posterior de DSA añadió un prerrequisito que no estaba reflejado
+en las pruebas iniciales: seleccionar `遥操模式` en la web del robot. La primera
+causa que se debe descartar es, por tanto, que el robot estuviera en modo de
+operación normal y no en modo de teleoperación.
+
+La segunda causa posible sigue siendo una incompatibilidad entre el robot
+genérico `v0.2.0` y el conjunto de PC exigido para adquisición de datos. El SOP
+define una matriz exacta:
 
 | Componente | Versión exigida por SOP |
 |---|---|
@@ -428,7 +444,8 @@ exacta:
 
 Los dos componentes del PC coinciden. La build exacta del robot no está
 instalada o, como mínimo, no puede demostrarse con el material actual. La
-ausencia del heartbeat de aplicación es consistente con esa diferencia.
+ausencia del heartbeat de aplicación es consistente con esa diferencia, pero
+no la demuestra hasta repetir la prueba con `遥操模式` activo.
 
 ### 7.3 Qué debe confirmar DSA
 
@@ -516,6 +533,53 @@ la parada procede del watchdog de heartbeat.
 **Estado final:** cerrado; STOP enviado; no debe ejecutarse junto a la UI
 oficial ni convertirse en una herramienta de producción.
 
+### 8.7 Perfil de abrazaderas en el backend del PC
+
+Se instaló el drop-in versionado
+[`../../config/systemd/system/ubt-controller.service.d/20-cruzr-clamp.conf`](../../config/systemd/system/ubt-controller.service.d/20-cruzr-clamp.conf),
+que fija:
+
+```ini
+Environment=arm=clamp
+```
+
+**Motivo:** la interfaz recibió del canal del robot la etiqueta genérica
+`gripper` y el backend cargó `ubt_gripper.json`, aunque el hardware real son
+abrazaderas laterales. El controlador distingue explícitamente `clamp` de
+`gripper`.
+
+**Resultado:** el valor por defecto del backend coincide ahora con el efector
+físico. El lanzador exige además `arm_type=clamp` y aborta si el log vuelve a
+seleccionar `gripper`.
+
+### 8.8 UI bajo demanda y preflight del PC
+
+Se añadió la unidad de usuario bajo demanda
+[`../../config/systemd/user/ubt-remote-control.service`](../../config/systemd/user/ubt-remote-control.service)
+y el lanzador
+[`../../scripts/teleoperation/cruzr_pico_teleop_pc.sh`](../../scripts/teleoperation/cruzr_pico_teleop_pc.sh).
+
+La UI no se habilita al arrancar Ubuntu. El lanzador comprueba ADB, rutas,
+Motion/Vision, TCP 63901, WebSocket 8082, `vr_status`, estado de operación y
+`arm=clamp`; exige una confirmación física antes de publicar y detiene/cierra
+si aparece el watchdog.
+
+La inspección del source map de `ubt-remote-control 4.1.0` mostró dos detalles:
+
+- la UI no genera el heartbeat de aplicación; éste debe llegar desde el lado
+  del robot;
+- usa `reconnectLimit: -1` como si significara infinito, pero la versión
+  incluida de la librería no reconecta con ese valor. Por eso el orden seguro
+  es backend + PICO primero y UI después.
+
+### 8.9 Recuperación de socket XR del PICO
+
+Después de reiniciar `RoboticsServiceProcess`, XRoboToolkit puede conservar una
+pantalla activa con un socket ya muerto. Se reprodujo que reiniciar sólo la app
+`com.xrobotoolkit.client` por ADB recupera TCP 63901. Ese reinicio desarma el
+envío: hay que volver a seleccionar `Head + Controllers`, pulsar `Send data` y
+verificar `Working`; TCP establecido por sí solo no equivale a `vr_status=1`.
+
 ## 9. Acciones intentadas que no solucionan el problema
 
 | Acción | Resultado | Decisión |
@@ -537,6 +601,9 @@ oficial ni convertirse en una herramienta de producción.
 |---|---|---|---|
 | PICO queda en `Connecting` | `adb devices`; TCP 63901 | app/USB/servicio XR no unidos | recuperar `Working`, después reiniciar servicio una vez |
 | `Working`, pero backend no detecta visor | logs `device found/missing` | backend arrancó antes del stream | reiniciar servicio con PICO ya conectado |
+| TCP 63901 existe, pero `vr_status=0` | consulta local `detect` | app reconectada pero tracking no rearmado | `Head + Controllers` → `Send data` → `Working` |
+| Heartbeat ausente con red correcta | selector superior derecho de `192.168.11.3` | robot fuera de `遥操模式` | seleccionar Remote control mode antes de START |
+| Backend indica `Arm type is: gripper` | log del PC | tipo genérico incorrecto para abrazaderas | mantener `arm=clamp`; abortar la sesión |
 | ADB no autorizado | `adb devices -l` | autorización, cable o udev | aceptar diálogo; revisar cable/regla; no usar root ADB |
 | Datos con números inválidos | locale del servicio | coma decimal española | mantener `LC_NUMERIC=C` |
 | No conecta con robot | ping `.2/.3`, config WS | IP/ruta/cable/config | restaurar `192.168.11.250/24`; no tocar ROS |
@@ -672,6 +739,11 @@ servicio embarcado o SDK oficialmente soportado.
 
 ### P0 — bloquean cualquier movimiento PICO
 
+- [ ] Seleccionar y verificar `遥操模式 / Remote control mode` en
+  `http://192.168.11.3`.
+- [ ] Reactivar `Head + Controllers / Send data / Working` y confirmar
+  `vr_status=1`.
+- [ ] Ejecutar el preflight PC y comprobar `arm=clamp`.
 - [ ] Obtener `utars-udoke-config-v0.2.0-dac-beta.2.tar.gz` y SHA-256.
 - [ ] Obtener matriz de compatibilidad firmada: robot, PICO APK, XR PC Service,
   controller, UI, efector y Ubuntu.
@@ -824,6 +896,10 @@ son parte de la evidencia.
 
 | Fecha/hora | Cambio o prueba | Resultado | Evidencia | Próxima decisión |
 |---|---|---|---|---|
+| 2026-08-24 12:28 | reinicio ordenado del stack PC y rearme del PICO | preflight completo aprobado: red, ADB, TCP 63901, tracking `vr_status=1`, backend 5.3.0 y `arm=clamp`; UI inactiva | lanzador local, systemd, WebSocket 8082 | obtener gate físico fresco y validar heartbeat durante 60 s |
+| 2026-08-24 12:25 | selección manual del modo web exigido por DSA | selector superior muestra `遥操模式`; el PICO aún devuelve `vr_status=0` | captura web y preflight local | rearmar `Head + Controllers / Send data / Working` y repetir gate |
+| 2026-08-24 12:08–12:15 | perfil PC `arm=clamp`, UI bajo demanda y preflight reproducible | red/ADB/TCP/backend válidos; tras reiniciar app falta rearmar tracking (`vr_status=0`) | systemd, WebSocket 8082, ADB, TCP 63901 | activar tracking y `遥操模式`; ejecutar gate único |
+| 2026-08-24 12:13 | DSA responde al diagnóstico | exige cambiar la web del robot a `遥操模式` | chat de soporte | probar ese prerrequisito antes de atribuir fallo a build |
 | 2026-08-24 11:04 | reinicio de `ubt-controller.service` con PICO conectado | XR detectado tras 21 s; servicio activo | systemd, ADB, TCP 63901 | no pulsar `Y`; resolver build |
 | 2026-08-24 10:45–11:07 | pruebas repetidas de START/`Y` y diagnóstico WS | DataChannel abre; `enable=1` temporal; watchdog envía STOP | logs PC/robot | falta heartbeat app |
 | 2026-08-24 | inspección de binarios cerrados | watchdog 10 s y tipo `heartbeat` confirmados; ping de señalización diferenciado | bytecode/bibliotecas locales | solicitar DAC beta.2 |
