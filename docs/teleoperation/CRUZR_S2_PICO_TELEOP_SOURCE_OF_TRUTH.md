@@ -334,11 +334,17 @@ la lectura del backend y del robot.
 
 1. El PICO aparece como dispositivo ADB autorizado.
 2. XRoboToolkit entra en `Working` y envía `Head + Controller`.
-3. La red USB asigna `192.168.67.183` al PC y `192.168.67.197` al PICO.
+3. En diferentes sesiones apareció una red IP USB en subredes
+   `192.168.67.x` o `192.168.106.x`; esas direcciones no son estables.
 4. Se establece TCP desde el PICO hacia `RoboticsServiceProcess:63901`.
 5. El servicio detecta el dispositivo y `ubt_controller` consume el SDK.
 6. En una prueba diagnóstica se observaron datos PICO próximos a la tasa
    configurada de 90 Hz.
+
+**REGRESIÓN AL CIERRE:** después de reiniciar el PICO, ADB volvió inicialmente
+pero no reapareció la interfaz de red USB. El PICO tampoco tenía Wi-Fi
+asociada. Por ello el enlace XR dejó de estar disponible aunque los servicios
+del PC siguieran activos.
 
 ### 6.2 PC → robot
 
@@ -392,12 +398,14 @@ puede aparecer antes de diez segundos desde la pulsación de `Y`; los diez
 segundos se miden desde el último heartbeat válido, no necesariamente desde el
 último START.
 
-**Hipótesis actualizada tras la respuesta de DSA:** las reproducciones
-anteriores se hicieron sin haber confirmado el selector web obligatorio
-`遥操模式`. Por tanto, la ausencia del heartbeat ya no debe atribuirse sólo a la
-build genérica: primero hay que repetir una única prueba con el modo remoto
-seleccionado, `vr_status=1` y `arm=clamp`. La incompatibilidad de build sigue
-siendo una hipótesis si el heartbeat falta también en esas condiciones.
+La reproducción inicial se hizo sin haber confirmado el selector web
+obligatorio `遥操模式`. Después se repitió la cadena con modo remoto,
+`vr_status=1` y `arm=clamp`; el robot siguió devolviendo `enable=0` y no se
+observó el heartbeat esperado. En la sesión analizada, estos callbacks
+aparecieron aproximadamente cada 11,1 segundos, mientras el watchdog del PC
+vence a los 10 segundos. Esto confirma una incompatibilidad temporal o de
+protocolo pendiente de DSA; no demuestra por sí solo cuál componente tiene la
+versión incorrecta.
 
 ### 6.4 Los dos “heartbeats” no son equivalentes
 
@@ -427,7 +435,7 @@ coherente con que la build genérica `v0.2.0` carezca de una pieza incluida en
 
 - Android/Stationservice reporta por separado contacto capacitivo y clic.
 - En una prueba aislada anterior, X mantenido llegó a producir
-  `key.a_x=1`, pero el resultado no ha sido reproducible.
+  `key.a_x=1`, pero el resultado no fue reproducible.
 - Al pulsar Y durante dos segundos apareció contacto `touch.b_y=1`, pero
   `key.b_y` permaneció en cero. Por tanto se estaba tocando el botón correcto,
   pero su clic no llegó a la aplicación.
@@ -439,11 +447,16 @@ coherente con que la build genérica `v0.2.0` carezca de una pieza incluida en
   `HandTrackingActive` y después a `ControllerActive`. Esto sitúa el fallo
   actual antes del backend del robot: estado/modo de entrada de XRoboToolkit,
   controlador PICO o transporte de botones PICO → XRoboToolkit PC Service.
-- El backend usa `get_Y_button()` para `left_joystick.b_button`, y ese campo
-  llama a `enable_operation_switch()`. El workaround X/Y no puede habilitar
-  operación si el SDK recibe ambos botones permanentemente en falso.
-- Aún no se ha obtenido una teleoperación física continua y validada después
-  del workaround X/Y.
+- El backend vendor usa `get_Y_button()` para `left_joystick.b_button`, y ese
+  campo llama a `enable_operation_switch()`.
+- Se sustituyó el workaround X/Y por un mapping del gatillo izquierdo al
+  booleano Y, manteniendo intacto el mando derecho. Una prueba de ocho segundos
+  no observó `b_button=true`; el robot permaneció con `enable=0`.
+- Dos escuchas directas posteriores del SDK devolvieron pico de gatillo
+  izquierdo `0.000` y ningún botón. Una primera prueba pudo haberse hecho sin
+  accionar correctamente el gatillo; la repetición explícita también quedó en
+  cero.
+- Aún no se ha obtenido una teleoperación física continua y validada.
 
 ## 7. Diagnóstico de causa
 
