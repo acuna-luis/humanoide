@@ -3,11 +3,23 @@
 Repositorio de documentación, diagnósticos y automatización desarrollados para
 la puesta en marcha del humanoide UBTECH Cruzr S2.
 
+## Relevo y contexto para nuevas sesiones
+
+La [fuente de verdad global](docs/PROJECT_SOURCE_OF_TRUTH.md) resume el estado
+del robot, los cambios persistentes en robot y PC, las capacidades verificadas,
+los riesgos abiertos y el punto de reanudación de cada línea de trabajo.
+
+[`AGENTS.md`](AGENTS.md) hace que Codex cargue automáticamente ese contexto al
+iniciar una sesión desde este repositorio y lo dirige después a la guía
+especializada correspondiente. El estado físico siempre debe comprobarse de
+nuevo: el relevo documenta el último estado conocido, no el estado presente.
+
 ## Estructura
 
 ```text
 .
 ├── docs/
+│   ├── PROJECT_SOURCE_OF_TRUTH.md # Relevo técnico global
 │   ├── guides/       # Guías de operación y documentos generados
 │   ├── reports/      # Revisión técnica, inventario y matriz de capacidades
 │   ├── support/      # Preguntas y seguimiento con UBTECH
