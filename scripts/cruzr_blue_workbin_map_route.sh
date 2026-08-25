@@ -311,7 +311,8 @@ set -Eeo pipefail
 set +u
 source /opt/ros/humble/setup.bash
 set -u
-timeout 8 ros2 topic echo --no-daemon --once "$1" --field pose.pose
+export ROS2CLI_DISABLE_DAEMON=1
+timeout 8 ros2 topic echo --once "$1" --field pose.pose
 INNER
 REMOTE
 )"
@@ -336,7 +337,8 @@ set -Eeo pipefail
 set +u
 source /opt/ros/humble/setup.bash
 set -u
-timeout 8 ros2 topic echo --no-daemon --once "$1" --field pose
+export ROS2CLI_DISABLE_DAEMON=1
+timeout 8 ros2 topic echo --once "$1" --field pose
 INNER
 REMOTE
 )"
@@ -676,7 +678,7 @@ safety_dir="$(mktemp -d)"
 trap 'rm -rf -- "$safety_dir"' EXIT
 topic_once() {
   docker exec "$ros_container" bash -lc \
-    "source /opt/ros/humble/setup.bash; timeout 8 ros2 topic echo --no-daemon --once '$1'"
+    "source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; timeout 8 ros2 topic echo --once '$1'"
 }
 topic_once /emb/estop_key_state >"$safety_dir/estop" & p1=$!
 topic_once /emb/servo_estop_key_state >"$safety_dir/servo" & p2=$!

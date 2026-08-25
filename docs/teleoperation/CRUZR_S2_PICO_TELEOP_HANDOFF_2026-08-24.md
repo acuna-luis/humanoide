@@ -207,10 +207,11 @@ una API oficial segura para hacerlo.
 
 ### P0 — scripts y modos
 
-- `cruzr_recover_to_home.sh` todavía espera la imagen antigua
-  `zs2_motion-v0.26.10` y falla su preflight con la imagen oficial v0.2.0
-  `utars-integration:zs2_motion-v0.2.0`. Actualizar la validación sin relajar
-  las demás comprobaciones.
+- **RESUELTO 2026-08-25:** los scripts operativos validan la imagen oficial
+  `utars-integration:zs2_motion-v0.2.0`, las huellas v0.2.0 y el estado real de
+  los objetivos de acción. `cruzr_recover_to_home.sh` admite que DO_RESET no
+  esté anunciado cuando la máquina de tareas está libre, pero se detiene si
+  aparece bloqueada; no se relajaron paros, cargador ni hashes.
 - `cruzr_pico_teleop_pc.sh --stop` deja el robot en `AutoTaskMode`. Diseñar una
   restauración explícita y verificable a `JoystickMode`, o documentar el paso
   web obligatorio, sin inventar una API.

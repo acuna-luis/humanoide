@@ -349,7 +349,7 @@ done
 topic_once() {
   local topic="$1"
   docker exec "$ros_container" bash -lc \
-    "source /opt/ros/humble/setup.bash; timeout 8 ros2 topic echo --no-daemon --once '$topic'"
+    "source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; timeout 8 ros2 topic echo --once '$topic'"
 }
 
 safety_tmp="$(mktemp -d)"
@@ -371,17 +371,17 @@ charge="$(<"$safety_tmp/charge")"
 }
 
 cmd_info="$(docker exec "$ros_container" bash -lc \
-  "source /opt/ros/humble/setup.bash; ros2 topic info --no-daemon /cmd_vel_navi")"
+  "source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; ros2 topic info /cmd_vel_navi")"
 grep -q 'Type: geometry_msgs/msg/TwistStamped' <<<"$cmd_info" || exit 27
 grep -Eq 'Subscription count: [1-9][0-9]*' <<<"$cmd_info" || exit 28
 
 monitored_cmd_info="$(docker exec "$ros_container" bash -lc \
-  "source /opt/ros/humble/setup.bash; ros2 topic info --no-daemon /mc/cmd_vel")"
+  "source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; ros2 topic info /mc/cmd_vel")"
 grep -q 'Type: geometry_msgs/msg/TwistStamped' <<<"$monitored_cmd_info" || exit 29
 grep -Eq 'Subscription count: [1-9][0-9]*' <<<"$monitored_cmd_info" || exit 30
 
 pose_info="$(docker exec "$ros_container" bash -lc \
-  "source /opt/ros/humble/setup.bash; ros2 topic info --no-daemon '$pose_topic'")"
+  "source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; ros2 topic info '$pose_topic'")"
 grep -q 'Type: nav_msgs/msg/Odometry' <<<"$pose_info" || exit 31
 grep -q 'Publisher count: 1' <<<"$pose_info" || exit 32
 
@@ -410,7 +410,7 @@ set -Eeuo pipefail
 container="$1"
 topic_once() {
   docker exec "$container" bash -lc \
-    "source /opt/ros/humble/setup.bash; timeout 8 ros2 topic echo --no-daemon --once '$1' std_msgs/msg/UInt8"
+    "source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; timeout 8 ros2 topic echo --once '$1' std_msgs/msg/UInt8"
 }
 safety_tmp="$(mktemp -d)"
 trap 'rm -rf -- "$safety_tmp"' EXIT
@@ -453,7 +453,8 @@ set -Eeo pipefail
 set +u
 source /opt/ros/humble/setup.bash
 set -u
-timeout 8 ros2 topic echo --no-daemon --once "$1" --field pose.pose
+export ROS2CLI_DISABLE_DAEMON=1
+timeout 8 ros2 topic echo --once "$1" --field pose.pose
 INNER
 REMOTE
 )"

@@ -13,12 +13,14 @@ readonly DEFAULT_PASSWORD="aa"
 readonly MOTION_CONTAINER="walker-motion.manipulation_robot_app-1"
 readonly ROS_CONTAINER="walker-ros.ros2-1"
 readonly EXPECTED_HW_TYPE="cruzr_s2_v1"
-readonly EXPECTED_IMAGE_FRAGMENT="zs2_motion-v0.26.10"
+readonly EXPECTED_IMAGE_FRAGMENT="utars-integration:zs2_motion-v0.2.0"
 readonly ACTION_NAME="/mc/manipulation/action"
 readonly ACTION_TYPE="mc_task_msgs/action/ArmTask"
 readonly CONFIG_ROOT="/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config"
 readonly FIST_XML_SHA256="b9af1013372dee7182f44497b31d1f0f931e188fb44602e19612e2e9101ee430"
-readonly WAVE_XML_SHA256="b7024a2721d8d6ee4f4898557a9d8c6d891837495921b784cdd4a226b07c44b7"
+readonly WAVE_XML_SHA256="1066811bea5ec8de2e88d0dfb35dba61364b707545254dcba55b8284e156a098"
+readonly HOME_XML_SHA256="50d819d6d6190280c6efee1dc275877362c3f7c807ec733fbc3c7ed217daed88"
+readonly HOME_TASK="cruzr/home"
 
 readonly -a ALLOWED_TASKS=(
   "fist_up_s2"
@@ -52,9 +54,9 @@ Opciones:
   --run-all         Ejecuta una vez cada tarea de la lista blanca.
   -h, --help        Muestra esta ayuda.
 
-fist_up_s2 ya se ha ejecutado correctamente en esta unidad. cruzr/wave_arm
-es una rutina oficial instalada, exclusivamente de brazo derecho y con retorno
-a cero; su primera ejecucion fisica sigue pendiente.
+fist_up_s2 ya se ha ejecutado correctamente en esta unidad. En v0.2.0,
+cruzr/wave_arm es una rutina oficial de dos poses y no retorna por si sola a
+cero; este script ejecuta cruzr/home inmediatamente despues de completarla.
 EOF
 }
 
@@ -164,17 +166,21 @@ check_motion_stack() {
 
   info "Comprobando PC motion, contenedor, configuracion y servidor de acciones..."
   report="$(ssh_robot "$MOTION_HOST" bash -s -- \
-    "$MOTION_CONTAINER" "$EXPECTED_HW_TYPE" "$EXPECTED_IMAGE_FRAGMENT" \
+    "$MOTION_CONTAINER" "$ROS_CONTAINER" "$EXPECTED_HW_TYPE" "$EXPECTED_IMAGE_FRAGMENT" \
     "$CONFIG_ROOT/fist_up_s2.xml" "$FIST_XML_SHA256" \
-    "$CONFIG_ROOT/cruzr/wave_arm.xml" "$WAVE_XML_SHA256" <<'REMOTE'
+    "$CONFIG_ROOT/cruzr/wave_arm.xml" "$WAVE_XML_SHA256" \
+    "$CONFIG_ROOT/cruzr/home.xml" "$HOME_XML_SHA256" <<'REMOTE'
 set -Eeuo pipefail
 container="$1"
-expected_hw="$2"
-expected_image_fragment="$3"
-fist_xml="$4"
-expected_fist_hash="$5"
-wave_xml="$6"
-expected_wave_hash="$7"
+ros_container="$2"
+expected_hw="$3"
+expected_image_fragment="$4"
+fist_xml="$5"
+expected_fist_hash="$6"
+wave_xml="$7"
+expected_wave_hash="$8"
+home_xml="$9"
+expected_home_hash="${10}"
 
 [[ "$(hostname)" == "motion" ]] || {
   printf 'HOST_ERROR=%s\n' "$(hostname)"
@@ -202,6 +208,7 @@ hw_type="$(awk -F= '$1=="HW_TYPE" {print substr($0, index($0,"=")+1)}' <<<"$envi
 # Se bloquea la ejecucion si cualquiera de los XML cambia respecto al auditado.
 fist_hash="$(docker exec "$container" sha256sum "$fist_xml" | awk '{print $1}')"
 wave_hash="$(docker exec "$container" sha256sum "$wave_xml" | awk '{print $1}')"
+home_hash="$(docker exec "$container" sha256sum "$home_xml" | awk '{print $1}')"
 [[ "$fist_hash" == "$expected_fist_hash" ]] || {
   printf 'XML_HASH_ERROR=fist_up_s2:%s\n' "$fist_hash"
   exit 24
@@ -209,6 +216,10 @@ wave_hash="$(docker exec "$container" sha256sum "$wave_xml" | awk '{print $1}')"
 [[ "$wave_hash" == "$expected_wave_hash" ]] || {
   printf 'XML_HASH_ERROR=cruzr/wave_arm:%s\n' "$wave_hash"
   exit 25
+}
+[[ "$home_hash" == "$expected_home_hash" ]] || {
+  printf 'XML_HASH_ERROR=cruzr/home:%s\n' "$home_hash"
+  exit 26
 }
 
 # Validacion estructural estricta de los XML autorizados. No modifica el robot.
@@ -257,8 +268,8 @@ print("XML_VALID=fist_up_s2")
 
 wave_root = ET.parse(wave_path).getroot()
 wave_actions = list(wave_root.iter("Action"))
-if len(wave_actions) != 11:
-    raise SystemExit(f"XML_ERROR=wave_expected_11_actions_got_{len(wave_actions)}")
+if len(wave_actions) != 2:
+    raise SystemExit(f"XML_ERROR=wave_expected_2_actions_got_{len(wave_actions)}")
 
 # Limites articulares del brazo derecho publicados en el SDK, en radianes.
 joint_limits = [
@@ -271,7 +282,15 @@ joint_limits = [
     (-1.98, 1.98),
 ]
 
-for index, action in enumerate(wave_actions, start=1):
+expected_wave = [
+    ([-0.423274, -0.336362, 1.27774, -1.20528,
+      1.28694, 0.376621, -1.38568], 10.0),
+    ([-0.488406, -0.165349, 1.16067, -0.923343,
+      1.11991, 0.473442, -1.16333], 10.0),
+]
+
+for index, (action, (expected_angles, expected_duration)) in enumerate(
+        zip(wave_actions, expected_wave), start=1):
     attrs = action.attrib
     if attrs.get("ID") != "MetaMove" or attrs.get("type") != "arm" or attrs.get("location") != "right":
         raise SystemExit(f"XML_ERROR=wave_unexpected_action_{index}:{attrs}")
@@ -283,13 +302,12 @@ for index, action in enumerate(wave_actions, start=1):
     if any(not math.isfinite(value) or not (low <= value <= high)
            for value, (low, high) in zip(angles, joint_limits)):
         raise SystemExit(f"XML_ERROR=wave_joint_limit_{index}:{angles}")
+    if any(not math.isclose(actual, wanted, rel_tol=0.0, abs_tol=1e-6)
+           for actual, wanted in zip(angles, expected_angles)):
+        raise SystemExit(f"XML_ERROR=wave_angles_{index}:{angles}")
     duration = float(attrs["duration"])
-    if not math.isfinite(duration) or duration <= 0.0 or duration > 2.0:
+    if not math.isclose(duration, expected_duration, rel_tol=0.0, abs_tol=1e-12):
         raise SystemExit(f"XML_ERROR=wave_duration_{index}:{duration}")
-
-last_angles = [float(value.strip()) for value in wave_actions[-1].attrib["joint_angles"].split(";")]
-if any(abs(value) > 1e-12 for value in last_angles):
-    raise SystemExit(f"XML_ERROR=wave_does_not_return_zero:{last_angles}")
 
 print("XML_VALID=cruzr/wave_arm")
 PY
@@ -299,6 +317,18 @@ printf 'IMAGE=%s\n' "$image"
 printf 'HW_TYPE=%s\n' "$hw_type"
 docker exec "$container" bash -lc \
   'source /opt/walker/setup.bash && rosa action info /mc/manipulation/action'
+
+action_status="$(docker exec "$ros_container" bash -lc '
+  source /opt/ros/humble/setup.bash
+  export ROS2CLI_DISABLE_DAEMON=1
+  timeout 8 ros2 topic echo --once /mc/manipulation/action/_action/status
+')"
+if awk '$1 == "status:" && ($2 == 1 || $2 == 2 || $2 == 3) {busy=1} END {exit !busy}' \
+    <<<"$action_status"; then
+  echo ACTION_BUSY=motion_goal_active
+  exit 27
+fi
+echo ACTION_STATUS_IDLE=1
 REMOTE
 )" || die "Fallo la validacion del sistema de movimiento. No se ejecutara ninguna accion."
 
@@ -309,8 +339,8 @@ REMOTE
     die "La trayectoria cruzr/wave_arm no coincide con la version validada."
   grep -q 'Action server count: 1' <<<"$report" || \
     die "El servidor /mc/manipulation/action no esta disponible."
-  grep -q 'Action client count: 0' <<<"$report" || \
-    die "Hay otro cliente conectado al servidor de movimiento."
+  grep -q '^ACTION_STATUS_IDLE=1$' <<<"$report" || \
+    die "Hay un objetivo activo en el servidor de movimiento."
 }
 
 preflight() {
@@ -349,11 +379,9 @@ EOF
   [[ "$answer" == "$expected_answer" ]] || die "Operacion cancelada por el usuario."
 }
 
-run_task() {
+run_task_once() {
   local task="$1"
   local result
-
-  is_allowed_task "$task" || die "Tarea no autorizada: $task"
 
   info "Ejecutando una sola vez: $task"
   result="$(ssh_robot "$MOTION_HOST" bash -s -- \
@@ -376,10 +404,21 @@ REMOTE
   info "Movimiento completado correctamente: $task"
 }
 
+run_task() {
+  local task="$1"
+  is_allowed_task "$task" || die "Tarea no autorizada: $task"
+
+  run_task_once "$task"
+  if [[ "$task" == "cruzr/wave_arm" ]]; then
+    info "La tarea oficial v0.2.0 termina con el brazo elevado; ejecutando home..."
+    run_task_once "$HOME_TASK"
+  fi
+}
+
 list_tasks() {
   printf 'Tareas validadas sin manos:\n'
   printf '  %s - brazo derecho arriba y retorno automatico a cero\n' "${ALLOWED_TASKS[0]}"
-  printf '  %s - saludo amplio con el brazo derecho y retorno a cero; primera prueba pendiente\n' "${ALLOWED_TASKS[1]}"
+  printf '  %s - dos poses oficiales v0.2.0 y retorno posterior mediante cruzr/home\n' "${ALLOWED_TASKS[1]}"
   printf '\nLas rutinas no incluidas quedan bloqueadas.\n'
 }
 

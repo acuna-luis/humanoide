@@ -1,8 +1,8 @@
 # Catálogo operativo de funcionalidades del Cruzr S2
 
-Fecha de verificación: 14 de agosto de 2026<br>
+Fecha de verificación: 25 de agosto de 2026<br>
 Unidad: Cruzr S2, `HW_TYPE=cruzr_s2_v1`<br>
-Motion: `zs2_motion-v0.26.10`
+Motion: `utars-integration:zs2_motion-v0.2.0`
 
 Este documento enumera las funcionalidades que están disponibles actualmente en
 esta unidad, con un ejemplo inmediato de uso. Se basa en los contenedores,
@@ -69,16 +69,15 @@ ros2 service list -t
 ros2 topic list -t
 ```
 
-Si el daemon de ROS 2 falla, utilizar `--no-daemon` solamente en los subcomandos
-que lo admiten, por ejemplo:
+En v0.2.0 se desactiva el daemon mediante la variable de entorno, porque esta
+versión del CLI no acepta `--no-daemon` de forma consistente:
 
 ```bash
-ros2 topic list --no-daemon -t
-ros2 topic info --no-daemon -v /emb/battery_state
-ros2 topic echo --no-daemon --once /emb/battery_state
+export ROS2CLI_DISABLE_DAEMON=1
+ros2 topic list -t
+ros2 topic info -v /emb/battery_state
+ros2 topic echo --once /emb/battery_state
 ```
-
-No añadir `--no-daemon` a `ros2 topic pub`: esa variante del CLI no lo acepta.
 
 ## 2. Resumen de lo utilizable ahora
 
@@ -110,7 +109,7 @@ No añadir `--no-daemon` a `ros2 topic pub`: esa variante del CLI no lo acepta.
 **LECTURA** — dentro de `walker-ros.ros2-1`:
 
 ```bash
-timeout 10 ros2 topic echo --no-daemon --once /emb/battery_state
+timeout 10 ros2 topic echo --once /emb/battery_state
 ```
 
 El campo `batsoc` es el porcentaje de carga de cada pack. Deben revisarse ambos;
@@ -119,7 +118,7 @@ no se debe usar la media para ocultar una diferencia importante entre packs.
 Lectura compacta:
 
 ```bash
-timeout 10 ros2 topic echo --no-daemon --once /emb/battery_state |
+timeout 10 ros2 topic echo --once /emb/battery_state |
   grep -E 'charge_status|voltage:|current:|temperature:|batsoc:|sn:'
 ```
 
@@ -128,9 +127,9 @@ timeout 10 ros2 topic echo --no-daemon --once /emb/battery_state |
 **LECTURA**:
 
 ```bash
-timeout 10 ros2 topic echo --no-daemon --once /emb/chrg_input_status
-timeout 10 ros2 topic echo --no-daemon --once /emb/estop_key_state
-timeout 10 ros2 topic echo --no-daemon --once /emb/servo_estop_key_state
+timeout 10 ros2 topic echo --once /emb/chrg_input_status
+timeout 10 ros2 topic echo --once /emb/estop_key_state
+timeout 10 ros2 topic echo --once /emb/servo_estop_key_state
 ```
 
 Los scripts de movimiento bloquean la ejecución si detectan cargador conectado o
@@ -161,7 +160,7 @@ agotó esos ocho segundos. Debe mostrarse una frecuencia mayor que cero.
 Para localizar los nombres exactos de las demás cámaras de esta versión:
 
 ```bash
-ros2 topic list --no-daemon -t | grep -E '/sensor/camera/.*(color|rgb|image)'
+ros2 topic list -t | grep -E '/sensor/camera/.*(color|rgb|image)'
 ```
 
 ### 4.2 Comprobar profundidad
@@ -178,7 +177,7 @@ timeout 8 ros2 topic hz /sensor/camera/stereo/depth/raw
 
 ```bash
 timeout 8 ros2 topic hz /sensor/camera/stereo/pointcloud/raw
-ros2 topic info --no-daemon -v /sensor/camera/stereo/pointcloud/raw
+ros2 topic info -v /sensor/camera/stereo/pointcloud/raw
 ```
 
 Esto confirma el flujo; no guarda un fichero PCD. Para una aplicación propia se
@@ -190,13 +189,13 @@ debe suscribir al tópico `sensor_msgs/msg/PointCloud2` y conservar también su
 **LECTURA**:
 
 ```bash
-ros2 topic list --no-daemon -t | grep -E '/sensor/camera/.*(info|camera_info)'
+ros2 topic list -t | grep -E '/sensor/camera/.*(info|camera_info)'
 ```
 
 Después se consulta el tópico encontrado:
 
 ```bash
-timeout 10 ros2 topic echo --no-daemon --once NOMBRE_DEL_TOPICO
+timeout 10 ros2 topic echo --once NOMBRE_DEL_TOPICO
 ```
 
 No se deben copiar intrínsecos de otra unidad; hay que usar los publicados por
@@ -213,8 +212,8 @@ Los lidar delantero y trasero están activos y alimentan la navegación.
 ```bash
 timeout 8 ros2 topic hz /sensor/lidar/front
 timeout 8 ros2 topic hz /sensor/lidar/back
-ros2 topic info --no-daemon -v /sensor/lidar/front
-ros2 topic info --no-daemon -v /sensor/lidar/back
+ros2 topic info -v /sensor/lidar/front
+ros2 topic info -v /sensor/lidar/back
 ```
 
 ### 5.2 Evitación de obstáculos
@@ -341,7 +340,7 @@ ros2 service call /apriltag/start_detecting \
 En otro terminal ROS 2:
 
 ```bash
-ros2 topic echo --no-daemon /sensor/camera/stereo/april_tag/results
+ros2 topic echo /sensor/camera/stereo/april_tag/results
 ```
 
 El ejemplo supone ID 0 y lado impreso de 0,16 m. Hay que sustituir ambos datos
@@ -372,8 +371,8 @@ profundidad sólo para un rectángulo de la imagen.
 **LECTURA**:
 
 ```bash
-ros2 topic list --no-daemon -t | grep '/sensor/camera/stereo/.*info'
-timeout 10 ros2 topic echo --no-daemon --once TOPICO_CAMERA_INFO
+ros2 topic list -t | grep '/sensor/camera/stereo/.*info'
+timeout 10 ros2 topic echo --once TOPICO_CAMERA_INFO
 ```
 
 ### 8.2 Solicitar una ROI de prueba
@@ -417,7 +416,7 @@ ros2 service call /sys/speech/get_speaker_list \
 ```bash
 ros2 service call /sys/asr/enable std_srvs/srv/SetBool "{data: true}"
 ros2 service call /sys/run_record/enable std_srvs/srv/SetBool "{data: true}"
-ros2 topic echo --no-daemon /sys/speech/asr
+ros2 topic echo /sys/speech/asr
 ```
 
 Al hablar se espera una salida como:
@@ -467,7 +466,7 @@ rosa action send_goal /vnav/task/command \
 La pose actual se observa dentro de `walker-ros.ros2-1`:
 
 ```bash
-timeout 10 ros2 topic echo --no-daemon --once /nav/robot_pose
+timeout 10 ros2 topic echo --once /nav/robot_pose
 ```
 
 ### 10.2 Navegar a un waypoint
@@ -712,7 +711,7 @@ rosa action info NOMBRE_DE_LA_ACCION
 rosa action type NOMBRE_DE_LA_ACCION
 ros2 service type NOMBRE_DEL_SERVICIO
 ros2 interface show TIPO_DEL_SERVICIO
-ros2 topic info --no-daemon -v NOMBRE_DEL_TOPICO
+ros2 topic info -v NOMBRE_DEL_TOPICO
 ```
 
 ## 17. VLA/GR00T: disponible como paquete, no operativo ahora

@@ -1,8 +1,8 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
-**Última actualización:** 24 de agosto de 2026  
-**Estado del documento:** operativo y en evolución  
-**Plataforma:** Cruzr S2 con abrazaderas, PICO 4 Ultra Enterprise y PC Ubuntu  
+**Última actualización:** 25 de agosto de 2026<br>
+**Estado del documento:** operativo y en evolución<br>
+**Plataforma:** Cruzr S2 con abrazaderas, PICO 4 Ultra Enterprise y PC Ubuntu<br>
 **Responsable de actualización:** registrar aquí cada cambio antes de reanudar una prueba física
 
 Este documento conserva el estado real de la integración de teleoperación. Su
@@ -12,13 +12,17 @@ Es la fuente de verdad para la conexión **PICO → PC → robot**. La guía de
 captura, dataset y VLA sigue estando en
 [`../vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md`](../vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md).
 
-> **Relevo vigente:** la sesión está detenida. El último estado robot
-> verificado fue brazos en `home` y Control Center en `JoystickMode`. Al
-> redactar el relevo, el PC no tenía portadora Ethernet y el PICO no aparecía
-> por ADB; el estado físico de apagado no quedó confirmado. Antes de continuar,
-> seguir el documento fechado
+> **Relevo vigente (25-08-2026):** el último movimiento verificado fue
+> `cruzr/home`, terminado con `SUCCEED/status=4`; el robot quedó en `home` y la
+> web se devolvió a `JoystickMode`. Después se detuvo completamente el cliente
+> de teleoperación del PC: no quedaron `ubt_controller`,
+> `RoboticsServiceProcess`, UI ni listeners de teleoperación activos. La unidad
+> systemd puede seguir habilitada para el próximo arranque, por lo que hay que
+> comprobarla antes de probar una conexión directa. El último preflight de
+> scripts detectó el cargador conectado; el estado físico actual debe
+> verificarse de nuevo y nunca inferirse de este texto. No se ha eliminado,
+> ampliado ni falsificado el watchdog. Para el historial anterior, véase
 > [`CRUZR_S2_PICO_TELEOP_HANDOFF_2026-08-24.md`](CRUZR_S2_PICO_TELEOP_HANDOFF_2026-08-24.md).
-> No se ha eliminado, ampliado ni falsificado el watchdog.
 
 ## 1. Convenciones de evidencia
 
@@ -40,15 +44,15 @@ certifican su propia capa. No equivalen a “teleoperación lista para mover”.
 
 | Capa | Estado | Evidencia resumida |
 |---|---|---|
-| PICO físico y USB | **HISTÓRICAMENTE VERIFICADO; DESCONECTADO AL CIERRE** | ADB y el enlace XR funcionaron; el snapshot final no mostró dispositivo ADB |
-| Aplicación XR del PICO | **REQUIERE RECONEXIÓN** | XRoboToolkit 1.1.1 llegó a `Working`/`vr_status=1`; después del reinicio quedó sin red hacia el PC |
-| Servicio XR del PC | **ACTIVO SIN PICO AL CIERRE** | `RoboticsServiceProcess` escucha; no había peer PICO en TCP 63901 |
-| Backend UBT del PC | **VERIFICADO** | `ubt-controller` 5.3.0 activo y escuchando en TCP 8082 |
-| Ethernet PC ↔ robot | **HISTÓRICAMENTE VERIFICADO; SIN PORTADORA AL CIERRE** | perfil PC `192.168.11.250/24`; `eno1` terminó `DOWN/NO-CARRIER` |
+| PICO físico y USB | **HISTÓRICAMENTE VERIFICADO; ESTADO ACTUAL NO ASUMIDO** | ADB, red USB y el enlace XR funcionaron en sesiones anteriores; comprobarlos de nuevo |
+| Aplicación XR del PICO | **REQUIERE PREFLIGHT NUEVO** | XRoboToolkit 1.1.1 llegó a `Working`/`vr_status=1`, pero ese estado no persiste entre reinicios |
+| Servicio XR del PC | **DETENIDO INTENCIONADAMENTE** | el último snapshot no mostró `RoboticsServiceProcess` ni listener TCP 63901 |
+| Backend UBT del PC | **DETENIDO INTENCIONADAMENTE** | el último snapshot no mostró `ubt_controller` ni listener TCP 8082; la unidad puede seguir habilitada al arranque |
+| Ethernet PC ↔ robot | **VERIFICADO DE NUEVO** | se recuperó acceso a Motion `.2` y Vision `.3` para diagnóstico y recuperación |
 | Configuración de efector | **VERIFICADO EN ROBOT Y PC** | `HW_TYPE=cruzr_s2_v1`; backend PC fijado a `arm=clamp` |
 | Configuración PICO del robot | **VERIFICADO** | `TELE_DEVICE=pico`, `transmit=local` |
 | Tarea Cruzr/PICO correcta | **VERIFICADO** | `teleoperation/cruzr_clamp_pico_teleoperation` |
-| Modo web del robot | **VERIFICADO VISUALMENTE** | La web mostró `遥操模式`; DSA confirma que es obligatorio |
+| Modo web del robot | **VERIFICADO; ÚLTIMO ESTADO `JoystickMode`** | `遥操模式` es obligatorio para teleoperar, pero el selector sólo cambia `workMode` |
 | Señalización y DataChannel | **VERIFICADO** | DataChannel llegó a estado abierto durante diagnóstico |
 | Flujo XR hacia el robot | **VERIFICADO** | El robot registró recepción de tele-data y habilitación temporal |
 | Botón de habilitación | **WORKAROUND INSTALADO, NO VALIDADO E2E** | el gatillo izquierdo se mapea al booleano Y; la última captura no observó flanco físico |
@@ -56,23 +60,25 @@ certifican su propia capa. No equivalen a “teleoperación lista para mover”.
 | Teleoperación sostenida | **NO VALIDADA** | falta gate monitorizado de 60 s |
 | Movimiento físico mediante PICO | **PENDIENTE DEL GATE** | sólo prueba mínima tras confirmar habilitación y watchdog |
 | Grabación de episodios con `B` | **PENDIENTE** | No existe aún exportación auditada extremo a extremo |
-| PICO directo al robot sin PC | **NO SOPORTADO/NO VERIFICADO** | El material recibido requiere el PC intermedio |
+| PICO directo al robot sin PC | **NO IMPLEMENTADO EN EL MATERIAL INSPECCIONADO** | la web viva sólo cambia el modo; no contiene discovery, tracking ni transporte PICO |
 
-Tras la corrección del PC y el último preflight completo realizado el 24 de
-agosto:
+Estado consolidado tras las sesiones del 24 y 25 de agosto:
 
-- `ubt-controller.service` está activo;
-- el PICO permanece autorizado por ADB;
-- llegó a existir una sesión TCP XR y el snapshot devolvió `vr_status=1`;
-- `RoboticsServiceProcess` y `ubt_controller` están activos;
-- la unidad del backend tiene `Environment=arm=clamp`;
-- no está abierta la interfaz Electron `ubt-remote-control`;
-- no hay un cliente diagnóstico WebSocket persistente;
-- no se obtuvo una teleoperación física sostenida;
+- PICO, PC Service, backend, señalización y DataChannel llegaron a enlazarse;
+- no se obtuvo una teleoperación física sostenida por el fallo de heartbeat;
+- el selector web `遥操模式` se verificó, pero no crea la conexión PICO;
 - se detuvo TeleopMode, se esperó la reinicialización de Motion y se ejecutó
   `cruzr/home` correctamente;
 - la web se devolvió manualmente a `JoystickMode`;
-- el snapshot de cierre mostró `eno1` sin portadora y PICO ausente de ADB.
+- el cliente de teleoperación del PC se detuvo por completo para evitar dos
+  clientes sobre el mismo canal;
+- el robot conserva `HW_TYPE=cruzr_s2_v1`, `TELE_DEVICE=pico` y
+  `transmit=local`;
+- no se renombraron topics, colas, `walker28` ni servicios de teleoperación;
+  el perfil independiente de tránsito con caja sí redirige temporalmente tres
+  entradas de nube de puntos del costmap y después restaura el original;
+- los scripts locales se migraron a las imágenes y hashes de v0.2.0 sin
+  instalar tareas nuevas ni mover el robot durante esa migración.
 
 ## 3. Arquitectura que se ha verificado
 
@@ -103,6 +109,48 @@ La señalización y el DataChannel no son el mismo canal. Tampoco debe
 confundirse el heartbeat de señalización con el heartbeat de seguridad de la
 aplicación de teleoperación; esta distinción explica el bloqueo actual.
 
+### 3.1 Qué hace realmente la web viva del robot
+
+Se inspeccionaron, sin modificarlos, los recursos JavaScript servidos por el
+propio robot en `http://192.168.11.3`. El selector superior ofrece estos modos:
+
+| Etiqueta | Valor interno |
+|---|---|
+| 遥控模式 | `joystick` |
+| 开发者模式 | `develop` |
+| 示教模式 | `teach` |
+| 遥操模式 | `teleop` |
+| 维修模式 | `maintain` |
+| 自动任务模式 | `auto_task` |
+
+Al elegir uno, la web invoca `work_mode.switch` con el campo `workMode`. Ese
+componente no descubre el PICO, no lee cabeza/controladores, no abre el canal
+XR y no ejecuta la tarea de manipulación. Por tanto:
+
+```text
+seleccionar 遥操模式 = prerrequisito de estado del robot
+seleccionar 遥操模式 ≠ conectar PICO ni iniciar una sesión completa
+```
+
+La ruta `/vr` de esa misma web reproduce la cámara del robot mediante un flujo
+WebRTC (`.../live/rtmpstream/head_front_rgbd`). Es un visor de vídeo del robot,
+no un cliente de entrada PICO. La presencia de librerías WebRTC/DataChannel en
+el frontend tampoco demuestra teleoperación directa.
+
+No se encontraron en el frontend vivo ni en el subfrontend `/utars/`
+implementaciones o referencias operativas a `pico_control`,
+`cruzr_clamp_pico_teleoperation`, `walker28_web`, tracking PICO o conexión
+directa al visor. Esto no prueba que DSA no disponga de otro APK o módulo; sí
+prueba que **no está expuesto por la web actualmente instalada**.
+
+### 3.2 Web del robot y HMI del PC no son la misma interfaz
+
+La frase del SDK “pulsar iniciar teleoperación en la web” es ambigua. La web
+viva del robot sólo contiene el cambio de `workMode`, mientras la HMI Electron
+del PC (`ubt-remote-control`) contiene el control de sesión asociado al backend
+5.3.0. Hasta que DSA identifique otra página o APK, no debe interpretarse el
+selector de `192.168.11.3` como sustituto del PC.
+
 ## 4. Inventario y versiones
 
 ### 4.1 Robot
@@ -118,8 +166,10 @@ aplicación de teleoperación; esta distinción explica el bloqueo actual.
 | `HW_TYPE` | `cruzr_s2_v1` | **VERIFICADO** |
 | `TELE_DEVICE` | `pico` | **VERIFICADO** |
 | `transmit` | `local` | **VERIFICADO** |
+| `MC_SCENE` | vacío en contenedores inspeccionados | **VERIFICADO; difiere del `DAC` indicado por el SDK** |
 | Canal configurado en el PC | `walker28` | **VERIFICADO**, no modificar sin DSA |
 | Build exacta DAC | `v0.2.0-dac-beta.2` | **NO DEMOSTRADA** |
+| Ejecutable `pico_control` | no encontrado en hosts/contenedores relevantes | **PENDIENTE DSA** |
 
 El SOP entregado exige específicamente:
 
@@ -145,20 +195,28 @@ un `CR_BASE_URL` de `acr.rd.ubtrobot.com/glcr` para ese flujo. El robot tiene
 actualmente `CR_BASE_URL=glcr.rd.ubtrobot.com`. No se cambiará el registry ni
 se ejecutará una actualización online sin paquete, backup y aprobación.
 
+La sección 7.1 del SDK recibido indica para v0.2.0 `MC_SCENE=DAC`,
+`TELE_DEVICE=pico`, el arranque de `signal_server` en Vision, `rtm_receiver` en
+Motion y la tarea `teleoperation/cruzr_clamp_pico_teleoperation`. También
+menciona el comando `pico_control --arm_type clamp/hand/gripper`. En el robot
+real están activos `signal_server` y `rtm_receiver`, pero `MC_SCENE` aparece
+vacío y `pico_control` no se encontró. Estas dos diferencias deben resolverse
+con DSA; no se inventará ni instalará un ejecutable homónimo.
+
 ### 4.2 PC de teleoperación
 
 | Elemento | Valor | Estado |
 |---|---|---|
 | Sistema | Ubuntu 24.04.4 LTS, amd64 | **VERIFICADO** |
 | Ethernet al robot | `192.168.11.250/24` | **VERIFICADO**, coincide con SOP |
-| Interfaz USB PICO | `192.168.67.183/24` | **VERIFICADO** |
+| Interfaz USB PICO | `192.168.67.183/24` en una sesión; subred variable | **HISTÓRICAMENTE VERIFICADO** |
 | ADB | `1:34.0.4-1build3` | **VERIFICADO** |
 | XRoboToolkit PC Service | `roboticsservice 1.0.0.0` para Ubuntu 24.04 | **VERIFICADO** |
 | Backend | `ubt-controller 5.3.0` | **VERIFICADO** |
 | UI | `ubt-remote-control 4.1.0` | **VERIFICADO** |
-| Servicio | `/etc/systemd/system/ubt-controller.service` | activo y habilitado |
-| Backend local | TCP 8082 | escuchando |
-| Servicio XR | TCP 63901 | escuchando y con PICO conectado |
+| Servicio | `/etc/systemd/system/ubt-controller.service` | instalado y habilitado; **detenido en el último snapshot** |
+| Backend local | TCP 8082 | sin listener en el último snapshot |
+| Servicio XR | TCP 63901 | sin proceso/listener en el último snapshot |
 
 La instalación del 21 de agosto usó deliberadamente el paquete
 `XRoboToolkit_PC_Service_1.0.0_ubuntu_24.04_amd64.deb`; el controlador 5.3.0
@@ -195,7 +253,7 @@ a extremo. Véase la sección 8.
 | Aplicación | `com.xrobotoolkit.client` | **VERIFICADO** |
 | XRoboToolkit | 1.1.1 | **VERIFICADO** |
 | IP compartida observada | varias subredes `192.168.67.x` y `192.168.106.x` | **HISTÓRICO**, no fijar en scripts |
-| Estado de aplicación | llegó a `Working`; terminó sin reconectar | **OBSERVADO** |
+| Estado de aplicación | llegó a `Working` en varias sesiones; estado físico actual no asumido | **OBSERVADO** |
 | Modo de envío | `Head + Controllers` | **OBSERVADO antes del reinicio** |
 | Controladores | poses enviadas; neutros antes de pruebas | **OBSERVADO** |
 | `QuestTool_v3.5.3.apk` | recibido, no identificado como componente activo | **NO UTILIZADO** |
@@ -325,6 +383,32 @@ recibieron muestra durante cinco segundos.
 La UI PICO no muestra por sí sola toda la cadena de armado. Mientras no se
 conozca el heartbeat, ningún cambio de color o estado del visor debe sustituir
 la lectura del backend y del robot.
+
+### 5.5 Estado interno y semántica observada en v0.2.0
+
+La última recuperación dejó evidencia de un cierre limpio de la tarea:
+
+- `teleoperation/cruzr_clamp_pico_teleoperation` fue destruida antes de
+  ejecutar `cruzr/home`;
+- `/sys/state/module_lock_info` devolvió `locked=false` y `module_name` vacío;
+- `cruzr/home` terminó con `SUCCEED/status=4`;
+- la última muestra conocida del status de acción era terminal, no activa.
+
+En v0.2.0 hay dos diferencias importantes respecto a scripts antiguos:
+
+1. `/sys/task/remote_command` puede anunciar un cliente pero ningún servidor y
+   no ofrecer `DO_RESET=9`. Si la máquina de tareas está libre, no hace falta
+   enviar ese reset; si está bloqueada y `DO_RESET` no existe, se debe parar y
+   diagnosticar, no enviar una orden inventada.
+2. `/mc/manipulation/action` conserva un cliente persistente incluso en reposo.
+   `Action client count: 1` ya no significa que haya una tarea ejecutándose.
+   Para decidir si está ocupado se consultan estados activos de action status
+   (`1`, `2` o `3`), además del lock y del resultado de la tarea.
+
+El último log de la tarea PICO confirmó los parámetros reales: abrazaderas,
+`PicoVRJoystick`, frecuencia 500 Hz, inicialización 12 s, detección de
+colisiones activa, seguimiento de cabeza activo, cintura desactivada y
+`TimeRatio=0.5`. Son evidencia de configuración, no de una sesión PICO válida.
 
 ## 6. Qué se ha probado extremo a extremo
 
@@ -630,7 +714,7 @@ pantalla activa con un socket ya muerto. Se reprodujo que reiniciar sólo la app
 envío: hay que volver a seleccionar `Head + Controllers`, pulsar `Send data` y
 verificar `Working`; TCP establecido por sí solo no equivale a `vr_status=1`.
 
-### 8.10 Corrección del efector y workaround del pulsador Y
+### 8.10 Corrección del efector y workaround de entrada
 
 El script
 [`../../scripts/teleoperation/patch_ubt_controller_clamp.py`](../../scripts/teleoperation/patch_ubt_controller_clamp.py)
@@ -638,15 +722,102 @@ reconstruye el archivo PYZ de PyInstaller con Python 3.10 y aplica:
 
 1. `WebsocketServer.collect`: cambia la selección automática
    `ARM_TYPE.GRIPPER` por `ARM_TYPE.CLAMP`.
-2. Con `--swap-pico-x-y`, `PicoPublisher.publish_joysticks`: intercambia
-   `get_X_button()` y `get_Y_button()`.
+2. Con `--pico-enable-left-trigger`, `PicoPublisher.publish_joysticks`:
+   sustituye únicamente la lectura Y izquierda por el gatillo izquierdo y
+   escribe su booleano ya calculado en `left_joystick.b_button`.
 
-El segundo cambio hace que X físico produzca el mismo `b_button` que el SOP
-asigna a Y. Y pasa al campo X y, al estar averiado/no registrado, queda
-inactivo. No se sintetiza el clic, no se llama directamente a
-`enable_operation_switch()` y no se altera heartbeat, STOP ni control de
-colisiones. Para revertir, reinstalar el backup vendor y reiniciar únicamente
-`ubt-controller.service` con el robot en STOP.
+Este modo se eligió porque X/Y no entregaron un clic reproducible y las
+abrazaderas pasivas no tienen dedos que accionar con el gatillo. El gatillo
+debe seguir siendo pulsado físicamente; no se sintetiza un clic, no se llama
+directamente a `enable_operation_switch()` y no se altera heartbeat, STOP ni
+control de colisiones. El mando derecho permanece intacto.
+
+La estructura del binario y el orden de bytecode quedaron validados, pero la
+prueba de ocho segundos no observó `b_button=true`; por tanto este workaround
+**no está validado extremo a extremo**. Para revertir, reinstalar el backup
+vendor y reiniciar únicamente `ubt-controller.service` con el robot en STOP.
+
+### 8.11 Parada rápida y limpia del servicio del PC
+
+El drop-in
+[`../../config/systemd/system/ubt-controller.service.d/30-service-lifecycle.conf`](../../config/systemd/system/ubt-controller.service.d/30-service-lifecycle.conf)
+configura `SIGTERM`, `KillMode=mixed` y `TimeoutStopSec=15s`. Corrige una parada
+vendor que consumía el timeout completo de 90 segundos. Está pendiente de una
+validación final y todavía no debe considerarse instalación estable.
+
+### 8.12 Compatibilidad de los scripts locales con v0.2.0
+
+Los scripts de movimiento y recuperación del repositorio ya no esperan la
+imagen anterior `zs2_motion-v0.26.10`. Se migraron a
+`utars-integration:zs2_motion-v0.2.0` y a los hashes oficiales observados en el
+robot actual.
+
+Cambios relevantes:
+
+- metas de caja v0.2.0 validadas por hash:
+  - clamp: `531f02cd9b3922142d66944633d35f717f50b6bd5a9a17c9ac7d770edd010b8f`;
+  - depósito: `88179f36bfa17aa1e161792680ece2cd716ca0c7cc457ee5c9135e0dd5172f11`;
+  - apertura: `02df67780fd37ee45d287a1e8a103f5e299c653481137b9e94895130d01f7a3d`;
+- `cruzr/wave_arm.xml` cambió en v0.2.0 y ya no retorna a cero; los scripts
+  envían `cruzr/home` después de esa demostración;
+- la plantilla bilateral local se reconstruyó a partir de las poses v0.2.0 y
+  termina explícitamente en cero, pero **no se instaló en el robot** durante la
+  migración;
+- se eliminó el argumento incompatible `--no-daemon` y se usa
+  `ROS2CLI_DISABLE_DAEMON=1`;
+- las comprobaciones de “acción ocupada” usan estados activos y no el número
+  persistente de clientes;
+- la recuperación trata `DO_RESET` como opcional cuando el task manager está
+  libre y falla de forma segura si está bloqueado sin reset disponible;
+- los hashes de las 26 tareas y tres metas de manos existentes continuaron
+  coincidiendo con v0.2.0.
+
+Se validaron sintaxis Bash, XML, hashes y modos `--check`. Durante esta
+migración no se instaló ninguna tarea, no se alteró configuración del robot y
+no se produjo movimiento. Un preflight posterior llegó correctamente al gate
+de cargador y se detuvo al detectar `CHARGER_CONNECTED=1`.
+
+### 8.13 Límite exacto entre cambios del robot y cambios del PC
+
+Cambios relevantes **dentro del robot**:
+
+- actualización desde la build anterior al paquete genérico v0.2.0;
+- configuración actual de abrazaderas `HW_TYPE=cruzr_s2_v1`;
+- `TELE_DEVICE=pico` y `transmit=local` en los componentes inspeccionados;
+- mapas, waypoints y nombres ROS conservados según las comprobaciones
+  realizadas.
+
+Cambios que existen **sólo en el PC**:
+
+- IP Ethernet `192.168.11.250/24`;
+- regla udev, locale neutral y orden de arranque;
+- `enable_foot_switch=0`;
+- perfil `arm=clamp`;
+- parche reversible de selección de efector y gatillo izquierdo;
+- unidad de UI bajo demanda, preflight y lifecycle de systemd.
+
+No se cambió en el robot ningún nombre a `walker28_web`; ese texto no aparece
+en el sistema inspeccionado. `walker28` sigue siendo únicamente el
+`channel_name` del backend PC. Tampoco se renombraron `/pico_vr/*`,
+`/mc/teleoperation/*`, `signal_server` ni `rtm_receiver`.
+
+Sí existió otro cambio de referencias a topics, ajeno a PICO: para navegar con
+el workbin sujeto, `cruzr_cargo_perception_profile.sh` redirige temporalmente
+las entradas de nube de puntos del costmap:
+
+```text
+/upub_od_waistpc  -> /cruzr/cargo_transit/waistpc_suppressed
+/upub_od_bottompc -> /cruzr/cargo_transit/bottompc_suppressed
+/upub_od_headpc   -> /cruzr/cargo_transit/headpc_suppressed
+```
+
+El objetivo era evitar que las cámaras registrasen la propia caja transportada
+como obstáculo dinámico. LiDAR frontal, mapa, localización, odometría, bumpers
+y paros permanecían activos. El orquestador guarda el archivo original, usa un
+trap de salida y lo restaura byte a byte incluso ante una interrupción. El
+último preflight registrado devolvió `CARGO_PERCEPTION_PROFILE=disabled`, es
+decir, las tres entradas originales estaban restauradas. Este perfil no cambia
+el canal `walker28` ni los topics de teleoperación.
 
 ## 9. Acciones intentadas que no solucionan el problema
 
@@ -677,11 +848,12 @@ colisiones. Para revertir, reinstalar el backup vendor y reiniciar únicamente
 | Datos con números inválidos | locale del servicio | coma decimal española | mantener `LC_NUMERIC=C` |
 | No conecta con robot | ping `.2/.3`, config WS | IP/ruta/cable/config | restaurar `192.168.11.250/24`; no tocar ROS |
 | DataChannel no abre | logs de señalización/RTM | canal, servidor o cliente duplicado | una sola UI; revisar `.3:4000` y `channel_name` |
-| `Y` no habilita | comparar `touch.b_y`/`key.b_y` | pulsador mecánico Y no registrado | usar X sólo con el workaround documentado; pedir revisión del mando |
+| `Y` no habilita | comparar `touch.b_y`/`key.b_y` | pulsador mecánico Y no registrado | el gatillo izquierdo sólo es un workaround diagnóstico no validado; pedir revisión/flujo oficial a DSA |
 | PC recibe `enable=0` repetidamente | log backend | watchdog sin heartbeat | no confundir con E-stop físico |
 | Topic existe pero `echo` no devuelve | `ros2 topic info/echo` | endpoints sin muestras activas | no considerar listo sólo por discovery DDS |
 | PICO se duerme/desconecta | ADB/TCP desaparecen | suspensión/USB | neutralizar, parar, reconectar y reiniciar servicio |
 | UI oficial y cliente diagnóstico abiertos | `ss`/procesos | dos clientes compitiendo | cerrar diagnóstico; conservar una sola UI |
+| Se desea probar PICO directo | revisar procesos/listeners del PC y peers de `.3:4000` | el servicio PC puede arrancar automáticamente | detener backend, UI y PC Service; demostrar un único peer antes de cualquier movimiento |
 
 ## 11. Procedimiento seguro para reanudar otro día
 
@@ -763,7 +935,8 @@ Si este gate falla, no se pasa a movimiento.
 
 ### 12.1 Estado actual
 
-**NO SOPORTADA/NO VERIFICADA.** El paquete recibido implementa explícitamente:
+**NO IMPLEMENTADA/NO VERIFICADA CON EL MATERIAL RECIBIDO.** El paquete
+inspeccionado implementa explícitamente:
 
 ```text
 PICO → XRoboToolkit PC Service → ubt_controller → robot
@@ -771,7 +944,24 @@ PICO → XRoboToolkit PC Service → ubt_controller → robot
 
 El PICO no se conecta directamente al controlador del robot en el flujo
 suministrado. La dirección `192.168.11.3:4000` es un servidor de señalización,
-no una API directa suficiente para controlar el robot.
+no una API directa suficiente para controlar el robot. `signal_server` sigue
+activo en Vision y `rtm_receiver` en Motion, pero eso sólo prepara el extremo
+robot de la cadena.
+
+La inspección de la web viva cerró una ambigüedad importante: seleccionar
+`遥操模式` sólo llama a `work_mode.switch`. La web no aporta tracking,
+controladores, calibración, deadman, heartbeat ni el cliente DataChannel PICO.
+La página `/vr` sólo recibe vídeo de la cámara del robot. Por tanto, cambiar el
+modo y ver una pantalla “online” no demuestra un camino directo.
+
+Si DSA afirma que existe conexión directa, debe proporcionar al menos uno de
+estos elementos concretos:
+
+- APK PICO diferente y su pantalla exacta de configuración del robot;
+- nombre/versión de un servicio embarcado adicional;
+- endpoint, autenticación, canal y protocolo soportados;
+- procedimiento oficial de START/STOP y heartbeat;
+- matriz compatible con este Cruzr S2 v0.2.0 y abrazaderas.
 
 ### 12.2 Qué sí puede hacerse sin usar una shell cada vez
 
@@ -803,6 +993,24 @@ Sería un desarrollo nuevo y debería cubrir, como mínimo:
 No es aceptable copiar el protocolo parcialmente ni simular heartbeat para
 “hacerlo funcionar”. Primero debe pedirse a DSA si existe una APK directa,
 servicio embarcado o SDK oficialmente soportado.
+
+### 12.4 Prueba decisiva sin movimiento para un supuesto modo directo
+
+1. Detener por completo backend, UI y PC Service; comprobar que no quedan
+   procesos ni listeners 8082/63901.
+2. Dejar el robot en `home`, abrazaderas vacías y seleccionar `遥操模式`.
+3. Abrir en el PICO únicamente la aplicación/procedimiento directo indicado
+   por DSA.
+4. Sin armar movimiento, observar en Vision las conexiones a TCP 4000 y en
+   Motion las tasas/muestras de `/pico_vr/*`.
+5. Exigir que aparezca un peer nuevo atribuible al PICO y datos frescos. Las
+   conexiones internas `.2 ↔ .3` no cuentan.
+6. Verificar heartbeat, STOP y estado de habilitación durante 60 s antes de
+   permitir cualquier movimiento.
+
+Con la aplicación XRoboToolkit suministrada no se encontró un menú documentado
+para introducir directamente la IP del robot. Si no aparece el peer/dato
+nuevo, la prueba termina ahí y se restaura `JoystickMode`.
 
 ## 13. Pendientes priorizados
 
@@ -866,6 +1074,13 @@ servicio embarcado o SDK oficialmente soportado.
 8. Is there an officially supported direct PICO-to-robot mode without the PC?
 9. Which component exports a synchronized LeRobot episode when `B` is used?
 10. Which observable states constitute “ready for physical teleoperation”?
+11. The SDK requires `MC_SCENE=DAC`, but the inspected containers expose an
+    empty `MC_SCENE`. Is this expected for our v0.2.0 build?
+12. Where should the documented `pico_control` executable be installed, and
+    which package/version provides it?
+13. Does “start teleoperation on the web” refer to the PC Electron HMI or to a
+    robot webpage different from the `work_mode.switch` selector at
+    `192.168.11.3`?
 
 ## 15. Evidencia reproducible y comandos de diagnóstico
 
@@ -879,7 +1094,11 @@ dpkg-query -W -f='${binary:Package}\t${Version}\t${Architecture}\n' \
   roboticsservice ubt-controller ubt-remote-control adb
 
 systemctl show ubt-controller.service \
-  -p ActiveState -p SubState -p ActiveEnterTimestamp -p MainPID
+  -p UnitFileState -p ActiveState -p SubState -p ActiveEnterTimestamp -p MainPID
+
+systemctl --user is-active ubt-remote-control.service || true
+pgrep -af 'ubt_controller|RoboticsServiceProcess|ubt-remote-control' || true
+ss -Hlntp | grep -E ':(8082|63901)\b' || true
 
 adb devices -l
 adb shell getprop ro.product.model
@@ -918,6 +1137,16 @@ ros2 topic info /pico_vr/tele_data
 ros2 topic info /mc/teleoperation/enable
 ```
 
+En Vision, una prueba de supuesto PICO directo debe distinguir conexiones
+internas de un peer externo:
+
+```bash
+ss -Hntp | grep ':4000' || true
+```
+
+No considerar “PICO conectado” si sólo aparecen peers `192.168.11.2` y
+`192.168.11.3`.
+
 ### Logs relevantes
 
 ```text
@@ -950,8 +1179,16 @@ AnswerSession: sent heartbeat
   [`../vla/templates/TELEOP_SESSION_CHECKLIST.md`](../vla/templates/TELEOP_SESSION_CHECKLIST.md)
 - Activación segura del VLA:
   [`../guides/CRUZR_S2_VLA_SAFE_ENABLEMENT.md`](../guides/CRUZR_S2_VLA_SAFE_ENABLEMENT.md)
+- Catálogo verificado de capacidades y tareas instaladas:
+  [`../guides/CATALOGO_FUNCIONALIDADES_CRUZR_S2.md`](../guides/CATALOGO_FUNCIONALIDADES_CRUZR_S2.md)
+- Arranque y recuperación específicos de v0.2.0:
+  [`../guides/CRUZR_V020_BOOT_GUARD.md`](../guides/CRUZR_V020_BOOT_GUARD.md)
+- Preguntas y estado de soporte con DSA:
+  [`../support/UBTECH_SUPPORT_TRACKER.md`](../support/UBTECH_SUPPORT_TRACKER.md)
 - Informe de actualización base:
   [`../../upgrade.txt`](../../upgrade.txt)
+- Resumen enviable de la actualización:
+  [`../../upgrade_summary.txt`](../../upgrade_summary.txt)
 - Regla udev PICO:
   [`../../config/udev/51-pico-ubt.rules`](../../config/udev/51-pico-ubt.rules)
 
@@ -965,6 +1202,10 @@ son parte de la evidencia.
 
 | Fecha/hora | Cambio o prueba | Resultado | Evidencia | Próxima decisión |
 |---|---|---|---|---|
+| 2026-08-25 | migración de scripts locales al runtime v0.2.0 | sintaxis/XML/hashes y `--check` válidos; sin instalación ni movimiento; gate de cargador bloqueó como debía | scripts y hashes del robot | conservar cambios; desconectar cargador sólo antes de una prueba física autorizada |
+| 2026-08-25 | inspección de la web viva del robot | el selector sólo ejecuta `work_mode.switch`; `/vr` sólo recibe cámara; no hay cliente PICO directo visible | assets servidos por `192.168.11.3` | pedir a DSA APK/módulo/procedimiento directo exacto |
+| 2026-08-25 | recuperación tras teleoperación y separación de clientes | `cruzr/home` terminó `SUCCEED/status=4`; `JoystickMode` restaurado; stack PC detenido sin procesos/listeners | log de Motion, ROSA, systemd, `pgrep`, `ss` | nuevo preflight desde estado conocido; no arrancar dos clientes |
+| 2026-08-25 | auditoría de v0.2.0 | `signal_server` y `rtm_receiver` activos; `MC_SCENE` vacío; `pico_control` ausente; nombres ROS/canal no renombrados | contenedores/env/procesos/búsqueda local | aclarar diferencias del SDK con DSA |
 | 2026-08-24 12:28 | reinicio ordenado del stack PC y rearme del PICO | preflight completo aprobado: red, ADB, TCP 63901, tracking `vr_status=1`, backend 5.3.0 y `arm=clamp`; UI inactiva | lanzador local, systemd, WebSocket 8082 | obtener gate físico fresco y validar heartbeat durante 60 s |
 | 2026-08-24 12:25 | selección manual del modo web exigido por DSA | selector superior muestra `遥操模式`; el PICO aún devuelve `vr_status=0` | captura web y preflight local | rearmar `Head + Controllers / Send data / Working` y repetir gate |
 | 2026-08-24 12:08–12:15 | perfil PC `arm=clamp`, UI bajo demanda y preflight reproducible | red/ADB/TCP/backend válidos; tras reiniciar app falta rearmar tracking (`vr_status=0`) | systemd, WebSocket 8082, ADB, TCP 63901 | activar tracking y `遥操模式`; ejecutar gate único |
@@ -1008,3 +1249,72 @@ sólo cuando se cumpla todo lo siguiente:
 - logs y timestamps permiten explicar cada transición;
 - un episodio piloto se graba, detiene, exporta y audita;
 - DSA confirma los parámetros de seguridad pendientes.
+
+## 19. Relevo mínimo para una nueva sesión de Codex
+
+No reconstruir el diagnóstico desde cero ni reinstalar paquetes. La nueva
+sesión debe leer primero este archivo completo y respetar los cambios sin
+commit que pueda mostrar `git status`.
+
+### 19.1 Hechos que ya no deben volver a investigarse
+
+- La web de `192.168.11.3` cambia el modo, pero no implementa el cliente PICO.
+- `/vr` es recepción de vídeo, no teleoperación de entrada.
+- `signal_server` y `rtm_receiver` existen y están activos en el robot.
+- El camino PICO → PC → robot llegó hasta DataChannel y datos; falla el
+  heartbeat de aplicación esperado por el PC.
+- `Working` en PICO, `TeleopMode` en web y topics existentes son condiciones
+  parciales, no autorización de movimiento.
+- No se renombraron topics, colas ni canales de teleoperación. El perfil de
+  carga redirigió temporalmente tres entradas del costmap y el último
+  preflight las mostró restauradas (`CARGO_PERCEPTION_PROFILE=disabled`).
+- El último estado de movimiento verificado es `home`; no asumir que el
+  cargador o la conexión física siguen igual.
+- El stack PC quedó detenido intencionadamente para que no compita con una
+  prueba directa.
+
+### 19.2 Primer snapshot, sin movimiento
+
+```bash
+cd /home/lacuna/proyectos/Robots/Humanoide
+git status --short
+
+systemctl is-active ubt-controller.service || true
+systemctl is-enabled ubt-controller.service || true
+systemctl --user is-active ubt-remote-control.service || true
+pgrep -af 'ubt_controller|RoboticsServiceProcess|ubt-remote-control' || true
+ss -Hlntp | grep -E ':(8082|63901)\b' || true
+
+ip -br -4 address
+ping -c 2 192.168.11.2
+ping -c 2 192.168.11.3
+adb devices -l
+```
+
+Si se pretende probar PICO directo, el resultado esperado antes de empezar es
+que no haya backend/UI/PC Service ni listeners 8082/63901. Si se pretende usar
+el flujo suministrado con PC, arrancarlos mediante el preflight versionado y
+usar una sola UI.
+
+### 19.3 Próxima decisión técnica
+
+La prioridad no es mover el robot, sino resolver una de estas rutas:
+
+1. **Ruta soportada con PC:** obtener/confirmar DAC beta.2, origen del
+   heartbeat y `pico_control`; superar el gate de 60 s.
+2. **Ruta directa:** recibir de DSA el APK/módulo/procedimiento exacto y
+   demostrar peer/datos/heartbeat sin movimiento según 12.4.
+
+No cambiar `MC_SCENE`, no instalar un paquete DAC supuesto, no simular
+heartbeat y no ejecutar teleoperación física hasta que una de esas rutas quede
+demostrada.
+
+### 19.4 Texto para iniciar un chat nuevo
+
+```text
+Lee completamente docs/teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md
+antes de actuar. Es la fuente de verdad del Cruzr S2 real. Conserva el
+worktree existente y no reinicies el diagnóstico. Empieza con el snapshot de
+la sección 19.2, sin mover el robot, y continúa únicamente desde la decisión
+pendiente de la sección 19.3.
+```

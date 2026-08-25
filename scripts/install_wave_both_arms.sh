@@ -12,7 +12,7 @@ readonly DEFAULT_PASSWORD="aa"
 readonly MOTION_CONTAINER="walker-motion.manipulation_robot_app-1"
 readonly ROS_CONTAINER="walker-ros.ros2-1"
 readonly EXPECTED_HW_TYPE="cruzr_s2_v1"
-readonly EXPECTED_IMAGE_FRAGMENT="zs2_motion-v0.26.10"
+readonly EXPECTED_IMAGE_FRAGMENT="utars-integration:zs2_motion-v0.2.0"
 readonly ACTION_NAME="/mc/manipulation/action"
 readonly ACTION_TYPE="mc_task_msgs/action/ArmTask"
 readonly VOICE_COMMAND="Please wave"
@@ -20,8 +20,8 @@ readonly VOICE_TIMEOUT_SECONDS=10
 readonly CONFIG_ROOT="/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config"
 readonly SOURCE_TASK="$CONFIG_ROOT/cruzr/wave_arm.xml"
 readonly DESTINATION_TASK="$CONFIG_ROOT/cruzr/wave_both_arms.xml"
-readonly SOURCE_SHA256="b7024a2721d8d6ee4f4898557a9d8c6d891837495921b784cdd4a226b07c44b7"
-readonly TEMPLATE_SHA256="8f59cc5d4e005a7518c12ec6d51974d3ccbbd465d824f70187be6fc31348947f"
+readonly SOURCE_SHA256="1066811bea5ec8de2e88d0dfb35dba61364b707545254dcba55b8284e156a098"
+readonly TEMPLATE_SHA256="09ab80a84a64c7beee1a38718f385af3030fa62a7daa422081f93fd5c0545593"
 
 CRUZR_SSH_PASSWORD="${CRUZR_SSH_PASSWORD:-$DEFAULT_PASSWORD}"
 export CRUZR_SSH_PASSWORD
@@ -143,8 +143,8 @@ import xml.etree.ElementTree as ET
 path = sys.argv[1]
 root = ET.parse(path).getroot()
 parallels = list(root.iter("Parallel"))
-if len(parallels) != 11:
-    raise SystemExit(f"Se esperaban 11 bloques Parallel; hay {len(parallels)}")
+if len(parallels) != 3:
+    raise SystemExit(f"Se esperaban 3 bloques Parallel; hay {len(parallels)}")
 
 joint_limits = [
     (-2.83, 2.83),
@@ -180,7 +180,7 @@ for index, parallel in enumerate(parallels, start=1):
                for value, (low, high) in zip(values, joint_limits)):
             raise SystemExit(f"Limite articular excedido en {side}, Parallel {index}")
         duration = float(attrs["duration"])
-        if not math.isfinite(duration) or duration <= 0.0 or duration > 2.0:
+        if not math.isclose(duration, 10.0, rel_tol=0.0, abs_tol=1e-12):
             raise SystemExit(f"Duracion no permitida en Parallel {index}: {duration}")
         parsed[side] = values
 
@@ -200,7 +200,20 @@ for action in last_actions:
     if any(abs(value) > 1e-12 for value in values):
         raise SystemExit("La trayectoria no termina con ambos brazos a cero")
 
-print("Plantilla local valida: 11 poses, 22 acciones y retorno bilateral a cero")
+expected_right = [
+    [-0.423274, -0.336362, 1.27774, -1.20528,
+     1.28694, 0.376621, -1.38568],
+    [-0.488406, -0.165349, 1.16067, -0.923343,
+     1.11991, 0.473442, -1.16333],
+]
+for index, expected in enumerate(expected_right):
+    right = [float(value.strip()) for value in
+             list(parallels[index])[1].attrib["joint_angles"].split(";")]
+    if any(not math.isclose(actual, wanted, rel_tol=0.0, abs_tol=1e-6)
+           for actual, wanted in zip(right, expected)):
+        raise SystemExit(f"La pose derecha {index + 1} no coincide con wave_arm v0.2.0")
+
+print("Plantilla local valida: 2 poses oficiales v0.2.0 y retorno bilateral a cero")
 PY
 }
 
@@ -398,11 +411,12 @@ check_action_server() {
 
   info "Comprobando el servidor de movimiento..."
   report="$(ssh_robot bash -s -- \
-    "$MOTION_CONTAINER" "$DESTINATION_TASK" "$TEMPLATE_SHA256" <<'REMOTE'
+    "$MOTION_CONTAINER" "$ROS_CONTAINER" "$DESTINATION_TASK" "$TEMPLATE_SHA256" <<'REMOTE'
 set -Eeuo pipefail
 container="$1"
-task_file="$2"
-expected_hash="$3"
+ros_container="$2"
+task_file="$3"
+expected_hash="$4"
 
 actual_hash="$(docker exec "$container" sha256sum "$task_file" | awk '{print $1}')"
 [[ "$actual_hash" == "$expected_hash" ]] || {
@@ -412,6 +426,18 @@ actual_hash="$(docker exec "$container" sha256sum "$task_file" | awk '{print $1}
 printf 'TASK_HASH_VALID=%s\n' "$actual_hash"
 docker exec "$container" bash -lc \
   'source /opt/walker/setup.bash && rosa action info /mc/manipulation/action'
+
+action_status="$(docker exec "$ros_container" bash -lc '
+  source /opt/ros/humble/setup.bash
+  export ROS2CLI_DISABLE_DAEMON=1
+  timeout 8 ros2 topic echo --once /mc/manipulation/action/_action/status
+')"
+if awk '$1 == "status:" && ($2 == 1 || $2 == 2 || $2 == 3) {busy=1} END {exit !busy}' \
+    <<<"$action_status"; then
+  echo ACTION_BUSY=motion_goal_active
+  exit 44
+fi
+echo ACTION_STATUS_IDLE=1
 REMOTE
 )" || die "No fue posible validar el servidor de movimiento."
 
@@ -420,8 +446,8 @@ REMOTE
     die "La tarea instalada no coincide con la version validada."
   grep -q 'Action server count: 1' <<<"$report" || \
     die "El servidor $ACTION_NAME no esta disponible."
-  grep -q 'Action client count: 0' <<<"$report" || \
-    die "Hay otro cliente conectado al servidor de movimiento."
+  grep -q '^ACTION_STATUS_IDLE=1$' <<<"$report" || \
+    die "Hay un objetivo activo en el servidor de movimiento."
 }
 
 confirm_physical_safety() {
@@ -457,7 +483,7 @@ CONFIRMACION FISICA OBLIGATORIA
   - Una persona esta preparada junto a la parada de emergencia trasera.
   - El cable Ethernet esta sujeto y la base permanecera inmovil.
 
-La tarea movera los dos brazos durante unos 19 segundos y deberia devolverlos
+La tarea movera los dos brazos durante unos 30 segundos y deberia devolverlos
 a cero. Detencion normal: H centrado + A. Ante peligro: parada fisica.
 EOF
   if [[ "$confirmation_mode" == "voice" ]]; then

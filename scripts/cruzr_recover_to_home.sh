@@ -35,6 +35,7 @@ MODE="run"
 YES=0
 FAST=0
 TASK_LOCKED=""
+RESET_SERVICE_AVAILABLE=""
 RETREAT_REQUIRED=""
 MANIPULATION_STATE=""
 
@@ -225,26 +226,36 @@ set +u
 source /opt/walker/setup.bash
 set -u
 
-type="$(rosa service type /sys/task/remote_command)"
-info="$(rosa service info /sys/task/remote_command)"
-[[ "$type" == "sys_task_msgs/srv/RemoteCommand" ]] || exit 31
-grep -q 'Service server count: 1' <<<"$info" || exit 32
+info="$(rosa service info /sys/task/remote_command 2>/dev/null || true)"
+if grep -q 'Service server count: 1' <<<"$info"; then
+  type="$(rosa service type /sys/task/remote_command)"
+  [[ "$type" == "sys_task_msgs/srv/RemoteCommand" ]] || exit 31
 
-iface="$(rosa msg show sys_task_msgs/srv/RemoteCommand)"
-grep -q 'uint8 RECOVER_ARM = 3' <<<"$iface" || exit 33
-grep -q 'uint8 STOP_ROBOT = 7' <<<"$iface" || exit 34
-grep -q 'uint8 DO_RESET = 9' <<<"$iface" || exit 35
+  iface="$(rosa msg show sys_task_msgs/srv/RemoteCommand)"
+  grep -q 'uint8 RECOVER_ARM = 3' <<<"$iface" || exit 33
+  grep -q 'uint8 STOP_ROBOT = 7' <<<"$iface" || exit 34
+  grep -q 'uint8 DO_RESET = 9' <<<"$iface" || exit 35
+  printf 'RESET_SERVICE=ready\n'
+else
+  # El backend v0.2.0 no anuncia este servidor en la configuración actual.
+  # Un estado libre puede continuar sin reset; uno bloqueado debe detenerse.
+  printf 'RESET_SERVICE=unavailable\n'
+fi
 
 lock="$(timeout 6 rosa topic echo --once /sys/state/module_lock_info)"
 printf '%s\n' "$lock"
-printf 'RESET_SERVICE=ready\n'
 INNER
 REMOTE
 )" || die "El servicio interno de recuperación no superó la comprobación."
 
   printf '%s\n' "$output"
-  grep -q 'RESET_SERVICE=ready' <<<"$output" || \
-    die "No se confirmó el servicio DO_RESET."
+  if grep -q '^RESET_SERVICE=ready$' <<<"$output"; then
+    RESET_SERVICE_AVAILABLE="true"
+  elif grep -q '^RESET_SERVICE=unavailable$' <<<"$output"; then
+    RESET_SERVICE_AVAILABLE="false"
+  else
+    die "No se pudo determinar la disponibilidad de DO_RESET."
+  fi
 
   if grep -Eq '"locked"[[:space:]]*:[[:space:]]*true' <<<"$output"; then
     TASK_LOCKED="true"
@@ -252,6 +263,10 @@ REMOTE
     TASK_LOCKED="false"
   else
     die "No se pudo determinar si la máquina interna está bloqueada."
+  fi
+
+  if [[ "$TASK_LOCKED" == "true" && "$RESET_SERVICE_AVAILABLE" != "true" ]]; then
+    die "La máquina de tareas está bloqueada y v0.2.0 no anuncia DO_RESET; no se enviará home."
   fi
 }
 
@@ -286,6 +301,8 @@ EOF
 
 reset_task_state() {
   local output
+  [[ "$RESET_SERVICE_AVAILABLE" == "true" ]] || \
+    die "DO_RESET no está disponible en v0.2.0; no se enviará una orden inexistente."
   output="$(ssh_vision bash -s -- "$SYSTEM_CONTAINER" "$RESET_COMMAND" <<'REMOTE'
 set -Eeuo pipefail
 container="$1"
@@ -320,7 +337,9 @@ run_recovery() {
     else
       detect_manipulation_state
     fi
-    TASK_LOCKED="true"
+    # v0.2.0 puede no publicar /sys/task/remote_command. Incluso en modo
+    # rápido se consulta el lock real y solo se exige DO_RESET si está activo.
+    check_reset_service
   else
     preflight
   fi

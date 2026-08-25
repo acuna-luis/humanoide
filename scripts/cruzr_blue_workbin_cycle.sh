@@ -12,7 +12,7 @@ readonly DEFAULT_PASSWORD="aa"
 readonly MOTION_CONTAINER="walker-motion.manipulation_robot_app-1"
 readonly ROS_CONTAINER="walker-ros.ros2-1"
 readonly EXPECTED_HW_TYPE="cruzr_s2_v1"
-readonly EXPECTED_IMAGE_FRAGMENT="zs2_motion-v0.26.10"
+readonly EXPECTED_IMAGE_FRAGMENT="utars-integration:zs2_motion-v0.2.0"
 readonly CONFIG_ROOT="/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config"
 readonly META_ROOT="/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config"
 readonly MIN_BATTERY_SOC="30"
@@ -32,9 +32,9 @@ readonly HOME_TASK="cruzr/home"
 readonly HEAD_LOWER_SHA="f3a73626f97b471d4a0a03c98c24de32243651116c497328e69b5ddc57ea46c1"
 readonly ARMS_READY_SHA="1527ca90105d70d7c8acda3310d15cec1a354a9938e8f30d11e11d2e923f4be7"
 readonly HOME_SHA="50d819d6d6190280c6efee1dc275877362c3f7c807ec733fbc3c7ed217daed88"
-readonly CLAMP_META_SHA="e8ec65bc73ac15b06977425778363b1cfb5258c64d08eb36b2d55422b198166e"
-readonly DEPOSIT_META_SHA="c2fd11113b8acc21eb970519c6e6679a3666dfa42fe3e98a005f2b404b38aa07"
-readonly OPEN_META_SHA="c0265aad37fc5f42f4b260a9707f6393a34607b9fb1919a9d5b5db381b2999eb"
+readonly CLAMP_META_SHA="531f02cd9b3922142d66944633d35f717f50b6bd5a9a17c9ac7d770edd010b8f"
+readonly DEPOSIT_META_SHA="88179f36bfa17aa1e161792680ece2cd716ca0c7cc457ee5c9135e0dd5172f11"
+readonly OPEN_META_SHA="02df67780fd37ee45d287a1e8a103f5e299c653481137b9e94895130d01f7a3d"
 
 readonly DETECT_TEMPLATE_SHA="cf32fbeb905e8fe7f7a3c3c58429044cc96ee79956c8c1060a6787b201028a4b"
 readonly CLAMP_TEMPLATE_SHA="76509f5694f0d73d71f65c59f12abc8f4e7740f3704cfdda7b56eca5d6dc0209"
@@ -336,15 +336,27 @@ motion_info="$(docker exec "$motion_container" bash -lc 'source /opt/walker/setu
 vision_info="$(docker exec "$motion_container" bash -lc 'source /opt/walker/setup.bash; rosa action info /cv/task/transport_action')"
 grep -q 'Action server count: 1' <<<"$motion_info" || exit 25
 grep -q 'Action server count: 1' <<<"$vision_info" || exit 26
-grep -q 'Action client count: 0' <<<"$motion_info" || {
-  echo "ACTION_BUSY=motion"
+
+# v0.2.0 mantiene un cliente de acción persistente aun cuando no existe un
+# objetivo activo. El número de clientes ya no permite decidir si el robot
+# está ocupado; se inspecciona el estado real de los objetivos publicados por
+# la acción y se bloquean ACCEPTED, EXECUTING y CANCELING.
+action_status="$(docker exec "$ros_container" bash -lc '
+  source /opt/ros/humble/setup.bash
+  export ROS2CLI_DISABLE_DAEMON=1
+  timeout 8 ros2 topic echo --once /mc/manipulation/action/_action/status
+')" || exit 27
+if awk '$1 == "status:" && ($2 == 1 || $2 == 2 || $2 == 3) {busy=1} END {exit !busy}' \
+    <<<"$action_status"; then
+  echo "ACTION_BUSY=motion_goal_active"
+  printf '%s\n' "$action_status"
   exit 27
-}
+fi
 
 topic_once() {
   local topic="$1"
   docker exec "$ros_container" bash -lc \
-    "source /opt/ros/humble/setup.bash; timeout 8 ros2 topic echo --no-daemon --once '$topic'"
+    "source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; timeout 8 ros2 topic echo --once '$topic'"
 }
 
 estop="$(topic_once /emb/estop_key_state)"

@@ -1,72 +1,25 @@
 <root main_tree_to_execute="MainTree">
     <BehaviorTree ID="MainTree">
         <Sequence name="root_sequence">
-            <!-- Reflejo bilateral de la trayectoria oficial cruzr/wave_arm. -->
+            <!-- Reflejo bilateral de las dos poses oficiales v0.2.0 de cruzr/wave_arm. -->
             <Parallel threshold="2">
                 <Action ID="MetaMove" type="arm" location="left"
-                    joint_angles="0.3465254018667001;-0.5;-1.6388589129215543;-1.8;1.9024415136877388;-0.006106799410141219;-0.17799414266918940" duration="2" />
+                    joint_angles="0.423274;-0.336362;-1.27774;-1.20528;-1.28694;-0.376621;-1.38568" duration="10" />
                 <Action ID="MetaMove" type="arm" location="right"
-                    joint_angles="-0.3465254018667001;-0.5;1.6388589129215543;-1.8;-1.9024415136877388;0.006106799410141219;-0.17799414266918940" duration="2" />
+                    joint_angles="-0.423274;-0.336362;1.27774;-1.20528;1.28694;0.376621;-1.38568" duration="10" />
             </Parallel>
             <Parallel threshold="2">
                 <Action ID="MetaMove" type="arm" location="left"
-                    joint_angles="1.4253048780098028;-0.7620750316685303;-1.3657534390382136;-1.8;2.354663843792207;-0.025753163555657987;-0.1544399722178044" duration="2" />
+                    joint_angles="0.488406;-0.165349;-1.16067;-0.923343;-1.11991;-0.473442;-1.16333" duration="10" />
                 <Action ID="MetaMove" type="arm" location="right"
-                    joint_angles="-1.4253048780098028;-0.7620750316685303;1.3657534390382136;-1.8;-2.354663843792207;0.025753163555657987;-0.1544399722178044" duration="2" />
+                    joint_angles="-0.488406;-0.165349;1.16067;-0.923343;1.11991;0.473442;-1.16333" duration="10" />
             </Parallel>
+            <!-- v0.2.0 ya no incluye retorno en wave_arm; se añade explícitamente. -->
             <Parallel threshold="2">
                 <Action ID="MetaMove" type="arm" location="left"
-                    joint_angles="1.2085002882261213;-0.873680215307267;-1.821265193874937;-1.6279120663950508;2.1780562893055353;-0.12261092627307679;-0.22457538806351843" duration="1.5" />
+                    joint_angles="0;0;0;0;0;0;0" duration="10" />
                 <Action ID="MetaMove" type="arm" location="right"
-                    joint_angles="-1.2085002882261213;-0.873680215307267;1.821265193874937;-1.6279120663950508;-2.1780562893055353;0.12261092627307679;-0.22457538806351843" duration="1.5" />
-            </Parallel>
-            <Parallel threshold="2">
-                <Action ID="MetaMove" type="arm" location="left"
-                    joint_angles="1.586710032784337;-0.49844104263880185;-1.216274966236663;-1.6443349098705144;2.3516492042996155;0.0457156427245923;-0.3299494348695888" duration="1.5" />
-                <Action ID="MetaMove" type="arm" location="right"
-                    joint_angles="-1.586710032784337;-0.49844104263880185;1.216274966236663;-1.6443349098705144;-2.3516492042996155;-0.0457156427245923;-0.3299494348695888" duration="1.5" />
-            </Parallel>
-            <Parallel threshold="2">
-                <Action ID="MetaMove" type="arm" location="left"
-                    joint_angles="1.2920665804274492;-0.6532231034667343;-1.7368938852482991;-1.6333039005925458;2.2566906154371753;-0.030574472870795802;-0.156435051257637" duration="1.5" />
-                <Action ID="MetaMove" type="arm" location="right"
-                    joint_angles="-1.2920665804274492;-0.6532231034667343;1.7368938852482991;-1.6333039005925458;-2.2566906154371753;0.030574472870795802;-0.156435051257637" duration="1.5" />
-            </Parallel>
-            <Parallel threshold="2">
-                <Action ID="MetaMove" type="arm" location="left"
-                    joint_angles="1.5179688708983659;-0.5642735032972062;-1.2541987385148656;-1.788543569789168;2.35201970353522;0.0699378704040175;0.002150404039670841" duration="1.5" />
-                <Action ID="MetaMove" type="arm" location="right"
-                    joint_angles="-1.5179688708983659;-0.5642735032972062;1.2541987385148656;-1.788543569789168;-2.35201970353522;-0.0699378704040175;0.002150404039670841" duration="1.5" />
-            </Parallel>
-            <Parallel threshold="2">
-                <Action ID="MetaMove" type="arm" location="left"
-                    joint_angles="1.260580043313916;-0.6851572876823144;-1.7916473464401867;-1.5844576519752955;2.1420223613748246;-0.023982798094745003;-0.15674859353166284" duration="1.5" />
-                <Action ID="MetaMove" type="arm" location="right"
-                    joint_angles="-1.260580043313916;-0.6851572876823144;1.7916473464401867;-1.5844576519752955;-2.1420223613748246;0.023982798094745003;-0.15674859353166284" duration="1.5" />
-            </Parallel>
-            <Parallel threshold="2">
-                <Action ID="MetaMove" type="arm" location="left"
-                    joint_angles="1.471341505474347;-0.6339581853520642;-1.30177514447291;-1.7931124210070686;2.3083650305546715;0.19676688013045465;-0.006703733103614406" duration="1.5" />
-                <Action ID="MetaMove" type="arm" location="right"
-                    joint_angles="-1.471341505474347;-0.6339581853520642;1.30177514447291;-1.7931124210070686;-2.3083650305546715;-0.19676688013045465;-0.006703733103614406" duration="1.5" />
-            </Parallel>
-            <Parallel threshold="2">
-                <Action ID="MetaMove" type="arm" location="left"
-                    joint_angles="1.256093388584975;-0.6985847872947601;-1.8311098887008928;-1.5327394708568156;2.115520750197233;-0.035495640894616196;-0.17454102949985756" duration="1.5" />
-                <Action ID="MetaMove" type="arm" location="right"
-                    joint_angles="-1.256093388584975;-0.6985847872947601;1.8311098887008928;-1.5327394708568156;-2.115520750197233;0.035495640894616196;-0.17454102949985756" duration="1.5" />
-            </Parallel>
-            <Parallel threshold="2">
-                <Action ID="MetaMove" type="arm" location="left"
-                    joint_angles="-0.4279279339278178;-0.3850324346113172;-1.6645856303619142;-1.8;1.6549888943019282;0.13884097513353036;-0.05345509199363112" duration="2" />
-                <Action ID="MetaMove" type="arm" location="right"
-                    joint_angles="0.4279279339278178;-0.3850324346113172;1.6645856303619142;-1.8;-1.6549888943019282;-0.13884097513353036;-0.05345509199363112" duration="2" />
-            </Parallel>
-            <Parallel threshold="2">
-                <Action ID="MetaMove" type="arm" location="left"
-                    joint_angles="0;0;0;0;0;0;0" duration="2" />
-                <Action ID="MetaMove" type="arm" location="right"
-                    joint_angles="0;0;0;0;0;0;0" duration="2" />
+                    joint_angles="0;0;0;0;0;0;0" duration="10" />
             </Parallel>
         </Sequence>
     </BehaviorTree>

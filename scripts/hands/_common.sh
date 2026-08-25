@@ -206,6 +206,21 @@ action_info="$(docker exec "$motion_container" bash -lc \
   'source /opt/walker/setup.bash; rosa action info /mc/manipulation/action')"
 printf '%s\n' "$action_info"
 
+# Desde v0.2.0 existe un cliente persistente aunque la acción esté inactiva.
+# Se bloquea únicamente si el estado publicado contiene un objetivo ACCEPTED,
+# EXECUTING o CANCELING.
+action_status="$(docker exec "$ros_container" bash -lc '
+  source /opt/ros/humble/setup.bash
+  export ROS2CLI_DISABLE_DAEMON=1
+  timeout 8 ros2 topic echo --once /mc/manipulation/action/_action/status
+')"
+if awk '$1 == "status:" && ($2 == 1 || $2 == 2 || $2 == 3) {busy=1} END {exit !busy}' \
+    <<<"$action_status"; then
+  echo ACTION_BUSY=motion_goal_active
+  exit 34
+fi
+echo ACTION_STATUS_IDLE=1
+
 topics="$(docker exec "$ros_container" bash -lc \
   'source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; ros2 topic list')"
 v3=0
@@ -240,7 +255,7 @@ REMOTE
 
   printf '%s\n' "$report"
   grep -q 'Action server count: 1' <<<"$report" || hands_die "No está disponible $HANDS_ACTION_NAME."
-  grep -q 'Action client count: 0' <<<"$report" || hands_die "Hay otro cliente de manipulación conectado."
+  grep -q '^ACTION_STATUS_IDLE=1$' <<<"$report" || hands_die "Hay un objetivo activo de manipulación."
   HANDS_DETECTED_MODEL="$(awk -F= '$1=="DETECTED_HAND_MODEL"{print $2}' <<<"$report")"
   [[ "$HANDS_DETECTED_MODEL" == "v3" || "$HANDS_DETECTED_MODEL" == "v4" ]] || \
     hands_die "Modelo de manos no válido: ${HANDS_DETECTED_MODEL:-desconocido}"
