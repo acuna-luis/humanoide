@@ -491,6 +491,14 @@ vence a los 10 segundos. Esto confirma una incompatibilidad temporal o de
 protocolo pendiente de DSA; no demuestra por sí solo cuál componente tiene la
 versión incorrecta.
 
+**REVALIDADO el 25 de agosto sobre los binarios instalados:** el bytecode de
+`Publisher.callback` documenta el flujo «robot SDK → RTM → Sender → callback».
+La rama `type=heartbeat` llama a `update_last_heartbeat_time`; START sólo
+inicializa esa misma marca una vez. El source map de la UI PC 4.1.0 no contiene
+un emisor de heartbeat y sus únicos mensajes operativos son START/STOP. Por
+tanto, mantener abierto el WebSocket de la UI o del lanzador no proporciona el
+heartbeat que falta.
+
 ### 6.4 Los dos “heartbeats” no son equivalentes
 
 El robot registra cada diez segundos:
@@ -732,10 +740,44 @@ debe seguir siendo pulsado físicamente; no se sintetiza un clic, no se llama
 directamente a `enable_operation_switch()` y no se altera heartbeat, STOP ni
 control de colisiones. El mando derecho permanece intacto.
 
-La estructura del binario y el orden de bytecode quedaron validados, pero la
-prueba de ocho segundos no observó `b_button=true`; por tanto este workaround
-**no está validado extremo a extremo**. Para revertir, reinstalar el backup
-vendor y reiniciar únicamente `ubt-controller.service` con el robot en STOP.
+**VERIFICADO el 25 de agosto:** el gatillo izquierdo produjo
+`b_button=true`, el robot respondió `enable=1` y Motion entró en `CoreMode 7`.
+La segunda prueba mantuvo físicamente el gatillo: la entrada cruda permaneció
+estable en `trigger_value=1.0` y `b_button=true`, mientras las respuestas del
+robot alternaron `enable=1/0` cada aproximadamente 0,51 segundos. Esto demuestra
+que el Y del proveedor es un **conmutador con repetición**, no un *deadman*.
+Mantenerlo pulsado provoca entradas/salidas repetidas de `CoreMode 7`.
+
+La maniobra correcta pendiente de validar es un único toque completo de menos
+de 0,5 segundos y soltar; después no se vuelve a tocar durante el gate. Ambas
+pruebas incorrectas terminaron con STOP automático. El operador confirmó cero
+movimiento físico en la primera; el resultado físico de la segunda queda
+pendiente de confirmación antes de otra prueba.
+Se oyó el TTS chino `原地全身遥操模式已开启`, que anuncia la activación del
+modo de teleoperación de cuerpo completo en posición fija.
+
+El lanzador se corrigió para pedir ese toque único y enviar STOP
+automáticamente al completar los 60 segundos. El modo recomendado
+`--gate-local` exige un TTY del PC y emite localmente una campana y el texto
+`TOQUE AHORA` después de armar el publicador; el chat o una coordinación remota
+no forman parte de la ventana de 8 segundos. `--run` queda como alias. El gate
+local se ejecutó posteriormente y falló de nuevo por ausencia de heartbeat;
+por tanto, la estabilidad sostenida continúa bloqueada. Para revertir el parche
+del backend, reinstalar el backup vendor y reiniciar únicamente
+`ubt-controller.service` con el robot en STOP.
+
+Para el operador se añadió `scripts/teleoperation/probar_pico.sh`: es un
+lanzador interactivo sin argumentos que muestra el briefing local y delega la
+secuencia al gate canónico anterior. Este informa progreso cada cinco segundos
+durante el monitor de 60 segundos. No duplica ni omite sus comprobaciones.
+El primer handler de señal sólo hacía STOP y podía reanudar el `read`; se
+corrigió para que `Ctrl+C`/`TERM` envíen STOP y terminen con 130/143.
+
+**DESCARTADO:** modificar `ubt_controller` para ignorar, ampliar artificialmente
+o dar por recibido el heartbeat. Eso convertiría una incompatibilidad visible
+en una pérdida de enlace robot→PC no detectada. Si no se puede modificar el
+robot, el cambio admisible debe ser un backend PC oficialmente compatible o el
+componente oficial del proveedor que mantenga el heartbeat y conserve el STOP.
 
 ### 8.11 Parada rápida y limpia del servicio del PC
 
@@ -1202,6 +1244,13 @@ son parte de la evidencia.
 
 | Fecha/hora | Cambio o prueba | Resultado | Evidencia | Próxima decisión |
 |---|---|---|---|---|
+| 2026-08-25 después del gate 09:53 | origen del heartbeat y opción de omitir watchdog | UI 4.1.0 revalidada sin emisor; `Publisher.callback` recibe el tipo `heartbeat` por el canal inverso RTM del robot; desactivar/puentear watchdog descartado | source maps de `app.asar`, bytecode instalado de `publisher.py` | pedir backend PC compatible o componente oficial si el robot debe permanecer inmutable |
+| 2026-08-25 09:53 PC | primer gate con lanzador local y toque único | START 09:53:46.142; `enable=1` 09:53:49.845; watchdog 09:53:56.718 (`10,576 s` desde START, `6,873 s` desde enable); `enable=0` 09:53:57.224; final `operation_type=1`, `enable_control=0`, UI inactiva; sin movimiento físico y con voz del robot | salida del operador, `ubt_controller.log`, consulta WS y systemd | no repetir; resolver con proveedor el heartbeat de aplicación |
+| 2026-08-25 después del gate 09:53 | corrección de aborto local | se observó que `Ctrl+C` durante la confirmación enviaba STOP pero el `read` podía continuar; handler cambiado a STOP + salida 130/143; sin prueba física durante el cambio | salida del operador, `bash -n`, prueba aislada del handler y `git diff --check` | conservar el aborto duro; no usar el gate hasta resolver heartbeat |
+| 2026-08-25 después del gate 09:44 | lanzador local solicitado por el operador | añadido `scripts/teleoperation/probar_pico.sh`; briefing, orden local y progreso cada 5 s, ejecución delegada al gate canónico; sin prueba física | `bash -n`, bloqueo no-TTY y `git diff --check` | el operador lo ejecuta manualmente desde el terminal local; no coordinar el toque por chat |
+| 2026-08-25 después del gate 09:44 | eliminación de latencia del chat en el procedimiento | añadido `--gate-local`: TTY obligatorio, señal local posterior al armado, monitor 60 s y STOP automático; sin ejecución física durante el cambio | `bash -n`, `--help`, `git diff --check` | ejecutar desde terminal local con dos personas; conservar el chat sólo para revisar logs |
+| 2026-08-25 09:44 PC / 15:44 robot | segundo gate, gatillo mantenido | entrada cruda fija en `trigger_value=1.0`/`b_button=true`, pero `enable` alternó cada ~0,51 s por repetición del conmutador Y; STOP automático; movimiento físico pendiente de confirmación explícita del operador | log PC `ubt_controller.log`, estado final WS | confirmar resultado físico; corregir a un toque menor de 0,5 s; no repetir hasta validar script y preflight |
+| 2026-08-25 09:39 PC / 15:39 robot | primer gate actual con PICO por ADB reverse | gatillo→`b_button=true`→`enable=1`→Motion `CoreMode 7`; las pulsaciones repetidas alternaron `enable`; STOP automático, sin movimiento físico; TTS de activación oído | log PC `ubt_controller.log`, log Motion `robot_app`, confirmación visual del operador | aislar semántica de Y antes del gate de 60 s |
 | 2026-08-25 | migración de scripts locales al runtime v0.2.0 | sintaxis/XML/hashes y `--check` válidos; sin instalación ni movimiento; gate de cargador bloqueó como debía | scripts y hashes del robot | conservar cambios; desconectar cargador sólo antes de una prueba física autorizada |
 | 2026-08-25 | inspección de la web viva del robot | el selector sólo ejecuta `work_mode.switch`; `/vr` sólo recibe cámara; no hay cliente PICO directo visible | assets servidos por `192.168.11.3` | pedir a DSA APK/módulo/procedimiento directo exacto |
 | 2026-08-25 | recuperación tras teleoperación y separación de clientes | `cruzr/home` terminó `SUCCEED/status=4`; `JoystickMode` restaurado; stack PC detenido sin procesos/listeners | log de Motion, ROSA, systemd, `pgrep`, `ss` | nuevo preflight desde estado conocido; no arrancar dos clientes |

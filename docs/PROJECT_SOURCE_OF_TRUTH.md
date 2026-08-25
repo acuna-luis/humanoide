@@ -323,6 +323,39 @@ recepción de tele-data. No se obtuvo movimiento físico sostenido y validado:
 el PC no recibió el heartbeat de aplicación esperado y el robot deshabilitó
 la sesión aproximadamente cada 11,1 s.
 
+En el gate del 25 de agosto se verificó además el workaround de entrada:
+gatillo izquierdo → `b_button=true` → `enable=1` → Motion `CoreMode 7`. El
+Y del proveedor funciona como conmutador con repetición, no como *deadman*:
+con el gatillo crudo estable en `1.0`, `enable` alternó aproximadamente cada
+0,51 segundos. Debe usarse un único toque inferior a 0,5 segundos y soltarlo.
+Los STOP automáticos dejaron el PC en `operation_type=1`, `enable_control=0`.
+El operador confirmó cero movimiento físico en el primer intento; el resultado
+físico del segundo debe confirmarse explícitamente antes de otra prueba. El gate
+local de 60 segundos se ejecutó el 25 de agosto: START fue a las 09:53:46.142,
+el toque habilitó a las 09:53:49.845 y el watchdog cerró a las 09:53:56.718 por
+`No heartbeat for 10 seconds`. No hubo movimiento físico y sí se oyó una voz
+del robot. Esto confirma el bloqueo P0 de heartbeat.
+
+La reinspección de los artefactos instalados descarta que el heartbeat deba
+producirlo la UI PC: el source map de `ubt-remote-control 4.1.0` sólo envía
+START/STOP. El bytecode de `Publisher.callback` en `ubt_controller 5.3.0`
+declara que procesa mensajes inversos del robot por RTM y sólo ante
+`type=heartbeat` actualiza `last_heartbeat_time`. **DESCARTADO** desactivar o
+puentear este watchdog en el PC: eliminaría la detección de pérdida robot→PC.
+Si el robot debe permanecer inmutable, UBTECH debe suministrar un backend PC
+compatible con la v0.2.0 genérica o el componente oficial que complete ese
+heartbeat, conservando la parada por pérdida de enlace.
+
+La coordinación del flanco ya no debe realizarse por chat. El modo local
+`cruzr_pico_teleop_pc.sh --gate-local` exige terminal interactivo, emite la
+señal `TOQUE AHORA` sólo después de armar, monitoriza el gate y envía STOP al
+terminar o ante cualquier fallo. `--run` es únicamente un alias compatible.
+El lanzador humano `scripts/teleoperation/probar_pico.sh` presenta esas órdenes
+en el terminal, muestra progreso periódico y delega el gate al controlador
+canónico. Tras observar que `Ctrl+C` durante un `read` enviaba STOP pero permitía
+continuar, el handler se corrigió para terminar definitivamente con código 130
+(143 para `TERM`) después del STOP.
+
 El SOP exige `utars-udoke-config-v0.2.0-dac-beta.2.tar.gz`, pero sólo está
 demostrada la build genérica v0.2.0. Además, `MC_SCENE` está vacío y no se
 encontró `pico_control`, aunque ambos aparecen en el SDK/SOP.
@@ -509,6 +542,7 @@ actualizarse este archivo antes de cerrar la sesión.
 
 | Fecha | Hito | Resultado |
 |---|---|---|
+| 2026-08-25 | gate PICO/conmutador | gatillo y `CoreMode 7` verificados; toque único correcto habilitó, pero el gate falló por heartbeat a los 10,576 s desde START; STOP dejó `operation_type=1`, `enable_control=0`; en el último intento no hubo movimiento y sí voz |
 | 2026-08-10/11 | diagnóstico inicial BMS | se observó desequilibrio SOC y SN truncado; pendiente proveedor |
 | 2026-08-14 | AprilTag mesa 2 | tag 113 y referencias empty/held calibrados |
 | 2026-08-17 | manos v4 | detección y demos de fábrica; luego se restauraron abrazaderas |
@@ -518,4 +552,3 @@ actualizarse este archivo antes de cerrar la sesión.
 | 2026-08-21 | apagado | discrepancia manual/hardware/software documentada |
 | 2026-08-24/25 | PICO | cadena hasta DataChannel validada; heartbeat sigue bloqueando sesión estable |
 | 2026-08-25 | relevo global | `AGENTS.md` y esta fuente hacen el contexto descubrible automáticamente |
-

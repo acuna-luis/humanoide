@@ -30,17 +30,19 @@ usage() {
 Uso:
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --open-ui
+  ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --gate-local
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --run
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --stop
 
 --check    Sólo lectura; valida PC, red, PICO y backend.
 --open-ui  Abre la interfaz después del backend. No inicia la publicación.
---run      Exige confirmación física y arma directamente el backend corregido
-           con arm_type=clamp, sin depender de Electron. La web del robot debe
-           mostrar 遥操模式. En esta unidad, el operador debe apretar por
-           completo el gatillo izquierdo cuando se indique: el PC lo reasigna
-           a la función Y oficial porque X/Y no entregan el clic de forma
-           fiable. Sólo es válido con las abrazaderas pasivas instaladas.
+--gate-local
+           Gate interactivo local recomendado. Exige confirmación física,
+           arma el backend corregido con arm_type=clamp, emite una campana y
+           muestra TOQUE AHORA, monitoriza 60 s y envía STOP siempre al
+           completar o fallar. Debe ejecutarse directamente en el terminal
+           del PC; no coordinar el toque mediante chat o acceso remoto.
+--run      Alias compatible de --gate-local.
 --stop     Solicita EXIT_REMOTE_CONTROL y cierra la interfaz.
 
 Este script sólo cambia/ejecuta componentes del PC. Nunca desactiva el
@@ -242,16 +244,38 @@ stop_all() {
   info "UI_STOPPED=1"
 }
 
+abort_gate() {
+  local signal="${1:-INT}"
+  local exit_code=130
+  [[ "$signal" == "TERM" ]] && exit_code=143
+
+  # El handler anterior sólo ejecutaba STOP y después devolvía el control al
+  # read interrumpido. Desactivar primero los traps evita recursión y garantiza
+  # que Ctrl+C/TERM terminen la prueba después del STOP.
+  trap - ERR INT TERM
+  printf '\nABORT_REQUESTED=%s\n' "$signal" >&2
+  stop_all || true
+  printf 'ERROR: Prueba abortada por el operador; no se continuará.\n' >&2
+  exit "$exit_code"
+}
+
 run_gate() {
+  [[ -t 0 && -t 1 ]] ||
+    die "El gate requiere un terminal interactivo local; no lo ejecute mediante pipe o job en segundo plano."
   check_pc
+  if systemctl --user is-active --quiet "$ui_unit"; then
+    die "$ui_unit está activo; ejecute --stop antes del gate para evitar dos clientes de control."
+  fi
 
   cat <<'EOF'
 
 CONFIRMACIÓN FÍSICA OBLIGATORIA
 El cargador debe estar desconectado; PICO y Ethernet conectados; abrazaderas
-vacías; robot en home; controladores neutros; grip y gatillos libres; nadie
-tocando el robot; toda la envolvente despejada y paro físico preparado. La
-web 192.168.11.3 debe mostrar 遥操模式 (Remote control mode) arriba.
+vacías; el robot debe haber partido de home y permanecer en la postura de
+inicialización esperada de TeleopMode; controladores neutros; grip y gatillos
+libres; nadie tocando el robot; toda la envolvente despejada y paro físico
+preparado. La web 192.168.11.3 debe mostrar 遥操模式 (Remote control mode)
+arriba.
 
 Escriba exactamente TELEOPERACION SEGURA Y MODO REMOTO para armar el flujo del PC:
 EOF
@@ -262,10 +286,13 @@ EOF
   cat <<'EOF'
 
 PREPARACIÓN INMEDIATA
-Mantenga ambos controladores neutros. Empiece a apretar y soltar completamente
-el gatillo izquierdo una vez por segundo y pulse Enter mientras continúa. El
-PC armará la sesión y capturará el primer flanco posterior al armado dentro de
-los 8 segundos permitidos por el watchdog original del fabricante.
+Mantenga ambos controladores neutros y el gatillo izquierdo suelto. Pulse
+Enter sólo cuando el operador del PICO y la persona del terminal estén listos.
+El PC armará el publicador y, cuando esté preparado, emitirá una campana y
+mostrará TOQUE AHORA. En ese instante haga un único toque completo y rápido
+del gatillo izquierdo (apretar y soltar en menos de medio segundo). No lo
+mantenga apretado ni vuelva a pulsarlo durante el gate: el Y del proveedor es
+un conmutador con repetición y alternaría enable=1/0 cada medio segundo.
 EOF
   read -r _
 
@@ -286,7 +313,9 @@ EOF
   info "ARM_TYPE_CONFIRMED=clamp"
   info "PUBLISHER_ARMED=1"
   info "ENABLE_CONTROL_BEFORE_TRIGGER=0"
-  info "PRESS_LEFT_TRIGGER_NOW=1"
+  printf '\a\n'
+  info "========== TOQUE AHORA: GATILLO IZQUIERDO UNA VEZ, MENOS DE 0,5 s =========="
+  info "TAP_LEFT_TRIGGER_ONCE_NOW=1"
 
   local enabled=0 detect_json operation_type enable_control
   local enable_deadline=$((SECONDS + 8))
@@ -311,7 +340,9 @@ EOF
   info "ENABLE_CONTROL_CONFIRMED=1"
 
   info "MONITORING_HEARTBEAT_GATE=60s"
-  local monitor_deadline=$((SECONDS + 60))
+  local monitor_start=$SECONDS
+  local monitor_deadline=$((monitor_start + 60))
+  local next_progress=$monitor_start
   while ((SECONDS < monitor_deadline)); do
     if tail -n "+$((start_line + 1))" "$backend_log" | grep -q 'No heartbeat for 10 seconds'; then
       stop_all
@@ -324,6 +355,10 @@ EOF
       stop_all
       die "La sesión perdió habilitación (operation_type=$operation_type, enable_control=$enable_control)."
     fi
+    if ((SECONDS >= next_progress)); then
+      info "GATE_LIVE=1 ELAPSED=$((SECONDS - monitor_start))s REMAINING=$((monitor_deadline - SECONDS))s"
+      next_progress=$((SECONDS + 5))
+    fi
     sleep 1
   done
 
@@ -334,9 +369,22 @@ EOF
     stop_all
     die "La operación no permaneció activa durante 60 s."
   }
+
+  # El gate sólo demuestra estabilidad sin movimiento útil. Cerrar siempre la
+  # sesión antes de anunciar el resultado evita dejar el publicador armado
+  # entre el resultado del script y la siguiente decisión.
+  stop_all
+  local stopped_json stopped_operation stopped_enable
+  stopped_json="$(backend_detect_json)"
+  stopped_operation="$(jq -r '.content.operation_type' <<<"$stopped_json")"
+  stopped_enable="$(jq -r '.content.enable_control' <<<"$stopped_json")"
+  if [[ "$stopped_operation" != "1" || "$stopped_enable" != "0" ]]; then
+    die "STOP no dejó el backend desarmado (operation_type=$stopped_operation, enable_control=$stopped_enable)."
+  fi
   info "TELEOPERATION_STABLE=60s"
   info "WATCHDOG_TRIP=0"
-  info "La teleoperación queda activa; use --stop antes de salir o quitarse el PICO."
+  info "TELEOPERATION_STOPPED_AFTER_GATE=1"
+  info "Gatillo liberable: la teleoperación queda desarmada tras el gate."
 }
 
 mode="${1:---check}"
@@ -347,8 +395,10 @@ case "$mode" in
   --open-ui)
     open_ui
     ;;
-  --run)
+  --gate-local|--run)
     trap 'stop_all >/dev/null 2>&1 || true' ERR INT TERM
+    trap 'abort_gate INT' INT
+    trap 'abort_gate TERM' TERM
     run_gate
     trap - ERR INT TERM
     ;;
