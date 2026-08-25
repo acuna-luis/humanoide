@@ -27,11 +27,16 @@ readonly ARMS_READY_TASK="transport/clamp_ready_cruzr"
 readonly DETECT_TASK="cruzr/blue_workbin_detect_only"
 readonly CLAMP_TASK="cruzr/blue_workbin_clamp_only"
 readonly DEPOSIT_TASK="cruzr/blue_workbin_auto_deposit"
-readonly HOME_TASK="cruzr/home"
+# La vuelta directa a cero interpola los siete ejes de cada brazo a la vez.
+# Con las abrazaderas orientadas hacia abajo tras TeleopMode esa trayectoria
+# pasó demasiado cerca del cuerpo. La imagen v0.2.0 incluye una tarea Cruzr
+# específica que abre primero los brazos y sólo después completa home.
+readonly HOME_TASK="cruzr/open_arm_before_home"
 
 readonly HEAD_LOWER_SHA="f3a73626f97b471d4a0a03c98c24de32243651116c497328e69b5ddc57ea46c1"
 readonly ARMS_READY_SHA="1527ca90105d70d7c8acda3310d15cec1a354a9938e8f30d11e11d2e923f4be7"
-readonly HOME_SHA="50d819d6d6190280c6efee1dc275877362c3f7c807ec733fbc3c7ed217daed88"
+readonly HOME_SHA="ec2c187c2217ca2dc1767179fba570677f062527fa7070729e81b05141f8980c"
+readonly DIRECT_HOME_SHA="50d819d6d6190280c6efee1dc275877362c3f7c807ec733fbc3c7ed217daed88"
 readonly CLAMP_META_SHA="531f02cd9b3922142d66944633d35f717f50b6bd5a9a17c9ac7d770edd010b8f"
 readonly DEPOSIT_META_SHA="88179f36bfa17aa1e161792680ece2cd716ca0c7cc457ee5c9135e0dd5172f11"
 readonly OPEN_META_SHA="02df67780fd37ee45d287a1e8a103f5e299c653481137b9e94895130d01f7a3d"
@@ -97,8 +102,9 @@ Modos:
   --deposit-held
              Verifica un agarre vigente, baja hasta contacto con el apoyo y
              abre los cogedores. No mueve el chasis.
-  --home     Devuelve brazos, cabeza, cintura y elevador a cero. Úsese solo
-             después de retirar caja y mesa.
+  --home     Usa la secuencia Cruzr protegida: separa primero los brazos y
+             después devuelve brazos, cabeza, cintura y elevador a cero.
+             Úsese sólo después de retirar caja y mesa.
   --prepare-vision
              Baja únicamente la cabeza para observar la caja; no mueve brazos
              ni chasis.
@@ -272,7 +278,7 @@ remote_preflight() {
   ssh_motion bash -s -- \
     "$MOTION_CONTAINER" "$ROS_CONTAINER" "$EXPECTED_HW_TYPE" \
     "$EXPECTED_IMAGE_FRAGMENT" "$HEAD_LOWER_SHA" "$ARMS_READY_SHA" \
-    "$HOME_SHA" "$CLAMP_META_SHA" "$DEPOSIT_META_SHA" "$OPEN_META_SHA" \
+    "$HOME_SHA" "$DIRECT_HOME_SHA" "$CLAMP_META_SHA" "$DEPOSIT_META_SHA" "$OPEN_META_SHA" \
     "$MIN_BATTERY_SOC" <<'REMOTE'
 set -Eeuo pipefail
 motion_container="$1"
@@ -282,10 +288,11 @@ expected_image="$4"
 head_sha="$5"
 ready_sha="$6"
 home_sha="$7"
-clamp_meta_sha="$8"
-deposit_meta_sha="$9"
-open_meta_sha="${10}"
-min_soc="${11}"
+direct_home_sha="$8"
+clamp_meta_sha="$9"
+deposit_meta_sha="${10}"
+open_meta_sha="${11}"
+min_soc="${12}"
 
 [[ "$(hostname)" == "motion" ]] || {
   echo "HOST_ERROR=$(hostname)"
@@ -327,7 +334,8 @@ task_root="/opt/walker/manipulation_task_manager/share/manipulation_task_manager
 meta_root="/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config"
 check_hash "$head_sha" "$task_root/cruzr/move_head_lower.xml"
 check_hash "$ready_sha" "$task_root/transport/clamp_ready_cruzr.xml"
-check_hash "$home_sha" "$task_root/cruzr/home.xml"
+check_hash "$home_sha" "$task_root/cruzr/open_arm_before_home.xml"
+check_hash "$direct_home_sha" "$task_root/cruzr/home.xml"
 check_hash "$clamp_meta_sha" "$meta_root/meta_clamp/clamp_cruzr_byd_large.yaml"
 check_hash "$deposit_meta_sha" "$meta_root/meta_clamp/put_collision_cruzr.yaml"
 check_hash "$open_meta_sha" "$meta_root/meta_clamp/byd/open_arm_cruzr.yaml"
@@ -868,7 +876,8 @@ EOF
 run_home() {
   if ((YES == 0)); then
     cat <<'EOF'
-Confirma que caja y mesa ya fueron retiradas y la zona frontal está despejada.
+Confirma que caja y mesa ya fueron retiradas, que las abrazaderas están vacías
+y que hay espacio libre debajo, delante y a ambos lados de los brazos.
 Escribe EJECUTAR HOME para continuar:
 EOF
     local answer
@@ -876,7 +885,7 @@ EOF
     [[ "$answer" == "EJECUTAR HOME" ]] || die "Home cancelado."
   fi
   run_motion_task "$HOME_TASK" 20
-  info "Robot devuelto a home; el chasis permaneció inmóvil."
+  info "Robot devuelto a home mediante apertura previa de brazos; el chasis permaneció inmóvil."
 }
 
 main() {

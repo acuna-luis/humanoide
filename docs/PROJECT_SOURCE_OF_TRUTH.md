@@ -33,14 +33,14 @@ nuevo el estado físico y lógico.
 
 | Elemento | Último estado documentado | Confianza |
 |---|---|---|
-| Postura | `cruzr/home` terminó con `SUCCEED/status=4` | **VERIFICADO** |
-| Modo web | restaurado a `JoystickMode` | **VERIFICADO** |
+| Postura | la prueba PICO movió el brazo y la recuperación posterior terminó en `home`; la trayectoria directa pasó casi rozando con las abrazaderas bajas | **OBSERVADO; RECOMPROBAR** |
+| Modo robot | para liberar la tarea PICO se cambió explícitamente de `teleop` a `auto_task`; el modo actual es volátil | **OBSERVADO; RECOMPROBAR** |
 | Efector | abrazaderas laterales vacías; `HW_TYPE=cruzr_s2_v1` | **VERIFICADO** |
-| Teleoperación PC | procesos, UI y listeners detenidos intencionadamente | **VERIFICADO** |
-| Servicio PC | puede seguir habilitado y reaparecer tras reiniciar el PC | **PENDIENTE DE RECOMPROBAR** |
+| Teleoperación PC | backend/XR Service activos y UI cerrada; a las 12:44 el `--check` recuperó PICO/stream y terminó 7/7 con `vr_status=1`, `operation_type=1`, `enable_control=0`; backend de flanco `5083e9f0…` | **VERIFICADO; NO ARMADA** |
+| Servicio PC | `ubt-controller.service` activo y habilitado; XR Service activo; UI inactiva | **VERIFICADO** |
 | VLA | contenedores detenidos, `restart=no`, sin mando físico | **VERIFICADO** |
-| Cargador | el último preflight lo detectó conectado | **HISTÓRICO; RECOMPROBAR** |
-| Paros, ruedas y zona | no se deben inferir del relevo | **ESTADO ACTUAL DESCONOCIDO** |
+| Cargador | desconectado en el preflight de las 12:23 | **VERIFICADO; RECOMPROBAR ANTES DE MOVER** |
+| Paros, ruedas y zona | paros `0/0` a las 12:23; ruedas y zona siguen siendo comprobación humana fresca | **PARCIAL; RECOMPROBAR** |
 | Mapa/localización | `test_route_01` se conservó; activación y localización son volátiles | **RECOMPROBAR** |
 
 La rama `main` estaba limpia y sincronizada con `origin/main` en el commit
@@ -77,7 +77,10 @@ movimiento o recuperación.
 | Software | genérico `v0.2.0` en Motion y Vision | **VERIFICADO** |
 | Motion | Ubuntu 22.04, `192.168.11.2` | **VERIFICADO** |
 | Vision/web | `192.168.11.3` | **VERIFICADO** |
-| PC Ethernet | `192.168.11.250/24` | **VERIFICADO** |
+| PC Ethernet | `192.168.11.250/24`; sin portadora y retirado del flujo canónico | **HISTÓRICO; NO EXIGIR** |
+| PC Wi-Fi Internet | `wlo1`, `DSA CORPORATE`, `192.168.40.120/24` | **VERIFICADO; CONSERVAR** |
+| PC Wi-Fi para todos los dispositivos del robot | `wlx80afcad40bd6`, `Cruzr S2-0669`, `192.168.42.215/24`; toda `.11.0/24` vía `.42.2` y `.42.0/24` directa, never-default y sin DNS | **VERIFICADO; CANÓNICO** |
+| PICO Wi-Fi local | `Cruzr S2-0669`, `192.168.42.211/24` en la sesión del 25-08 | **VERIFICADO; DHCP, REDESCUBRIR** |
 | Efector actual | abrazaderas | **VERIFICADO** |
 | `HW_TYPE` | `cruzr_s2_v1` | **VERIFICADO** |
 | `TELE_DEVICE` | `pico` | **VERIFICADO** |
@@ -248,27 +251,56 @@ fuente de teleoperación y en [`../utats/README.md`](../utats/README.md).
 
 ### 5.2 Configuración y workarounds PC
 
-- Ethernet al robot fijada en `192.168.11.250/24`.
+- Red canónica robot por `Cruzr S2-0669`: `.11.0/24` vía `.42.2` y
+  `.42.0/24` directa por `wlx80afcad40bd6`; Ethernet queda histórico.
 - Backend con `transmit=local`, señalización
   `ws://192.168.11.3:4000`, `channel_name=walker28`, dispositivo PICO y pedal
   deshabilitado.
 - Se corrigió la selección de efector del backend de `GRIPPER` a `CLAMP`.
-- Se reconstruyó el binario del backend de forma reproducible para mapear el
-  gatillo izquierdo al booleano que el proveedor asigna a Y. La estructura se
-  verificó, pero el flanco físico extremo a extremo no llegó a validarse.
+- Se reconstruyó el binario del backend de forma reproducible para mapear sólo
+  el flanco ascendente del gatillo izquierdo al booleano Y del proveedor. El
+  test aislado impide repeticiones al mantenerlo; el E2E físico está pendiente.
+- Por petición explícita del propietario se amplió temporalmente sólo el
+  comparador del watchdog de heartbeat de 10 a 300 s para diagnóstico. No se
+  fabrica heartbeat y la misma ruta STOP permanece al vencer. El ejecutable
+  activo en disco es `5083e9f0…`; la variante anterior de nivel/300 s
+  `40b440…` y la anterior de 10 s `0f0d3414…` quedaron como backups.
+- El preflight de teleoperación muestra ahora siete etapas con timestamp y
+  timeouts de 5 s para ADB/systemd/journal/WebSocket. La variable
+  `CRUZR_TELEOP_DEBUG=1` activa traza Bash con línea y comando; los fallos del
+  gate informan el punto exacto antes de solicitar STOP.
 - Se mejoró orden de arranque: servicio XR y PICO antes del backend; UI al
   final. Una desconexión/suspensión del visor puede exigir reinicio del
   servicio.
+- El lanzador descubre ahora el mismo visor por `ro.serialno` tanto si ADB usa
+  el serial USB como si usa un destino `IP:puerto`; `PICO_ADB_TARGET` permite
+  fijar el transporte para diagnóstico. No se cambió ninguna ruta de mando.
 
 El binario original permanece respaldado; los hashes original y activo están
 en la fuente especializada.
 
 ### 5.3 Último estado PC
 
-El cliente quedó detenido intencionadamente: sin `ubt_controller`,
-`RoboticsServiceProcess`, UI ni listeners `8082/63901`. El servicio systemd
-puede seguir habilitado, de modo que este hecho debe recomprobarse tras cada
-arranque antes de intentar PICO directo u otro cliente.
+Tras instalar el timeout, el cliente quedó inicialmente detenido. A las 10:29
+se recuperó mediante ADB reverse. A las 11:53 se sustituyó esa ruta por Wi-Fi
+local: el PC conserva Internet en `wlo1`/`DSA CORPORATE` y usa el adaptador
+secundario `wlx80afcad40bd6` en `Cruzr S2-0669`; PICO quedó en la misma WLAN.
+XRoboToolkit descubrió `192.168.42.215` y abrió TCP directo desde
+`192.168.42.211` a `63901`. Se eliminó todo ADB reverse y el stream permaneció
+estable. El snapshot final muestra `vr_status=1`, `operation_type=1` y
+`enable_control=0`; `--check` pasó completo, sin START ni movimiento. ADB
+también quedó accesible por `192.168.42.211:5555`; su modo TCP y las concesiones
+DHCP deben redescubrirse después de un reinicio.
+
+Ese snapshot fue sustituido por la intervención de las 12:39–12:40: el backend
+de flanco `5083e9f0…` quedó activo, pero PICO/ADB/stream estaba offline. El
+estado final WebSocket fue `vr_status=0`, `operation_type=1`,
+`enable_control=0`, con la UI inactiva.
+El `--check` de las 12:44 recuperó ADB/stream y pasó 7/7 con `vr_status=1`,
+manteniendo `operation_type=1`, `enable_control=0` y la UI inactiva.
+
+El drop-in de lifecycle de 15 s está instalado y la parada usada para cambiar
+el backend terminó ordenadamente dentro de ese margen.
 
 Fuente completa:
 [`teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md`](teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md).
@@ -319,22 +351,60 @@ Catálogo detallado:
 ### 7.1 PICO/teleoperación — bloqueo P0
 
 La cadena PICO → PC → robot llegó a `Working`, señalización, DataChannel y
-recepción de tele-data. No se obtuvo movimiento físico sostenido y validado:
-el PC no recibió el heartbeat de aplicación esperado y el robot deshabilitó
-la sesión aproximadamente cada 11,1 s.
+recepción de tele-data. El PC no recibe el heartbeat de aplicación esperado.
+Con el timeout original esto deshabilitaba la sesión aproximadamente cada
+11,1 s; el timeout diagnóstico de 300 s ya superó en runtime ese límite, pero
+no corrige ni valida el heartbeat.
 
 En el gate del 25 de agosto se verificó además el workaround de entrada:
 gatillo izquierdo → `b_button=true` → `enable=1` → Motion `CoreMode 7`. El
 Y del proveedor funciona como conmutador con repetición, no como *deadman*:
 con el gatillo crudo estable en `1.0`, `enable` alternó aproximadamente cada
-0,51 segundos. Debe usarse un único toque inferior a 0,5 segundos y soltarlo.
+0,51 segundos. A las 12:27 una sola pulsación de 0,567 s volvió a alternar
+`enable 0→1→0`; no fue un fallo de heartbeat. El backend activo publica ahora
+sólo el flanco ascendente, y los scripts exigen neutralidad previa y liberación
+posterior del gatillo. Su test aislado pasó; el E2E físico queda pendiente.
 Los STOP automáticos dejaron el PC en `operation_type=1`, `enable_control=0`.
-El operador confirmó cero movimiento físico en el primer intento; el resultado
-físico del segundo debe confirmarse explícitamente antes de otra prueba. El gate
+El operador confirmó cero movimiento físico en los intentos informados. El gate
 local de 60 segundos se ejecutó el 25 de agosto: START fue a las 09:53:46.142,
 el toque habilitó a las 09:53:49.845 y el watchdog cerró a las 09:53:56.718 por
 `No heartbeat for 10 seconds`. No hubo movimiento físico y sí se oyó una voz
 del robot. Esto confirma el bloqueo P0 de heartbeat.
+
+En la ventana de las 10:38 con el timeout de 300 s, el DataChannel abrió antes
+de habilitar y `enable_control=1` se sostuvo durante unos 46,1 s sin disparar
+el watchdog anterior. Motion entró en `CoreMode 7`, habilitó la protección de
+fuerza de ambos brazos y arrancó ambos chequeos de fuerza. El operador movió
+los mandos, pero observó cero movimiento del robot. El log PC contiene 4.530
+muestras por mando durante ese minuto y ninguna activación de
+`squeeze`/grip (`false`, valor `0.0`). Según el SOP, mover el mando sólo hace
+seguir al brazo mientras se mantiene el grip correspondiente; por ello este
+resultado es el esperado para el gate sin maniobra y no valida ni refuta aún
+el seguimiento físico. Tres pulsaciones nuevas al final produjeron
+`enable=0→1→0` a intervalos de 0,5 s; el lanzador detectó la pérdida y envió
+STOP. El robot quedó `CoreMode 0`/`NotTele` y el PC en
+`operation_type=1`, `enable_control=0`. A las 10:43 el stream XR volvió a
+`vr_status=0`, aunque TCP/ADB reverse seguían presentes.
+
+A las 10:50–10:51 se restauró de nuevo el stream reiniciando sólo
+XRoboToolkit y conservando ADB reverse. El propietario autorizó después una
+prueba física real inmediata. `probar_pico.sh` sin argumentos ejecuta ahora
+una micromaniobra del brazo derecho; `--move-left-arm` permite la segunda
+prueba y `--gate-only` conserva el diagnóstico sin movimiento. Cada modo
+físico exige un preflight fresco de paros, batería, cargador, efector, tarea
+PICO y velocidad articular, mantiene 60 s sin grips, admite un solo grip y un
+gesto de 2–3 cm durante un máximo de 5 s, y envía STOP al soltar o fallar. El
+preflight sólo lectura pasó con baterías 77,2/77,8 %, ambos paros a cero,
+cargador desconectado, robot inmóvil y tarea Cruzr/PICO correcta. No se envió
+START durante la implementación ni la validación seca.
+
+A las 11:53 el transporte XR se migró a la WLAN local `Cruzr S2-0669` sin
+alterar `DSA CORPORATE`: PC `192.168.42.215`, PICO `192.168.42.211`. Tras
+seleccionar `Head + Controllers` y `Send data`, XRoboToolkit abrió TCP directo
+hacia el listener PC `63901`. Se borró el reverse, el flujo siguió establecido
+y el preflight canónico terminó correctamente con el backend en STOP. ADB TCP
+se usó sólo para administración inalámbrica; no transporta el stream XR
+directo. No hubo movimiento físico.
 
 La reinspección de los artefactos instalados descarta que el heartbeat deba
 producirlo la UI PC: el source map de `ubt-remote-control 4.1.0` sólo envía
@@ -342,6 +412,9 @@ START/STOP. El bytecode de `Publisher.callback` en `ubt_controller 5.3.0`
 declara que procesa mensajes inversos del robot por RTM y sólo ante
 `type=heartbeat` actualiza `last_heartbeat_time`. **DESCARTADO** desactivar o
 puentear este watchdog en el PC: eliminaría la detección de pérdida robot→PC.
+El propietario autorizó después una excepción limitada: ampliar el timeout a
+300 s para diagnóstico, conservando el STOP. Esto no resuelve ni valida el
+heartbeat y una ventana local de 60 s ya no puede declararse gate de heartbeat.
 Si el robot debe permanecer inmutable, UBTECH debe suministrar un backend PC
 compatible con la v0.2.0 genérica o el componente oficial que complete ese
 heartbeat, conservando la parada por pérdida de enlace.
@@ -351,10 +424,12 @@ La coordinación del flanco ya no debe realizarse por chat. El modo local
 señal `TOQUE AHORA` sólo después de armar, monitoriza el gate y envía STOP al
 terminar o ante cualquier fallo. `--run` es únicamente un alias compatible.
 El lanzador humano `scripts/teleoperation/probar_pico.sh` presenta esas órdenes
-en el terminal, muestra progreso periódico y delega el gate al controlador
-canónico. Tras observar que `Ctrl+C` durante un `read` enviaba STOP pero permitía
-continuar, el handler se corrigió para terminar definitivamente con código 130
-(143 para `TERM`) después del STOP.
+en el terminal y delega el flujo al controlador canónico. Por defecto ejecuta
+la prueba física mínima del brazo derecho; `--move-left-arm` selecciona el
+izquierdo y `--gate-only` conserva el gate sin maniobra. Tras observar que
+`Ctrl+C` durante un `read` enviaba STOP pero permitía continuar, el handler se
+corrigió para terminar definitivamente con código 130 (143 para `TERM`)
+después del STOP.
 
 El SOP exige `utars-udoke-config-v0.2.0-dac-beta.2.tar.gz`, pero sólo está
 demostrada la build genérica v0.2.0. Además, `MC_SCENE` está vacío y no se
@@ -362,7 +437,8 @@ encontró `pico_control`, aunque ambos aparecen en el SDK/SOP.
 
 Decisiones:
 
-- no puentear el watchdog;
+- no eliminar el watchdog ni fabricar heartbeat; el timeout temporal autorizado
+  es 300 s y debe tratarse como workaround diagnóstico;
 - no declarar lista la teleoperación por ver sólo `Working`, `TeleopMode` o un
   topic existente;
 - no ejecutar a la vez el cliente PC y un supuesto cliente PICO directo;
@@ -444,6 +520,9 @@ Seguimiento:
 2. Ejecutar `./scripts/cruzr_recover_to_home.sh --check`.
 3. Leer `--help` y elegir el modo de recuperación compatible con el estado.
 4. No enviar `home` con una carga o contacto dentro de la trayectoria.
+5. Tras PICO no usar `cruzr/home` directo: el script canónico ejecuta
+   `cruzr/open_arm_before_home`, separando los brazos antes de llevarlos a
+   cero. Su primera validación física sigue pendiente.
 
 ### 8.2 Caja mesa 1 → mesa 2
 
@@ -462,8 +541,13 @@ Script canónico:
 1. Leer la fuente PICO completa, incluida la checklist P0.
 2. Comprobar que no hay otro cliente ni servicio reactivado.
 3. Recuperar ADB/red/`Working`; verificar tracking y backend por separado.
-4. Resolver o demostrar heartbeat estable durante 60 s.
-5. Sólo después considerar una prueba física mínima con deadman y paro.
+4. Para producción, resolver o demostrar heartbeat estable durante 60 s. La
+   excepción diagnóstica del propietario usa sólo los modos versionados con el
+   timeout temporal de 300 s; no equivale a heartbeat válido.
+5. Para la ventana integral autorizada, ejecutar localmente sólo
+   `./scripts/teleoperation/probar_pico.sh --all-controls`: 60 s neutros,
+   120 s activos por defecto y STOP automático. Requiere preflight físico
+   fresco, zona de brazos y chasis despejada y persona junto al paro.
 
 ### 8.4 VLA suministrado
 
@@ -542,6 +626,17 @@ actualizarse este archivo antes de cerrar la sesión.
 
 | Fecha | Hito | Resultado |
 |---|---|---|
+| 2026-08-25 | fallo de gatillo de nivel y corrección a flanco | `--all-controls` habilitó con una sola pulsación, pero sus 0,567 s altos repitieron Y y causaron `enable 0→1→0`; STOP automático, sin trip de heartbeat. Backend cambiado a pulso sólo en flanco ascendente, con gates de mandos neutros/liberación; activo `5083e9f0…`, rollback de nivel/300 s `40b440f4…`. A las 12:44 `--check` recuperó PICO/stream y pasó 7/7; final `vr_status=1`, `operation_type=1`, `enable_control=0`, UI inactiva; E2E físico pendiente |
+| 2026-08-25 | Wi-Fi Cruzr canónica para todos los dispositivos del robot; DSA sólo Internet | toda `.11.0/24` se enruta vía `.42.2` y `.42.0/24` es directa por `wlx80afcad40bd6`; perfil Cruzr `never-default`/sin DNS. Motion, Vision, PICO y servicios robot usan `Cruzr S2-0669`; sólo Internet usa `wlo1`. Scripts dejaron de exigir `eno1`; `--check-motion-ready` pasó sin START/movimiento |
+| 2026-08-25 | `--all-controls` abortó antes de START por Ethernet caído | `eno1` quedó `NO-CARRIER`/sin `192.168.11.250`; Motion/Vision no eran accesibles y no se armó teleoperación. El preflight ahora recomprueba portadora, IP, ruta, ping y SSH justo antes de los gates físicos para fallar inmediatamente y con causa concreta; ambas Wi-Fi permanecieron conectadas |
+| 2026-08-25 | ventana integral PICO autorizada, aún no ejecutada | `probar_pico.sh --all-controls` permite 120 s activos tras 60 s neutros (configurable 120–180 s), cubre controles documentados y siempre solicita STOP; resumen sólo acredita entradas, no efectos finales. Tras una caída WLAN quedaron dos sockets y `vr_status=0` pese a Working; reiniciar sólo XRoboToolkit y reseleccionar Head+Controllers/Send data recuperó el enlace. El `--check` final terminó 7/7 con `vr_status=1`, clamp/300 s y backend desarmado; no hubo START ni movimiento durante el cambio |
+| 2026-08-25 | PICO por Wi-Fi local sin túnel XR | `DSA CORPORATE` se conservó en `wlo1`; adaptador secundario y PICO se asociaron a `Cruzr S2-0669` (`.215`/`.211`); XR abrió TCP directo 63901, reverse vacío, `--check` OK y backend STOP; ADB por Wi-Fi soportado por discovery de serial |
+| 2026-08-25 | movimiento PICO y retorno a home | el brazo se movió; STOP desarmó el PC pero TeleopMode persistió hasta seleccionar `auto_task`; home directo terminó, aunque las abrazaderas bajas pasaron casi rozando. `--home` queda cambiado a la tarea oficial `cruzr/open_arm_before_home` (apertura previa); hash y preflight sin movimiento verificados, prueba física de la corrección pendiente |
+| 2026-08-25 | modo físico real PICO autorizado | `probar_pico.sh` por defecto prueba sólo brazo derecho: preflight Motion+PC, estabilidad 60 s, grip exclusivo, gesto 2–3 cm/5 s máximo y STOP al soltar/fallar; XR restaurado a `vr_status=1`; en ese preflight aún no se había ejecutado START físico |
+| 2026-08-25 | ventana PICO 300 s / gate sin maniobra | DataChannel abrió antes de enable; `CoreMode 7` y protección de fuerza activos ~46 s sin trip de 10 s; cero movimiento con ambos grips siempre libres; tres pulsaciones finales alternaron `0→1→0` y provocaron STOP seguro; a las 10:43 `vr_status=0` |
+| 2026-08-25 | debug lanzador PICO | añadidos progreso 1/7, timestamps, timeouts de 5 s y traza opcional; flujo normal y fallo ADB simulado verificados; backend permaneció STOP |
+| 2026-08-25 | reconexión XR | restaurado ADB reverse 63901 y reiniciada sólo la app; TCP y `vr_status=1`; backend activo pero STOP (`operation_type=1`, `enable_control=0`); `--check` completo OK |
+| 2026-08-25 | timeout PICO 300 s | propietario autorizó 10→300 s; binario PC `40b440…` instalado con STOP conservado y backup `0f0d3414…`; backend/UI/XR quedaron detenidos; sin runtime ni movimiento |
 | 2026-08-25 | gate PICO/conmutador | gatillo y `CoreMode 7` verificados; toque único correcto habilitó, pero el gate falló por heartbeat a los 10,576 s desde START; STOP dejó `operation_type=1`, `enable_control=0`; en el último intento no hubo movimiento y sí voz |
 | 2026-08-10/11 | diagnóstico inicial BMS | se observó desequilibrio SOC y SN truncado; pendiente proveedor |
 | 2026-08-14 | AprilTag mesa 2 | tag 113 y referencias empty/held calibrados |

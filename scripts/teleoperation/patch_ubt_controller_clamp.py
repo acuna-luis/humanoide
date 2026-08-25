@@ -17,11 +17,17 @@ does not force enable_control, fabricate a heartbeat, or modify the robot.
 
 The mutually exclusive ``--pico-enable-left-trigger`` workaround replaces
 only the vendor Y lookup used for ``left_joystick.b_button`` with the physical
-left-trigger value and then stores the already computed boolean trigger state
-in ``left_joystick.b_button``.  It is intended for a clamp configuration where
-the trigger has no finger actuator to command.  The trigger must still be
-pressed by the operator; this option does not synthesize input or alter the
-watchdog.
+left-trigger value and emits ``left_joystick.b_button`` only on its rising
+edge.  It is intended for a clamp configuration where the trigger has no
+finger actuator to command.  The trigger must still be pressed by the
+operator; holding it cannot repeat the vendor Y toggle.  This option does not
+synthesize input or alter the watchdog.
+
+The optional ``--heartbeat-timeout-seconds`` diagnostic workaround replaces
+only the heartbeat comparison operand in
+``WebsocketServer._broadcast_publisher_states``.  The STOP path remains in
+place and still runs when the configured interval expires.  This does not
+fabricate or acknowledge a heartbeat and does not change the robot.
 
 Run this with the Python 3.10 interpreter used by the vendor bundle.  The
 result is written to a separate executable; the caller is responsible for
@@ -173,6 +179,61 @@ def patch_pico_button_code(code: types.CodeType, path: str = ""):
     return code, changed
 
 
+def _publish_joysticks_left_trigger_edge(self):
+    """Vendor publish_joysticks with a rising-edge left-trigger enable."""
+    left_joystick = Joystick()
+    left_joystick.a_button = xrt.get_X_button()
+
+    left_trigger_value = xrt.get_left_trigger()
+    left_trigger_pressed = left_trigger_value != 0
+    left_joystick.b_button = left_trigger_pressed and not getattr(
+        self, "_left_trigger_enable_pressed", False
+    )
+    self._left_trigger_enable_pressed = left_trigger_pressed
+    left_joystick.trigger_value = left_trigger_value
+
+    left_joystick.squeeze_value = xrt.get_left_grip()
+    left_joystick.squeeze = left_joystick.squeeze_value != 0
+    left_joystick.thumbstick = xrt.get_left_axis_click()
+    left_joystick.thumbstick_value = xrt.get_left_axis()
+    if left_joystick.thumbstick_value[1] != 0:
+        left_joystick.thumbstick_value[1] *= -1
+
+    self.update_vr_button_state(left_joystick)
+    logger.info(f"Left hand state: {left_joystick.model_dump_json()}")
+
+    right_joystick = Joystick()
+    right_joystick.a_button = xrt.get_A_button()
+    right_joystick.b_button = xrt.get_B_button()
+    right_joystick.trigger_value = xrt.get_right_trigger()
+    right_joystick.trigger = right_joystick.trigger_value != 0
+    right_joystick.squeeze_value = xrt.get_right_grip()
+    right_joystick.squeeze = right_joystick.squeeze_value != 0
+    right_joystick.thumbstick = xrt.get_right_axis_click()
+    right_joystick.thumbstick_value = xrt.get_right_axis()
+    if right_joystick.thumbstick_value[1] != 0:
+        right_joystick.thumbstick_value[1] *= -1
+
+    if right_joystick.b_button and self.tele_operation_enable:
+        self.handle_collection_request()
+    if left_joystick.b_button:
+        if not self.enable_operation_switch():
+            left_joystick.b_button = False
+
+    self.update_vr_button_state(right_joystick)
+    logger.info(f"Right hand state: {right_joystick.model_dump_json()}")
+
+    message_bytes = msgpack.dumps(
+        Message(
+            type=MessageType.PICO_VR_JOYSTICKS,
+            message=Joysticks(
+                left=left_joystick, right=right_joystick
+            ),
+        ).model_dump()
+    )
+    self.put_to_send(message_bytes)
+
+
 def patch_pico_trigger_enable_code(code: types.CodeType, path: str = ""):
     current_path = f"{path}/{code.co_name}"
     changed = 0
@@ -191,42 +252,98 @@ def patch_pico_trigger_enable_code(code: types.CodeType, path: str = ""):
             fail(f"Unexpected Pico Y button bytecode names: {names!r}")
         if names.count("get_left_trigger") != 1:
             fail(f"Unexpected Pico trigger bytecode names: {names!r}")
-        names = tuple(
-            "get_left_trigger" if name == "get_Y_button" else name
-            for name in names
+        template = _publish_joysticks_left_trigger_edge.__code__
+        code = template.replace(
+            co_name=code.co_name,
+            co_filename=code.co_filename,
+            co_firstlineno=code.co_firstlineno,
         )
-        # The SDK returns the trigger as a float in [0, 1], while the robot's
-        # enable switch expects a boolean button.  The vendor function already
-        # computes ``trigger_value != 0`` for the left controller.  Redirect
-        # only that first STORE_ATTR from ``trigger`` to ``b_button``.  The
-        # second STORE_ATTR belongs to the right controller and stays intact.
-        bytecode = bytearray(code.co_code)
-        trigger_stores = [
-            instruction
-            for instruction in __import__("dis").get_instructions(code)
-            if instruction.opname == "STORE_ATTR"
-            and instruction.argval == "trigger"
-        ]
-        if len(trigger_stores) != 2:
-            fail(
-                "Expected left/right trigger STORE_ATTR instructions, got "
-                f"{trigger_stores!r}"
-            )
-        left_store = trigger_stores[0]
-        b_button_index = names.index("b_button")
-        if b_button_index > 255 or bytecode[left_store.offset + 1] != left_store.arg:
-            fail("Unexpected Python 3.10 STORE_ATTR encoding")
-        bytecode[left_store.offset + 1] = b_button_index
-        code = code.replace(co_code=bytes(bytecode))
         changed += 1
-
-    if tuple(constants) != code.co_consts or names != code.co_names:
+    elif tuple(constants) != code.co_consts:
         code = code.replace(co_consts=tuple(constants), co_names=names)
     return code, changed
 
 
+def patch_heartbeat_timeout_code(
+    code: types.CodeType, timeout_seconds: int, path: str = ""
+):
+    """Replace only the heartbeat watchdog threshold with a literal value."""
+    dis_module = __import__("dis")
+    heartbeat_time_attr = "_".join(("last", "heartbeat", "time"))
+    release_timeout_attr = "_".join(("release", "timeout"))
+    current_path = f"{path}/{code.co_name}"
+    changed = 0
+    constants = []
+    for value in code.co_consts:
+        if isinstance(value, types.CodeType):
+            value, child_changes = patch_heartbeat_timeout_code(
+                value, timeout_seconds, current_path
+            )
+            changed += child_changes
+        constants.append(value)
+
+    if current_path.endswith(
+        "/WebsocketServer/_broadcast_publisher_states"
+    ):
+        instructions = list(dis_module.get_instructions(code))
+        sites = []
+        for index, instruction in enumerate(instructions[:-4]):
+            following = instructions[index + 1 : index + 5]
+            if (
+                instruction.opname == "LOAD_ATTR"
+                and instruction.argval == heartbeat_time_attr
+                and following[0].opname == "BINARY_SUBTRACT"
+                and following[1].opname == "LOAD_FAST"
+                and following[1].argval == "self"
+                and following[2].opname == "LOAD_ATTR"
+                and following[2].argval == release_timeout_attr
+                and following[3].opname == "COMPARE_OP"
+                and following[3].argval == ">"
+            ):
+                sites.append((following[1], following[2]))
+        if len(sites) != 1:
+            fail(
+                "Expected one heartbeat timeout comparison, got "
+                f"{sites!r}"
+            )
+
+        if timeout_seconds in constants:
+            timeout_index = constants.index(timeout_seconds)
+        else:
+            constants.append(timeout_seconds)
+            timeout_index = len(constants) - 1
+        if timeout_index > 255:
+            fail("Heartbeat timeout constant needs EXTENDED_ARG")
+
+        load_self, load_release_timeout = sites[0]
+        bytecode = bytearray(code.co_code)
+        if (
+            bytecode[load_self.offset] != dis_module.opmap["LOAD_FAST"]
+            or bytecode[load_self.offset + 1] != load_self.arg
+            or bytecode[load_release_timeout.offset]
+            != dis_module.opmap["LOAD_ATTR"]
+            or bytecode[load_release_timeout.offset + 1]
+            != load_release_timeout.arg
+        ):
+            fail("Unexpected Python 3.10 heartbeat bytecode encoding")
+        bytecode[load_self.offset] = dis_module.opmap["LOAD_CONST"]
+        bytecode[load_self.offset + 1] = timeout_index
+        bytecode[load_release_timeout.offset] = dis_module.opmap["NOP"]
+        bytecode[load_release_timeout.offset + 1] = 0
+        code = code.replace(
+            co_code=bytes(bytecode), co_consts=tuple(constants)
+        )
+        changed += 1
+    elif tuple(constants) != code.co_consts:
+        code = code.replace(co_consts=tuple(constants))
+    return code, changed
+
+
 def patch_pyz(
-    pyz: bytes, swap_pico_x_y: bool, pico_enable_left_trigger: bool
+    pyz: bytes,
+    swap_pico_x_y: bool,
+    pico_enable_left_trigger: bool,
+    heartbeat_timeout_seconds: int | None,
 ) -> bytes:
     if pyz[:4] != b"PYZ\0":
         fail("Embedded PYZ header not found")
@@ -255,6 +372,15 @@ def patch_pyz(
             code, changes = patch_collect_code(code)
             if changes != 1:
                 fail(f"Expected one collect() patch, got {changes}")
+            if heartbeat_timeout_seconds is not None:
+                code, changes = patch_heartbeat_timeout_code(
+                    code, heartbeat_timeout_seconds
+                )
+                if changes != 1:
+                    fail(
+                        "Expected one heartbeat timeout patch, got "
+                        f"{changes}"
+                    )
             compressed = zlib.compress(marshal.dumps(code), 6)
             targets_found.add(name)
         elif name == "pico" and (swap_pico_x_y or pico_enable_left_trigger):
@@ -291,6 +417,7 @@ def rebuild_pkg(
     pylib: str,
     swap_pico_x_y: bool,
     pico_enable_left_trigger: bool,
+    heartbeat_timeout_seconds: int | None,
 ) -> bytes:
     output = bytearray()
     rebuilt_entries = []
@@ -303,7 +430,10 @@ def rebuild_pkg(
             if old["compressed"]:
                 fail("Unexpected compressed PYZ CArchive member")
             raw = patch_pyz(
-                raw, swap_pico_x_y, pico_enable_left_trigger
+                raw,
+                swap_pico_x_y,
+                pico_enable_left_trigger,
+                heartbeat_timeout_seconds,
             )
             pyz_count += 1
         rebuilt = dict(old)
@@ -338,6 +468,7 @@ def validate_patch(
     executable_path: Path,
     swap_pico_x_y: bool,
     pico_enable_left_trigger: bool,
+    heartbeat_timeout_seconds: int | None,
 ) -> None:
     executable = executable_path.read_bytes()
     pkg, entries, _, _ = parse_pkg(executable)
@@ -361,6 +492,47 @@ def validate_patch(
     walk(code)
     if len(matches) != 1 or "CLAMP" not in matches[0] or "GRIPPER" in matches[0]:
         fail(f"Patched collect() validation failed: {matches!r}")
+
+    if heartbeat_timeout_seconds is not None:
+        dis_module = __import__("dis")
+        heartbeat_time_attr = "_".join(("last", "heartbeat", "time"))
+        heartbeat_matches = []
+
+        def walk_heartbeat(item: types.CodeType, path: str = "") -> None:
+            current = f"{path}/{item.co_name}"
+            if current.endswith(
+                "/WebsocketServer/_broadcast_publisher_states"
+            ):
+                heartbeat_matches.append(item)
+            for child in item.co_consts:
+                if isinstance(child, types.CodeType):
+                    walk_heartbeat(child, current)
+
+        walk_heartbeat(code)
+        if len(heartbeat_matches) != 1:
+            fail("Patched heartbeat watchdog validation failed")
+        instructions = list(
+            dis_module.get_instructions(heartbeat_matches[0])
+        )
+        sites = []
+        for index, instruction in enumerate(instructions[:-4]):
+            following = instructions[index + 1 : index + 5]
+            if (
+                instruction.opname == "LOAD_ATTR"
+                and instruction.argval == heartbeat_time_attr
+                and following[0].opname == "BINARY_SUBTRACT"
+                and following[1].opname == "LOAD_CONST"
+                and following[1].argval == heartbeat_timeout_seconds
+                and following[2].opname == "NOP"
+                and following[3].opname == "COMPARE_OP"
+                and following[3].argval == ">"
+            ):
+                sites.append(instruction.offset)
+        if len(sites) != 1:
+            fail(
+                "Heartbeat timeout validation failed: "
+                f"expected {heartbeat_timeout_seconds}, sites={sites!r}"
+            )
 
     if swap_pico_x_y or pico_enable_left_trigger:
         _, offset, length = toc["pico"]
@@ -391,30 +563,29 @@ def validate_patch(
         if swap_pico_x_y:
             if instructions[:2] != ["get_Y_button", "get_X_button"]:
                 fail(f"Pico X/Y validation failed: {instructions[:2]!r}")
-        elif instructions[:3] != [
-            "get_X_button",
-            "get_left_trigger",
-            "get_left_trigger",
-        ]:
-            fail(
-                "Pico trigger-enable validation failed: "
-                f"{instructions[:3]!r}"
-            )
+        elif (
+            instructions[:2] != ["get_X_button", "get_left_trigger"]
+            or instructions.count("get_left_trigger") != 1
+            or "_left_trigger_enable_pressed" not in joystick.co_names
+            or "getattr" not in joystick.co_names
+        ):
+            fail(f"Pico trigger-edge validation failed: {instructions!r}")
         if pico_enable_left_trigger:
             stores = [
                 instruction.argval
                 for instruction in __import__("dis").get_instructions(joystick)
                 if instruction.opname == "STORE_ATTR"
             ]
-            if stores[:4] != [
+            if stores[:5] != [
                 "a_button",
                 "b_button",
+                "_left_trigger_enable_pressed",
                 "trigger_value",
-                "b_button",
+                "squeeze_value",
             ]:
                 fail(
-                    "Pico trigger boolean validation failed: "
-                    f"{stores[:4]!r}"
+                    "Pico trigger-edge store validation failed: "
+                    f"{stores[:5]!r}"
                 )
 
 
@@ -433,6 +604,15 @@ def main() -> int:
         action="store_true",
         help="map the left trigger to the vendor Y teleoperation switch",
     )
+    parser.add_argument(
+        "--heartbeat-timeout-seconds",
+        type=int,
+        metavar="SECONDS",
+        help=(
+            "set the backend heartbeat STOP interval while retaining the "
+            "watchdog"
+        ),
+    )
     args = parser.parse_args()
 
     if sys.version_info[:2] != (3, 10):
@@ -441,6 +621,11 @@ def main() -> int:
         fail("Output must be a separate file")
     if not args.input.is_file():
         fail(f"Input executable not found: {args.input}")
+    if (
+        args.heartbeat_timeout_seconds is not None
+        and not 1 <= args.heartbeat_timeout_seconds <= 3600
+    ):
+        fail("Heartbeat timeout must be between 1 and 3600 seconds")
 
     source = args.input.read_bytes()
     pkg, entries, pyvers, pylib = parse_pkg(source)
@@ -453,6 +638,7 @@ def main() -> int:
         pylib,
         args.swap_pico_x_y,
         args.pico_enable_left_trigger,
+        args.heartbeat_timeout_seconds,
     )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -475,12 +661,18 @@ def main() -> int:
         args.output,
         args.swap_pico_x_y,
         args.pico_enable_left_trigger,
+        args.heartbeat_timeout_seconds,
     )
     print("PATCH_OK=WebsocketServer.collect:GRIPPER->CLAMP")
     if args.swap_pico_x_y:
         print("PICO_BUTTON_WORKAROUND_OK=X->vendor-Y,Y->vendor-X")
     if args.pico_enable_left_trigger:
-        print("PICO_BUTTON_WORKAROUND_OK=left-trigger->vendor-Y")
+        print("PICO_BUTTON_WORKAROUND_OK=left-trigger-rising-edge->vendor-Y")
+    if args.heartbeat_timeout_seconds is not None:
+        print(
+            "HEARTBEAT_WATCHDOG_OK="
+            f"{args.heartbeat_timeout_seconds}s"
+        )
     print(f"OUTPUT={args.output}")
     return 0
 

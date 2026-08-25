@@ -67,13 +67,21 @@ Este baseline es histórico y debe verificarse al comienzo de una intervención:
 
 - Unidad Cruzr S2 `WAE001UBT60000669`, software genérico `v0.2.0`.
 - Efector operativo actual: abrazaderas; `HW_TYPE=cruzr_s2_v1`.
-- Motion: `192.168.11.2`; Vision/web: `192.168.11.3`; PC Ethernet usado:
-  `192.168.11.250/24`. No publique contraseñas ni las añada a Git.
+- Motion: `192.168.11.2`; Vision/web: `192.168.11.3`. Ruta canónica desde el
+  PC: Wi-Fi `Cruzr S2-0669` por `wlx80afcad40bd6`, gateway
+  `192.168.42.2`, ruta persistente `192.168.11.0/24`; esa Wi-Fi debe usarse
+  para **todos los dispositivos y servicios del robot**, además de la subred
+  directa `192.168.42.0/24` del PICO. La IP PC observada fue
+  `192.168.42.215/24` por DHCP. `wlo1`/`DSA CORPORATE` conserva en exclusiva
+  la ruta por defecto de Internet. Ethernet `192.168.11.250/24` queda como
+  histórico y no debe exigirse. No publique contraseñas ni las añada a Git.
 - Teleoperación robot: `TELE_DEVICE=pico`, `transmit=local`; `MC_SCENE` se
   encontró vacío. La build DAC beta requerida por el SOP no está demostrada.
-- El último relevo dejó el robot recuperado a `home` y `JoystickMode`, pero el
-  último preflight detectó cargador conectado. El stack PICO del PC quedó
-  detenido intencionadamente; su servicio puede volver a arrancar en el boot.
+- El último relevo documentado dejó el robot recuperado a `home`; el estado
+  físico, modo, cargador y zona deben recomprobarse. El backend PICO del PC está
+  activo con el parche de flanco `5083e9f0…`, UI inactiva y STOP confirmado;
+  el `--check` de las 12:44 recuperó PICO/stream y pasó 7/7 con `vr_status=1`.
+  No iniciar una prueba sin repetir el preflight físico fresco.
 - No se renombraron topics, colas ni servicios PICO. `walker28` es sólo el
   `channel_name` del backend del PC. `walker28_web` no se encontró.
 - VLA: imágenes y `checkpoint-40000` instalados, `restart=no`, contenedores
@@ -109,4 +117,3 @@ Este baseline es histórico y debe verificarse al comienzo de una intervención:
 - En la entrega final enlace los archivos modificados y explique qué se
   verificó y qué sigue pendiente. No haga commit ni push salvo petición del
   usuario.
-

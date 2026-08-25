@@ -6,7 +6,8 @@ set -Eeuo pipefail
 # "coger caja") y, después de resetear la máquina de tareas, ejecuta la
 # trayectoria oficial cruzr/home. Se lanza desde el PC Ubuntu.
 
-readonly VISION_HOST="192.168.42.2"
+readonly VISION_HOST_DIRECT="192.168.11.3"
+readonly VISION_HOST_WIFI="192.168.42.2"
 readonly MOTION_HOST="192.168.11.2"
 readonly ROBOT_USER="walker"
 readonly DEFAULT_PASSWORD="aa"
@@ -38,6 +39,7 @@ TASK_LOCKED=""
 RESET_SERVICE_AVAILABLE=""
 RETREAT_REQUIRED=""
 MANIPULATION_STATE=""
+VISION_HOST=""
 
 usage() {
   cat <<'EOF'
@@ -52,7 +54,7 @@ Modos:
   --check  Comprueba conexión, paros, batería, cargador y servicios. No
            cambia estados ni mueve el robot.
   --run    Detecta si los brazos quedaron junto a la mesa. Si hace falta,
-           retrocede 0,50 m; después ejecuta la tarea oficial cruzr/home.
+           retrocede 0,50 m; después abre los brazos antes de completar home.
 
 Opciones:
   --yes    Omite la confirmación física inicial.
@@ -65,6 +67,8 @@ Antes de --run:
   - Debe haber al menos 1,50 m libres detrás del robot.
   - Mantén a todas las personas fuera del alcance de brazos, cabeza,
     cintura y elevador.
+  - Las abrazaderas deben estar vacías y con espacio libre debajo y a ambos
+    lados durante la apertura previa.
   - Robot desenchufado del cargador y paro de emergencia preparado.
 
 El script puede retroceder el chasis, pero nunca vuelve hacia la mesa. No
@@ -133,6 +137,17 @@ ssh_vision() {
     "$ROBOT_USER@$VISION_HOST" "$@"
 }
 
+select_vision_host() {
+  if nc -z -w2 "$VISION_HOST_DIRECT" 22 >/dev/null 2>&1; then
+    VISION_HOST="$VISION_HOST_DIRECT"
+  elif nc -z -w2 "$VISION_HOST_WIFI" 22 >/dev/null 2>&1; then
+    VISION_HOST="$VISION_HOST_WIFI"
+  else
+    die "No se alcanza Vision por Ethernet ($VISION_HOST_DIRECT:22) ni por Wi-Fi ($VISION_HOST_WIFI:22)."
+  fi
+  info "VISION_CONNECTION=$VISION_HOST"
+}
+
 ssh_motion() {
   CRUZR_INTERNAL_ASKPASS=1 \
   SSH_ASKPASS="$SCRIPT_PATH" \
@@ -163,27 +178,37 @@ last_line() {
 }
 
 home_line="$(last_line "BTree task: 'cruzr/home' is start")"
+safe_home_line="$(last_line "BTree task: 'cruzr/open_arm_before_home' is start")"
+teleop_line="$(last_line "BTree task: 'teleoperation/cruzr_clamp_pico_teleoperation' is start")"
 ready_line="$(last_line "BTree task: 'transport/clamp_ready_cruzr' is start")"
 clamp_line="$(last_line "BTree task: 'cruzr/blue_workbin_clamp_only' is start")"
 deposit_line="$(last_line "BTree task: 'cruzr/blue_workbin_auto_deposit' is start")"
 open_line="$(last_line 'Start MetaClamp: byd/open_arm_cruzr')"
 
 home_line="${home_line:-0}"
+safe_home_line="${safe_home_line:-0}"
+teleop_line="${teleop_line:-0}"
 ready_line="${ready_line:-0}"
 clamp_line="${clamp_line:-0}"
 deposit_line="${deposit_line:-0}"
 open_line="${open_line:-0}"
 
 printf 'MOTION_LOG=%s\n' "$latest"
-printf 'HOME_LINE=%s\nREADY_LINE=%s\nCLAMP_LINE=%s\nDEPOSIT_LINE=%s\nOPEN_LINE=%s\n' \
-  "$home_line" "$ready_line" "$clamp_line" "$deposit_line" "$open_line"
+printf 'HOME_LINE=%s\nSAFE_HOME_LINE=%s\nTELEOP_LINE=%s\nREADY_LINE=%s\nCLAMP_LINE=%s\nDEPOSIT_LINE=%s\nOPEN_LINE=%s\n' \
+  "$home_line" "$safe_home_line" "$teleop_line" "$ready_line" "$clamp_line" "$deposit_line" "$open_line"
+
+((safe_home_line > home_line)) && home_line="$safe_home_line"
 
 latest_extended="$ready_line"
 ((clamp_line > latest_extended)) && latest_extended="$clamp_line"
 ((deposit_line > latest_extended)) && latest_extended="$deposit_line"
+((teleop_line > latest_extended)) && latest_extended="$teleop_line"
 
 if ((home_line > latest_extended)); then
   echo 'MANIPULATION_STATE=home'
+  echo 'RETREAT_REQUIRED=false'
+elif ((teleop_line > home_line && teleop_line >= ready_line && teleop_line >= clamp_line && teleop_line >= deposit_line)); then
+  echo 'MANIPULATION_STATE=teleoperated_pose'
   echo 'RETREAT_REQUIRED=false'
 elif ((deposit_line > home_line && open_line > deposit_line)); then
   echo 'MANIPULATION_STATE=deposited_open_near_table'
@@ -212,8 +237,7 @@ REMOTE
 
 check_reset_service() {
   local output
-  nc -z -w2 "$VISION_HOST" 22 >/dev/null 2>&1 || \
-    die "No se alcanza vision por Wi-Fi ($VISION_HOST:22)."
+  select_vision_host
 
   output="$(ssh_vision bash -s -- "$SYSTEM_CONTAINER" <<'REMOTE'
 set -Eeuo pipefail
@@ -353,7 +377,11 @@ run_recovery() {
       "$CARRY_SCRIPT" --retreat-only --yes
     fi
   else
-    info "[1/4] El robot ya consta en home; no es necesario mover el chasis."
+    if [[ "$MANIPULATION_STATE" == "home" ]]; then
+      info "[1/4] El robot ya consta en home; no es necesario mover el chasis."
+    else
+      info "[1/4] Postura $MANIPULATION_STATE: no se moverá el chasis."
+    fi
   fi
 
   if [[ "$TASK_LOCKED" == "true" ]]; then
@@ -372,7 +400,7 @@ run_recovery() {
     info "[3/4] FAST_MODE: verificación completa posterior omitida."
   fi
 
-  info "[4/4] Ejecutando la trayectoria oficial cruzr/home..."
+  info "[4/4] Abriendo primero los brazos y ejecutando después home..."
   if ((FAST == 1)); then
     "$CYCLE_SCRIPT" --home --yes --fast
   else
@@ -382,7 +410,8 @@ run_recovery() {
   cat <<'EOF'
 
 RECUPERACIÓN COMPLETADA
-La máquina de tareas salió del estado anterior y cruzr/home terminó con éxito.
+La máquina de tareas salió del estado anterior y la secuencia protegida de
+apertura previa más home terminó con éxito.
 Si los brazos estaban junto a la mesa, el chasis quedó 0,50 m más atrás. No se
 reinició ningún contenedor.
 EOF

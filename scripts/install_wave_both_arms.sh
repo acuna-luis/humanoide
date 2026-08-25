@@ -7,6 +7,8 @@ set -Eeuo pipefail
 
 readonly MOTION_HOST="192.168.11.2"
 readonly VISION_HOST="192.168.11.3"
+readonly ROBOT_WIFI_INTERFACE="${CRUZR_ROBOT_WIFI_INTERFACE:-wlx80afcad40bd6}"
+readonly ROBOT_WIFI_SSID="${CRUZR_ROBOT_WIFI_SSID:-Cruzr S2-0669}"
 readonly ROBOT_USER="walker"
 readonly DEFAULT_PASSWORD="aa"
 readonly MOTION_CONTAINER="walker-motion.manipulation_robot_app-1"
@@ -114,17 +116,23 @@ ensure_local_network() {
   command -v setsid >/dev/null 2>&1 || die "No esta instalado setsid."
   command -v sha256sum >/dev/null 2>&1 || die "No esta instalado sha256sum."
   command -v python3 >/dev/null 2>&1 || die "No esta instalado python3."
+  command -v nmcli >/dev/null 2>&1 || die "No esta instalado nmcli."
 
-  if ! ip route get "$MOTION_HOST" 2>/dev/null | grep -qE 'dev eno1( |$)'; then
-    info "Activando la conexion Ethernet cruzr-s2..."
-    nmcli connection up cruzr-s2 >/dev/null || \
-      die "No se pudo activar la conexion NetworkManager cruzr-s2."
-  fi
-
-  ip route get "$MOTION_HOST" 2>/dev/null | grep -qE 'dev eno1( |$)' || \
-    die "La ruta hacia $MOTION_HOST no utiliza eno1."
-  ip route get "$VISION_HOST" 2>/dev/null | grep -qE 'dev eno1( |$)' || \
-    die "La ruta hacia $VISION_HOST no utiliza eno1."
+  local connection_name active_ssid
+  ip route get "$MOTION_HOST" 2>/dev/null |
+    grep -qE "dev $ROBOT_WIFI_INTERFACE( |$)" ||
+    die "La ruta hacia $MOTION_HOST no utiliza la Wi-Fi robot $ROBOT_WIFI_INTERFACE."
+  ip route get "$VISION_HOST" 2>/dev/null |
+    grep -qE "dev $ROBOT_WIFI_INTERFACE( |$)" ||
+    die "La ruta hacia $VISION_HOST no utiliza la Wi-Fi robot $ROBOT_WIFI_INTERFACE."
+  connection_name="$(
+    nmcli -g GENERAL.CONNECTION device show "$ROBOT_WIFI_INTERFACE" 2>/dev/null
+  )" || die "NetworkManager no reconoce $ROBOT_WIFI_INTERFACE."
+  active_ssid="$(
+    nmcli -g 802-11-wireless.ssid connection show "$connection_name" 2>/dev/null
+  )" || die "No se pudo leer el SSID de $connection_name."
+  [[ "$active_ssid" == "$ROBOT_WIFI_SSID" ]] ||
+    die "La interfaz robot usa '$active_ssid', no '$ROBOT_WIFI_SSID'."
 }
 
 validate_local_template() {
