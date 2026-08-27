@@ -64,10 +64,13 @@ Los identificadores suministrados son:
 
 Antes de conectar un ejecutor físico deben cumplirse todos estos puntos:
 
-1. Registrar y probar por separado la postura oficial
-   `s2_vla_pick_large_teleop_ready` con zona despejada y paro preparado.
-2. Confirmar con UBTECH que `clamp_s2_joints_trajectory` existe en v0.2.0. No
-   se encontró una definición visible en los archivos instalados.
+1. Auditar y probar por separado el XML suministrado
+   `codes-S2/.../s2_vla_pick_large_teleop_ready.xml`, hash
+   `f4025124491eba995ec824db3e3be91875f781a4b4e98928654bde9a021d8323`,
+   con zona despejada y paro preparado; todavía no se ha demostrado cuál task
+   equivalente está instalado en Motion.
+2. Resolver con UBTECH/la instalación real `clamp_s2_joints_trajectory`: el
+   XML existe, pero termina invocando esa acción sin definir allí su trayectoria.
 3. Repetir shadow desde esa postura y obtener chunks aceptados sin saltos,
    valores fuera de rango ni estado obsoleto.
 4. Implementar un ejecutor S2 independiente que sólo mande los 14 ejes de los

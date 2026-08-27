@@ -27,12 +27,25 @@ principio de [`../plan_de_trabajo.md`](../plan_de_trabajo.md). Sus gates son
 obligatorios antes de incorporar VLA a la misión física de cajas.
 
 Las secciones 0.17–0.21 de ese plan son además el runbook reproducible de la
-campaña: definen la caja patrón provisional `0,603 × 0,397 × 0,217 m`, dos
-fixtures provisionales a `0,55/1,15 m`, el marco y tolerancias de colocación,
-los estados `SUPPORTED/HELD`, los comandos shadow existentes, las herramientas
-aún pendientes y tarjetas `VLA-T00…T10` con PASS/FAIL/evidencia/recuperación.
-Las alturas son hipótesis experimentales, no geometría confirmada por UBTECH;
-ninguna tarjeta física queda autorizada por documentarlas.
+campaña: definen la caja segura `B0_SAFE` de `0,603 × 0,397 × 0,217 m`, los
+estados `SUPPORTED/HELD`, los comandos shadow existentes, las herramientas aún
+pendientes y tarjetas `VLA-T00…T10` con PASS/FAIL/evidencia/recuperación. El
+fixture inicial confirmado por el SDK es B0 sobre plataforma de **1 m de
+altura**. Los niveles 0,55/1,15 pertenecen al árbol alternativo no-S2 y no se
+adoptan como baseline. Ninguna tarjeta física queda autorizada al documentarlo.
+
+El plan comienza ahora con un manual para el experimentador numerado
+`E1.0…E8.2`. E1 confirma plataforma `z=1,000 ± 0,010 m`, B0 y los artefactos;
+E2 ejecuta sólo smoke shadow OOD con el fixture fuera de la envolvente. El SDK
+no proporciona separación horizontal. E4 debe derivar y congelar
+`platform_in_base`, `D_BUMPER_PLATFORM` y el mapeo de alturas low/middle a
+partir de la pose S2, cinemática, frames del dataset y proveedor antes de
+cualquier canary o PICK/PLACE.
+
+Los 12 frames inicio/medio/final inspeccionados de los episodios 0/1/90/91
+muestran un tote rígido gris abierto con borde/asas negras y un objeto pequeño
+visible en el interior. `B0_SAFE` vacía reduce riesgo físico, pero se etiqueta
+OOD si su apariencia o contenido no coincide; la igualdad dimensional no basta.
 
 ### Convenciones de evidencia
 

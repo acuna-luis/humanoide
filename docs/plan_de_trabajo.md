@@ -6,6 +6,720 @@
 
 **Unidad:** Cruzr S2 `WAE001UBT60000669`, abrazaderas, `HW_TYPE=cruzr_s2_v1`
 
+## Manual secuencial del experimentador
+
+Ésta es la entrada operativa al plan. Los apartados posteriores explican el
+porqué técnico; los experimentos siguientes indican exactamente qué preparar,
+qué ejecutar y qué registrar. Se realizan en orden. Un experimento `FAIL` o
+`BLOCKED` impide continuar a su sucesor, salvo que éste diga expresamente que
+es independiente.
+
+### Estados de los experimentos
+
+- `EJECUTABLE_SHADOW`: usa herramientas existentes, produce inferencia pero
+  mantiene cero publicadores físicos y no mueve el robot.
+- `EJECUTABLE_LECTURA`: sólo inspección, medida o cálculo.
+- `PENDIENTE_CODIGO`: la interfaz está especificada, pero el script todavía no
+  existe; copiar la orden debe fallar y no se sustituye por una orden manual.
+- `PENDIENTE_DATOS_Y_CODIGO`: faltan tanto el dataset conforme al contrato como
+  su wrapper reproducible.
+- `PENDIENTE_DISENO`: todavía debe definirse el contrato de entradas/salidas;
+  no se elige una implementación antes de cerrarlo.
+- `BLOQUEADO_FISICO`: implicaría movimiento; requiere herramientas terminadas,
+  gates previos aprobados, preflight físico fresco y autorización en esa sesión.
+
+### Convención física confirmada y magnitudes todavía desconocidas
+
+Para eliminar “aproximadamente” y “frente al robot” se define:
+
+1. **Confirmado por el SDK, sección 7.3:** para alinear el demo Cruzr S2 con
+   sus datos de entrenamiento, la caja mide `0,60 × 0,40 × 0,22 m` y se coloca
+   sobre una plataforma de **`1,00 m de altura`**. La B0 real
+   `0,603 × 0,397 × 0,217 m` satisface esa geometría dentro de 3 mm.
+2. Ese `1,00 m` es la altura de la superficie desde el suelo, **no** la
+   distancia horizontal entre robot y plataforma. El SDK sólo indica que el
+   robot debe moverse con el mando a una “posición adecuada”; no aporta la
+   cota.
+3. `BUMPER_FRONT`: punto más adelantado del bumper inferior del chasis, medido
+   sobre la línea central del robot y proyectado verticalmente al suelo.
+4. `PLATFORM_FRONT`: línea del borde frontal de la plataforma proyectada al
+   suelo. `D_BUMPER_PLATFORM` será la distancia perpendicular entre ambas.
+5. `D_BUMPER_PLATFORM=UNRESOLVED`. No se coloca la plataforma delante del
+   robot ni se ejecuta una inferencia nominal hasta resolverla en E4.1 mediante
+   pose oficial, cinemática/alcance y encuadre del dataset.
+6. Los XML `55/70/85/100/115` están en el árbol alternativo `codes` para Cruzr,
+   no en el árbol S2 canónico `codes-S2`; por ello `0,55/1,15 m` no son el
+   baseline inicial del S2. Sólo podrán añadirse después como variantes si se
+   demuestra su mapeo con los tasks low/middle.
+7. La plataforma S2 inicial tiene una única superficie a
+   `H_VENDOR_PLATFORM=1,000 ± 0,010 m`, mide al menos `0,80 × 0,75 m`, está
+   nivelada y es rígida. No se permiten mesas apiladas ni calzos.
+8. Para seguridad se usa `B0_SAFE`, vacía. Los frames del dataset muestran un
+   tote rígido gris abierto, con borde/asas negras y a veces un objeto pequeño
+   dentro; una caja de cartón o un tote de otro aspecto es OOD aunque mida lo
+   mismo. El lado de
+   `0,603 m` queda paralelo a los hombros. Su cara frontal queda a
+   `0,050 ± 0,010 m` detrás del borde; el centro es `x=0`, `y=0,2485 m`,
+   `yaw=0°` en `PLATFORM_FRAME`.
+9. En Experimentos 1–3, plataforma y B0 permanecen fuera de la envolvente del
+   robot: separación mínima de `1,5 m` respecto de cualquier parte del robot.
+   E2 sólo es un smoke test OOD de runtime, no una prueba de pick/place.
+10. Nadie coloca o corrige caja/plataforma mientras shadow o inferencia estén
+    activos. Primero se ejecuta `--stop`, luego se modifica el escenario y se
+    fotografía, y sólo después se reinicia shadow.
+
+Antes de E1.1 el robot, si está encendido, debe estar estable y sin movimiento,
+la teleoperación/PICO/UI cerradas y VLA detenido. Ningún experimento 1–5
+autoriza liberar un paro, cambiar de postura ni mover una articulación.
+
+### Formulario obligatorio del resultado real
+
+Cada experimento crea un directorio independiente y termina con un
+`actual_result.yaml`. No se escribe “funcionó” sin datos:
+
+```bash
+export VLA_EXPERIMENT_ID="E1.0"
+export VLA_RUN_ID="$(date +%Y%m%dT%H%M%S)_${VLA_EXPERIMENT_ID}"
+export VLA_EVIDENCE_ROOT="/home/lacuna/proyectos/Robots/Humanoide-vla-evidence"
+export VLA_RUN_DIR="$VLA_EVIDENCE_ROOT/$VLA_RUN_ID"
+mkdir -p "$VLA_RUN_DIR"
+```
+
+```yaml
+experiment_id: E1.0
+run_id: null
+operator: null
+start_time: null
+end_time: null
+status: PASS_OR_FAIL_OR_BLOCKED
+scenario_id: null
+fixture_measured:
+  platform_height_m: null
+  bumper_to_platform_m: null
+  bumper_to_platform_source: UNRESOLVED_OR_COMPUTED_OR_VENDOR
+  box_lwh_m: null
+  box_pose_platform_frame: null
+initial_robot_state: null
+commands_executed: []
+expected_result: null
+actual_observations: []
+files: []
+failure_reason: null
+final_robot_state: null
+recovery_or_stop: null
+next_experiment_authorized: false
+```
+
+Para shadow se añaden checkpoint/hash, task ID/texto, estado 20D, frame RGB,
+chunk bruto, verdict, latencia y publicadores antes/después. Para futuros
+experimentos físicos se añaden paros, cargador, velocidades, fuerzas, vídeo
+externo, pose final y latencia de STOP.
+
+### Serie 1 — Construir el escenario y congelar el baseline
+
+#### Experimento 1.0 — Montar y medir la plataforma S2 sin acercarla
+
+**Estado:** `EJECUTABLE_LECTURA`; no requiere encender ni mover el robot.
+
+**Objetivo:** construir el fixture confirmado por el SDK sin inventar todavía
+la distancia horizontal al robot.
+
+**Pasos:**
+
+1. Mantener el robot inmóvil; si existe una sesión VLA anterior, ejecutar:
+
+   ```bash
+   ./scripts/vla/run_ubtech_vla_shadow.sh --stop
+   ```
+
+2. Colocar la plataforma a más de `1,5 m` de cualquier parte del robot; esta
+   separación sólo mantiene el fixture fuera de la envolvente y no se registra
+   como distancia de trabajo.
+3. Medir desde el mismo suelo la superficie a `1,000 m` en sus cuatro esquinas.
+   Cada medida debe quedar en `0,990…1,010 m` y la diferencia máxima entre
+   esquinas no debe superar `0,010 m`.
+4. Medir ancho/fondo y verificar mínimos `0,80 × 0,75 m`.
+5. Con B0 aún fuera, verificar estabilidad de la plataforma manualmente.
+6. Pegar marcas de cinta para plataforma, centro de B0, cara frontal de B0 y
+   orientación `yaw=0°`.
+7. Fotografiar vista frontal/lateral con cinta métrica y la altura de las
+   cuatro esquinas.
+
+**Resultado esperado:** todas las cotas dentro de tolerancia, plataforma estable,
+zona despejada y robot sin movimiento.
+
+**PASS:** las medidas y fotografías existen. **FAIL:** plataforma inestable,
+superficie fuera de tolerancia o falta una referencia medible. No continuar
+ajustando el robot para “compensar”.
+
+**Resultado real:** completar `actual_result.yaml` y guardar
+`front.jpg`, `side.jpg`, `height_corners.jpg` y un croquis. Registrar
+`bumper_to_platform_m: null`: E1.0 no calcula esa distancia.
+
+#### Experimento 1.1 — Baseline PC/VLA sin inferencia
+
+**Estado:** `EJECUTABLE_LECTURA`.
+
+**Escenario:** plataforma fuera de la envolvente; B0 retirada; robot inmóvil. La
+red Motion/Vision debe estar disponible.
+
+**Comandos, en este orden:**
+
+```bash
+./scripts/vla/install_ubtech_vla.sh --check \
+  2>&1 | tee "$VLA_RUN_DIR/01_install_check.log"
+./scripts/vla/install_ubtech_vla.sh --verify \
+  2>&1 | tee "$VLA_RUN_DIR/02_install_verify.log"
+./scripts/vla/run_ubtech_vla_shadow.sh --check \
+  2>&1 | tee "$VLA_RUN_DIR/03_shadow_check.log"
+./scripts/vla/run_ubtech_vla_shadow.sh --status \
+  2>&1 | tee "$VLA_RUN_DIR/04_shadow_status.log"
+./scripts/vla/run_ubtech_vla_shadow.sh --stop \
+  2>&1 | tee "$VLA_RUN_DIR/05_shadow_stop.log"
+```
+
+**Resultado esperado:** checkpoint/config/runtime presentes, contenedores
+instalados, final detenidos, `restart=no` y cero publicadores en
+`/mc/sdk/robot_command`. No debe aparecer ninguna orden de movimiento.
+
+**PASS:** todas las órdenes terminan correctamente y el último check demuestra
+cero publishers. **FAIL:** hash inesperado, contenedor ausente/auto-restart,
+Motion/Vision no accesible o publisher físico presente.
+
+**Resultado real:** copiar al YAML versiones, hashes, hosts, estados de los dos
+contenedores, contador de publishers y el error completo si falla.
+
+#### Experimento 1.2 — Auditar el fixture, el dataset y la pose S2 suministrada
+
+**Estado:** `EJECUTABLE_LECTURA`; usa `jq`, `sha256sum` y VLC instalados.
+
+**Comandos:**
+
+```bash
+sha256sum \
+  cruzrss2_vla_pack-002/codes-S2/motion/s2_vla_scripts/s2_bio_vla/s2_vla_pick_large_teleop_ready.xml \
+  > "$VLA_RUN_DIR/s2_ready.sha256"
+sed -n '1,120p' \
+  cruzrss2_vla_pack-002/codes-S2/motion/s2_vla_scripts/s2_bio_vla/s2_vla_pick_large_teleop_ready.xml \
+  > "$VLA_RUN_DIR/s2_ready.xml.txt"
+jq -r '[.task_index,.task] | @tsv' \
+  cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319/meta/tasks.jsonl \
+  > "$VLA_RUN_DIR/tasks.tsv"
+```
+
+Extraer de forma determinista inicio/medio/final. Los tiempos proceden de la
+longitud de cada episodio dividida por 120 FPS:
+
+```bash
+mkdir -p "$VLA_RUN_DIR/reference_frames"
+while read -r VLA_EPISODE VLA_POSITION VLA_SECOND; do
+  VLA_VIDEO="cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319/videos/chunk-000/observation.images.rgb/episode_${VLA_EPISODE}.mp4"
+  cvlc --intf dummy --vout dummy --no-audio --no-video-title-show \
+    --video-filter=scene --scene-format=png --scene-ratio=1 --scene-replace \
+    --scene-path="$VLA_RUN_DIR/reference_frames" \
+    --scene-prefix="episode_${VLA_EPISODE}_${VLA_POSITION}" \
+    --start-time="$VLA_SECOND" --run-time=0.08 \
+    "$VLA_VIDEO" vlc://quit \
+    > "$VLA_RUN_DIR/reference_frames/episode_${VLA_EPISODE}_${VLA_POSITION}.log" 2>&1
+  test -s "$VLA_RUN_DIR/reference_frames/episode_${VLA_EPISODE}_${VLA_POSITION}.png"
+done <<'EOF'
+000000 start 0.05
+000000 middle 0.94
+000000 end 1.82
+000001 start 0.05
+000001 middle 0.65
+000001 end 1.25
+000090 start 0.05
+000090 middle 1.07
+000090 end 2.09
+000091 start 0.05
+000091 middle 1.43
+000091 end 2.80
+EOF
+sha256sum "$VLA_RUN_DIR"/reference_frames/*.png \
+  > "$VLA_RUN_DIR/reference_frames.sha256"
+```
+
+**Resultado esperado:** hash S2
+`f4025124491eba995ec824db3e3be91875f781a4b4e98928654bde9a021d8323`;
+el XML preposiciona cintura/cabeza/brazos y termina invocando
+`clamp_s2_joints_trajectory`; tasks 0/1 son low y 2/3 middle. El SDK confirma
+plataforma a 1 m de altura, pero no mapea low/middle a cotas ni da distancia
+horizontal.
+
+**PASS:** XML/hash/catalog, 12 frames con índice/hash y lista
+`CONFIRMED/UNRESOLVED`. La inspección debe registrar que el objeto visual de
+referencia es un tote gris abierto con detalles negros y no asumir equivalencia
+con cartón/B0 vacía. **FAIL:** falta un artefacto o el hash cambió.
+
+#### Experimento 1.3 — Medir B0 sobre la plataforma fuera de la envolvente
+
+**Estado:** `EJECUTABLE_LECTURA`; robot inmóvil y sin usar su detector.
+
+1. Pesar B0 vacía.
+2. Colocarla sobre la plataforma a `x=0`, cara frontal `0,050 m` detrás del
+   borde, lado de 0,603 m paralelo al borde y `yaw=0°`.
+3. Medir L/W/H, centro y altura superior esperada
+   `1,000 + 0,217 = 1,217 m`.
+4. Fotografiar frontal/lateral/superior y retirar de nuevo plataforma+B0 fuera
+   de la envolvente.
+
+**PASS:** dimensiones dentro de `±0,010 m`, superficie a `1,000 ±0,010 m`,
+pose marcada y masa registrada. `D_BUMPER_PLATFORM` continúa `null`.
+
+### Serie 2 — Primera inferencia shadow con las herramientas actuales
+
+#### Experimento 2.0 — Task 0, PICK bajo, una inferencia sin movimiento
+
+**Estado:** `EJECUTABLE_SHADOW` después de PASS en E1.0–E1.2.
+
+**Escenario:** plataforma y B0 fuera de la envolvente; robot inmóvil en su
+postura actual. Es un smoke test OOD: no representa `SUPPORTED_LOW`.
+
+**Comandos:**
+
+```bash
+./scripts/vla/run_ubtech_vla_shadow.sh --check \
+  2>&1 | tee "$VLA_RUN_DIR/01_check.log"
+./scripts/vla/run_ubtech_vla_shadow.sh --start-shadow --shadow-duration 180 \
+  2>&1 | tee "$VLA_RUN_DIR/02_start_shadow.log"
+./scripts/vla/run_ubtech_vla_shadow.sh --start-inference \
+  2>&1 | tee "$VLA_RUN_DIR/03_start_inference.log"
+./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id 0 --inference-duration 8 \
+  2>&1 | tee "$VLA_RUN_DIR/04_task0.log"
+./scripts/vla/run_ubtech_vla_shadow.sh --status \
+  2>&1 | tee "$VLA_RUN_DIR/05_status.log"
+./scripts/vla/run_ubtech_vla_shadow.sh --stop \
+  2>&1 | tee "$VLA_RUN_DIR/06_stop.log"
+```
+
+**Resultado esperado:** goal task 0 aceptado por el action server, uno o más
+chunks 10×20 finitos y verdict shadow `ACCEPT` o `REJECT` con causa. Desde
+`home` es esperable `REJECT` por primer salto; eso es un PASS de seguridad, no
+un PASS de la tarea. Siempre debe haber cero publishers físicos y cero
+movimiento observado.
+
+**PASS:** la inferencia termina, existe verdict explicable, `--stop` detiene
+ambos contenedores y no aparece publisher. **FAIL:** timeout sin diagnóstico,
+chunk inválido sin rechazo, publisher o movimiento.
+
+**Resultado real:** registrar `ACCEPT/REJECT`, razón, máximo primer delta,
+ejes implicados, latencia, chunk IDs, `flag_pred` y publishers.
+
+#### Experimento 2.1 — Task 2, smoke test medio sin fixture nominal
+
+**Estado:** `EJECUTABLE_SHADOW` después de E1.3 y E2.0.
+
+**Escenario:** idéntico a E2.0; plataforma y B0 fuera de la envolvente. Sólo
+cambia el task ID para verificar el catálogo y runtime.
+
+**Comandos:** repetir exactamente E2.0 cambiando sólo:
+
+```bash
+./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id 2 --inference-duration 8 \
+  2>&1 | tee "$VLA_RUN_DIR/04_task2.log"
+```
+
+**Resultado esperado/PASS:** iguales a E2.0, pero task/texto deben ser
+`Pick up the large box from the middle level of shelf`. Comparar low y middle
+sin afirmar que la diferencia sea correcta físicamente.
+
+#### Experimento 2.2 — Tasks 1 y 3, PLACE, con entrada reproducible
+
+**Estado:** `PENDIENTE_CODIGO`.
+
+**Razón:** un PLACE necesita `HELD_LOW` o `HELD_MIDDLE`. No se pondrá al robot a
+sujetar B0 sólo para crear una entrada shadow. Primero se implementa replay
+offline de un episodio de place o un mock 20D+RGB documentado.
+
+**Orden especificada para cuando exista el evaluador:**
+
+```bash
+python3 scripts/vla/evaluate_checkpoint_offline.py \
+  --checkpoint cruzrss2_vla_pack-002/weight/checkpoint-40000 \
+  --dataset cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319 \
+  --split test --task-id 1 --seed 0 --output "$VLA_RUN_DIR/task1"
+python3 scripts/vla/evaluate_checkpoint_offline.py \
+  --checkpoint cruzrss2_vla_pack-002/weight/checkpoint-40000 \
+  --dataset cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319 \
+  --split test --task-id 3 --seed 0 --output "$VLA_RUN_DIR/task3"
+```
+
+**Resultado esperado:** chunks 10×20 para place bajo/medio y provenance del
+episodio inicial HELD. Hasta que el script exista, el resultado real es
+`BLOCKED_MISSING_OFFLINE_EVALUATOR` y no se improvisa otra prueba.
+
+#### Experimento 2.3 — Repetibilidad P20 OOD de tasks 0 y 2
+
+**Estado:** `EJECUTABLE_SHADOW`; sólo mide runtime actual P20, no máscaras
+14–19.
+
+**Escenario:** plataforma/B0 fuera de la envolvente. Ejecutar cinco repeticiones
+task 0 y cinco task 2 sin cambiar escena, robot ni cámara. Esto mide
+repetibilidad del runtime en una entrada OOD, no fidelidad de pick low/middle.
+
+**Secuencia por bloque:**
+
+```bash
+./scripts/vla/run_ubtech_vla_shadow.sh --check
+./scripts/vla/run_ubtech_vla_shadow.sh --start-shadow --shadow-duration 300
+./scripts/vla/run_ubtech_vla_shadow.sh --start-inference
+for VLA_REP in 1 2 3 4 5; do
+  ./scripts/vla/run_ubtech_vla_shadow.sh \
+    --trigger --task-id 0 --inference-duration 8 \
+    2>&1 | tee "$VLA_RUN_DIR/task0_rep_${VLA_REP}.log"
+done
+./scripts/vla/run_ubtech_vla_shadow.sh --status
+./scripts/vla/run_ubtech_vla_shadow.sh --stop
+```
+
+Para task 2 repetir cambiando únicamente `--task-id 0` por `--task-id 2` y el
+prefijo de log. **PASS:** 5/5 ejecuciones terminan con verdict y cero publishers;
+se reporta variación de latencia, endpoint, primer delta y `flag_pred`.
+
+### Serie 3 — Dataset, OOD y contrato temporal
+
+#### Experimento 3.0 — Evaluación offline tasks 0–3
+
+**Estado:** `PENDIENTE_CODIGO` hasta implementar
+`scripts/vla/evaluate_checkpoint_offline.py`.
+
+**Escenario:** sin robot ni plataforma. Crear split por episodio/sesión, no por frame.
+Para cada task ejecutar seeds `0,1,2,3,4`; repetir seed 0 cinco veces.
+
+**Comando patrón:** el de E2.2 cambiando `--task-id` y `--seed`. **PASS:** salida
+10×20 finita, métricas por eje/horizonte/task, ningún episodio compartido entre
+train/test y C0 inmutable. **Resultado real mientras falta el script:**
+`BLOCKED_MISSING_OFFLINE_EVALUATOR`.
+
+#### Experimento 3.1 — OOD geométrico offline, una variable cada vez
+
+**Estado:** `PENDIENTE_CODIGO` hasta disponer del evaluador/replay de imágenes.
+
+**Escenario base:** frames de dataset task 0/2. Variantes sintéticas exactas:
+
+```text
+x = -0,100; -0,050; 0; +0,050; +0,100 m
+cara frontal detrás del borde = 0,050; 0,100; 0,150 m
+yaw = -15; -5; 0; +5; +15 grados
+```
+
+Se cambia una sola variable por transformación reproducible del frame/metadata.
+No se aproxima físicamente plataforma o caja al robot para generar OOD.
+
+**Resultado esperado:** un verdict por punto y mapa de sensibilidad. `ACCEPT`
+significa sólo chunk estructuralmente aceptable, no capacidad de agarre.
+**FAIL metodológico:** cambiar dos variables, recolocar mientras VLA está
+activo o perder la foto/medida.
+
+#### Experimento 3.2 — Mensajes inválidos y fault injection
+
+**Estado:** `PENDIENTE_CODIGO`; sólo sink, nunca robot.
+
+**Comando previsto:**
+
+```bash
+python3 scripts/vla/test_vla_executor_sink.py \
+  --axis-profile P20_AHLW --fixture low --fault-suite all \
+  --output "$VLA_RUN_DIR"
+```
+
+**Entradas:** NaN, Inf, dimensión distinta, orden permutado, estado >1 s,
+chunk duplicado/regresivo, tiempo no monótono, rango/salto/velocidad excedidos,
+cancel y doble cliente. **PASS:** 100 % rechazadas y cero publishers.
+
+#### Experimento 3.3 — Tiempo, huecos, cancelación y end flag
+
+**Estado:** parte `EJECUTABLE_SHADOW`, cancel/fault completo
+`PENDIENTE_CODIGO`.
+
+**Escenario:** para runtime vivo, plataforma/B0 fuera de la envolvente y robot
+inmóvil; para semántica nominal, replay del dataset. Ejecutar E2.0 guardando
+goal, feedback, timestamps de los diez puntos, siguiente chunk y STOP.
+
+**Resultado esperado:** medir `Δt=0,08 s`, horizonte `0,72 s`, frecuencia real
+de inferencia y hueco hasta el siguiente chunk. **PASS final:** existe una sola
+semántica demostrada para hold, chunk viejo, `continuous_end_chunk_num`, timeout
+y cancel. Mientras no se resuelva, no avanzar a ejecución física.
+
+### Serie 4 — Obtener y validar las posturas `VLA_READY`
+
+#### Experimento 4.0 — Completar la pose S2 suministrada
+
+**Estado:** inspección `EJECUTABLE_LECTURA`; uso físico `BLOQUEADO_FISICO`.
+
+**Evidencia disponible:**
+
+- `codes-S2/.../s2_vla_pick_large_teleop_ready.xml`, hash
+  `f4025124…d8323`, preposiciona waist `0`, cabeza `-0,65` y ambos brazos con
+  segundo ángulo `-0,6`;
+- después llama a `MetaMove name="clamp_s2_joints_trajectory"`, cuya
+  trayectoria/semántica no está definida en ese XML;
+- el SDK muestra otro nombre de task (`cruzr_bio_vla/...`) y exige mover el
+  robot con el mando a una posición adecuada, pero no da la distancia.
+
+**Trabajo exacto:** localizar en la instalación real, sólo lectura, qué task
+S2 está cargado; resolver `clamp_s2_joints_trajectory`; obtener sus 20 estados,
+duración, límites, swept volume, trayectoria inversa y precondición. Separar
+ready de PICK/PLACE si son distintos. No aceptar el primer chunk como ready.
+
+**PASS:** task canónico, hash, trayectoria completa, inverse/recovery y
+dependencias demostradas. **Resultado actual:**
+`BLOCKED_INCOMPLETE_S2_READY_AND_CLAMP_TRAJECTORY`.
+
+#### Experimento 4.1 — Derivar offline la pose completa del fixture
+
+**Estado:** `PENDIENTE_CODIGO` hasta PASS en E4.0; no usa el robot.
+
+**No se ensaya una parrilla de distancias a ojo.** Se calcula la pose de
+plataforma que satisface simultáneamente:
+
+1. TCP izquierdo/derecho y caras laterales de B0 según la trayectoria S2;
+2. superficie `z=1,000 m` y caja superior `z=1,217 m`;
+3. ausencia de colisión en todo el swept volume;
+4. caja completa y ubicación/escala visual compatibles con los frames iniciales
+   de episodios 0/1/90/91;
+5. margen de alcance y no una solución en singularidad/límite.
+
+Se implementará `scripts/vla/derive_vla_fixture_pose.py` con inputs XML/task,
+URDF/TF, B0, cámara/intrínsecos y frames de referencia. Su salida será una pose
+completa `platform_in_base={x,y,z,roll,pitch,yaw}`, más
+`D_BUMPER_PLATFORM`, error de reproyección y margen cinemático.
+
+```bash
+test -n "$VLA_READY_TASK"
+test -s "$VLA_S2_URDF"
+test -d "$VLA_E1_2_RUN_DIR/reference_frames"
+python3 scripts/vla/derive_vla_fixture_pose.py \
+  --ready-task "$VLA_READY_TASK" --urdf "$VLA_S2_URDF" \
+  --box-lwh 0.603,0.397,0.217 --platform-height 1.000 \
+  --reference-frames "$VLA_E1_2_RUN_DIR/reference_frames" \
+  --output "$VLA_RUN_DIR/fixture_pose.yaml"
+```
+
+**PASS:** una única pose candidata versionada, sin colisión y reproducible. Si
+no hay solución o los criterios discrepan, `FAIL_NO_COMPATIBLE_FIXTURE_POSE`.
+Todavía no se mueve el robot ni se coloca la plataforma delante.
+
+#### Experimento 4.2 — Resolver qué alturas corresponden a low/middle
+
+**Estado:** análisis `PENDIENTE_CODIGO`; físico `BLOQUEADO_FISICO`.
+
+El SDK S2 confirma 1 m, mientras los task texts dicen low/middle y el árbol
+no-S2 incluye alturas 55/70/85/100/115. Se reconstruye cada task a partir de
+frames, estados iniciales/finales, lifter y FK, y se solicita confirmación de
+UBTECH. La salida debe ser `H_TASK_0_1` y `H_TASK_2_3` con fuente e
+incertidumbre. No se asigna automáticamente `0,55/1,15 m`.
+
+**PASS:** cada task tiene una altura y pose de soporte demostradas. Si sólo se
+confirma la plataforma de 1 m, se valida primero únicamente el task/escenario
+que corresponda y los demás quedan bloqueados.
+
+#### Experimento 4.3 — Validar la pose S2 en vacío
+
+**Estado:** `BLOQUEADO_FISICO` hasta PASS en E4.0/E4.1 e implementación de
+`scripts/vla/cruzr_vla_ready_pose.sh`.
+
+**Escenario futuro:** plataforma/B0 retiradas más de 1,5 m; zona completa
+vacía; abrazaderas vacías; robot estable; cargador fuera; ambos paros
+comprobados; persona junto al paro.
+
+**Órdenes futuras, en una sesión autorizada:**
+
+```bash
+test -n "$VLA_READY_TASK"  # valor canónico producido y registrado por E4.0
+./scripts/vla/cruzr_vla_ready_pose.sh --check --task "$VLA_READY_TASK"
+./scripts/vla/cruzr_vla_ready_pose.sh --run --task "$VLA_READY_TASK"
+```
+
+**PASS:** completa la trayectoria suministrada sin contacto/oscilación, termina
+a velocidad cero y tiene trayectoria inversa comprobable. **Aborto:** movimiento
+no previsto, FT, salto o discrepancia. STOP y mantener postura; no home
+automático.
+
+#### Experimento 4.4 — Validar y congelar el fixture calculado
+
+**Estado:** `BLOQUEADO_FISICO`.
+
+Con el robot parado, colocar primero un target visual ligero en la pose
+calculada de E4.1 y ejecutar sólo shadow; validar encuadre. Retirarlo. En una
+sesión posterior, y sólo si el swept volume validado no intersecta el fixture,
+colocar la plataforma vacía; repetir ready determinista y shadow. Finalmente
+repetir con `B0_SAFE` vacía. Cada transición requiere STOP, personas fuera y
+foto/medida nueva. Publicar exactamente
+`H_TASK_*`, `platform_in_base`, `D_BUMPER_PLATFORM` y tolerancias. Si cualquier
+campo queda `null`, toda la Serie 7 permanece bloqueada.
+
+### Serie 5 — Máscaras 14–20 y ejecutor sink
+
+#### Experimento 5.0 — Tests de los ocho perfiles
+
+**Estado:** `PENDIENTE_CODIGO`.
+
+**Escenario:** sin robot. Chunks guardados y poses hold low/middle. Ejecutar
+`test_vla_executor_sink.py` para `P14_A`, `P15_AW`, `P16_AH`, `P17_AL`,
+`P17_AHW`, `P18_ALW`, `P19_AHL`, `P20_AHLW`.
+
+**PASS:** ejes habilitados copian el chunk; bloqueados mantienen la pose real,
+no cero; fault suite aprobada y cero import/publicación de `RobotCommand`.
+
+#### Experimento 5.1 — Matriz shadow 4 tasks × 8 perfiles × 5
+
+**Estado:** `PENDIENTE_CODIGO` hasta implementar
+`scripts/vla/run_vla_shadow_matrix.sh`.
+
+**Comando de cada celda:**
+
+```bash
+./scripts/vla/run_vla_shadow_matrix.sh \
+  --scenario SUPPORTED_LOW --task-id 0 --axis-profile P14_A \
+  --repetitions 5 --output "$VLA_RUN_DIR"
+```
+
+Cambiar escenario/task/perfil según la tabla 0.3; tasks 1/3 usan replay HELD,
+no un agarre físico. **PASS:** 160 bundles y cero publishers.
+
+#### Experimento 5.2 — Selección shadow preliminar
+
+**Estado:** `PENDIENTE_CODIGO`.
+
+```bash
+python3 scripts/vla/analyze_vla_campaign.py \
+  --input "$VLA_EVIDENCE_ROOT" --select-minimal-profile \
+  --output "$VLA_EVIDENCE_ROOT/shadow-profile-selection.json"
+```
+
+**PASS:** perfil candidato por task y razón cuantitativa para H/L/W. No autoriza
+movimiento.
+
+### Serie 6 — Canary físico sin caja
+
+Toda esta serie está `BLOQUEADO_FISICO` hasta PASS en E4.4/E5.2, ejecutor
+revisado y primitiva `clamp_s2_joints_trajectory` demostrada.
+
+#### Experimento 6.0 — Un punto P14 sin caja
+
+**Escenario futuro:** plataforma y B0 retiradas >1,5 m; ready S2 validado; ruedas
+bloqueadas; cargador fuera; persona en paro; un cliente.
+
+```bash
+./scripts/vla/run_cruzr_vla_canary.sh --check \
+  --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY
+./scripts/vla/run_cruzr_vla_canary.sh --one-point \
+  --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY
+./scripts/vla/run_cruzr_vla_canary.sh --stop
+```
+
+**PASS:** sólo brazos, delta pequeño autorizado, velocidad/fuerza dentro de
+gate, STOP y velocidad cero. Repetir tres veces.
+
+#### Experimento 6.1 — Un chunk y dos chunks P14
+
+Después de E6.0, ejecutar `--one-chunk`; STOP/revisión; luego `--window` limitado
+a dos chunks; STOP/revisión. **FAIL:** continuidad incorrecta, salto, oscilación
+o postura no clasificable.
+
+#### Experimento 6.2 — Añadir H, W y L aisladamente
+
+Probar en sesiones separadas P16_AH, P15_AW y P17_AL; después combinaciones
+P17_AHW/P18_ALW/P19_AHL/P20. Cada perfil comienza de nuevo en un punto y exige
+tres repeticiones limpias. No se habilita un grupo porque el anterior funcionó.
+
+#### Experimento 6.3 — Timeout, cancel y STOP físico
+
+Ejecutar ventanas cortas primero terminadas por timeout y después por cancel.
+Medir latencia hasta velocidad cero. **PASS:** no se ejecuta ningún chunk tras
+STOP/cancel y recovery deja estado conocido.
+
+### Serie 7 — Las cuatro tareas físicas con B0 vacía
+
+Toda esta serie está `BLOQUEADO_FISICO`; necesita autorización por experimento.
+Usa altura y pose completa congeladas en E4.4. El único `1,000 m` confirmado
+es altura de plataforma; no existe distancia horizontal por defecto.
+
+#### Experimento 7.0 — PICK bajo, task 0
+
+**Inicio:** B0 `SUPPORTED_LOW`, pose nominal; robot `VLA_READY_LOW`; plataforma
+en `platform_in_base` y `H_TASK_0_1` resueltos por E4; B0 pesada/vacía;
+abrazaderas vacías.
+
+```bash
+./scripts/vla/run_cruzr_vla_canary.sh --check \
+  --task-id 0 --axis-profile PROFILE_APROBADO --scenario SUPPORTED_LOW
+./scripts/vla/run_cruzr_vla_canary.sh --one-chunk \
+  --task-id 0 --axis-profile PROFILE_APROBADO --scenario SUPPORTED_LOW
+./scripts/vla/run_cruzr_vla_canary.sh --stop
+```
+
+**Esperado:** `HELD_LOW`, suspendida estable, fuerza dentro de gate, sin apoyo.
+Primero 1 intento; si PASS, 3; si todos PASS, 10. Si queda `UNKNOWN`, STOP y no
+home.
+
+#### Experimento 7.1 — PLACE bajo, task 1
+
+**Inicio:** `HELD_LOW` demostrado y superficie low vacía. Mismo patrón de
+comandos con task 1/scenario `HELD_LOW`. **Esperado:** `SUPPORTED_LOW`,
+abrazaderas libres y brazos retirados. No crear HELD improvisando.
+
+#### Experimento 7.2 — PICK medio, task 2
+
+**Inicio:** B0 `SUPPORTED_MIDDLE`, `VLA_READY_MIDDLE`, plataforma en la pose y
+`H_TASK_2_3` resueltas por E4. Mismo patrón con task 2. **Esperado:**
+`HELD_MIDDLE`.
+
+#### Experimento 7.3 — PLACE medio, task 3
+
+**Inicio:** `HELD_MIDDLE` demostrado. Mismo patrón con task 3. **Esperado:**
+`SUPPORTED_MIDDLE`, abrazaderas libres y retirada limpia.
+
+#### Experimento 7.4 — Repetibilidad y decisión física
+
+Completar `1+3+10` por task/perfil sin contenido, navegación ni volcado.
+Registrar éxito, fuerza máxima, tiempo, STOP y recovery. Cualquier incidente
+peligroso invalida esa celda; no se promedia como un fallo ordinario.
+
+### Serie 8 — Elegir o evolucionar el checkpoint
+
+#### Experimento 8.0 — Selección final de dimensiones
+
+**Estado:** `PENDIENTE_CODIGO`; análisis sin robot.
+
+Comparar E5/E7 y elegir el menor perfil que iguale al completo por task. La
+salida es `task→profile`, dominio físico aprobado y holds H/L/W.
+
+#### Experimento 8.1 — Candidato C1 continuando checkpoint-40000
+
+**Estado:** `PENDIENTE_DATOS_Y_CODIGO`; sin salida al robot.
+
+Recopilar/curar nuevos datos manteniendo 1 RGB, abrazaderas y acción 20D;
+incluir cajas/tamaños/poses/alturas y futuros `TIP/POUR`, mezclando tareas 0–3.
+
+```bash
+./scripts/vla/train_cruzr_vla_candidate.sh \
+  --base C1_CONTINUE_40000 --dataset-manifest DATASET_MANIFEST \
+  --data-config utars1 --output CHECKPOINT_OUTPUT
+```
+
+Repetir Series 3–7 desde cero para cada candidato. Nunca sobrescribir C0.
+
+#### Experimento 8.2 — Candidato C2 con contrato nuevo
+
+**Estado:** `PENDIENTE_DISENO`; sin salida al robot.
+
+Sólo si se añaden dedos, pinza activa, fuerza como input, profundidad, cámaras o
+chasis: partir de GR00T N1.5 base, crear DataConfig/estado/acción nuevos y
+datasets nuevos. No conectar `checkpoint-40000` a una salida de distinta
+dimensión. El experimento termina con una model card y vuelve a Serie 3; no
+pasa directamente al robot.
+
+### Punto exacto de comienzo
+
+El próximo experimento es **E1.0**. Después de medir la plataforma se ejecuta E1.1.
+La primera inferencia permitida es E2.0 y es shadow. El primer experimento con
+movimiento determinista sería E4.3 y el primer canary VLA sería E6.0; ambos
+están hoy bloqueados por dependencias explícitas y requieren autorización
+física futura independiente.
+
 ## 0. Próximo bloque prioritario: caracterización integral del VLA
 
 Éste es el trabajo que se realizará **antes** de ampliar la misión de cajas. Su
@@ -45,9 +759,11 @@ Su contrato verificado es:
 - 12 valores FT guardados en los datos pero **no consumidos por el modelo**;
 - ninguna acción para chasis, dedos ni pinza eléctrica.
 
-La caja física y las alturas exactas del dataset no están especificadas. Los
-nombres de archivo sugieren estantes de 55–115, pero eso no constituye una
-medida verificable y no se usará como rango operativo.
+El SDK S2 sección 7.3 sí confirma una caja `60 × 40 × 22 cm` sobre una
+plataforma de `1 m de altura` para reproducir el demo. No especifica la
+distancia horizontal ni mapea los textos low/middle del dataset a alturas. Los
+XML 55/70/85/100/115 pertenecen al árbol alternativo `codes` no-S2 y no se
+usarán como rango S2 sin demostrar su compatibilidad.
 
 El comentario de `InferenceTask.action` contiene un orden antiguo de tareas que
 no coincide con `tasks.jsonl` ni con el YAML vivo. Antes de probar se fijará un
@@ -201,10 +917,13 @@ inferencia, chunk, ejecutor y feedback— y STOP con latencia medida.
 El checkpoint ya demostró que `home` no es una postura inicial compatible:
 ocho ejes de brazo superaron el límite conservador y el máximo rondó 1,35 rad.
 
-1. Localizar la definición oficial de `s2_vla_pick_large_teleop_ready` o pedirla
-   a UBTECH; no reconstruirla a partir del primer chunk.
-2. Definir `VLA_READY_LOW` y `VLA_READY_MIDDLE`, incluyendo cabeza, elevador,
-   cintura, caja y encuadre.
+1. Auditar la definición suministrada
+   `codes-S2/.../s2_vla_pick_large_teleop_ready.xml` (hash `f4025124…d8323`),
+   resolver su llamada `clamp_s2_joints_trajectory` y comprobar cuál es el task
+   realmente instalado; no reconstruirlo a partir del primer chunk.
+2. Derivar, o conseguir de UBTECH, los ready específicos low/middle y la pose
+   completa de plataforma, incluyendo altura, distancia horizontal, cabeza,
+   elevador, cintura, caja y encuadre. El SDK sólo confirma plataforma a 1 m.
 3. Validar cada postura primero como trayectoria determinista independiente,
    con preflight físico fresco y autorización específica en otra intervención.
 4. Repetir shadow de los cuatro tasks desde su postura correcta.
@@ -409,42 +1128,47 @@ Las pruebas no comenzarán con una caja, mesa o distancia elegidas a ojo. Cada
 ejecución usará un `scenario_id` versionado y fotografías de las marcas antes
 de arrancar inferencia.
 
-#### Caja patrón inicial `B0_PROVISIONAL`
+#### Caja segura inicial `B0_SAFE` y referencia visual del dataset
 
 | Propiedad | Valor inicial |
 |---|---|
 | Geometría exterior | `0,603 × 0,397 × 0,217 m` (`L × W × H`) |
-| Estado | vacía, cerrada, seca, sin piezas sueltas |
+| Estado de canary | vacía, seca y sin piezas sueltas; confirmar si es tote abierto o caja |
 | Masa | `PENDIENTE_DE_MEDIR`; se pesa y registra antes de cualquier canary físico |
 | Orientación nominal | lado de 0,603 m paralelo a los hombros (`+x/-x`); fondo de 0,397 m en `+y` |
 | Efectores | abrazaderas vacías al inicio; apertura y fuerza no son acciones del VLA 20D |
 | Uso | una sola caja por ensayo; sin contenido durante Gates VLA-0…VLA-9 |
 
-`B0_PROVISIONAL` es la caja de trabajo conocida por el detector `workbin`, no
-una demostración de que coincida con la “large box” del dataset. Antes de una
-prueba física debe compararse visual y geométricamente con frames del dataset.
-Si difiere materialmente, sólo es un caso OOD hasta recopilar datos propios.
+`B0_SAFE` es la caja de trabajo conocida por el detector `workbin`, no una
+demostración de que coincida con la “large box” del dataset. Los frames de los
+episodios 0/1/90/91 muestran un tote rígido gris abierto, con borde/asas negras
+y, en algunos frames, un objeto pequeño en el interior. Antes de una prueba
+física se compara material, color, abertura, borde, asas y contenido además de
+la geometría. Una B0 vacía distinta sigue siendo el canary seguro, pero se
+etiqueta OOD hasta recopilar datos propios; no se convierte en “nominal” por
+medir 60×40×22 cm.
 
-#### Estaciones iniciales
+#### Plataforma inicial y alturas de task
 
-Las dos alturas son **valores de fixture propuestos**, derivados únicamente de
-la pista `55_to_115_shelfs`; UBTECH no ha confirmado que sean las alturas de
-entrenamiento. Se usan para hacer medible la primera comparación y pueden ser
-reemplazadas por las alturas oficiales o por valores alcanzables validados sin
-caja.
+El fixture suministrado para Cruzr S2 es:
 
 | ID | Superficie `z` desde suelo | Centro de B0 | Parte superior de B0 | Estado |
 |---|---:|---:|---:|---|
-| `S_LOW_V1` | `0,550 ± 0,010 m` | `0,6585 m` | `0,767 m` | provisional |
-| `S_MIDDLE_V1` | `1,150 ± 0,010 m` | `1,2585 m` | `1,367 m` | provisional |
+| `S_VENDOR_1M` | `1,000 ± 0,010 m` | `1,1085 m` | `1,217 m` | confirmado por SDK 7.3 |
+| `S_TASK_LOW` | `H_TASK_0_1=UNRESOLVED` | derivado | derivado | pendiente de mapear dataset/task |
+| `S_TASK_MIDDLE` | `H_TASK_2_3=UNRESOLVED` | derivado | derivado | pendiente de mapear dataset/task |
 
-Cada superficie será horizontal, rígida, inmóvil y de al menos `0,80 m` de
-ancho por `0,75 m` de fondo. No se apilarán mesas ni se improvisarán calzos. La
-zona debajo, encima y alrededor de brazos/caja estará despejada; para gates
-físicos se mantendrá una envolvente mínima de 1,5 m y una persona junto al
-paro.
+Los XML 55/70/85/100/115 existen sólo en el árbol alternativo no-S2 y no fijan
+estas dos alturas. Primero se reproduce `S_VENDOR_1M`; los tasks low/middle no
+pasan a prueba física hasta resolver su altura con frames, estado/FK y
+confirmación del proveedor.
 
-Se define `SHELF_FRAME` con origen en el centro del borde frontal de la
+La superficie será horizontal, rígida, inmóvil y de al menos `0,80 m` de ancho
+por `0,75 m` de fondo. No se apilarán mesas ni se improvisarán calzos. La zona
+debajo, encima y alrededor de brazos/caja estará despejada; para gates físicos
+se mantendrá una envolvente mínima de 1,5 m y una persona junto al paro.
+
+Se define `PLATFORM_FRAME` con origen en el centro del borde frontal de la
 superficie, `x` hacia la derecha del robot, `y` alejándose del robot y `z`
 hacia arriba. La pose nominal de B0 apoyada será:
 
@@ -452,8 +1176,9 @@ hacia arriba. La pose nominal de B0 apoyada será:
 box_pose_in_shelf_frame:
   x: 0.000       # centrada lateralmente
   y: 0.2485      # cara frontal a 0.050 m del borde + W/2
-  z_low: 0.6585
-  z_middle: 1.2585
+  z_vendor_1m: 1.1085
+  z_task_low: UNRESOLVED
+  z_task_middle: UNRESOLVED
   roll_deg: 0
   pitch_deg: 0
   yaw_deg: 0     # eje largo paralelo a los hombros / eje x
@@ -463,21 +1188,23 @@ tolerances:
   yaw_deg: 1
 ```
 
-La base se centra con `x=0` y `yaw=0°` respecto de `SHELF_FRAME`. **No se fija
-todavía una distancia longitudinal base–borde**: `D_BASE_EDGE_LOW` y
-`D_BASE_EDGE_MIDDLE` permanecen `UNRESOLVED` hasta validar, sin caja, la pose
-oficial `VLA_READY` y el alcance. Esa medida se marcará en el suelo y no se
-alterará dentro de una celda. Inventar ahora una distancia podría colocar caja
-o estante dentro de una trayectoria desconocida.
+La base se centra con `x=0` y `yaw=0°` respecto de `PLATFORM_FRAME`. **No se fija
+todavía una distancia longitudinal base–borde**: `D_BUMPER_PLATFORM` y la pose
+`platform_in_base` permanecen `UNRESOLVED` hasta resolver
+`clamp_s2_joints_trajectory`, cinemática, alcance y encuadre del dataset. Esa
+pose se marcará en el suelo y no se alterará dentro de una celda. Inventar una
+distancia podría colocar caja o plataforma dentro de una trayectoria
+desconocida.
 
 #### Estados iniciales físicos permitidos
 
 | Estado | Caja | Abrazaderas | Robot | Uso |
 |---|---|---|---|---|
-| `NO_BOX_READY` | retirada de toda la envolvente | vacías | `VLA_READY_LOW` o `MIDDLE`, velocidad cero | canary sin caja |
-| `SUPPORTED_LOW` | B0 apoyada en `S_LOW_V1` | vacías | `VLA_READY_LOW`, velocidad cero | task 0 |
+| `NO_BOX_READY` | retirada de toda la envolvente | vacías | ready S2 validado, velocidad cero | canary sin caja |
+| `SUPPORTED_VENDOR_1M` | B0 apoyada en `S_VENDOR_1M` | vacías | ready S2/pose fixture validados | reproducción inicial SDK |
+| `SUPPORTED_LOW` | B0 apoyada en `S_TASK_LOW` ya resuelta | vacías | `VLA_READY_LOW`, velocidad cero | task 0 |
 | `HELD_LOW` | B0 suspendida y estable | sujetando B0 | postura de place baja validada | task 1 |
-| `SUPPORTED_MIDDLE` | B0 apoyada en `S_MIDDLE_V1` | vacías | `VLA_READY_MIDDLE`, velocidad cero | task 2 |
+| `SUPPORTED_MIDDLE` | B0 apoyada en `S_TASK_MIDDLE` ya resuelta | vacías | `VLA_READY_MIDDLE`, velocidad cero | task 2 |
 | `HELD_MIDDLE` | B0 suspendida y estable | sujetando B0 | postura de place media validada | task 3 |
 
 `HELD_LOW/MIDDLE` no se obtienen iniciando el task de place desde home. Deben
@@ -555,7 +1282,8 @@ no deben copiarse al terminal como si estuvieran implementados:
 | `scripts/vla/build_vla_manifest.sh` | `--output DIR` | VLA-0 |
 | `scripts/vla/evaluate_checkpoint_offline.py` | `--checkpoint`, `--dataset`, `--split`, `--task-id`, `--seed`, `--output` | VLA-1/2/3 |
 | `scripts/vla/run_vla_shadow_matrix.sh` | `--scenario`, `--task-id`, `--axis-profile`, `--repetitions`, `--output` | VLA-6 |
-| `scripts/vla/cruzr_vla_ready_pose.sh` | primero `--check --level low|middle`; `--run` sólo con autorización futura | VLA-4 |
+| `scripts/vla/cruzr_vla_ready_pose.sh` | primero `--check --task TASK`; `--run` sólo con autorización futura | VLA-4 |
+| `scripts/vla/derive_vla_fixture_pose.py` | `--ready-task`, `--urdf`, `--box-lwh`, `--platform-height`, `--reference-frames`, `--output` | VLA-4/geometría |
 | `scripts/vla/test_vla_executor_sink.py` | `--axis-profile`, `--fixture`, `--fault-suite`, `--output` | VLA-5 |
 | `scripts/vla/run_cruzr_vla_canary.sh` | `--check`, `--one-point`, `--one-chunk`, `--window`, `--stop`; siempre `--task-id`, `--axis-profile` y `--scenario` | VLA-7/8 |
 | `scripts/vla/analyze_vla_campaign.py` | `--input`, `--select-minimal-profile`, `--output` | VLA-9 |
@@ -564,7 +1292,8 @@ no deben copiarse al terminal como si estuvieran implementados:
 El canary no publicará un `RobotCommand` escrito a mano desde la shell. Sólo un
 ejecutor revisado podrá convertir chunks a la primitiva oficial, tras demostrar
 tipo, QoS, unidades, límites, cancelación y ausencia de conflicto. Mientras
-`clamp_s2_joints_trajectory` siga sin localizarse, VLA-7 y VLA-8 permanecen
+la trayectoria/instalación de `clamp_s2_joints_trajectory` siga sin demostrarse,
+VLA-7 y VLA-8 permanecen
 `BLOCKED` incluso si shadow da `ACCEPT`.
 
 ### 0.19 Registro mínimo por ejecución
@@ -589,7 +1318,7 @@ axis_profile: null
 checkpoint_sha256: null
 runtime_id: null
 scenario_id: null
-box_id: B0_PROVISIONAL
+box_id: B0_SAFE
 box_mass_kg: null
 box_state: RETIRED_OR_SUPPORTED_OR_HELD
 station_id: null
@@ -617,7 +1346,7 @@ cuenta.
 #### `VLA-T00` — Baseline y manifiesto de artefactos (Gate VLA-0)
 
 - **Escenario:** robot apagado o detenido en `operation_type=1`, sin cliente de
-  control; B0 retirada. No se necesitan `S_LOW_V1/S_MIDDLE_V1`.
+  control; B0/plataforma retiradas. No se necesita pose relativa de fixture.
 - **Preparación PC:** red Motion/Vision disponible sólo para `--check`; no
   arrancar inferencia.
 - **Comandos existentes:** ejecutar `install_ubtech_vla.sh --check`,
@@ -680,9 +1409,9 @@ cuenta.
 
 #### `VLA-T02` — OOD visual/estado/runtime (Gate VLA-2)
 
-- **Escenario offline nominal:** frame retenido cuya caja/estante se parezcan al
-  dataset. Para escena física shadow, robot inmóvil, ruedas bloqueadas y B0
-  apoyada según `SUPPORTED_LOW` o `SUPPORTED_MIDDLE`; no se publican comandos.
+- **Escenario offline nominal:** frame retenido cuya caja/plataforma se parezcan
+  al dataset. Una escena física task-valid sólo existe después de E4.4; antes,
+  live-shadow con fixture retirado se etiqueta `OOD_RUNTIME_SMOKE`.
 - **Variantes OFAT:** x de caja `0, ±0,05, ±0,10 m`; y de cara frontal
   `0,05, 0,10, 0,15 m`; yaw `0°, ±5°, ±15°`; después caja ausente, oclusión,
   otro color/tamaño y distractor. Esas cifras son estímulos OOD, no posiciones
@@ -712,8 +1441,9 @@ cuenta.
 
 #### `VLA-T03` — Timeline, timeout y end flag (Gate VLA-3)
 
-- **Escenario:** robot inmóvil; B0 nominal en `SUPPORTED_LOW`; cámara y estado
-  estáticos/frescos. Repetir con `SUPPORTED_MIDDLE` una vez resuelto low.
+- **Escenario:** robot inmóvil con plataforma/B0 fuera de la envolvente para el
+  timeline de runtime; o replay de dataset para timeline nominal. No atribuir
+  semántica low/middle a la escena viva hasta E4.4.
 - **PC:** iniciar shadow 180 s, inferencia y disparar task 0 por 8 s. Repetir
   task 2. La futura herramienta offline prueba cancelación en `t=0`, durante
   inferencia, entre chunks y tras timeout.
@@ -739,19 +1469,21 @@ cuenta.
   puntos de cancelación.
 - **Recuperación:** `--stop`; este test no debe haber movido el robot.
 
-#### `VLA-T04` — Identificar `VLA_READY_LOW/MIDDLE` (Gate VLA-4)
+#### `VLA-T04` — Completar ready S2 y geometría del fixture (Gate VLA-4)
 
 - **Escenario A, rechazo de control:** robot inmóvil en `home`, sin caja.
   Ejecutar sólo shadow y conservar como evidencia el salto inicial ya observado
   (~1,35 rad máximo); no repetir físicamente ese chunk.
-- **Escenario B, ready low:** `S_LOW_V1` vacía, base centrada, distancia
-  longitudinal aún por calibrar, brazos/cabeza/elevador/cintura en la pose
-  oficial low, cámara mostrando toda B0 aunque B0 permanece retirada durante el
-  primer canary shadow.
-- **Escenario C, ready middle:** igual con `S_MIDDLE_V1` y pose oficial middle.
+- **Escenario B, ready S2 vacío:** plataforma/B0 retiradas; validar el XML
+  `s2_vla_pick_large_teleop_ready` sólo tras resolver
+  `clamp_s2_joints_trajectory`.
+- **Escenario C, fixture calculado:** plataforma a `z=1,000 m` y pose horizontal
+  producida por `derive_vla_fixture_pose.py`; primero target visual, luego
+  plataforma vacía y finalmente B0. Low/middle adicionales sólo si E4.3 les
+  asigna alturas verificadas.
 - **PC hoy:** sólo `--check`, secuencia shadow y `--trigger` para los tasks
   correspondientes. La entrada física a ready está bloqueada hasta implementar
-  `cruzr_vla_ready_pose.sh --check --level ...`, obtener la trayectoria oficial
+  `cruzr_vla_ready_pose.sh --check --task ...`, completar la trayectoria S2
   y autorizar su `--run` en otra sesión.
 
   ```bash
@@ -763,10 +1495,12 @@ cuenta.
   ./scripts/vla/run_ubtech_vla_shadow.sh --stop
 
   # Especificación futura; --run no queda autorizado por este documento:
-  ./scripts/vla/cruzr_vla_ready_pose.sh --check --level low
+  test -n "$VLA_READY_TASK"  # salida canónica de E4.0
+  ./scripts/vla/cruzr_vla_ready_pose.sh --check --task "$VLA_READY_TASK"
   ```
-- **PASS:** cinco primeros chunks consecutivos aceptados para 0/1 en low y 2/3
-  en middle; `D_BASE_EDGE_*`, 20D inicial y encuadre quedan versionados.
+- **PASS:** ready S2 completo, `platform_in_base` y `D_BUMPER_PLATFORM`
+  versionados; después cinco primeros chunks aceptados por cada task cuya
+  altura low/middle esté resuelta.
 - **FAIL:** se deduce ready del primer chunk, se suaviza el salto, caja/cámara
   quedan fuera del encuadre o cualquier primer delta excede límites.
 - **Evidencia:** trayectoria oficial, hash, pose 20D, distancias, fotografías,
@@ -833,12 +1567,12 @@ cuenta.
 
 - **Autorización:** nueva confirmación física el día de la prueba; el plan no
   la concede.
-- **Escenario:** `NO_BOX_READY`, superficie del nivel elegido completamente
-  vacía, B0 retirada >1,5 m, base en marca calibrada, ruedas bloqueadas,
+- **Escenario:** `NO_BOX_READY`, plataforma y B0 retiradas >1,5 m, envolvente
+  completamente vacía, base en marca calibrada, ruedas bloqueadas,
   cargador desconectado, ambos paros liberados sólo tras preflight, persona en
   el paro y un único cliente.
 - **PC preflight:** `run_ubtech_vla_shadow.sh --check`,
-  `cruzr_vla_ready_pose.sh --check --level LEVEL` y futuro
+  `cruzr_vla_ready_pose.sh --check --task TASK` y futuro
   `run_cruzr_vla_canary.sh --check --task-id N --axis-profile PROFILE`.
 
   Secuencia especificada para cuando ambas herramientas y la primitiva estén
@@ -846,7 +1580,8 @@ cuenta.
 
   ```bash
   ./scripts/vla/run_ubtech_vla_shadow.sh --check
-  ./scripts/vla/cruzr_vla_ready_pose.sh --check --level low
+  test -n "$VLA_READY_TASK"  # salida canónica de E4.0
+  ./scripts/vla/cruzr_vla_ready_pose.sh --check --task "$VLA_READY_TASK"
   ./scripts/vla/run_cruzr_vla_canary.sh --check \
     --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY
   ./scripts/vla/run_cruzr_vla_canary.sh --one-point \
@@ -871,7 +1606,8 @@ cuenta.
 
 #### `VLA-T08-0` — PICK bajo físico, caja vacía (task 0)
 
-- **Inicio:** `SUPPORTED_LOW`; B0 en `S_LOW_V1`, pose nominal, masa medida,
+- **Inicio:** `SUPPORTED_LOW`; B0 en `S_TASK_LOW` cuya altura y
+  `platform_in_base` fueron resueltas en E4, pose nominal, masa medida,
   abrazaderas vacías, `VLA_READY_LOW`, velocidad cero.
 - **PC:** preflights de T07 y futuro canary con `--task-id 0`. Primero perfil
   ganador shadow de menor dimensión; no asumir P14 si la matriz requiere L/W/H.
@@ -894,7 +1630,7 @@ cuenta.
 #### `VLA-T08-1` — PLACE bajo físico, caja vacía (task 1)
 
 - **Inicio:** `HELD_LOW` demostrado, B0 centrada respecto de la estación,
-  `S_LOW_V1` vacía y `VLA_READY_PLACE_LOW` validada.
+  `S_TASK_LOW` vacía y `VLA_READY_PLACE_LOW` validada.
 - **PC:** futuro canary con `--task-id 1`; no iniciar desde home ni improvisar
   el agarre para crear el estado inicial.
 
@@ -914,8 +1650,9 @@ cuenta.
 
 #### `VLA-T08-2` — PICK medio físico, caja vacía (task 2)
 
-- **Inicio:** `SUPPORTED_MIDDLE`; B0 nominal en `S_MIDDLE_V1`, abrazaderas
-  vacías, `VLA_READY_MIDDLE`, cámara con caja completa.
+- **Inicio:** `SUPPORTED_MIDDLE`; B0 nominal en `S_TASK_MIDDLE` cuya altura y
+  pose fueron resueltas en E4, abrazaderas vacías, `VLA_READY_MIDDLE`, cámara
+  con caja completa.
 - **PC:** igual a T08-0 con `--task-id 2`.
 
   ```bash
@@ -928,7 +1665,7 @@ cuenta.
   ```
 - **PASS:** `HELD_MIDDLE` estable y mismos límites de seguridad; se reporta por
   separado de low.
-- **Recuperación:** depósito dedicado en `S_MIDDLE_V1`; nunca home con B0
+- **Recuperación:** depósito dedicado en `S_TASK_MIDDLE`; nunca home con B0
   sujeta.
 
 #### `VLA-T08-3` — PLACE medio físico, caja vacía (task 3)
@@ -1013,12 +1750,15 @@ VLA-T00 -> implementar herramientas offline -> VLA-T01 -> VLA-T02 -> VLA-T03
 
 VLA-T07 y VLA-T08 están bloqueados por tres condiciones independientes:
 
-1. no está demostrada la trayectoria oficial `VLA_READY_LOW/MIDDLE`;
+1. no está completa/demostrada la trayectoria S2 ready ni el mapeo de alturas
+   low/middle;
 2. no existe todavía el ejecutor canary revisado con STOP/deadman;
 3. no está demostrada la primitiva física `clamp_s2_joints_trajectory`.
 
-Por tanto, la primera sesión práctica debe montar/medir `B0_PROVISIONAL`,
-`S_LOW_V1` y `S_MIDDLE_V1`, fotografiar el fixture y ejecutar **T00**. El
+Por tanto, la primera sesión práctica debe medir `B0_SAFE` y la
+plataforma `S_VENDOR_1M` fuera de la envolvente, fotografiar el fixture y
+ejecutar **T00**. La pose horizontal se deriva posteriormente en E4.1 y se
+valida físicamente en E4.4. El
 primer goal permitido después será un goal shadow; no un mensaje de movimiento.
 
 ## 1. Resultado buscado
