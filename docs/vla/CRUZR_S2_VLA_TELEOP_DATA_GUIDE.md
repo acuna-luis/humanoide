@@ -1,6 +1,6 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
-> Versión documental 1.2 — 21 de agosto de 2026. Estado: guía técnica del
+> Versión documental 1.3 — 27 de agosto de 2026. Estado: guía técnica del
 > proyecto basada en evidencias locales; los puntos marcados «Pendiente DSA»
 > requieren confirmación del proveedor.
 
@@ -25,6 +25,14 @@ ocho combinaciones funcionales de 14 a 20 ejes, validar los cuatro task IDs y
 decidir entre continuar el checkpoint o partir de GR00T base está definida al
 principio de [`../plan_de_trabajo.md`](../plan_de_trabajo.md). Sus gates son
 obligatorios antes de incorporar VLA a la misión física de cajas.
+
+Las secciones 0.17–0.21 de ese plan son además el runbook reproducible de la
+campaña: definen la caja patrón provisional `0,603 × 0,397 × 0,217 m`, dos
+fixtures provisionales a `0,55/1,15 m`, el marco y tolerancias de colocación,
+los estados `SUPPORTED/HELD`, los comandos shadow existentes, las herramientas
+aún pendientes y tarjetas `VLA-T00…T10` con PASS/FAIL/evidencia/recuperación.
+Las alturas son hipótesis experimentales, no geometría confirmada por UBTECH;
+ninguna tarjeta física queda autorizada por documentarlas.
 
 ### Convenciones de evidencia
 

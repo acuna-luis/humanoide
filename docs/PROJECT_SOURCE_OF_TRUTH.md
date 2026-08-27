@@ -217,7 +217,13 @@ El siguiente bloque de trabajo VLA está planificado al principio de
 [`plan_de_trabajo.md`](plan_de_trabajo.md): auditoría offline, contrato temporal,
 posturas `VLA-ready`, ejecutor sink, matriz shadow de 4 tasks × 8 perfiles
 funcionales (`P14`…`P20`), canary progresivo y comparación del checkpoint
-intacto frente a continuación o nuevo DataConfig. El plan no autoriza movimiento.
+intacto frente a continuación o nuevo DataConfig. Se añadieron tarjetas
+`VLA-T00…T10` con fixture, estado inicial, comandos/mensajes PC, PASS/FAIL,
+evidencia y recovery: B0 provisional `0,603 × 0,397 × 0,217 m`, estantes
+provisionales `0,55/1,15 m` y pose medible en `SHELF_FRAME`. Las alturas no son
+datos confirmados por UBTECH y el plan no autoriza movimiento. Las tarjetas
+físicas permanecen bloqueadas hasta demostrar `VLA_READY`, ejecutor canary y
+primitiva de trayectoria.
 
 Fuente: [`guides/CRUZR_S2_VLA_SAFE_ENABLEMENT.md`](guides/CRUZR_S2_VLA_SAFE_ENABLEMENT.md).
 
@@ -673,6 +679,7 @@ actualizarse este archivo antes de cerrar la sesión.
 
 | Fecha | Hito | Resultado |
 |---|---|---|
+| 2026-08-27 | escenarios y runbook PC completos para validación VLA | se definieron en `docs/plan_de_trabajo.md` la caja B0 provisional, estaciones low/middle a 0,55/1,15 m, `SHELF_FRAME`, pose/tolerancias, estados `NO_BOX/SUPPORTED/HELD`, manifiesto de evidencia y tarjetas `VLA-T00…T10`. Cada tarjeta especifica escenario, comandos o mensajes PC, PASS/FAIL, evidencia y recovery; se separan scripts existentes de ocho herramientas aún por implementar. La revisión de `cruzr_blue_workbin_cycle.sh --help` fijó el lado de 600 mm paralelo a hombros. Es planificación documental: no se inició inferencia ni hubo movimiento; los canaries físicos siguen bloqueados por falta de `VLA_READY`, ejecutor y primitiva demostrados |
 | 2026-08-27 | campaña VLA 14→20 priorizada | se amplió el inicio de `docs/plan_de_trabajo.md` con una campaña por gates para caracterizar exhaustivamente por grupos los 20 outputs del checkpoint: A=14 brazos, H=2 cabeza, L=3 elevador y W=1 cintura. Cubre ocho perfiles funcionales —incluidas dos combinaciones distintas de 17D—, los cuatro task IDs, 32 celdas shadow, postura baja/media, contrato temporal, end flag, OOD, ejecutor sink, canary sin caja, tareas físicas con caja vacía y decisión C0/C1/C2. Es planificación documental; no se inició VLA, no se creó publicador y no hubo movimiento |
 | 2026-08-27 | plan de trabajo multialtura y multitamaño | se documentó en `docs/plan_de_trabajo.md` una misión por estados para recoger una caja a baja altura, transportarla, volcar contenido ligero en un receptor, devolverla erguida y depositarla vacía a otra altura. Incluye una caja manipulada por ensayo, perfiles de cajas/estaciones, variación OFAT de posición/orientación/altura, comparación de detector/tag/RGB-D, control determinista, replay, PICO y VLA, gates de captura 20D y recuperación por fase. Es planificación documental: no se enviaron comandos ni se autorizó movimiento |
 | 2026-08-27 | arranque controlado después del trip FT restaura Motion sin mover | se encendió chasis, `KEY1` y botón trasero con el paro accionado; Control Center esperó `WaitEStopRelease`. Tras confirmación física se liberó y no hubo movimiento inesperado. La primera consulta `docker info` activó `docker.service` mediante `docker.socket`; se registró explícitamente y no envió comandos al robot. Motion inició `hw`/`manipulation_robot_app`, readiness x86 3/3 y cámaras 2/2; self-check global `passed=true` y `StartMotion` exitoso. Control Center quedó en `AutoTaskMode`. `cruzr_blue_workbin_cycle.sh --check` aprobó: actuadores Operation Enabled, errores/deltas/velocidades dentro de gates, paros 0/0, cargador fuera, baterías 51,5/63,4 % y acciones listas. `cruzr_recover_to_home.sh --check` repitió la salud pero bloqueó correctamente `home` porque el nuevo log no clasifica la postura. El boot guard terminó `failed` por `CONTROL_STATE=unknown`, aunque no ejecutó recuperación (`RECOVERY_ELIGIBLE=0`) y registró seguridad `0 0 0`; no invalida el preflight de Motion, pero debe corregirse para reconocer `AutoTaskMode` |

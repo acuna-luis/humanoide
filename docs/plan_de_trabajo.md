@@ -403,6 +403,624 @@ Los stages 10–13 posteriores de este documento resumen captura, entrenamiento 
 despliegue dentro de la misión completa. En caso de discrepancia, esta campaña
 VLA prioritaria impone los gates más estrictos.
 
+### 0.17 Fixture físico común y sistema de coordenadas
+
+Las pruebas no comenzarán con una caja, mesa o distancia elegidas a ojo. Cada
+ejecución usará un `scenario_id` versionado y fotografías de las marcas antes
+de arrancar inferencia.
+
+#### Caja patrón inicial `B0_PROVISIONAL`
+
+| Propiedad | Valor inicial |
+|---|---|
+| Geometría exterior | `0,603 × 0,397 × 0,217 m` (`L × W × H`) |
+| Estado | vacía, cerrada, seca, sin piezas sueltas |
+| Masa | `PENDIENTE_DE_MEDIR`; se pesa y registra antes de cualquier canary físico |
+| Orientación nominal | lado de 0,603 m paralelo a los hombros (`+x/-x`); fondo de 0,397 m en `+y` |
+| Efectores | abrazaderas vacías al inicio; apertura y fuerza no son acciones del VLA 20D |
+| Uso | una sola caja por ensayo; sin contenido durante Gates VLA-0…VLA-9 |
+
+`B0_PROVISIONAL` es la caja de trabajo conocida por el detector `workbin`, no
+una demostración de que coincida con la “large box” del dataset. Antes de una
+prueba física debe compararse visual y geométricamente con frames del dataset.
+Si difiere materialmente, sólo es un caso OOD hasta recopilar datos propios.
+
+#### Estaciones iniciales
+
+Las dos alturas son **valores de fixture propuestos**, derivados únicamente de
+la pista `55_to_115_shelfs`; UBTECH no ha confirmado que sean las alturas de
+entrenamiento. Se usan para hacer medible la primera comparación y pueden ser
+reemplazadas por las alturas oficiales o por valores alcanzables validados sin
+caja.
+
+| ID | Superficie `z` desde suelo | Centro de B0 | Parte superior de B0 | Estado |
+|---|---:|---:|---:|---|
+| `S_LOW_V1` | `0,550 ± 0,010 m` | `0,6585 m` | `0,767 m` | provisional |
+| `S_MIDDLE_V1` | `1,150 ± 0,010 m` | `1,2585 m` | `1,367 m` | provisional |
+
+Cada superficie será horizontal, rígida, inmóvil y de al menos `0,80 m` de
+ancho por `0,75 m` de fondo. No se apilarán mesas ni se improvisarán calzos. La
+zona debajo, encima y alrededor de brazos/caja estará despejada; para gates
+físicos se mantendrá una envolvente mínima de 1,5 m y una persona junto al
+paro.
+
+Se define `SHELF_FRAME` con origen en el centro del borde frontal de la
+superficie, `x` hacia la derecha del robot, `y` alejándose del robot y `z`
+hacia arriba. La pose nominal de B0 apoyada será:
+
+```yaml
+box_pose_in_shelf_frame:
+  x: 0.000       # centrada lateralmente
+  y: 0.2485      # cara frontal a 0.050 m del borde + W/2
+  z_low: 0.6585
+  z_middle: 1.2585
+  roll_deg: 0
+  pitch_deg: 0
+  yaw_deg: 0     # eje largo paralelo a los hombros / eje x
+tolerances:
+  x_y_m: 0.010
+  surface_height_m: 0.010
+  yaw_deg: 1
+```
+
+La base se centra con `x=0` y `yaw=0°` respecto de `SHELF_FRAME`. **No se fija
+todavía una distancia longitudinal base–borde**: `D_BASE_EDGE_LOW` y
+`D_BASE_EDGE_MIDDLE` permanecen `UNRESOLVED` hasta validar, sin caja, la pose
+oficial `VLA_READY` y el alcance. Esa medida se marcará en el suelo y no se
+alterará dentro de una celda. Inventar ahora una distancia podría colocar caja
+o estante dentro de una trayectoria desconocida.
+
+#### Estados iniciales físicos permitidos
+
+| Estado | Caja | Abrazaderas | Robot | Uso |
+|---|---|---|---|---|
+| `NO_BOX_READY` | retirada de toda la envolvente | vacías | `VLA_READY_LOW` o `MIDDLE`, velocidad cero | canary sin caja |
+| `SUPPORTED_LOW` | B0 apoyada en `S_LOW_V1` | vacías | `VLA_READY_LOW`, velocidad cero | task 0 |
+| `HELD_LOW` | B0 suspendida y estable | sujetando B0 | postura de place baja validada | task 1 |
+| `SUPPORTED_MIDDLE` | B0 apoyada en `S_MIDDLE_V1` | vacías | `VLA_READY_MIDDLE`, velocidad cero | task 2 |
+| `HELD_MIDDLE` | B0 suspendida y estable | sujetando B0 | postura de place media validada | task 3 |
+
+`HELD_LOW/MIDDLE` no se obtienen iniciando el task de place desde home. Deben
+provenir de un PICK anterior declarado correcto o de una puesta en escena
+determinista aprobada, y han de demostrar caja suspendida, fuerza estable y
+ausencia de apoyo. Si el estado es desconocido, el task de place no empieza.
+
+En todas las poses `VLA_READY`, la cámara principal debe contener la caja
+completa y margen visible a izquierda, derecha y por encima. Los metadatos
+muestran cabeza casi fija alrededor de `head_pitch≈-0,431 rad` y
+`head_yaw≈0`, pero esos valores son una referencia observada del dataset, no
+un comando ni una postura validada. Los 14 ángulos de brazos y las posiciones
+del elevador deben obtenerse de la tarea oficial; no se inferirán del primer
+chunk.
+
+### 0.18 Interfaces PC, mensajes y herramientas necesarias
+
+#### Scripts que existen hoy
+
+| Orden en el PC | Efecto | Movimiento |
+|---|---|---|
+| `./scripts/vla/install_ubtech_vla.sh --check` | valida paquete local y prerequisitos | no |
+| `./scripts/vla/install_ubtech_vla.sh --verify` | comprueba instalación/contenedores | no |
+| `./scripts/vla/run_ubtech_vla_shadow.sh --deploy` | sincroniza runtime seguro; cambia archivos remotos | no |
+| `./scripts/vla/run_ubtech_vla_shadow.sh --check` | preflight de Motion/Vision, hashes, estado y cero publicadores | no |
+| `./scripts/vla/run_ubtech_vla_shadow.sh --start-shadow --shadow-duration 180` | arranca validador que sólo registra/rechaza chunks | no |
+| `./scripts/vla/run_ubtech_vla_shadow.sh --start-inference` | arranca contenedor de inferencia | no |
+| `./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id N --inference-duration 8` | solicita inferencia para task `N`; exige shadow activo | no |
+| `./scripts/vla/run_ubtech_vla_shadow.sh --status` | muestra contenedores, logs y publicadores | no |
+| `./scripts/vla/run_ubtech_vla_shadow.sh --stop` | detiene VLA y verifica cero publicadores físicos | no |
+| `./scripts/cruzr_blue_workbin_cycle.sh --measure-box-fast` | mide/detecta B0 para registrar geometría | no debe mover; confirmar `--help` antes |
+| `./scripts/cruzr_recover_to_home.sh --check` | diagnóstico de estado para recuperación | no |
+
+No se combina este flujo con PICO, UI web, joystick ni otro cliente de control.
+`--deploy` se usa sólo al cambiar runtime; no se repite como parte de cada
+inferencia.
+
+La secuencia shadow canónica disponible es:
+
+```bash
+./scripts/vla/run_ubtech_vla_shadow.sh --check
+./scripts/vla/run_ubtech_vla_shadow.sh --start-shadow --shadow-duration 180
+./scripts/vla/run_ubtech_vla_shadow.sh --start-inference
+./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id 0 --inference-duration 8
+./scripts/vla/run_ubtech_vla_shadow.sh --status
+./scripts/vla/run_ubtech_vla_shadow.sh --stop
+```
+
+El script envía internamente el goal ROS 2 siguiente; se documenta para auditar
+el contrato, **no para abrir un segundo cliente en paralelo**:
+
+```yaml
+action: /gr00t/trigger_inference
+type: mc_task_msgs/action/InferenceTask
+goal:
+  task_id: 0                 # 0, 1, 2 o 3 según la tarjeta
+  max_inference_duration: 8.0
+  end_threshold: 0.1
+```
+
+El resultado esperado aparece en `/vla_inference_result` como
+`vla_msgs/msg/Gr00tMotionChunk`: `chunk_id`, latencia, estado y 10 puntos con
+20 posiciones absolutas. `/mc/sdk/robot_command` debe tener **cero
+publicadores**. `--status`, `shadow.jsonl` y el resultado de cada `--trigger`
+son la vía primaria para observarlos; no se mantiene un segundo WebSocket/ROS
+client después de STOP.
+
+#### Herramientas que deben existir antes de completar la campaña
+
+Los nombres siguientes son especificaciones de trabajo; **aún no existen** y
+no deben copiarse al terminal como si estuvieran implementados:
+
+| Herramienta requerida | Interfaz mínima | Gate que desbloquea |
+|---|---|---|
+| `scripts/vla/build_vla_manifest.sh` | `--output DIR` | VLA-0 |
+| `scripts/vla/evaluate_checkpoint_offline.py` | `--checkpoint`, `--dataset`, `--split`, `--task-id`, `--seed`, `--output` | VLA-1/2/3 |
+| `scripts/vla/run_vla_shadow_matrix.sh` | `--scenario`, `--task-id`, `--axis-profile`, `--repetitions`, `--output` | VLA-6 |
+| `scripts/vla/cruzr_vla_ready_pose.sh` | primero `--check --level low|middle`; `--run` sólo con autorización futura | VLA-4 |
+| `scripts/vla/test_vla_executor_sink.py` | `--axis-profile`, `--fixture`, `--fault-suite`, `--output` | VLA-5 |
+| `scripts/vla/run_cruzr_vla_canary.sh` | `--check`, `--one-point`, `--one-chunk`, `--window`, `--stop`; siempre `--task-id`, `--axis-profile` y `--scenario` | VLA-7/8 |
+| `scripts/vla/analyze_vla_campaign.py` | `--input`, `--select-minimal-profile`, `--output` | VLA-9 |
+| `scripts/vla/train_cruzr_vla_candidate.sh` | `--base`, `--dataset-manifest`, `--data-config`, `--output` | VLA-10 |
+
+El canary no publicará un `RobotCommand` escrito a mano desde la shell. Sólo un
+ejecutor revisado podrá convertir chunks a la primitiva oficial, tras demostrar
+tipo, QoS, unidades, límites, cancelación y ausencia de conflicto. Mientras
+`clamp_s2_joints_trajectory` siga sin localizarse, VLA-7 y VLA-8 permanecen
+`BLOCKED` incluso si shadow da `ACCEPT`.
+
+### 0.19 Registro mínimo por ejecución
+
+Antes de cada tarjeta se crea un directorio fuera de Git y se completa un
+manifiesto. En este PC se propone:
+
+```bash
+export VLA_RUN_ID="YYYYMMDD-HHMMSS_gate-task-profile_rep"
+export VLA_EVIDENCE_ROOT="/home/lacuna/proyectos/Robots/Humanoide-vla-evidence"
+mkdir -p "$VLA_EVIDENCE_ROOT/$VLA_RUN_ID"
+```
+
+El manifiesto debe contener como mínimo:
+
+```yaml
+run_id: null
+gate: null
+task_id: null
+task_text: null
+axis_profile: null
+checkpoint_sha256: null
+runtime_id: null
+scenario_id: null
+box_id: B0_PROVISIONAL
+box_mass_kg: null
+box_state: RETIRED_OR_SUPPORTED_OR_HELD
+station_id: null
+station_height_m: null
+box_pose_shelf_frame: null
+base_to_edge_m: null
+robot_pose: HOME_OR_VLA_READY_LOW_OR_VLA_READY_MIDDLE
+estops: null
+charger: null
+joint_velocity: null
+command_publishers_before: null
+command_publishers_after: null
+result: PASS_OR_FAIL_OR_BLOCKED
+failure_reason: null
+recovery_state: null
+```
+
+Guardar: foto frontal/lateral del fixture, medida de altura/distancia, frame RGB
+exacto, estado 20D, goal, chunk bruto, chunk enmascarado, `shadow.jsonl`, logs,
+latencias, verdict y `--status` antes/después. Un `PASS` sin esos artefactos no
+cuenta.
+
+### 0.20 Tarjetas de prueba completas por gate
+
+#### `VLA-T00` — Baseline y manifiesto de artefactos (Gate VLA-0)
+
+- **Escenario:** robot apagado o detenido en `operation_type=1`, sin cliente de
+  control; B0 retirada. No se necesitan `S_LOW_V1/S_MIDDLE_V1`.
+- **Preparación PC:** red Motion/Vision disponible sólo para `--check`; no
+  arrancar inferencia.
+- **Comandos existentes:** ejecutar `install_ubtech_vla.sh --check`,
+  `install_ubtech_vla.sh --verify`, `run_ubtech_vla_shadow.sh --check` y
+  `run_ubtech_vla_shadow.sh --status`. Construir hashes con la futura
+  `build_vla_manifest.sh`; hasta entonces registrar manualmente `sha256sum` de
+  checkpoint, metadata, DataConfig, YAML y runtime.
+
+  ```bash
+  ./scripts/vla/install_ubtech_vla.sh --check
+  ./scripts/vla/install_ubtech_vla.sh --verify
+  ./scripts/vla/run_ubtech_vla_shadow.sh --check
+  ./scripts/vla/run_ubtech_vla_shadow.sh --status
+  find cruzrss2_vla_pack-002/weight/checkpoint-40000 \
+    -type f -print0 | sort -z | xargs -0 sha256sum \
+    > "$VLA_EVIDENCE_ROOT/$VLA_RUN_ID/checkpoint.sha256"
+  ./scripts/vla/run_ubtech_vla_shadow.sh --stop
+  ```
+- **Prueba:** comparar catálogo 0–3 de `tasks.jsonl` con goal/action, comprobar
+  orden 20D y registrar las cinco contradicciones de 0.4.
+- **PASS:** hashes completos, `restart=no`, contenedores detenidos al final y
+  `/mc/sdk/robot_command` con cero publicadores.
+- **FAIL/STOP:** artefacto cambia, task mapping ambiguo, contenedor con restart
+  automático o aparece un publicador.
+- **Evidencia:** `artifact-manifest.sha256`, `task-catalog.json`, salida de
+  `--check/--status` y lista de deudas.
+- **Recuperación:** `run_ubtech_vla_shadow.sh --stop`; no hay recuperación
+  mecánica porque no hubo movimiento.
+
+#### `VLA-T01` — Replay offline nominal (Gate VLA-1)
+
+- **Escenario:** sin robot; se usan episodios del dataset, no cámara viva ni
+  estaciones reales.
+- **Casos:** tasks 0–3; cinco seeds iguales y cinco diferentes por task;
+  splits separados por episodio/sesión.
+- **PC:** futura `evaluate_checkpoint_offline.py` con checkpoint
+  `cruzrss2_vla_pack-002/weight/checkpoint-40000`, dataset
+  `utars_clamp_and_place_large_box_full_data_bio_lerobot_0319`, task y seed.
+  `gr00t_finetune.py` **no** se usa para evaluar ni se reentrena C0.
+
+  Invocación especificada, disponible sólo después de implementar el script:
+
+  ```bash
+  python3 scripts/vla/evaluate_checkpoint_offline.py \
+    --checkpoint cruzrss2_vla_pack-002/weight/checkpoint-40000 \
+    --dataset cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319 \
+    --split test --task-id 0 --seed 0 \
+    --output "$VLA_EVIDENCE_ROOT/$VLA_RUN_ID"
+  ```
+- **Mensaje:** misma instrucción textual exacta del catálogo más un estado 20D
+  y una RGB del episodio; salida esperada 10×20 finita.
+- **PASS:** métricas por eje/horizonte/task, error de primer punto/endpoint,
+  continuidad, clipping y `flag_pred`, sin fuga entre splits.
+- **FAIL:** cualquier NaN/Inf, orden distinto, resultado no reproducible sin
+  explicación o promedio global que oculte una tarea.
+- **Evidencia:** split manifest, seeds, predicciones, métricas y mosaico de
+  frames representativos.
+- **Recuperación:** ninguna; proceso offline se cancela y los pesos C0 quedan
+  inmutables.
+
+#### `VLA-T02` — OOD visual/estado/runtime (Gate VLA-2)
+
+- **Escenario offline nominal:** frame retenido cuya caja/estante se parezcan al
+  dataset. Para escena física shadow, robot inmóvil, ruedas bloqueadas y B0
+  apoyada según `SUPPORTED_LOW` o `SUPPORTED_MIDDLE`; no se publican comandos.
+- **Variantes OFAT:** x de caja `0, ±0,05, ±0,10 m`; y de cara frontal
+  `0,05, 0,10, 0,15 m`; yaw `0°, ±5°, ±15°`; después caja ausente, oclusión,
+  otro color/tamaño y distractor. Esas cifras son estímulos OOD, no posiciones
+  físicas autorizadas para PICK.
+- **Estado inválido:** NaN/Inf, eje ausente, permutación, timestamp >1 s y valor
+  fuera de rango. **Se inyecta sólo al sink/offline**, nunca al robot.
+- **PC:** `evaluate_checkpoint_offline.py --fault-suite ...` cuando exista. Para
+  una escena viva válida usar la secuencia shadow de 0.18 y el task correcto.
+
+  ```bash
+  # Especificación futura; hoy este archivo no existe.
+  python3 scripts/vla/evaluate_checkpoint_offline.py \
+    --checkpoint cruzrss2_vla_pack-002/weight/checkpoint-40000 \
+    --dataset cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319 \
+    --split test --task-id 0 --seed 0 --fault-suite all \
+    --output "$VLA_EVIDENCE_ROOT/$VLA_RUN_ID"
+  ```
+- **PASS:** 100 % de mensajes estructuralmente inválidos rechazados; cada
+  variante válida queda etiquetada `NOMINAL`, `OOD_ACCEPTED` o `OOD_REJECTED`.
+- **FAIL:** un inválido llega al ejecutor, cambio simultáneo de dos factores o
+  el modelo se declara capaz por generar un chunk.
+- **Evidencia:** tabla factor/valor/task, RGB de entrada, estado, chunk, razón de
+  rechazo y cero publicadores antes/después.
+- **Recuperación:** `--stop`; devolver físicamente B0 a pose nominal sólo a
+  mano con robot parado y fuera de control, nunca mientras shadow/inferencia
+  estén activos.
+
+#### `VLA-T03` — Timeline, timeout y end flag (Gate VLA-3)
+
+- **Escenario:** robot inmóvil; B0 nominal en `SUPPORTED_LOW`; cámara y estado
+  estáticos/frescos. Repetir con `SUPPORTED_MIDDLE` una vez resuelto low.
+- **PC:** iniciar shadow 180 s, inferencia y disparar task 0 por 8 s. Repetir
+  task 2. La futura herramienta offline prueba cancelación en `t=0`, durante
+  inferencia, entre chunks y tras timeout.
+
+  ```bash
+  ./scripts/vla/run_ubtech_vla_shadow.sh --check
+  ./scripts/vla/run_ubtech_vla_shadow.sh --start-shadow --shadow-duration 300
+  ./scripts/vla/run_ubtech_vla_shadow.sh --start-inference
+  ./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id 0 --inference-duration 8
+  ./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id 2 --inference-duration 8
+  ./scripts/vla/run_ubtech_vla_shadow.sh --status
+  ./scripts/vla/run_ubtech_vla_shadow.sh --stop
+  ```
+- **Mensaje:** `InferenceTask{task_id, max_inference_duration:8.0,
+  end_threshold:0.1}`; observar `chunk_id`, diez `time_from_start`, feedback,
+  `flag_pred`, cancelación y fin.
+- **PASS:** se explica 120 FPS frente a `Δt=0,08 s`, se fija qué ocurre en el
+  hueco `0,72–5 s`, no se reutiliza chunk viejo y STOP/cancel tienen latencia
+  medida.
+- **FAIL:** cola ejecutable después de STOP, chunk duplicado/regresivo aceptado,
+  end con un criterio diferente al documentado o hueco de mando indefinido.
+- **Evidencia:** timeline monotónica sensor→goal→chunk→end y logs de cuatro
+  puntos de cancelación.
+- **Recuperación:** `--stop`; este test no debe haber movido el robot.
+
+#### `VLA-T04` — Identificar `VLA_READY_LOW/MIDDLE` (Gate VLA-4)
+
+- **Escenario A, rechazo de control:** robot inmóvil en `home`, sin caja.
+  Ejecutar sólo shadow y conservar como evidencia el salto inicial ya observado
+  (~1,35 rad máximo); no repetir físicamente ese chunk.
+- **Escenario B, ready low:** `S_LOW_V1` vacía, base centrada, distancia
+  longitudinal aún por calibrar, brazos/cabeza/elevador/cintura en la pose
+  oficial low, cámara mostrando toda B0 aunque B0 permanece retirada durante el
+  primer canary shadow.
+- **Escenario C, ready middle:** igual con `S_MIDDLE_V1` y pose oficial middle.
+- **PC hoy:** sólo `--check`, secuencia shadow y `--trigger` para los tasks
+  correspondientes. La entrada física a ready está bloqueada hasta implementar
+  `cruzr_vla_ready_pose.sh --check --level ...`, obtener la trayectoria oficial
+  y autorizar su `--run` en otra sesión.
+
+  ```bash
+  # Existe y es shadow:
+  ./scripts/vla/run_ubtech_vla_shadow.sh --check
+  ./scripts/vla/run_ubtech_vla_shadow.sh --start-shadow --shadow-duration 300
+  ./scripts/vla/run_ubtech_vla_shadow.sh --start-inference
+  ./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id 0 --inference-duration 8
+  ./scripts/vla/run_ubtech_vla_shadow.sh --stop
+
+  # Especificación futura; --run no queda autorizado por este documento:
+  ./scripts/vla/cruzr_vla_ready_pose.sh --check --level low
+  ```
+- **PASS:** cinco primeros chunks consecutivos aceptados para 0/1 en low y 2/3
+  en middle; `D_BASE_EDGE_*`, 20D inicial y encuadre quedan versionados.
+- **FAIL:** se deduce ready del primer chunk, se suaviza el salto, caja/cámara
+  quedan fuera del encuadre o cualquier primer delta excede límites.
+- **Evidencia:** trayectoria oficial, hash, pose 20D, distancias, fotografías,
+  frames y cinco verdicts por task.
+- **Recuperación:** sólo la trayectoria determinista inversa aprobada; no usar
+  `home` si una caja/estante está dentro de la trayectoria.
+
+#### `VLA-T05` — Ejecutor sink y fallos (Gate VLA-5)
+
+- **Escenario:** sin robot y sin caja; chunks guardados de T01/T03 alimentan un
+  sink. Un mock representa la pose inicial de low/middle.
+- **Perfiles:** los ocho `P14_A…P20_AHLW`; para cada uno, un chunk válido y
+  fallos de dimensión, NaN, rango, velocidad, primer salto, timestamp, ID,
+  duplicado, timeout, estado viejo, cancel y doble cliente.
+- **PC:** futura `test_vla_executor_sink.py --axis-profile PROFILE
+  --fixture low|middle --fault-suite all --output DIR`.
+
+  ```bash
+  # Especificación futura; no publica al robot.
+  python3 scripts/vla/test_vla_executor_sink.py \
+    --axis-profile P14_A --fixture low --fault-suite all \
+    --output "$VLA_EVIDENCE_ROOT/$VLA_RUN_ID"
+  ```
+- **Mensajes:** entrada `Gr00tMotionChunk`; salida sólo un comando serializado al
+  sink. Los ejes bloqueados deben conservar exactamente el hold inicial.
+- **PASS:** todos los válidos aceptados, todos los inválidos rechazados,
+  deadman/STOP idempotentes y ninguna importación/publicación al topic físico.
+- **FAIL:** cero usado como hold, clipping oculta salto, ejecución continúa tras
+  timeout/cancel o aparece publisher en `/mc/sdk/robot_command`.
+- **Evidencia:** tests, cobertura, input/output por caso y conteo de publishers.
+- **Recuperación:** terminar procesos y demostrar cero publishers; no hay estado
+  físico que recuperar.
+
+#### `VLA-T06` — Matriz shadow 4×8×5 (Gate VLA-6)
+
+- **Escenarios task:** 0=`SUPPORTED_LOW`; 1=`HELD_LOW`; 2=`SUPPORTED_MIDDLE`;
+  3=`HELD_MIDDLE`. Para shadow inicial se permite un replay de imagen/estado;
+  una puesta en escena viva `HELD` sólo se hará después de contar con un método
+  seguro para establecerla.
+- **Posición:** B0 nominal `x=0`, `y=0,2485`, `yaw=0`; alturas y ready del
+  fixture. Sin variaciones OOD dentro de esta matriz.
+- **PC:** hoy sólo puede obtenerse P20 con `run_ubtech_vla_shadow.sh`. Antes de
+  declarar completa la matriz se implementará `run_vla_shadow_matrix.sh` para
+  aplicar las máscaras/holds P14–P20 y guardar cinco repeticiones por celda.
+
+  ```bash
+  # Especificación de una celda futura; repetir task/perfil según la matriz.
+  ./scripts/vla/run_vla_shadow_matrix.sh \
+    --scenario SUPPORTED_LOW --task-id 0 --axis-profile P14_A \
+    --repetitions 5 --output "$VLA_EVIDENCE_ROOT/$VLA_RUN_ID"
+  ```
+- **Orden:** task 0 perfiles 14→20, task 1 sólo tras establecer HELD; después 2
+  y 3. Un perfil no avanza si la celda anterior falla por seguridad.
+- **PASS de celda:** 5/5 outputs estructuralmente válidos, primer salto y
+  continuidad aceptados, sin movimiento significativo requerido en un grupo
+  bloqueado y cero publishers.
+- **FAIL:** un perfil elimina un grupo necesario, cambia el fixture entre
+  repeticiones o no conserva el output P20 bruto para comparación.
+- **Evidencia:** 160 bundles completos y tabla 32×métricas.
+- **Recuperación:** `--stop` después de cada bloque task; verificar
+  `operation_type=1` y cero publishers.
+
+#### `VLA-T07` — Canary físico sin caja (Gate VLA-7, bloqueado hoy)
+
+- **Autorización:** nueva confirmación física el día de la prueba; el plan no
+  la concede.
+- **Escenario:** `NO_BOX_READY`, superficie del nivel elegido completamente
+  vacía, B0 retirada >1,5 m, base en marca calibrada, ruedas bloqueadas,
+  cargador desconectado, ambos paros liberados sólo tras preflight, persona en
+  el paro y un único cliente.
+- **PC preflight:** `run_ubtech_vla_shadow.sh --check`,
+  `cruzr_vla_ready_pose.sh --check --level LEVEL` y futuro
+  `run_cruzr_vla_canary.sh --check --task-id N --axis-profile PROFILE`.
+
+  Secuencia especificada para cuando ambas herramientas y la primitiva estén
+  revisadas; hoy los comandos marcados como futuros deben fallar por ausencia:
+
+  ```bash
+  ./scripts/vla/run_ubtech_vla_shadow.sh --check
+  ./scripts/vla/cruzr_vla_ready_pose.sh --check --level low
+  ./scripts/vla/run_cruzr_vla_canary.sh --check \
+    --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY
+  ./scripts/vla/run_cruzr_vla_canary.sh --one-point \
+    --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY
+  ./scripts/vla/run_cruzr_vla_canary.sh --stop
+  ```
+- **Escalado:** una consigna/punto de delta pequeño → STOP/revisión; un chunk →
+  STOP; dos chunks → STOP; ventana corta por timeout; ventana corta por cancel.
+  Tres repeticiones limpias antes de añadir H, W o L.
+- **Mensaje:** nunca shell→`RobotCommand`; el canary toma un chunk ya aceptado,
+  aplica máscara/hold y usa la primitiva oficial todavía no demostrada.
+- **PASS:** movimiento sólo en grupos autorizados, velocidad/fuerza/latencia
+  dentro de contrato, STOP y cero velocidad demostrados, postura final
+  clasificable.
+- **FAIL inmediato:** cualquier contacto, oscilación, primer salto, grupo
+  bloqueado que se mueve, trip FT, imagen/estado viejo, STOP tardío o executor
+  ambiguo.
+- **Evidencia:** vídeo externo, logs sincronizados, estado/órdenes, fuerza,
+  latencia STOP y pose final.
+- **Recuperación:** STOP del executor; mantener postura. Recovery determinista
+  específico sólo tras clasificarla; no enviar home automáticamente.
+
+#### `VLA-T08-0` — PICK bajo físico, caja vacía (task 0)
+
+- **Inicio:** `SUPPORTED_LOW`; B0 en `S_LOW_V1`, pose nominal, masa medida,
+  abrazaderas vacías, `VLA_READY_LOW`, velocidad cero.
+- **PC:** preflights de T07 y futuro canary con `--task-id 0`. Primero perfil
+  ganador shadow de menor dimensión; no asumir P14 si la matriz requiere L/W/H.
+
+  ```bash
+  # Especificación futura, bloqueada hoy:
+  ./scripts/vla/run_cruzr_vla_canary.sh --check \
+    --task-id 0 --axis-profile PROFILE_APROBADO --scenario SUPPORTED_LOW
+  ./scripts/vla/run_cruzr_vla_canary.sh --one-chunk \
+    --task-id 0 --axis-profile PROFILE_APROBADO --scenario SUPPORTED_LOW
+  ./scripts/vla/run_cruzr_vla_canary.sh --stop
+  ```
+- **Ejercicio:** un canary, después tres y finalmente diez repeticiones. Cada
+  repetición termina al demostrar `HELD_LOW` o al primer fallo.
+- **PASS:** B0 suspendida estable, sin apoyo ni contacto externo, fuerza dentro
+  de protección; fin de tarea y estado físico concuerdan.
+- **Recuperación:** si `SUPPORTED`, retirar brazos con trayectoria específica;
+  si `HELD`, depositar mediante recovery dedicado; si `UNKNOWN`, STOP y no home.
+
+#### `VLA-T08-1` — PLACE bajo físico, caja vacía (task 1)
+
+- **Inicio:** `HELD_LOW` demostrado, B0 centrada respecto de la estación,
+  `S_LOW_V1` vacía y `VLA_READY_PLACE_LOW` validada.
+- **PC:** futuro canary con `--task-id 1`; no iniciar desde home ni improvisar
+  el agarre para crear el estado inicial.
+
+  ```bash
+  # Especificación futura, bloqueada hoy:
+  ./scripts/vla/run_cruzr_vla_canary.sh --check \
+    --task-id 1 --axis-profile PROFILE_APROBADO --scenario HELD_LOW
+  ./scripts/vla/run_cruzr_vla_canary.sh --one-chunk \
+    --task-id 1 --axis-profile PROFILE_APROBADO --scenario HELD_LOW
+  ./scripts/vla/run_cruzr_vla_canary.sh --stop
+  ```
+- **Ejercicio:** una sola colocación por ensayo; STOP tras apoyo y retirada.
+- **PASS:** `SUPPORTED_LOW`, B0 estable dentro de tolerancias, abrazaderas
+  libres, brazos retirados y fuerza descargada.
+- **Recuperación:** si sigue `HELD`, volver a ready-place; si queda `PARTIAL`,
+  STOP y retirar obstáculo sólo con procedimiento específico.
+
+#### `VLA-T08-2` — PICK medio físico, caja vacía (task 2)
+
+- **Inicio:** `SUPPORTED_MIDDLE`; B0 nominal en `S_MIDDLE_V1`, abrazaderas
+  vacías, `VLA_READY_MIDDLE`, cámara con caja completa.
+- **PC:** igual a T08-0 con `--task-id 2`.
+
+  ```bash
+  # Especificación futura, bloqueada hoy:
+  ./scripts/vla/run_cruzr_vla_canary.sh --check \
+    --task-id 2 --axis-profile PROFILE_APROBADO --scenario SUPPORTED_MIDDLE
+  ./scripts/vla/run_cruzr_vla_canary.sh --one-chunk \
+    --task-id 2 --axis-profile PROFILE_APROBADO --scenario SUPPORTED_MIDDLE
+  ./scripts/vla/run_cruzr_vla_canary.sh --stop
+  ```
+- **PASS:** `HELD_MIDDLE` estable y mismos límites de seguridad; se reporta por
+  separado de low.
+- **Recuperación:** depósito dedicado en `S_MIDDLE_V1`; nunca home con B0
+  sujeta.
+
+#### `VLA-T08-3` — PLACE medio físico, caja vacía (task 3)
+
+- **Inicio:** `HELD_MIDDLE` demostrado y `VLA_READY_PLACE_MIDDLE`; superficie
+  media vacía.
+- **PC:** igual a T08-1 con `--task-id 3`.
+
+  ```bash
+  # Especificación futura, bloqueada hoy:
+  ./scripts/vla/run_cruzr_vla_canary.sh --check \
+    --task-id 3 --axis-profile PROFILE_APROBADO --scenario HELD_MIDDLE
+  ./scripts/vla/run_cruzr_vla_canary.sh --one-chunk \
+    --task-id 3 --axis-profile PROFILE_APROBADO --scenario HELD_MIDDLE
+  ./scripts/vla/run_cruzr_vla_canary.sh --stop
+  ```
+- **PASS:** `SUPPORTED_MIDDLE`, B0 estable, abrazaderas libres y retirada limpia.
+- **Recuperación:** específica según `HELD/SUPPORTED/PARTIAL/UNKNOWN`.
+
+Para cada T08 la progresión es `1 + 3 + 10` sólo si no ocurre ningún fallo
+peligroso. Contenido, chasis, navegación, otra caja y volcado quedan fuera.
+
+#### `VLA-T09` — Selección del perfil mínimo (Gate VLA-9)
+
+- **Escenario:** no añade movimiento; analiza T01–T08 preservando cada fixture.
+- **PC:** futura `analyze_vla_campaign.py --input EVIDENCE_ROOT
+  --select-minimal-profile --output REPORT`.
+
+  ```bash
+  # Especificación futura; sólo analiza evidencia.
+  python3 scripts/vla/analyze_vla_campaign.py \
+    --input "$VLA_EVIDENCE_ROOT" --select-minimal-profile \
+    --output "$VLA_EVIDENCE_ROOT/profile-selection.json"
+  ```
+- **Comparación:** por task, P14 frente a todos los superconjuntos; seguridad,
+  recovery, éxito, continuidad/fuerza y sólo después tiempo.
+- **PASS:** una decisión independiente por task con intervalo de confianza y
+  razón para cada grupo H/L/W habilitado o bloqueado.
+- **FAIL:** elegir P20 por ser “completo”, mezclar low/middle o concluir con una
+  sola repetición.
+- **Salida:** tabla `task→profile`, pose hold de grupos bloqueados y dominio
+  físico exacto aprobado.
+
+#### `VLA-T10` — Checkpoint C1/C2 y regresión (Gate VLA-10)
+
+- **Escenario de entrenamiento:** sin conexión de salida al robot. C0 permanece
+  inmutable. Las demostraciones nuevas conservan el `scenario_id`, geometría,
+  alturas, pose, task text y fronteras de episodio.
+- **C1:** B0 y nuevas cajas, alturas/poses/yaw y futuros `TIP/POUR`, manteniendo
+  1 RGB, abrazaderas y acción 20D. Mezclar tareas 0–3 para evitar olvido.
+- **C2:** sólo si cambian entradas/salidas —dedos, pinza activa, fuerza como
+  entrada, profundidad, otra cámara o chasis—; partir de GR00T N1.5 base con un
+  DataConfig nuevo.
+- **PC:** `cruzrss2_vla_pack-002/gr00t_finetune.py` es el entrenador proveedor,
+  pero la invocación reproducible se encapsulará en
+  `train_cruzr_vla_candidate.sh`; no se lanza directamente hasta congelar
+  manifest/splits/config/receta y disponer de rollback.
+
+  ```bash
+  # Especificación futura; sólo entrenamiento, sin salida al robot.
+  ./scripts/vla/train_cruzr_vla_candidate.sh \
+    --base C1_CONTINUE_40000 --dataset-manifest DATASET_MANIFEST \
+    --data-config utars1 --output CHECKPOINT_OUTPUT
+  ```
+- **Validación:** cada checkpoint candidato repite T01–T09. Primero offline,
+  después shadow; ningún peso entrenado entra directamente a canary.
+- **PASS:** mejora demostrada en tarea nueva sin regresión inaceptable de 0–3,
+  hashes/receta/datos reproducibles y dominio explícito.
+- **FAIL:** training/test comparten sesión o caja, C0 se sobrescribe, cambia el
+  contrato sin DataConfig nuevo o se prueba físicamente antes de shadow.
+- **Evidencia:** dataset manifest, splits, licencia/procedencia, configuración,
+  logs, checkpoints, métricas y model card.
+
+### 0.21 Orden operativo para comenzar
+
+El trabajo ejecutable ahora, sin movimiento, es:
+
+```text
+VLA-T00 -> implementar herramientas offline -> VLA-T01 -> VLA-T02 -> VLA-T03
+        -> obtener/validar VLA_READY -> VLA-T04 -> VLA-T05 -> VLA-T06
+```
+
+VLA-T07 y VLA-T08 están bloqueados por tres condiciones independientes:
+
+1. no está demostrada la trayectoria oficial `VLA_READY_LOW/MIDDLE`;
+2. no existe todavía el ejecutor canary revisado con STOP/deadman;
+3. no está demostrada la primitiva física `clamp_s2_joints_trajectory`.
+
+Por tanto, la primera sesión práctica debe montar/medir `B0_PROVISIONAL`,
+`S_LOW_V1` y `S_MIDDLE_V1`, fotografiar el fixture y ejecutar **T00**. El
+primer goal permitido después será un goal shadow; no un mensaje de movimiento.
+
 ## 1. Resultado buscado
 
 Construir y validar un flujo recuperable que, con **una sola caja manipulada por
