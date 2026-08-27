@@ -242,6 +242,16 @@ STOP; sin embargo, `VLA_RUN_DIR` no estaba definido y `tee` intentó escribir en
 `INCOMPLETE_EVIDENCE_EMPTY_VLA_RUN_DIR`; repetir este mismo bloque no mueve el
 robot y es obligatorio antes de marcar E1.1 como `PASS`.
 
+**Repetición verificada:** `20260827T141244_E1.1`, estado `PASS`. Existen cinco
+logs no vacíos y `sha256sum -c logs.sha256` valida los cinco. Vision y Motion
+respondieron; paquete `codes-S2`/`checkpoint-40000`/abrazaderas correcto; ambos
+contenedores terminaron `exited`; `verify_installation` comprobó además
+`restart=no`; publicadores físicos `0` y `SHADOW_SESSION_STOPPED=yes`. Resultado
+estructurado en
+`Humanoide-vla-evidence/20260827T141244_E1.1/actual_result.yaml`. E1.2 queda
+autorizado como inspección de sólo lectura; no se autoriza inferencia ni
+movimiento por este PASS.
+
 #### Experimento 1.2 — Auditar el fixture, el dataset y la pose S2 suministrada
 
 **Estado:** `EJECUTABLE_LECTURA`; usa `jq`, `sha256sum` y VLC instalados.
