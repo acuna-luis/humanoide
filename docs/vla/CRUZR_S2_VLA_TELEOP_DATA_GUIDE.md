@@ -20,6 +20,12 @@ No es una autorización para movimiento VLA autónomo. La activación física si
 condicionada por los bloqueos de
 [CRUZR_S2_VLA_SAFE_ENABLEMENT.md](../guides/CRUZR_S2_VLA_SAFE_ENABLEMENT.md).
 
+La campaña prioritaria para caracterizar el checkpoint intacto, comparar las
+ocho combinaciones funcionales de 14 a 20 ejes, validar los cuatro task IDs y
+decidir entre continuar el checkpoint o partir de GR00T base está definida al
+principio de [`../plan_de_trabajo.md`](../plan_de_trabajo.md). Sus gates son
+obligatorios antes de incorporar VLA a la misión física de cajas.
+
 ### Convenciones de evidencia
 
 - **Verificado**: observado en el robot o inspeccionado en los paquetes

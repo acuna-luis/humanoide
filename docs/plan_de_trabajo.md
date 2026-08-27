@@ -6,6 +6,403 @@
 
 **Unidad:** Cruzr S2 `WAE001UBT60000669`, abrazaderas, `HW_TYPE=cruzr_s2_v1`
 
+## 0. Próximo bloque prioritario: caracterización integral del VLA
+
+Éste es el trabajo que se realizará **antes** de ampliar la misión de cajas. Su
+objetivo es determinar, con evidencia reproducible, qué puede ejecutar el
+`checkpoint-40000` intacto, qué subconjunto de sus 20 salidas debe gobernar el
+robot y qué capacidades requieren continuar el entrenamiento.
+
+La campaña no presupone que 20 ejes sean mejores que 14. Probará todas las
+combinaciones funcionales razonables y conservará el menor espacio de mando que
+complete la tarea de forma segura y repetible.
+
+Este apartado es planificación. No habilita el publicador físico, no arranca
+los contenedores VLA y no autoriza una postura `VLA-ready` ni movimiento.
+
+### 0.1 Capacidad que se somete a prueba
+
+El checkpoint actual está entrenado, no simplemente propuesto, para:
+
+| Task ID canónico | Instrucción exacta | Episodios |
+|---:|---|---:|
+| 0 | `Pick up the large box from the lowest level of shelf` | 150 |
+| 1 | `Place the large box on the lowest level of shelf` | 150 |
+| 2 | `Pick up the large box from the middle level of shelf` | 100 |
+| 3 | `Place the large box on the middle level of shelf` | 100 |
+
+Su contrato verificado es:
+
+- una RGB de la cámara estéreo principal; fuente `960 × 576`, recorte 0,95 y
+  entrada de modelo `224 × 224`;
+- una de las cuatro instrucciones anteriores;
+- una muestra de 20 posiciones articulares como estado;
+- salida de 10 posiciones absolutas por 20 articulaciones;
+- orden: 7 brazo izquierdo, 7 derecho, 2 cabeza, 3 elevador y 1 cintura;
+- normalización `min_max`, cuatro pasos de denoising y cómputo `bfloat16`;
+- 500 episodios, 105 207 frames, checkpoint en step 40 000, batch 16 y
+  aproximadamente 6,08 épocas;
+- 12 valores FT guardados en los datos pero **no consumidos por el modelo**;
+- ninguna acción para chasis, dedos ni pinza eléctrica.
+
+La caja física y las alturas exactas del dataset no están especificadas. Los
+nombres de archivo sugieren estantes de 55–115, pero eso no constituye una
+medida verificable y no se usará como rango operativo.
+
+El comentario de `InferenceTask.action` contiene un orden antiguo de tareas que
+no coincide con `tasks.jsonl` ni con el YAML vivo. Antes de probar se fijará un
+único catálogo canónico con los IDs de la tabla anterior.
+
+### 0.2 Qué significa probar de 14 a 20
+
+El modelo siempre calcula 20 valores. Lo que varía es qué grupos puede publicar
+un ejecutor independiente. Los ejes bloqueados se mantienen en su posición
+real/preposición validada; nunca se sustituyen por cero.
+
+Se consideran atómicos los grupos funcionales:
+
+- `A`: ambos brazos, 14 ejes;
+- `H`: cabeza, 2 ejes;
+- `L`: elevador, 3 ejes;
+- `W`: cintura, 1 eje.
+
+El conjunto exhaustivo de combinaciones por grupos es:
+
+| Perfil | Dimensiones habilitadas | Grupos | Pregunta que responde |
+|---|---:|---|---|
+| `P14_A` | 14 | A | ¿Basta preposicionar cuerpo/cámara y dejar al VLA sólo la manipulación? |
+| `P15_AW` | 15 | A+W | ¿La pequeña corrección de cintura mejora alcance sin mover elevador/cámara? |
+| `P16_AH` | 16 | A+H | ¿El movimiento de cabeza aporta observación o desestabiliza el encuadre? |
+| `P17_AL` | 17 | A+L | ¿El elevador aprendido es necesario para distinguir alturas? |
+| `P17_AHW` | 17 | A+H+W | ¿Cabeza+cintura ayudan cuando la altura está preposicionada? |
+| `P18_ALW` | 18 | A+L+W | ¿Elevador+cintura bastan manteniendo fija la cámara? |
+| `P19_AHL` | 19 | A+H+L | ¿Cabeza+elevador bastan manteniendo fija la cintura? |
+| `P20_AHLW` | 20 | A+H+L+W | ¿La política completa supera de forma demostrable a un perfil reducido? |
+
+Hay dos perfiles de 17 dimensiones porque son combinaciones funcionalmente
+distintas. No se probarán los 64 subconjuntos arbitrarios de seis ejes: romper
+un grupo cinemático —por ejemplo mandar sólo una articulación del elevador— no
+representa una capacidad prevista y puede ser físicamente inválido.
+
+### 0.3 Matriz mínima de cobertura
+
+La matriz shadow base tiene `4 tareas × 8 perfiles = 32 celdas`. Cada tarea se
+ejecuta desde su postura baja o media correspondiente y con cinco repeticiones
+controladas, para un mínimo de 160 inferencias aceptadas o rechazadas con causa.
+
+Por cada celda se registran además:
+
+- checkpoint/hash, configuración, seed y task ID;
+- imagen, estado 20D y postura inicial;
+- chunk bruto 10×20 antes de máscara y chunk efectivo después de máscara;
+- latencia, uso de GPU/VRAM y frecuencia real;
+- clipping por eje, rango, velocidad, primer salto y continuidad entre chunks;
+- `flag_pred`, criterio de fin, cancelación y timeout;
+- veredicto `ACCEPT`, `REJECT_SAFE`, `OOD` o `INVALID_RUNTIME`.
+
+Las pruebas físicas no heredan automáticamente las 32 celdas. Sólo una celda
+aprobada offline y shadow puede pasar, una por una, al canary físico.
+
+### 0.4 Gate VLA-0 — Congelar artefactos y corregir contradicciones
+
+**Sólo lectura y cambios en repositorio; ningún movimiento.**
+
+1. Calcular y guardar SHA-256 de pesos, `config.json`, metadatos, DataConfig,
+   YAML vivo, runtime y dataset.
+2. Confirmar que sólo existe `checkpoint-40000`; no llamar “alternativa” a un
+   checkpoint que no esté físicamente disponible.
+3. Fijar el catálogo task ID 0–3 de `tasks.jsonl` y hacer que scripts, action y
+   logs lo validen antes de inferir.
+4. Inventariar exactamente los 20 nombres, unidades, límites min/max y orden.
+5. Separar límites del dataset, límites mecánicos del robot y límites
+   conservadores del canary; ninguno sustituye a los otros.
+6. Resolver documentalmente estas inconsistencias antes de movimiento:
+   - dataset declarado a 120 FPS frente a puntos runtime cada 0,08 s;
+   - inferencia a 0,2 Hz frente a un chunk que termina en 0,72 s;
+   - `continuous_end_chunk_num=5` declarado pero no aplicado por el código;
+   - `/mc/sdk/robot_state` sin muestras frente al fallback
+     `/mc/whole_joint_states`;
+   - definición/ausencia de `clamp_s2_joints_trajectory`.
+7. Demostrar que ambos contenedores continúan con `restart=no` y que shadow
+   crea cero publicadores en `/mc/sdk/robot_command`.
+
+**Salida del gate:** manifiesto inmutable de la campaña y lista cerrada de
+deudas. Cualquier cambio posterior genera un nuevo `runtime_id`.
+
+### 0.5 Gate VLA-1 — Evaluación offline del checkpoint intacto
+
+**Sin conexión de salida al robot.**
+
+1. Crear splits retenidos por episodio y sesión. El dataset suministrado sólo
+   declara `train=0:500`, por lo que no existe evaluación independiente.
+2. Ejecutar las cuatro tareas sobre episodios no usados para seleccionar
+   parámetros de evaluación.
+3. Comparar cada predicción con la trayectoria 20D registrada:
+   - error por articulación y por horizonte;
+   - error de primer punto y endpoint;
+   - continuidad entre ventanas;
+   - porcentaje recortado a min/max;
+   - precisión y anticipación del `flag_pred`.
+4. Ejecutar cinco inferencias idénticas con seed fijo y cinco con seeds
+   distintos para medir variabilidad de la difusión.
+5. Auditar separadamente recogida, depósito, nivel bajo y nivel medio; una media
+   global no puede ocultar el fallo de una tarea.
+6. Revisar muestras visuales y medir, si es posible, caja, estantes, encuadre,
+   iluminación, offsets y yaw observados. Lo que no se pueda medir queda
+   `UNKNOWN`, no se atribuye al modelo.
+7. Probar replay puramente cinemático de los chunks; no publicar comandos.
+
+**Criterio de avance:** chunks finitos 10×20, catálogo correcto, métricas por
+tarea y ningún supuesto pendiente sobre el orden de ejes.
+
+### 0.6 Gate VLA-2 — Robustez, límites y fuera de distribución
+
+**Offline o shadow sin publicador.**
+
+Probar sistemáticamente:
+
+| Familia | Casos |
+|---|---|
+| Entrada nominal | caja/estante del dataset, postura baja y media |
+| Caja | ausente, parcialmente ocluida, desplazada lateral/profundidad, yaw distinto, otro tamaño/color |
+| Escena | luz baja/alta, fondo cambiado, persona fuera de envolvente pero visible, receptor añadido |
+| Cámara | frame congelado, timestamp viejo, pérdida, oclusión y resolución incorrecta |
+| Estado | articulación ausente, orden cambiado, NaN/Inf, timestamp viejo y valores cerca/fuera de rango |
+| Lenguaje | IDs 0–3 correctos, ID inválido y contradicción ID/instrucción |
+| Runtime | pérdida de Vision/Motion, chunk duplicado, ID regresivo, timeout y cancelación |
+
+El resultado esperado para entradas inválidas no es “algún movimiento
+razonable”, sino rechazo antes del ejecutor. Los casos válidos pero fuera de la
+distribución delimitan el dominio que requerirá nuevos datos.
+
+**Criterio de avance:** 100 % de entradas estructuralmente inválidas rechazadas
+y mapa OOD por tarea publicado.
+
+### 0.7 Gate VLA-3 — Resolver el contrato temporal y el fin de tarea
+
+Antes de movimiento se debe elegir y demostrar una sola semántica temporal:
+
+1. determinar si los 120 FPS representan muestras físicas, interpolación o
+   sólo timestamps de exportación;
+2. determinar por qué el runtime expande 10 filas a puntos de 80 ms;
+3. fijar la frecuencia de inferencia y qué mantiene el robot entre chunks;
+4. prohibir huecos sin comando vigente, repetición silenciosa de un chunk viejo
+   o colas que ejecuten después de STOP;
+5. implementar y probar `N` flags consecutivos si ésa es la condición de fin,
+   o eliminar el parámetro engañoso;
+6. probar cancelación antes, durante y después de inferencia;
+7. probar pérdida de imagen/estado y expiración del último chunk.
+
+**Criterio de avance:** timeline documentada extremo a extremo —sensor,
+inferencia, chunk, ejecutor y feedback— y STOP con latencia medida.
+
+### 0.8 Gate VLA-4 — Posturas `VLA-ready` baja y media
+
+El checkpoint ya demostró que `home` no es una postura inicial compatible:
+ocho ejes de brazo superaron el límite conservador y el máximo rondó 1,35 rad.
+
+1. Localizar la definición oficial de `s2_vla_pick_large_teleop_ready` o pedirla
+   a UBTECH; no reconstruirla a partir del primer chunk.
+2. Definir `VLA_READY_LOW` y `VLA_READY_MIDDLE`, incluyendo cabeza, elevador,
+   cintura, caja y encuadre.
+3. Validar cada postura primero como trayectoria determinista independiente,
+   con preflight físico fresco y autorización específica en otra intervención.
+4. Repetir shadow de los cuatro tasks desde su postura correcta.
+5. Rechazar todo chunk cuyo primer punto exceda los límites por eje; no ocultar
+   el salto con clipping o smoothing.
+6. Registrar cuánto cambiarían H/L/W. Esto decide si `P14_A` puede ser fiel o si
+   ignoraría una parte esencial de la política.
+
+**Criterio de avance:** cinco primeros chunks consecutivos aceptados por task y
+postura, sin mover el robot durante esta evaluación.
+
+### 0.9 Gate VLA-5 — Ejecutor independiente, en sink/simulación
+
+El ejecutor no será una modificación rápida del nodo de inferencia. Debe:
+
+1. aceptar únicamente `runtime_id`, checkpoint, task y perfil de ejes
+   autorizados;
+2. validar 10×20, finitud, orden, rango, timestamps, monotonía de `chunk_id`,
+   estado fresco y primer salto;
+3. publicar sólo los nombres habilitados; los grupos bloqueados permanecen bajo
+   hold determinista en su postura validada;
+4. tener deadman, timeout de estado/imagen/chunk, cancelación, STOP externo y
+   límite de duración;
+5. no importar ni publicar al topic físico en modo `sink`, `offline` o
+   `shadow`;
+6. impedir dos clientes, replays tardíos y ejecución después de cancelación;
+7. conservar protecciones FT, límites, anticolisión y paros del robot;
+8. registrar comando solicitado, aceptado, rechazado y estado observado;
+9. verificar velocidad y aceleración con una primitiva oficial de trayectoria;
+10. fallar cerrado si la primitiva `clamp_s2_joints_trajectory` no existe o su
+    contrato no está demostrado.
+
+Los límites actuales del validador —no certificados como límites mecánicos—
+son: estado ≤1 s; tolerancia de rango 0,05; velocidad entre puntos de brazos
+1,25 rad/s, cabeza 0,50, elevador 0,25 y cintura 0,35; salto inicial máximo de
+brazos 0,35 rad, cabeza 0,20, elevador 0,25 y cintura 0,15. El canary físico
+puede imponer valores más estrictos, nunca más laxos sin evidencia.
+
+**Criterio de avance:** tests automatizados de aceptación/rechazo, STOP y
+máscaras para los ocho perfiles, sin publicador físico.
+
+### 0.10 Gate VLA-6 — Matriz shadow de los ocho perfiles
+
+Para cada una de las 32 celdas task/perfil:
+
+1. colocar lógicamente el estado correspondiente a `VLA_READY_LOW` o
+   `VLA_READY_MIDDLE`;
+2. generar cinco rollouts shadow;
+3. validar primero la salida completa P20 sin máscara;
+4. construir el chunk efectivo del perfil conservando en los ejes bloqueados
+   la postura de hold;
+5. comparar endpoint, continuidad y geometría con P20;
+6. medir si H, L o W tienen movimiento significativo o sólo ruido;
+7. simular la trayectoria y revisar autocolisión, alcance y encuadre;
+8. rechazar perfiles que eliminen un grupo necesario para completar la tarea.
+
+Resultados esperados que deben demostrarse, no suponerse:
+
+- `P14_A` puede funcionar si cuerpo/cámara se preposicionan y H/L/W permanecen
+  prácticamente constantes durante el task;
+- `P17_AL` puede reproducir mejor el cambio bajo/medio si el elevador forma
+  parte esencial de la demostración;
+- cabeza o cintura pueden permanecer bloqueadas si no mejoran la tarea;
+- `P20_AHLW` sólo se justifica si supera perfiles reducidos y conserva margen
+  de seguridad.
+
+**Criterio de avance:** tabla 32×métricas completa y recomendación de perfil por
+task. Shadow debe seguir mostrando cero publicadores físicos.
+
+### 0.11 Gate VLA-7 — Canary físico sin caja
+
+Este gate requiere una futura autorización explícita y un preflight físico
+nuevo. Se ejecuta en una sesión distinta; este documento no la concede.
+
+Orden de escalado por cada perfil aprobado:
+
+1. robot en postura `VLA-ready`, caja retirada y envolvente completa despejada;
+2. ejecutar una única consigna aceptada y de delta muy pequeño mediante la
+   primitiva segura;
+3. STOP, velocidad cero y revisión de logs;
+4. ejecutar un chunk aceptado;
+5. STOP y revisión;
+6. ejecutar dos chunks con continuidad demostrada;
+7. ejecutar una ventana corta cerrada por timeout y después por cancelación;
+8. repetir tres veces sin anomalía antes de añadir otro grupo.
+
+Orden recomendado de grupos, manteniendo siempre A como base:
+
+```text
+P14_A -> aislar P16_AH -> aislar P15_AW -> aislar P17_AL
+      -> P17_AHW / P18_ALW / P19_AHL -> P20_AHLW
+```
+
+“Aislar” significa que cada subsistema nuevo se prueba primero sin combinarlo
+con los otros. El elevador se prueba después de cabeza/cintura por su impacto en
+altura, alcance y centro de masa.
+
+**Aborta:** primer salto, movimiento de grupo bloqueado, contacto, trip FT,
+oscilación, pérdida de imagen/estado, latencia fuera del contrato, end flag
+prematuro, STOP tardío o postura final no clasificable.
+
+### 0.12 Gate VLA-8 — Las cuatro tareas físicas del checkpoint
+
+Sólo después del canary sin caja:
+
+1. usar una caja vacía cuya geometría y escena se hayan comparado con el
+   dataset; una caja “parecida” no se considera automáticamente equivalente;
+2. probar task 0 con `P14_A` desde `VLA_READY_LOW`;
+3. probar task 1 sólo cuando la caja esté `HELD` de forma demostrada y exista
+   una recuperación específica;
+4. repetir tasks 2 y 3 desde `VLA_READY_MIDDLE`;
+5. repetir cada task con los perfiles adicionales aprobados en shadow;
+6. ejecutar una sola caja y una sola tarea por ensayo;
+7. realizar 1 canary, después 3 repeticiones y finalmente 10 para declarar una
+   celda validada;
+8. no probar todavía contenido, navegación ni volcado.
+
+Éxito de `PICK`: caja suspendida estable, sin contacto externo, fuerza dentro
+de protección y estado `HELD` demostrado. Éxito de `PLACE`: apoyo estable,
+abrazaderas libres, brazos retirados y caja `SUPPORTED`. El `flag_pred` no
+sustituye estas verificaciones.
+
+**Criterio de avance:** matriz task/perfil con tasa de éxito, fuerza máxima,
+tiempo, STOP y recovery; cero fallos peligrosos.
+
+### 0.13 Gate VLA-9 — Seleccionar 14, 15, 16, 17, 18, 19 o 20
+
+La decisión se toma por tarea, no para todo el robot:
+
+| Evidencia | Decisión |
+|---|---|
+| P14 iguala P20 | Mantener cabeza/elevador/cintura deterministas |
+| Sólo L mejora bajo/medio | Usar P17_AL o preposicionar L determinísticamente, comparando ambos |
+| H mejora visibilidad sin inestabilidad | Considerar P16/P19/P20 |
+| W mejora alcance de forma repetible | Considerar P15/P18/P20 |
+| Un grupo no mejora éxito o aumenta riesgo | Mantenerlo bloqueado |
+| P20 supera significativamente y pasa todos los gates | Autorizarlo sólo para ese task/escena |
+
+La métrica prioriza: cero incidentes, STOP/recovery, éxito físico, continuidad,
+fuerza/contacto, repetibilidad y finalmente tiempo. No se habilita un eje sólo
+porque el checkpoint produzca un valor para él.
+
+### 0.14 Gate VLA-10 — Probar las posibilidades de evolución del checkpoint
+
+Después de establecer el baseline intacto se comparan tres ramas:
+
+| Rama | Punto de partida | Qué puede cubrir |
+|---|---|---|
+| `C0_VENDOR_40000` | checkpoint intacto | Las cuatro tareas originales dentro de su distribución |
+| `C1_CONTINUE_40000` | copia del checkpoint + mezcla de datos viejos/nuevos | Nuevos tamaños, poses, yaw, alturas y `TIP/POUR` con 1 RGB, abrazaderas y 20D |
+| `C2_GROOT_BASE` | `nvidia/GR00T-N1.5-3B` + DataConfig nuevo | Dedos, pinza activa, fuerza aprendida, más cámaras, profundidad o chasis |
+
+Para `C1`:
+
+1. conservar inmutable `C0`;
+2. capturar episodios nuevos con exactamente 1 RGB y estado/acción 20D;
+3. separar instrucciones `PICK`, `PLACE`, `TIP/POUR` y `RETURN_UPRIGHT`;
+4. mezclar tareas antiguas para evitar olvido;
+5. evaluar tareas antiguas y nuevas en splits por sesión/caja/altura;
+6. repetir desde Gate VLA-1 hasta VLA-9 para cada candidato.
+
+Para `C2` se define primero un contrato distinto; no se conectan pesos C0 a una
+salida que incluya dedos, base o fuerza.
+
+### 0.15 Campaña de generalización después del baseline VLA
+
+Sólo para el perfil/checkpoint ganador y mediante OFAT:
+
+1. posición lateral;
+2. profundidad;
+3. yaw;
+4. altura baja/media adicional;
+5. tamaño y color de caja;
+6. iluminación/fondo;
+7. caja vacía frente a carga ligera;
+8. receptor y volcado, tras entrenar `C1`.
+
+Cada variación se prueba offline, shadow, canary sin caja y caja vacía antes de
+carga ligera. Una combinación fuera del dataset no se convierte en capacidad
+por completar una sola vez.
+
+### 0.16 Entregables antes de continuar la misión de cajas
+
+- manifiesto de artefactos y catálogo task ID canónico;
+- informe de dataset, splits y geometría conocida/desconocida;
+- contrato temporal corregido;
+- ejecutor sink/simulación con ocho máscaras y tests;
+- reporte de 32 celdas shadow;
+- definición validada de posturas `VLA_READY_LOW/MIDDLE`;
+- reporte canary y físico por task/perfil, si se autoriza posteriormente;
+- decisión documentada de perfil mínimo por task;
+- decisión `C0`, `C1` o `C2` para recogida, depósito y futuro volcado;
+- rollback que detenga contenedores y deje cero publicadores físicos.
+
+Los stages 10–13 posteriores de este documento resumen captura, entrenamiento y
+despliegue dentro de la misión completa. En caso de discrepancia, esta campaña
+VLA prioritaria impone los gates más estrictos.
+
 ## 1. Resultado buscado
 
 Construir y validar un flujo recuperable que, con **una sola caja manipulada por
