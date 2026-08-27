@@ -61,9 +61,9 @@ Para eliminar “aproximadamente” y “frente al robot” se define:
    cambiaría la imagen y el volumen barrido. No se permiten mesas apiladas ni
    calzos.
 8. Para seguridad se usa `B0_SAFE`, vacía. Los frames del dataset muestran un
-   tote rígido gris abierto, con borde/asas negras y a veces un objeto pequeño
-   dentro; una caja de cartón o un tote de otro aspecto es OOD aunque mida lo
-   mismo. El lado de
+   tote rígido gris abierto de paredes altas, con borde gris, tiras/marcas negras
+   estrechas en algunos frames y un pequeño elemento con lazo dentro; una caja
+   de cartón o un tote de otro aspecto es OOD aunque mida lo mismo. El lado de
    `0,603 m` queda paralelo a los hombros. Su cara frontal queda a
    `0,050 ± 0,010 m` detrás del borde; el centro es `x=0`, `y=0,2485 m`,
    `yaw=0°` en `PLATFORM_FRAME`.
@@ -254,54 +254,41 @@ movimiento por este PASS.
 
 #### Experimento 1.2 — Auditar el fixture, el dataset y la pose S2 suministrada
 
-**Estado:** `EJECUTABLE_LECTURA`; usa `jq`, `sha256sum` y VLC instalados.
+**Estado:** `EJECUTABLE_LECTURA`; usa `jq`, `sha256sum` y VLC instalados. No
+reutiliza `VLA_RUN_DIR` de E1.1: aquella variable vivía en un subshell y ya no
+existe al volver al prompt.
 
-**Comandos:**
-
-```bash
-sha256sum \
-  cruzrss2_vla_pack-002/codes-S2/motion/s2_vla_scripts/s2_bio_vla/s2_vla_pick_large_teleop_ready.xml \
-  > "$VLA_RUN_DIR/s2_ready.sha256"
-sed -n '1,120p' \
-  cruzrss2_vla_pack-002/codes-S2/motion/s2_vla_scripts/s2_bio_vla/s2_vla_pick_large_teleop_ready.xml \
-  > "$VLA_RUN_DIR/s2_ready.xml.txt"
-jq -r '[.task_index,.task] | @tsv' \
-  cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319/meta/tasks.jsonl \
-  > "$VLA_RUN_DIR/tasks.tsv"
-```
-
-Extraer de forma determinista inicio/medio/final. Los tiempos proceden de la
-longitud de cada episodio dividida por 120 FPS:
+**Comando único recomendado:**
 
 ```bash
-mkdir -p "$VLA_RUN_DIR/reference_frames"
-while read -r VLA_EPISODE VLA_POSITION VLA_SECOND; do
-  VLA_VIDEO="cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319/videos/chunk-000/observation.images.rgb/episode_${VLA_EPISODE}.mp4"
-  cvlc --intf dummy --vout dummy --no-audio --no-video-title-show \
-    --video-filter=scene --scene-format=png --scene-ratio=1 --scene-replace \
-    --scene-path="$VLA_RUN_DIR/reference_frames" \
-    --scene-prefix="episode_${VLA_EPISODE}_${VLA_POSITION}" \
-    --start-time="$VLA_SECOND" --run-time=0.08 \
-    "$VLA_VIDEO" vlc://quit \
-    > "$VLA_RUN_DIR/reference_frames/episode_${VLA_EPISODE}_${VLA_POSITION}.log" 2>&1
-  test -s "$VLA_RUN_DIR/reference_frames/episode_${VLA_EPISODE}_${VLA_POSITION}.png"
-done <<'EOF'
-000000 start 0.05
-000000 middle 0.94
-000000 end 1.82
-000001 start 0.05
-000001 middle 0.65
-000001 end 1.25
-000090 start 0.05
-000090 middle 1.07
-000090 end 2.09
-000091 start 0.05
-000091 middle 1.43
-000091 end 2.80
-EOF
-sha256sum "$VLA_RUN_DIR"/reference_frames/*.png \
-  > "$VLA_RUN_DIR/reference_frames.sha256"
+./scripts/vla/audit_vla_experiment_e1_2.sh
 ```
+
+El script crea su propio directorio `<timestamp>_E1.2`, valida antes de escribir,
+comprueba el hash XML y los cuatro task IDs, y extrae de forma determinista
+inicio/medio/final. Los tiempos proceden de la longitud de cada episodio
+dividida por 120 FPS. Al terminar debe mostrar:
+
+```text
+E1.2_ARTIFACTS_OK=/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/...
+E1.2_STATUS=ARTIFACTS_EXTRACTED_PENDING_VISUAL_REVIEW
+```
+
+Ese estado exige inspeccionar los doce PNG antes de convertir el resultado a
+`PASS`; el script no declara por sí solo qué objeto aparece en las imágenes.
+
+**Intento fallido observado el 2026-08-27:** se ejecutaron las órdenes manuales
+después del subshell E1.1. `VLA_RUN_DIR` estaba vacío y las redirecciones
+intentaron crear `/s2_ready.sha256`, `/s2_ready.xml.txt` y `/tasks.tsv`, que el
+sistema rechazó. No se alteraron los artefactos originales ni el robot.
+
+**Repetición verificada:** `20260827T141837_E1.2`, estado `PASS`. El wrapper
+validó hash XML, preposiciones, catálogo exacto de tasks y doce PNG con hashes.
+La hoja de contacto confirma un tote rígido gris abierto de paredes altas y
+borde gris, con tiras/marcas negras estrechas en algunos frames y un pequeño
+elemento con lazo dentro; no es cartón. Permanecen `UNRESOLVED` la definición de
+`clamp_s2_joints_trajectory`, task ready instalado, alturas low/middle y pose
+horizontal del fixture. No hubo conexión al robot, inferencia ni publicadores.
 
 **Resultado esperado:** hash S2
 `f4025124491eba995ec824db3e3be91875f781a4b4e98928654bde9a021d8323`;
@@ -1204,8 +1191,9 @@ de arrancar inferencia.
 
 `B0_SAFE` es la caja de trabajo conocida por el detector `workbin`, no una
 demostración de que coincida con la “large box” del dataset. Los frames de los
-episodios 0/1/90/91 muestran un tote rígido gris abierto, con borde/asas negras
-y, en algunos frames, un objeto pequeño en el interior. Antes de una prueba
+episodios 0/1/90/91 muestran un tote rígido gris abierto de paredes altas, borde
+gris, tiras/marcas negras estrechas en algunos frames y un pequeño elemento con
+lazo en el interior. Antes de una prueba
 física se compara material, color, abertura, borde, asas y contenido además de
 la geometría. Una B0 vacía distinta sigue siendo el canary seguro, pero se
 etiqueta OOD hasta recopilar datos propios; no se convierte en “nominal” por

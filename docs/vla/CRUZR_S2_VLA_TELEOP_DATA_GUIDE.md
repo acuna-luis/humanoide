@@ -43,7 +43,8 @@ partir de la pose S2, cinemática, frames del dataset y proveedor antes de
 cualquier canary o PICK/PLACE.
 
 Los 12 frames inicio/medio/final inspeccionados de los episodios 0/1/90/91
-muestran un tote rígido gris abierto con borde/asas negras y un objeto pequeño
+muestran un tote rígido gris abierto de paredes altas y borde gris, con
+tiras/marcas negras estrechas en algunos frames y un pequeño elemento con lazo
 visible en el interior. `B0_SAFE` vacía reduce riesgo físico, pero se etiqueta
 OOD si su apariencia o contenido no coincide; la igualdad dimensional no basta.
 
