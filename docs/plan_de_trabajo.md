@@ -56,8 +56,10 @@ Para eliminar “aproximadamente” y “frente al robot” se define:
    fija su ancho ni su fondo: `0,80 × 0,75 m` es un **mínimo provisional del
    proyecto, no un máximo ni una dimensión del proveedor**. Puede ser mayor,
    pero se medirán y registrarán sus dimensiones exteriores reales para que E4.1
-   compruebe toda la plataforma en el modelo de colisiones. No se permiten
-   mesas apiladas ni calzos.
+   compruebe toda la plataforma en el modelo de colisiones. El baseline no lleva
+   compartimientos, laterales, fondo ni divisores: cualquiera de esos elementos
+   cambiaría la imagen y el volumen barrido. No se permiten mesas apiladas ni
+   calzos.
 8. Para seguridad se usa `B0_SAFE`, vacía. Los frames del dataset muestran un
    tote rígido gris abierto, con borde/asas negras y a veces un objeto pequeño
    dentro; una caja de cartón o un tote de otro aspecto es OOD aunque mida lo
@@ -71,6 +73,12 @@ Para eliminar “aproximadamente” y “frente al robot” se define:
 10. Nadie coloca o corrige caja/plataforma mientras shadow o inferencia estén
     activos. Primero se ejecuta `--stop`, luego se modifica el escenario y se
     fotografía, y sólo después se reinicia shadow.
+
+**Fixture disponible declarado por el propietario:** `MESA_T1`, dimensiones
+nominales `1,85 m` de ancho × `0,80 m` de fondo × `1,00 m` de altura. Es
+`PENDIENTE` hasta ejecutar E1.0: medir tablero y cuatro esquinas, comprobar
+nivelación, rigidez, estabilidad y registrar patas/travesaños. Su disponibilidad
+no resuelve `D_BUMPER_PLATFORM` ni autoriza acercarla al robot.
 
 Antes de E1.1 el robot, si está encendido, debe estar estable y sin movimiento,
 la teleoperación/PICO/UI cerradas y VLA detenido. Ningún experimento 1–5
@@ -1172,10 +1180,13 @@ confirmación del proveedor.
 La superficie será horizontal, rígida e inmóvil. El SDK no especifica ancho ni
 fondo: `0,80 × 0,75 m` es el mínimo provisional adoptado por el proyecto, no un
 máximo. Puede utilizarse una plataforma mayor si se registran sus dimensiones
-exteriores completas y E4.1 demuestra que no invade el volumen barrido. No se
-apilarán mesas ni se improvisarán calzos. La zona debajo, encima y alrededor de
-brazos/caja estará despejada; para gates físicos se mantendrá una envolvente
-mínima de 1,5 m y una persona junto al paro.
+exteriores completas y E4.1 demuestra que no invade el volumen barrido. El
+fixture inicial es una superficie abierta, sin compartimientos, laterales,
+respaldo ni divisores. Esos elementos sólo se introducirán como otro escenario
+después de modelar sus colisiones y validar o recopilar datos que los incluyan.
+No se apilarán mesas ni se improvisarán calzos. La zona debajo, encima y
+alrededor de brazos/caja estará despejada; para gates físicos se mantendrá una
+envolvente mínima de 1,5 m y una persona junto al paro.
 
 Se define `PLATFORM_FRAME` con origen en el centro del borde frontal de la
 superficie, `x` hacia la derecha del robot, `y` alejándose del robot y `z`
