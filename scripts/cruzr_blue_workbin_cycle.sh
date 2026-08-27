@@ -345,6 +345,51 @@ vision_info="$(docker exec "$motion_container" bash -lc 'source /opt/walker/setu
 grep -q 'Action server count: 1' <<<"$motion_info" || exit 25
 grep -q 'Action server count: 1' <<<"$vision_info" || exit 26
 
+# Un servidor de acción disponible no implica que todos los servos puedan
+# ejecutar una trayectoria. Tras un choque, el proceso de manipulación puede
+# seguir activo mientras un único eje permanece en FAULT. Bloqueamos antes de
+# consultar o enviar objetivos si cualquier articulación (excepto las ruedas)
+# tiene un código de error, el bit FAULT, no está Operation Enabled o conserva
+# una consigna latente alejada más de 0,01 rad de su posición inmóvil.
+actuator_state="$(docker exec "$motion_container" bash -lc '
+  source /opt/walker/setup.bash
+  timeout 8 rosa topic echo --once --no-daemon /mc/actuator_state
+')" || exit 33
+actuator_faults="$(python3 -c '
+import json
+import sys
+
+message = json.load(sys.stdin)
+faults = []
+for actuator in message.get("act_item", []):
+    actuator_id = int(actuator.get("id", 0))
+    if actuator_id in (18001, 18002):
+        continue
+    error_code = int(actuator.get("error_code", 0))
+    status = int(actuator.get("status", 0))
+    position = float(actuator.get("position", 0.0))
+    command_position = float(actuator.get("cmd_pos", position))
+    command_delta = command_position - position
+    operation_enabled = (status & 0x0007) == 0x0007
+    fault = bool(status & 0x0008)
+    stale_command = abs(command_delta) > 0.01
+    if error_code or fault or not operation_enabled or stale_command:
+        name = actuator.get("name", "unknown")
+        faults.append(
+            f"{actuator_id},{name},"
+            f"error=0x{error_code:04x},status=0x{status:04x},"
+            f"command_delta={command_delta:.6f}"
+        )
+print("\n".join(faults))
+' <<<"$actuator_state")"
+if [[ -n "$actuator_faults" ]]; then
+  while IFS= read -r fault; do
+    printf 'ACTUATOR_FAULT=%s\n' "$fault"
+  done <<<"$actuator_faults"
+  exit 33
+fi
+echo 'ACTUATORS_OPERATION_ENABLED=1'
+
 # v0.2.0 mantiene un cliente de acción persistente aun cuando no existe un
 # objetivo activo. El número de clientes ya no permite decidir si el robot
 # está ocupado; se inspecciona el estado real de los objetivos publicados por

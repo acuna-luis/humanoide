@@ -287,6 +287,51 @@ contiene la **acción teleoperada 20D** y cómo la sincroniza el centro de captu
 Guardar sólo `/mc/whole_joint_states` produciría observaciones, no necesariamente
 los objetivos que el operador ordenó.
 
+#### 6.2.1 Auditoría local del contrato 20D suministrado — 2026-08-27
+
+Esta sección registra evidencia del dataset local, no una especificación
+recibida del proveedor. Se inspeccionaron `meta/info.json`,
+`Utars_1RGBDataConfig` y los episodios `000000`, `000088` y `000499` de
+`utars_clamp_and_place_large_box_full_data_bio_lerobot_0319`.
+
+- **VERIFICADO — esquema**: `observation.state` contiene 32 valores. Los
+  primeros 20 son posiciones articulares y los 12 restantes son fuerza/par de
+  ambas muñecas. `action` contiene las mismas 20 articulaciones, en este orden:
+  `L_elbow_roll`, `L_elbow_yaw`, `L_shoulder_pitch`, `L_shoulder_roll`,
+  `L_shoulder_yaw`, `L_wrist_pitch`, `L_wrist_roll`, los siete equivalentes
+  derechos, `head_pitch`, `head_yaw`, `lifter_pitch_1`, `lifter_pitch_2`,
+  `lifter_pitch_3` y `waist_yaw`, todos con sufijo `_joint` en el metadato.
+- **VERIFICADO — horizonte**: `Utars_1RGBDataConfig` usa el estado del índice
+  actual y forma cada objetivo con 10 filas de acción consecutivas
+  (`action_indices = range(10)`); no hay un vector 200D almacenado por frame.
+- **OBSERVADO — relación estado/acción**: al comparar `action[t]` con las
+  primeras 20 posiciones de `observation.state[t]`, el error absoluto medio fue
+  `9.8915e-5`, `9.0236e-5` y `1.08006e-4` rad en los tres episodios. El máximo
+  observado fue `1.45221e-3` rad. Comparar la acción con el estado de un frame
+  posterior elevó el error medio a `2.12879e-3`, `1.77495e-3` y
+  `2.57668e-3` rad respectivamente. Por tanto, en estas muestras la acción está
+  alineada con una trayectoria articular prácticamente simultánea; no aparece
+  como un objetivo desplazado un frame completo hacia el futuro.
+- **VERIFICADO — timeline exportado**: los timestamps del parquet avanzan
+  exactamente `1/120 s`. Los MP4 examinados son H.264, `960x576`, 120 FPS, y
+  tienen el mismo número de frames que sus parquets: 225, 251 y 157. Todos los
+  frames decodificados de esas tres muestras fueron distintos por hash exacto.
+- **PENDIENTE**: lo anterior no demuestra si `action` procede de la consigna
+  teleoperada previa al actuador, de una lectura articular independiente o de
+  una conversión/interpolación del exportador. Tampoco demuestra que el sensor
+  físico entregue 120 imágenes nuevas por segundo ni identifica el reloj
+  maestro. Esas semánticas y la sincronización oficial siguen pendientes de
+  UBTECH/DSA.
+
+**INFERENCIA de trabajo, no contrato oficial**: si el proveedor demora el
+exportador, se puede construir un recolector pasivo compatible con la forma del
+dataset grabando RGB, el estado 20D reordenado, fuerza/par, XR y fronteras de
+episodio. Debe conservar en canales separados tanto la consigna teleoperada —si
+se localiza— como la posición ejecutada. Sólo después de comparar un episodio
+piloto extremo a extremo podrá decidirse si la trayectoria ejecutada se acepta
+como `action`; hasta entonces no debe etiquetarse como comando oficial ni usarse
+para una campaña grande.
+
 `shm_msgs/msg/Image2m` usa la infraestructura de imagen compartida del robot.
 Antes de confiar en `ros2 bag`, se debe demostrar con un episodio piloto que el
 bag contiene píxeles decodificables y no sólo metadatos de memoria compartida.

@@ -35,6 +35,7 @@ readonly CARRY_SCRIPT="$SCRIPT_DIR/$CARRY_SCRIPT_NAME"
 MODE="run"
 YES=0
 FAST=0
+FORCE_HELD_HOME=0
 TASK_LOCKED=""
 RESET_SERVICE_AVAILABLE=""
 RETREAT_REQUIRED=""
@@ -47,6 +48,7 @@ Uso:
   ./scripts/cruzr_recover_to_home.sh
   ./scripts/cruzr_recover_to_home.sh --check
   ./scripts/cruzr_recover_to_home.sh --run [--yes] [--fast]
+  ./scripts/cruzr_recover_to_home.sh --run --force-held-home [--yes]
 
 Modos:
   sin opción
@@ -60,6 +62,13 @@ Opciones:
   --yes    Omite la confirmación física inicial.
   --fast   Omite auditorías repetidas y usa las validaciones ya realizadas
            por el transporte; conserva detección de postura y resultados.
+  --force-held-home
+           Recuperación explícita del propietario desde una postura PICO no
+           reconocida o con una caja prescindible posiblemente sujeta. Omite
+           sólo la clasificación histórica, no paros, batería, cargador,
+           servidor de manipulación, hashes ni resultados. No mueve el chasis:
+           separa primero los brazos, por lo que la caja puede caer, y después
+           ejecuta home. Es incompatible con --fast.
   --help   Muestra esta ayuda.
 
 Antes de --run:
@@ -68,7 +77,9 @@ Antes de --run:
   - Mantén a todas las personas fuera del alcance de brazos, cabeza,
     cintura y elevador.
   - Las abrazaderas deben estar vacías y con espacio libre debajo y a ambos
-    lados durante la apertura previa.
+    lados durante la apertura previa, salvo con --force-held-home. En ese modo
+    la caja debe ser prescindible y toda la zona de caída debe estar libre de
+    personas, pies, cables, mesas y objetos que puedan salir despedidos.
   - Robot desenchufado del cargador y paro de emergencia preparado.
 
 El script puede retroceder el chasis, pero nunca vuelve hacia la mesa. No
@@ -99,6 +110,9 @@ while (($#)); do
     --fast)
       FAST=1
       ;;
+    --force-held-home)
+      FORCE_HELD_HOME=1
+      ;;
     --help|-h)
       usage
       exit 0
@@ -109,6 +123,13 @@ while (($#)); do
   esac
   shift
 done
+
+if ((FORCE_HELD_HOME == 1)); then
+  [[ "$MODE" == "run" ]] || \
+    die "--force-held-home sólo es válido con --run."
+  ((FAST == 0)) || \
+    die "--force-held-home exige el preflight completo; no puede combinarse con --fast."
+fi
 
 require_local_tools() {
   local command_name
@@ -231,8 +252,15 @@ REMOTE
   RETREAT_REQUIRED="$(awk -F= '/^RETREAT_REQUIRED=/ {print $2; exit}' <<<"$output")"
   [[ -n "$MANIPULATION_STATE" && -n "$RETREAT_REQUIRED" ]] || \
     die "El registro no produjo un estado de manipulación válido."
-  [[ "$RETREAT_REQUIRED" != "unsafe" ]] || \
-    die "Estado '$MANIPULATION_STATE': no es seguro ejecutar home automáticamente."
+  if ((FORCE_HELD_HOME == 1)); then
+    info "FORCE_HELD_HOME_SOURCE_STATE=$MANIPULATION_STATE"
+    MANIPULATION_STATE="owner_forced_held_or_teleop_pose"
+    RETREAT_REQUIRED="false"
+    info "FORCE_HELD_HOME_ACCEPTED=1; no se moverá el chasis y la apertura previa puede soltar la caja."
+  else
+    [[ "$RETREAT_REQUIRED" != "unsafe" ]] || \
+      die "Estado '$MANIPULATION_STATE': no es seguro ejecutar home automáticamente."
+  fi
 }
 
 check_reset_service() {
@@ -310,6 +338,26 @@ preflight() {
 
 confirm_run() {
   ((YES == 0)) || return 0
+  if ((FORCE_HELD_HOME == 1)); then
+    cat <<'EOF'
+
+RECUPERACIÓN FORZADA CON POSIBLE CAÍDA DE LA CAJA
+La secuencia NO moverá el chasis. Separará primero ambos brazos durante 3 s;
+la caja puede caer inmediatamente. Después moverá brazos, cabeza, cintura y
+elevador hasta home.
+
+Confirma AHORA que la caja es prescindible, la zona completa debajo y alrededor
+está libre de personas, pies, cables, mesas y objetos, el robot está estable,
+el cargador está desconectado y una persona atiende el paro.
+
+Escribe exactamente SOLTAR CAJA Y RECUPERAR A HOME para continuar:
+EOF
+    local force_answer
+    read -r force_answer
+    [[ "$force_answer" == "SOLTAR CAJA Y RECUPERAR A HOME" ]] || \
+      die "Recuperación forzada cancelada."
+    return 0
+  fi
   cat <<'EOF'
 
 La recuperación puede retroceder el chasis 0,50 m y después mover brazos,

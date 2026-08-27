@@ -15,6 +15,7 @@ checkpoint de forma gradual.
 - [Registro de misiones](templates/mission_log.csv): enlaza caja, estaciones, ruta y episodios PICK/PLACE.
 - [Registro de fases](templates/phase_log.csv): navegación, alineación, manipulación y recovery de cada misión.
 - [Activación segura del checkpoint suministrado](../guides/CRUZR_S2_VLA_SAFE_ENABLEMENT.md): estado del shadow mode y bloqueos actuales para movimiento físico.
+- [Plan de recogida, transporte, volcado y depósito multialtura](../plan_de_trabajo.md): gates deterministas, matriz de tamaños/poses y puntos de decisión para replay, PICO o VLA.
 
 ## Regla esencial
 

@@ -6,6 +6,11 @@ Esta guía define la preparación y la secuencia prevista para recoger el
 contenedor azul en la mesa 1, transportarlo hasta la mesa 2, depositarlo y
 terminar con el robot en `home`.
 
+La extensión para recoger a baja altura, volcar contenido y depositar la caja
+vacía a otra altura, con varios tamaños y poses, se planifica en
+[`../plan_de_trabajo.md`](../plan_de_trabajo.md). Esa extensión todavía no es
+una capacidad física validada.
+
 La arquitectura recomendada es:
 
 ```text
@@ -366,6 +371,57 @@ Los componentes de bajo nivel que reutiliza el orquestador son:
 ./scripts/cruzr_recover_to_home.sh \
   --run --yes --fast
 ```
+
+La recuperación anterior presupone que el depósito terminó y que las
+abrazaderas están vacías. Para el caso distinto de una postura PICO no
+reconocida con una caja **prescindible** todavía sujeta, el propietario autorizó
+un modo específico:
+
+```bash
+./scripts/cruzr_recover_to_home.sh --run --force-held-home
+```
+
+No debe combinarse con `--fast`. Sólo omite la inferencia histórica del log y
+no mueve el chasis; conserva el preflight completo. La separación inicial de
+los brazos puede dejar caer la caja, por lo que exige una zona de caída vacía y
+una persona junto al paro. Después de teleoperación debe seleccionarse primero
+`自动任务模式`/`auto_task` y esperar a que `/mc/manipulation/action` vuelva a
+tener servidor. Si el servidor o los estados frescos de seguridad no aparecen,
+el modo se bloquea y no se debe forzar más.
+
+El intento de recuperación del 27-08 confirmó además que un servidor de acción
+activo no demuestra que todos los ejes estén habilitados. Después del contacto
+contra la mesa, el hombro izquierdo yaw `4003` conservó
+`error_code=0x1001`/`status=0x0238` incluso después del reinicio; su habilitación
+terminó en timeout. El preflight de `cruzr_blue_workbin_cycle.sh` lee ahora
+`/mc/actuator_state` y rechaza cualquier articulación con error, bit FAULT o
+sin `Operation Enabled`, mostrando `ACTUATOR_FAULT=...`. Este gate no tiene
+override: una caja prescindible permite aceptar su caída, pero no permite
+mover una cadena cinemática con un servo en fallo. Debe mantenerse el robot
+estable y solicitar a UBTECH el significado y procedimiento oficial de
+recuperación antes de resetear el eje o enviar `home`.
+
+Una prueba excepcional posterior intentó separar únicamente el brazo derecho
+50 mm en 6 s para soltar una caja prescindible. El servidor aceptó el objetivo,
+pero lo terminó como `MoveToGoalFailed`/`status=6`; las posiciones y el fault
+no cambiaron. El intento dejó, no obstante, consignas derechas latentes de
+hasta 0,1043 rad. Por ello tampoco es seguro rearmar 4003 en caliente: al
+recuperarse el eje podrían aplicarse esas consignas. El gate comprueba ahora
+también `abs(cmd_pos-position) <= 0.01` rad. El XML temporal se retiró tanto del
+robot como del repositorio. El siguiente paso seguro es descartar el estado de
+mando mediante un apagado completo aprobado, volver a descubrir todo el stack
+y no rearmar hasta demostrar posiciones/consignas coincidentes.
+
+En la ejecución real, el operador retiró la caja durante el apagado y usó
+`KEY1`; los brazos descendieron sin trayectoria. No se considera un método de
+recuperación aprobado. El siguiente arranque, con el paro inicialmente
+accionado, descartó tanto el fault de 4003 como las consignas latentes. Al
+liberar el paro se verificaron todos los actuadores sin error,
+`status=0x1237`, velocidades cero y posiciones/consignas dentro de ±0,003 rad
+de cero. El robot ya estaba en `home` articular, por lo que no se envió otra
+trayectoria. El boot guard sí terminó en `failed` por
+`unexpected_control_state_unknown`; Control Center debe revalidarse por
+separado antes de otra misión o teleoperación.
 
 Si la alineación falla antes del depósito, el orquestador no abre los cogedores.
 Debe conservarse la zona despejada y diagnosticarse el estado antes de

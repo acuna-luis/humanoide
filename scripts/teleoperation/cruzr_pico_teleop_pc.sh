@@ -11,21 +11,36 @@ pico_adb_target="${PICO_ADB_TARGET:-}"
 robot_iface="${CRUZR_IFACE:-}"
 robot_pc_ip="${CRUZR_PC_IP:-}"
 robot_wifi_ssid="${CRUZR_ROBOT_WIFI_SSID:-Cruzr S2-0669}"
+robot_link_kind=""
+robot_connection_name=""
 backend_unit="ubt-controller.service"
 ui_unit="ubt-remote-control.service"
 backend_log="/opt/ubt/ubt_controller/logs/ubt_controller.log"
 required_arm="clamp"
-heartbeat_timeout_seconds=300
 all_controls_seconds="${PICO_ALL_CONTROLS_SECONDS:-120}"
-patched_backend_sha256="5083e9f0bef9142bfa6ad1b849c767cb9e5ab22e2edd99b981d6061decd7aec2"
+official_teleop_seconds="${PICO_OFFICIAL_TELEOP_SECONDS:-300}"
+allow_bimanual="${PICO_ALLOW_BIMANUAL:-1}"
+expected_backend_version="4.7.0"
+expected_ui_version="4.1.0"
+expected_backend_sha256="e88b83b7936a13f5fb71b99416e0d6bcc844b9361524ef709f87fd04ed449d16"
+expected_pico_control_sha256="46323392cacf3935c20ccbd535fb7609f71169fa48081e423a2f3b78db97b425"
 backend_executable="/opt/ubt/ubt_controller/ubt_controller"
+pico_control_executable="/usr/local/bin/pico_control"
 command_timeout_seconds=5
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 motion_askpass="$script_dir/../cruzr_blue_workbin_cycle.sh"
+camera_script="$script_dir/cruzr_pico_camera.sh"
+teleop_camera="${PICO_TELEOP_CAMERA:-main}"
+camera_pid=""
+camera_ready_file=""
+official_client_pid=""
+official_cleanup_done=0
 robot_user="${CRUZR_ROBOT_USER:-walker}"
 motion_ros_container="walker-ros.ros2-1"
 motion_app_container="walker-motion.manipulation_robot_app-1"
 expected_teleop_task="teleoperation/cruzr_clamp_pico_teleoperation"
+arms_only_config_path="/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_teleoperation/cruzr_clamp_pico_tele.yaml"
+arms_only_config_sha256="4e8d79a40e8b1f1fa5915de27ef60676fce4c9b5cec41cacfc0a1d9a7d117a44"
 minimum_battery_soc=30
 
 if [[ "${CRUZR_TELEOP_DEBUG:-0}" == "1" ]]; then
@@ -37,7 +52,7 @@ progress() {
   printf '[%(%H:%M:%S)T] %s\n' -1 "$*"
 }
 
-discover_robot_wifi_route() {
+discover_robot_link_route() {
   local route_line detected_iface detected_src connection_name active_type active_ssid
   route_line="$(ip -4 route get "$motion_ip" 2>/dev/null | head -n1)" ||
     die "No existe una ruta IPv4 hacia Motion $motion_ip."
@@ -63,16 +78,126 @@ discover_robot_wifi_route() {
 
   active_type="$(nmcli -g GENERAL.TYPE device show "$robot_iface" 2>/dev/null)" ||
     die "NetworkManager no reconoce la interfaz robot $robot_iface."
-  [[ "$active_type" == "wifi" ]] ||
-    die "La ruta del robot usa $robot_iface ($active_type), no la Wi-Fi $robot_wifi_ssid."
   connection_name="$(
     nmcli -g GENERAL.CONNECTION device show "$robot_iface" 2>/dev/null
   )" || die "No se pudo leer la conexión activa de $robot_iface."
-  active_ssid="$(
-    nmcli -g 802-11-wireless.ssid connection show "$connection_name" 2>/dev/null
-  )" || die "No se pudo leer el SSID de $connection_name."
-  [[ "$active_ssid" == "$robot_wifi_ssid" ]] ||
-    die "La ruta del robot usa SSID '$active_ssid', no '$robot_wifi_ssid'."
+  robot_connection_name="$connection_name"
+  case "$active_type" in
+    wifi)
+      active_ssid="$(
+        nmcli -g 802-11-wireless.ssid connection show "$connection_name" 2>/dev/null
+      )" || die "No se pudo leer el SSID de $connection_name."
+      [[ "$active_ssid" == "$robot_wifi_ssid" ]] ||
+        die "La ruta del robot usa SSID '$active_ssid', no '$robot_wifi_ssid'."
+      robot_link_kind="wifi"
+      ;;
+    ethernet)
+      robot_link_kind="ethernet"
+      ;;
+    *)
+      die "La ruta del robot usa $robot_iface con tipo no admitido '$active_type'."
+      ;;
+  esac
+}
+
+robot_link_runtime_ok() {
+  [[ -n "$robot_iface" && -n "$robot_pc_ip" ]] || return 1
+  [[ -d "/sys/class/net/$robot_iface" ]] || return 1
+  [[ -r "/sys/class/net/$robot_iface/carrier" ]] || return 1
+  [[ "$(<"/sys/class/net/$robot_iface/carrier")" == "1" ]] || return 1
+  ip -4 -o addr show dev "$robot_iface" 2>/dev/null |
+    grep -q " $robot_pc_ip/" || return 1
+  ip -4 route get "$motion_ip" 2>/dev/null |
+    grep -q "dev $robot_iface" || return 1
+}
+
+check_robot_arms_only_loaded() {
+  ensure_cmd ssh
+  ensure_cmd setsid
+  [[ -x "$motion_askpass" ]] ||
+    die "No existe el proveedor SSH local requerido: $motion_askpass"
+  discover_robot_link_route
+
+  local output
+  if ! output="$({
+    CRUZR_INTERNAL_ASKPASS=1 \
+    SSH_ASKPASS="$motion_askpass" \
+    SSH_ASKPASS_REQUIRE=force \
+    DISPLAY="${DISPLAY:-:0}" \
+    setsid -w timeout 20s ssh \
+      -o ConnectTimeout=6 \
+      -o ConnectionAttempts=1 \
+      -o PreferredAuthentications=password \
+      -o PubkeyAuthentication=no \
+      -o NumberOfPasswordPrompts=1 \
+      -o StrictHostKeyChecking=accept-new \
+      "$robot_user@$motion_ip" bash -s -- \
+        "$motion_app_container" "$arms_only_config_path" \
+        "$arms_only_config_sha256" "$expected_teleop_task" <<'REMOTE'
+set -Eeuo pipefail
+container="$1"
+config_path="$2"
+expected_sha="$3"
+task_name="$4"
+
+[[ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null)" == "true" ]] || exit 31
+actual_sha="$(docker exec "$container" sha256sum "$config_path" | awk '{print $1}')"
+[[ "$actual_sha" == "$expected_sha" ]] || {
+  printf 'ARMS_ONLY_CONFIG_SHA_ERROR=%s\n' "$actual_sha"
+  exit 32
+}
+
+latest="$(find /etc/walker/log/motion -maxdepth 1 -type f -name 'robot_app*.log' -printf '%T@ %p\n' | sort -nr | sed -n '1p' | cut -d' ' -f2-)"
+last_start="$(grep -n "BTree task: '$task_name' is start" "$latest" | tail -n1 | cut -d: -f1 || true)"
+[[ -n "$last_start" ]] || exit 33
+block="$(sed -n "${last_start},$((last_start + 79))p" "$latest")"
+waist="$(sed -nE 's/.*Waist tele mode: ([0-9]+).*/\1/p' <<<"$block" | sed -n '1p')"
+leg="$(sed -nE 's/.*Leg tele mode: ([0-9]+).*/\1/p' <<<"$block" | sed -n '1p')"
+hand="$(sed -nE 's/.*Hand type: ([^ ]+).*/\1/p' <<<"$block" | sed -n '1p')"
+[[ "$waist" == "0" && "$leg" == "0" && "$hand" == "clamp" ]] || {
+  printf 'ARMS_ONLY_NOT_LOADED=hand:%s,waist:%s,leg:%s\n' \
+    "${hand:-unknown}" "${waist:-unknown}" "${leg:-unknown}"
+  exit 34
+}
+printf 'ARMS_ONLY_CONFIG_SHA256=%s\n' "$actual_sha"
+printf 'ARMS_ONLY_LOADED=hand:%s,waist:%s,leg:%s\n' "$hand" "$waist" "$leg"
+REMOTE
+  } 2>&1)"; then
+    printf '%s\n' "$output" >&2
+    die "Motion todavía no ejecuta el perfil arms-only; salga de TeleopMode, vuelva a entrar y repita sólo --check-arms-only."
+  fi
+  printf '%s\n' "$output"
+}
+
+pico_camera_runtime_ok() {
+  [[ "$teleop_camera" == "off" ]] && return 0
+  [[ -n "$camera_pid" && -n "$camera_ready_file" ]] || return 1
+  kill -0 "$camera_pid" 2>/dev/null || return 1
+  [[ -s "$camera_ready_file" ]] || return 1
+  local modified now
+  modified="$(stat -c %Y "$camera_ready_file" 2>/dev/null)" || return 1
+  now="$(date +%s)"
+  ((now - modified <= 5)) || return 1
+}
+
+assert_runtime_links() {
+  local detect_json="$1"
+  local phase="$2"
+  local vr_status
+
+  if ! robot_link_runtime_ok; then
+    stop_all
+    die "Se perdió el enlace del robot ($robot_link_kind/$robot_iface) $phase; STOP solicitado."
+  fi
+  if ! pico_camera_runtime_ok; then
+    stop_all
+    die "Se perdió el stream de cámara PICO $phase; STOP solicitado."
+  fi
+  vr_status="$(jq -r '.content.vr_status' <<<"$detect_json")"
+  if [[ "$vr_status" != "1" ]]; then
+    stop_all
+    die "Se perdió HEAD+CONTROLLERS del PICO $phase (vr_status=$vr_status); STOP enviado."
+  fi
 }
 
 die() {
@@ -88,7 +213,10 @@ usage() {
   cat <<'EOF'
 Uso:
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check
+  ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check-arms-only
+  ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check-reload-ready
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check-motion-ready
+  ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --teleoperate
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --open-ui
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --gate-local
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --move-left-arm
@@ -98,41 +226,49 @@ Uso:
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --stop
 
 --check    Sólo lectura; valida PC, red, PICO y backend mostrando 7 etapas.
+--check-arms-only
+           Sólo lectura; demuestra hash y modos cargados de la tarea Motion.
+--check-reload-ready
+           Sólo lectura; comprueba seguridad Motion sin depender del visor.
 --check-motion-ready
            Sólo lectura; añade paros, batería, cargador, efector, tarea PICO,
            acción activa esperada y velocidad articular inmóvil.
+--teleoperate
+           Teleoperación oficial de brazos, incluido control bimanual. Sólo
+           inicia si Motion demuestra que la tarea clamp viva cargó
+           waist_mode=0 y leg_mode=0. PICO_ALLOW_BIMANUAL=0 restaura el gate
+           estricto de un brazo. Cualquier otro fallo sigue enviando STOP.
 --open-ui  Abre la interfaz después del backend. No inicia la publicación.
 --gate-local
            Gate interactivo local recomendado. Exige confirmación física,
-           arma el backend corregido con arm_type=clamp, emite una campana y
+           arma el backend con arm_type=clamp, emite una campana y
            muestra TOQUE AHORA, abre una ventana diagnóstica de 60 s y envía
-           STOP siempre al completar o fallar. El watchdog de heartbeat está
-           ampliado temporalmente a 300 s; esta ventana no valida heartbeat.
+           STOP siempre al completar o fallar. Actualmente se bloquea antes
+           de START hasta validar el protocolo oficial de enable de 4.7.0.
            Debe ejecutarse directamente en el terminal del PC; no coordinar
            el toque mediante chat o acceso remoto.
 --move-left-arm / --move-right-arm
-           Prueba física mínima de un único brazo. Primero exige 60 s estables
-           sin movimiento; después permite un solo gesto de 2-3 cm durante un
-           máximo de 5 s mientras se mantiene exclusivamente el grip elegido.
-           Al soltar el grip envía STOP inmediatamente. Comprueba además
-           paros, batería, cargador, efector, tarea PICO y robot inmóvil.
+           Bloqueados en 4.7.0 hasta validar Y/enable. Solicitan STOP y salen
+           antes de cualquier START.
 --all-controls
-           Prueba física integral: exige el mismo preflight, 60 s neutros y
-           después permite los controles nativos durante 120 s por defecto.
-           PICO_ALL_CONTROLS_SECONDS admite 120..180 s. Exige devolver X a
-           modo en sitio, cerrar B y restaurar con un segundo click cualquier
-           protección de fuerza conmutada. Siempre envía STOP al terminar.
+           Bloqueado por el mismo gate de 4.7.0; no envía START.
 --run      Alias compatible de --gate-local.
 --stop     Solicita EXIT_REMOTE_CONTROL y cierra la interfaz.
 
-Este script sólo cambia/ejecuta componentes del PC. No inventa el heartbeat
-del robot y conserva su STOP, configurado temporalmente a 300 s.
+Cuando el protocolo 4.7.0 quede validado, las pruebas exigirán primero la
+cámara principal del robot en XRoboToolkit. PICO_TELEOP_CAMERA conserva las
+fuentes main, stereo-right, waist, chassis u off.
+
+Este script sólo cambia/ejecuta componentes del PC. Con 4.7.0 conserva el
+binario oficial sin alterar heartbeat, enable ni selección de efector.
 
 Diagnóstico detallado opcional:
   CRUZR_TELEOP_DEBUG=1 ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check
 
 PICO_ADB_TARGET puede fijar explícitamente el transporte ADB (serial USB o
 IP:puerto). Si se omite, el script identifica el mismo visor por ro.serialno.
+Con PICO_TELEOP_CAMERA=off, --check puede continuar sin ADB sólo si demuestra
+simultáneamente peer XR 63901, serial esperado en el backend y vr_status=1.
 EOF
 }
 
@@ -143,14 +279,14 @@ check_robot_teleop_safety() {
   [[ -x "$motion_askpass" ]] ||
     die "No existe el proveedor SSH local requerido: $motion_askpass"
 
-  discover_robot_wifi_route
+  discover_robot_link_route
 
   local carrier="unknown"
   if [[ -r "/sys/class/net/$robot_iface/carrier" ]]; then
     carrier="$(<"/sys/class/net/$robot_iface/carrier")"
   fi
   [[ "$carrier" == "1" ]] ||
-    die "$robot_iface no tiene enlace Wi-Fi (carrier=$carrier). Reconecte $robot_wifi_ssid."
+    die "$robot_iface no tiene enlace del robot (carrier=$carrier)."
   ip -4 -o addr show dev "$robot_iface" | grep -q " $robot_pc_ip/" ||
     die "$robot_iface perdió $robot_pc_ip antes del preflight Motion."
   ip route get "$motion_ip" | grep -q "dev $robot_iface" ||
@@ -164,7 +300,7 @@ import socket
 with socket.create_connection((os.environ["MOTION_IP"], 22), timeout=3):
     pass
 PY
-    die "Motion $motion_ip no acepta SSH TCP 22 por $robot_wifi_ssid; revise Wi-Fi, ruta, arranque y servicio."
+    die "Motion $motion_ip no acepta SSH TCP 22 por $robot_link_kind/$robot_iface; revise enlace, ruta, arranque y servicio."
 
   progress "MOVIMIENTO 2/2: comprobando paros, batería, cargador, efector, tarea y velocidad articular"
 
@@ -301,20 +437,50 @@ first_grip_state_line() {
     ' "$backend_log"
 }
 
+both_grips_currently_pressed_since() {
+  local first_line="$1"
+  awk -v first="$first_line" '
+    NR < first {next}
+    /Left hand state:/ {
+      left = index($0, "\"squeeze\":true") ? 1 : 0
+      seen_left = 1
+    }
+    /Right hand state:/ {
+      right = index($0, "\"squeeze\":true") ? 1 : 0
+      seen_right = 1
+    }
+    END {exit !(seen_left && seen_right && left && right)}
+  ' "$backend_log"
+}
+
 check_controller_inputs_neutral() {
-  BACKEND_LOG="$backend_log" python3 - <<'PY' ||
+  local first_line="$1"
+  local deadline=$((SECONDS + 3))
+
+  until awk -v first="$first_line" '
+    NR >= first && /Left hand state:/ {left=1}
+    NR >= first && /Right hand state:/ {right=1}
+    END {exit !(left && right)}
+  ' "$backend_log"; do
+    if ((SECONDS >= deadline)); then
+      stop_all
+      die "No llegaron muestras nuevas de ambos mandos dentro de 3 s; STOP enviado."
+    fi
+    sleep 0.05
+  done
+
+  if ! BACKEND_LOG="$backend_log" FIRST_LINE="$first_line" python3 - <<'PY'
 import json
 import os
 
 path = os.environ["BACKEND_LOG"]
-with open(path, "rb") as handle:
-    handle.seek(0, 2)
-    size = handle.tell()
-    handle.seek(max(0, size - 2_000_000))
-    recent = handle.read().decode("utf-8", errors="replace").splitlines()
+first_line = int(os.environ["FIRST_LINE"])
 
 latest = {}
-for line in reversed(recent):
+with open(path, "r", encoding="utf-8", errors="replace") as handle:
+    fresh = [line for number, line in enumerate(handle, 1) if number >= first_line]
+
+for line in reversed(fresh):
     for side in ("Left", "Right"):
         if side in latest or f"{side} hand state:" not in line:
             continue
@@ -346,9 +512,13 @@ for side in ("Left", "Right"):
 if errors:
     print("CONTROLLER_INPUTS_NOT_NEUTRAL=" + ",".join(errors))
     raise SystemExit(1)
+print("CONTROLLER_INPUTS_FRESH=1")
 print("CONTROLLER_INPUTS_NEUTRAL=1")
 PY
-    die "Los mandos no están neutros; suelte grips, gatillos, botones y joysticks antes de START."
+  then
+    stop_all
+    die "Las muestras nuevas no están neutras; suelte grips, gatillos, botones y joysticks. STOP enviado."
+  fi
 }
 
 wait_for_left_trigger_release() {
@@ -508,7 +678,25 @@ latest_log_has_pico() {
   grep -qE 'device found|PA94Y0MGKB070822G' <<<"$recent_journal"
 }
 
+latest_log_has_expected_pico_serial() {
+  local start_text recent_journal
+  start_text="$(
+    timeout "${command_timeout_seconds}s" \
+      systemctl show "$backend_unit" -p ActiveEnterTimestamp --value
+  )" || return 1
+  recent_journal="$(
+    timeout "${command_timeout_seconds}s" \
+      journalctl -u "$backend_unit" --since "$start_text" --no-pager -n 2000 \
+      2>/dev/null
+  )" || return 1
+  grep -Fq "$pico_serial" <<<"$recent_journal"
+}
+
 backend_detect_json() {
+  # En 4.7.0 esto NO es una lectura pasiva: si el broadcast periódico coincide
+  # con un cliente WebSocket y PICO está online, el backend puede arrancar el
+  # publisher. Usar sólo después del START autorizado; para preflight/STOP use
+  # backend_passive_state_json().
   timeout "${command_timeout_seconds}s" python3 - <<'PY'
 import websocket
 
@@ -517,6 +705,89 @@ try:
     print(ws.recv())
 finally:
     ws.close()
+PY
+}
+
+backend_passive_state_json() {
+  local backend_start_text backend_start_ts
+  backend_start_text="$(
+    timeout "${command_timeout_seconds}s" \
+      systemctl show "$backend_unit" -p ActiveEnterTimestamp --value
+  )" || return 1
+  backend_start_ts="$(date -d "$backend_start_text" '+%Y-%m-%d:%H:%M:%S')" ||
+    return 1
+
+  BACKEND_LOG="$backend_log" BACKEND_START_TS="$backend_start_ts" \
+    timeout "${command_timeout_seconds}s" python3 - <<'PY'
+import json
+import os
+import sys
+
+path = os.environ["BACKEND_LOG"]
+start_ts = os.environ["BACKEND_START_TS"]
+
+
+def reverse_lines(file_path, block_size=65536):
+    with open(file_path, "rb") as stream:
+        stream.seek(0, 2)
+        position = stream.tell()
+        remainder = b""
+        while position:
+            size = min(block_size, position)
+            position -= size
+            stream.seek(position)
+            parts = (stream.read(size) + remainder).split(b"\n")
+            remainder = parts[0]
+            for raw_line in reversed(parts[1:]):
+                yield raw_line.decode("utf-8", errors="replace")
+        if remainder:
+            yield remainder.decode("utf-8", errors="replace")
+
+
+snapshot = None
+operation_type = None
+for line in reverse_lines(path):
+    # Las líneas comienzan por YYYY-MM-DD:HH:MM:SS.mmm. No reutilizar eventos
+    # de una ejecución anterior del servicio.
+    if len(line) >= 19 and line[:19] < start_ts:
+        break
+
+    if operation_type is None:
+        if "Pico publisher stop" in line:
+            operation_type = 1
+        elif "Pico publisher start" in line:
+            operation_type = 2
+
+    if snapshot is None:
+        raw_json = None
+        marker = 'Send message to client: {"type":"detect"'
+        if marker in line:
+            raw_json = line.split("Send message to client: ", 1)[1]
+        elif "Pico connect state from " in line and " changed to {" in line:
+            raw_json = line.split(" changed to ", 1)[1]
+            raw_json = raw_json.rsplit(", broadcast it", 1)[0]
+        if raw_json is not None:
+            try:
+                candidate = json.loads(raw_json)
+            except json.JSONDecodeError:
+                candidate = None
+            if isinstance(candidate, dict) and candidate.get("type") == "detect":
+                snapshot = candidate
+
+    if snapshot is not None and operation_type is not None:
+        break
+
+if snapshot is None:
+    print("No current passive backend snapshot", file=sys.stderr)
+    raise SystemExit(2)
+
+content = snapshot.setdefault("content", {})
+if operation_type is None:
+    operation_type = content.get("operation_type", 1)
+content["operation_type"] = operation_type
+if operation_type == 1:
+    content["robot_sn"] = ""
+print(json.dumps(snapshot, separators=(",", ":")))
 PY
 }
 
@@ -532,29 +803,54 @@ check_pc() {
   ensure_cmd jq
   ensure_cmd sha256sum
   ensure_cmd nmcli
+  ensure_cmd dpkg-query
+  ensure_cmd stat
+  ensure_cmd date
 
   progress "CHECK 2/7: comprobando ADB y XRoboToolkit en el PICO (timeout ${command_timeout_seconds}s)"
-  local current_adb_state
-  resolve_pico_adb_target ||
-    die "No se encontró por ADB el PICO físico $pico_serial (USB o Wi-Fi)."
-  if ! current_adb_state="$(adb_state)"; then
-    die "ADB no respondió dentro de ${command_timeout_seconds}s."
+  local current_adb_state pico_identity_source="adb" pico_adb_available=0
+  if resolve_pico_adb_target; then
+    if ! current_adb_state="$(adb_state)"; then
+      die "ADB no respondió dentro de ${command_timeout_seconds}s."
+    fi
+    [[ "$current_adb_state" == "device" ]] ||
+      die "PICO no autorizado por ADB ($pico_adb_target; estado=${current_adb_state:-ausente})."
+    timeout "${command_timeout_seconds}s" \
+      adb -s "$pico_adb_target" shell pidof com.xrobotoolkit.client \
+      >/dev/null 2>&1 ||
+      die "XRoboToolkit no está abierto en el PICO."
+    pico_adb_available=1
+  else
+    [[ "$teleop_camera" == "off" ]] ||
+      die "No se encontró por ADB el PICO físico $pico_serial; la cámara '$teleop_camera' mantiene ADB obligatorio."
+    timeout "${command_timeout_seconds}s" \
+      systemctl is-active --quiet "$backend_unit" ||
+      die "Sin ADB no se puede validar el PICO: $backend_unit no está activo."
+    ss -Hlnt | grep -q ':63901 ' ||
+      die "Sin ADB no se puede validar el PICO: XR no escucha en TCP 63901."
+    discover_pico_stream ||
+      die "Sin ADB no se encontró un peer XR activo hacia TCP 63901."
+    has_established_pico_stream ||
+      die "Sin ADB no se confirmó el flujo XR $pico_ip->$pc_pico_ip:63901."
+    latest_log_has_expected_pico_serial ||
+      die "Sin ADB, el backend no demostró el serial esperado $pico_serial en esta ejecución."
+    pico_identity_source="xr-backend"
+    info "PICO_ADB_UNAVAILABLE=1; CAMERA=off; CONTINUING_WITH_STRICT_XR_IDENTITY=1"
   fi
-  [[ "$current_adb_state" == "device" ]] ||
-    die "PICO no autorizado por ADB ($pico_adb_target; estado=${current_adb_state:-ausente})."
-  timeout "${command_timeout_seconds}s" \
-    adb -s "$pico_adb_target" shell pidof com.xrobotoolkit.client \
-    >/dev/null 2>&1 ||
-    die "XRoboToolkit no está abierto en el PICO."
 
-  progress "CHECK 3/7: comprobando Wi-Fi Cruzr, rutas y hosts Motion/Vision"
-  discover_robot_wifi_route
+  progress "CHECK 3/7: comprobando enlace Cruzr, rutas y hosts Motion/Vision"
+  discover_robot_link_route
   ip -4 -o addr show dev "$robot_iface" | grep -q " $robot_pc_ip/" ||
     die "$robot_iface no tiene $robot_pc_ip."
   ip route get "$motion_ip" | grep -q "dev $robot_iface" ||
     die "La ruta a motion no usa $robot_iface."
   ip route get "$vision_ip" | grep -q "dev $robot_iface" ||
     die "La ruta a vision no usa $robot_iface."
+  if [[ "$robot_link_kind" == "wifi" ]]; then
+    ensure_cmd iw
+    iw dev "$robot_iface" get power_save 2>/dev/null | grep -q 'Power save: off' ||
+      die "$robot_iface mantiene ahorro Wi-Fi activo; reactive el perfil $robot_wifi_ssid con powersave=disable."
+  fi
   ping -c 1 -W 1 "$motion_ip" >/dev/null || die "Motion $motion_ip no responde."
   ping -c 1 -W 1 "$vision_ip" >/dev/null || die "Vision $vision_ip no responde."
 
@@ -571,40 +867,72 @@ check_pc() {
   latest_log_has_pico ||
     die "No se encontró discovery del PICO en el journal reciente o la consulta agotó ${command_timeout_seconds}s."
 
-  progress "CHECK 6/7: comprobando arm=clamp y hash del backend de 300 s"
-  local environment backend_sha256
+  progress "CHECK 6/7: comprobando baseline oficial 4.7.0, arm=clamp y binario sin parches"
+  local environment backend_sha256 pico_control_sha256 backend_version ui_version
   environment="$(
     timeout "${command_timeout_seconds}s" \
       systemctl show "$backend_unit" -p Environment --value
   )" || die "systemd no devolvió el entorno del backend dentro de ${command_timeout_seconds}s."
   [[ " $environment " == *" arm=$required_arm "* ]] ||
     die "El backend no está fijado a arm=$required_arm; reinstale el drop-in del PC."
+  [[ " $environment " == *" LC_NUMERIC=C "* ]] ||
+    die "El backend no fija LC_NUMERIC=C; reinstale el drop-in de locale numérico."
+  backend_version="$(dpkg-query -W -f='${Version}' ubt-controller 2>/dev/null)" ||
+    die "No se pudo consultar la versión instalada de ubt-controller."
+  [[ "$backend_version" == "$expected_backend_version" ]] ||
+    die "Se requiere ubt-controller $expected_backend_version; está instalado $backend_version."
+  ui_version="$(dpkg-query -W -f='${Version}' ubt-remote-control 2>/dev/null)" ||
+    die "No se pudo consultar la versión instalada de ubt-remote-control."
+  [[ "$ui_version" == "$expected_ui_version" ]] ||
+    die "Se requiere ubt-remote-control $expected_ui_version; está instalado $ui_version."
   backend_sha256="$(sha256sum "$backend_executable" | awk '{print $1}')"
-  [[ "$backend_sha256" == "$patched_backend_sha256" ]] ||
-    die "El backend no contiene la corrección clamp validada (SHA-256=$backend_sha256)."
+  [[ "$backend_sha256" == "$expected_backend_sha256" ]] ||
+    die "El binario 4.7.0 no coincide con el DEB oficial recibido (SHA-256=$backend_sha256)."
+  [[ -x "$pico_control_executable" ]] ||
+    die "El paquete 4.7.0 no dejó ejecutable $pico_control_executable."
+  pico_control_sha256="$(sha256sum "$pico_control_executable" | awk '{print $1}')"
+  [[ "$pico_control_sha256" == "$expected_pico_control_sha256" ]] ||
+    die "pico_control no coincide con el DEB 4.7.0 (SHA-256=$pico_control_sha256)."
+  "$pico_control_executable" --help 2>&1 | grep -q -- '--arm_type {hand,clamp,gripper}' ||
+    die "pico_control 4.7.0 no anuncia arm_type=clamp en su ayuda."
 
-  progress "CHECK 7/7: consultando estado WebSocket del backend (timeout ${command_timeout_seconds}s)"
+  progress "CHECK 7/7: comprobando estado pasivo del backend (sin abrir WebSocket)"
   local detect_json vr_status operation_type
-  if ! detect_json="$(backend_detect_json)"; then
-    die "El WebSocket 8082 no devolvió estado dentro de ${command_timeout_seconds}s."
+  if ! detect_json="$(backend_passive_state_json)"; then
+    die "No se pudo reconstruir pasivamente el estado actual del backend."
   fi
   vr_status="$(jq -r 'select(.type == "detect") | .content.vr_status' <<<"$detect_json")"
   operation_type="$(jq -r 'select(.type == "detect") | .content.operation_type' <<<"$detect_json")"
   [[ "$vr_status" == "1" ]] ||
-    die "El transporte ADB existe, pero XRoboToolkit no envía HEAD+CONTROLLERS (vr_status=$vr_status). Active Send data/Working en el PICO."
+    die "XRoboToolkit no envía HEAD+CONTROLLERS (vr_status=$vr_status). Active Send data/Working en el PICO."
   [[ "$operation_type" == "1" ]] ||
     die "El backend ya está en operación remota (operation_type=$operation_type); ejecute --stop antes de iniciar."
 
-  info "PC_ROBOT_WIFI_OK=$robot_wifi_ssid,$robot_iface:$robot_pc_ip"
+  info "PC_ROBOT_LINK_OK=$robot_link_kind,$robot_connection_name,$robot_iface:$robot_pc_ip"
+  if [[ "$robot_link_kind" == "wifi" ]]; then
+    info "ROBOT_WIFI_POWERSAVE=off"
+  fi
   info "ROBOT_LINK_OK=motion:$motion_ip,vision:$vision_ip"
-  info "PICO_ADB_OK=$pico_adb_target (device=$pico_serial)"
+  if ((pico_adb_available == 1)); then
+    info "PICO_ADB_OK=$pico_adb_target (device=$pico_serial)"
+  else
+    info "PICO_ADB_OPTIONAL_FOR_CAMERA_OFF=unavailable"
+  fi
+  info "PICO_IDENTITY_OK=$pico_serial,source:$pico_identity_source"
   info "PICO_STREAM_OK=$pico_ip->$pc_pico_ip:63901"
   info "PICO_TRACKING_OK=vr_status:$vr_status"
-  info "BACKEND_OK=ubt-controller:5.3.0,arm:$required_arm,ws:8082"
-  info "CLAMP_PATCH_OK=WebsocketServer.collect:GRIPPER->CLAMP"
-  info "PICO_BUTTON_WORKAROUND_OK=left-trigger-rising-edge->vendor-Y"
-  info "HEARTBEAT_WATCHDOG_OK=${heartbeat_timeout_seconds}s"
-  info "UI_PACKAGE_OK=ubt-remote-control:4.1.0"
+  info "BACKEND_OK=ubt-controller:$backend_version,arm:$required_arm,ws:8082"
+  info "OFFICIAL_COMPATIBILITY_BASELINE_OK=robot-v0.2.0/controller-$backend_version/ui-$ui_version"
+  info "BACKEND_VENDOR_BINARY_SHA256_OK=$backend_sha256"
+  info "PICO_CONTROL_VENDOR_CLI_OK=$pico_control_sha256,arm_type=clamp"
+  info "HEARTBEAT_WATCHDOG=vendor-default-unmodified"
+  info "PICO_ENABLE_PROTOCOL=verified-live-vendor-Y->Left.b_button->tele_operation.enable:1"
+  info "PICO_ARM_SELECTION_LIVE=requested:clamp,pc-observed:gripper,motion-hand:clamp,pc-label-pending"
+  info "PICO_STOP_PROTOCOL=verified-official-client->operation_type:1"
+  info "BACKEND_STATE_SOURCE=passive-log-no-websocket"
+  info "STOP_DIAGNOSTIC_NOTE=preflight-and-final-verification-do-not-open-websocket"
+  info "LEGACY_PHYSICAL_GATES_BLOCKED=1"
+  info "UI_PACKAGE_OK=ubt-remote-control:$ui_version"
   progress "CHECK COMPLETADO"
 }
 
@@ -667,13 +995,96 @@ open_ui() {
   local detect_json operation_type enable_control
   detect_json="$(backend_detect_json)"
   operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
-  enable_control="$(jq -r '.content.enable_control' <<<"$detect_json")"
-  if [[ "$operation_type" != "1" || "$enable_control" != "0" ]]; then
+  enable_control="$(jq -r 'if .content | has("enable_control") then .content.enable_control else "absent" end' <<<"$detect_json")"
+  if [[ "$operation_type" != "1" || ("$enable_control" != "absent" && "$enable_control" != "0") ]]; then
     stop_all
     die "La UI alteró el estado remoto al abrirse; STOP enviado (operation_type=$operation_type, enable_control=$enable_control)."
   fi
   info "UI_CONNECTED=local-ws:8082"
   info "UI_NOTE=no pulse todavía el botón chino de inicio ni Y"
+}
+
+stop_pico_camera() {
+  if [[ -n "$camera_pid" ]] && kill -0 "$camera_pid" 2>/dev/null; then
+    kill -TERM "$camera_pid" 2>/dev/null || true
+    wait "$camera_pid" 2>/dev/null || true
+  fi
+  camera_pid=""
+  if [[ -n "$camera_ready_file" && -f "$camera_ready_file" ]]; then
+    rm -f -- "$camera_ready_file"
+  fi
+  camera_ready_file=""
+  info "PICO_CAMERA_STOPPED=1"
+}
+
+start_pico_camera() {
+  if [[ "$teleop_camera" == "off" ]]; then
+    info "PICO_CAMERA_DISABLED_EXPLICITLY=1"
+    return 0
+  fi
+  case "$teleop_camera" in
+    main|stereo-right|waist|chassis)
+      ;;
+    *)
+      die "PICO_TELEOP_CAMERA debe ser main, stereo-right, waist, chassis u off."
+      ;;
+  esac
+  [[ -x "$camera_script" ]] ||
+    die "No se puede ejecutar el puente de cámara: $camera_script"
+
+  camera_ready_file="$(mktemp --tmpdir humanoide-teleop-camera-ready.XXXXXX)"
+  rm -f -- "$camera_ready_file"
+  cat <<EOF
+
+VÍDEO OBLIGATORIO ANTES DE START
+En el PICO abra Camera y active «Request PC camera data». No cierre
+XRoboToolkit ni desactive Head + Controllers / Send data / Working. El robot
+seguirá desarmado hasta recibir el primer keyframe de la cámara '$teleop_camera'.
+
+EOF
+  local camera_pico_ip
+  camera_pico_ip="${PICO_CAMERA_PICO_IP:-}"
+  if [[ -z "$camera_pico_ip" ]]; then
+    camera_pico_ip="$(
+      timeout "${command_timeout_seconds}s" adb -s "$pico_adb_target" shell \
+        'ip -4 -o addr show wlan0 2>/dev/null' |
+        awk '{split($4,address,"/"); print address[1]; exit}' |
+        tr -d '\r'
+    )"
+  fi
+  [[ "$camera_pico_ip" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] ||
+    camera_pico_ip="$pico_ip"
+  info "PICO_CAMERA_TARGET_DISCOVERED=$camera_pico_ip"
+
+  PICO_IP="$camera_pico_ip" \
+    PICO_ADB_TARGET="$pico_adb_target" \
+    PICO_CAMERA_READY_FILE="$camera_ready_file" \
+    "$camera_script" --run --camera "$teleop_camera" &
+  camera_pid=$!
+
+  local deadline=$((SECONDS + 75)) next_notice=$SECONDS
+  while [[ ! -s "$camera_ready_file" ]]; do
+    if ! kill -0 "$camera_pid" 2>/dev/null; then
+      wait "$camera_pid" || true
+      camera_pid=""
+      rm -f -- "$camera_ready_file"
+      camera_ready_file=""
+      die "La cámara PICO terminó antes de mostrar vídeo; no se enviará START."
+    fi
+    if ((SECONDS >= deadline)); then
+      stop_pico_camera
+      die "La cámara PICO no recibió un keyframe en 75 s; no se enviará START."
+    fi
+    if ((SECONDS >= next_notice)); then
+      progress "CÁMARA: esperando Request PC camera data / primer keyframe ($((deadline - SECONDS))s)"
+      next_notice=$((SECONDS + 5))
+    fi
+    sleep 0.25
+  done
+  info "PICO_CAMERA_REQUIRED=1"
+  info "PICO_CAMERA_SOURCE=$teleop_camera"
+  info "PICO_CAMERA_LIVE_BEFORE_START=1"
+  info "Vuelva a dejar cabeza, botones, gatillos, grips y joysticks neutros."
 }
 
 stop_all() {
@@ -683,6 +1094,214 @@ stop_all() {
   systemctl --user stop "$ui_unit" >/dev/null 2>&1 || true
   info "TELEOPERATION_STOP_REQUESTED=1"
   info "UI_STOPPED=1"
+  stop_pico_camera
+}
+
+require_official_enable_protocol_validation() {
+  stop_all
+  die "Movimiento bloqueado en este gate legado: Y y el STOP oficial de 4.7.0 ya se validaron, pero este flujo todavía depende del campo enable_control ausente y no usa el cliente pico_control del proveedor. Use --check; adapte el gate al cliente oficial antes de otro START automatizado."
+}
+
+wait_for_pico_tracking_ready() {
+  local deadline=$((SECONDS + 30)) next_notice=$SECONDS detect_json vr_status
+  systemctl is-active --quiet "$backend_unit" ||
+    die "$backend_unit no está activo antes de esperar al PICO."
+  ss -Hlnt | grep -q ':8082 ' ||
+    die "El backend no escucha en TCP 8082 antes de esperar al PICO."
+
+  while ((SECONDS < deadline)); do
+    detect_json="$(backend_passive_state_json 2>/dev/null || true)"
+    vr_status="$(jq -r '.content.vr_status // "unknown"' <<<"$detect_json" 2>/dev/null || true)"
+    if [[ "$vr_status" == "1" ]]; then
+      info "PICO_TRACKING_READY_BEFORE_PREFLIGHT=1"
+      return 0
+    fi
+    if ((SECONDS >= next_notice)); then
+      progress "PICO: active Head + Controllers y Send data / Working (${deadline-SECONDS}s restantes; vr_status=$vr_status)"
+      next_notice=$((SECONDS + 5))
+    fi
+    sleep 1
+  done
+  die "XRoboToolkit sigue en vr_status=$vr_status tras 30 s; active Head + Controllers / Send data / Working."
+}
+
+cleanup_official_teleop() {
+  ((official_cleanup_done == 0)) || return 0
+  official_cleanup_done=1
+  trap - ERR INT TERM EXIT
+
+  if [[ -n "$official_client_pid" ]] && kill -0 "$official_client_pid" 2>/dev/null; then
+    kill -INT "$official_client_pid" 2>/dev/null || true
+    wait "$official_client_pid" 2>/dev/null || true
+  fi
+  official_client_pid=""
+
+  # pico_control envía operation_type=1 al recibir SIGINT. Verificarlo desde el
+  # log: abrir otro WebSocket sólo para leer puede volver a arrancar 4.7.0 si
+  # coincide con su broadcast periódico y PICO continúa online.
+  systemctl --user stop "$ui_unit" >/dev/null 2>&1 || true
+  stop_pico_camera
+  info "TELEOPERATION_STOP_REQUESTED=1"
+  info "UI_STOPPED=1"
+
+  local detect_json operation_type attempt
+  operation_type="unknown"
+  for attempt in {1..15}; do
+    detect_json="$(backend_passive_state_json 2>/dev/null || true)"
+    operation_type="$(jq -r '.content.operation_type // "unknown"' <<<"$detect_json" 2>/dev/null || true)"
+    [[ "$operation_type" == "1" ]] && break
+    sleep 0.2
+  done
+
+  # Sólo la ausencia del STOP del cliente oficial justifica abrir un cliente
+  # de emergencia que envíe STOP. No se usa para una comprobación ordinaria.
+  if [[ "$operation_type" != "1" ]]; then
+    info "OFFICIAL_STOP_NOT_OBSERVED_PASSIVELY=1; sending emergency STOP"
+    stop_all || true
+    for attempt in {1..10}; do
+      detect_json="$(backend_passive_state_json 2>/dev/null || true)"
+      operation_type="$(jq -r '.content.operation_type // "unknown"' <<<"$detect_json" 2>/dev/null || true)"
+      [[ "$operation_type" == "1" ]] && break
+      sleep 0.2
+    done
+  fi
+  info "OFFICIAL_TELEOP_FINAL_OPERATION_TYPE=$operation_type"
+  info "OFFICIAL_TELEOP_STOP_CONFIRMED=$([[ "$operation_type" == "1" ]] && printf 1 || printf 0)"
+}
+
+run_official_arm_teleop() {
+  [[ -t 0 && -t 1 ]] ||
+    die "La teleoperación física debe ejecutarse directamente en el terminal local del PC."
+  [[ "$official_teleop_seconds" =~ ^[0-9]+$ ]] ||
+    die "PICO_OFFICIAL_TELEOP_SECONDS debe ser un entero entre 120 y 300."
+  ((official_teleop_seconds >= 120 && official_teleop_seconds <= 300)) ||
+    die "PICO_OFFICIAL_TELEOP_SECONDS debe estar entre 120 y 300."
+  [[ "$allow_bimanual" == "0" || "$allow_bimanual" == "1" ]] ||
+    die "PICO_ALLOW_BIMANUAL debe ser 0 o 1."
+
+  official_cleanup_done=0
+  trap cleanup_official_teleop EXIT
+  trap 'printf "\nABORT_REQUESTED=INT\n" >&2; exit 130' INT
+  trap 'printf "\nABORT_REQUESTED=TERM\n" >&2; exit 143' TERM
+
+  # Este gate es independiente del visor y debe fallar primero: evita esperar
+  # 30 s por Working cuando Motion aún conserva el perfil de cuerpo completo.
+  check_robot_arms_only_loaded
+  wait_for_pico_tracking_ready
+  check_pc
+  systemctl --user is-active --quiet "$ui_unit" &&
+    die "$ui_unit está activo; ciérrelo para conservar un solo cliente de control."
+
+  cat <<EOF
+
+TELEOPERACIÓN OFICIAL 4.7.0 — BRAZOS, ${official_teleop_seconds} SEGUNDOS
+
+Esta ventana permite mover uno o ambos brazos con sus grips después de pulsar
+Y una vez. El perfil arms-only mantiene cintura y elevador fuera del control.
+Con ambos brazos use recorridos pequeños, sincronizados y dentro del alcance;
+suelte los grips ante resistencia, retraso o cualquier movimiento del torso.
+No use gatillos, joysticks, clicks, X/A/B ni comandos de chasis/elevador.
+Confirme ahora: abrazaderas vacías, postura actual despejada, cargador fuera,
+paros liberados, persona junto al paro y nadie dentro de la trayectoria.
+
+Escriba exactamente: INICIAR TELEOPERACION OFICIAL DE BRAZOS
+EOF
+  local confirmation
+  read -r confirmation
+  [[ "$confirmation" == "INICIAR TELEOPERACION OFICIAL DE BRAZOS" ]] ||
+    die "Confirmación incorrecta; no se enviará START."
+
+  start_pico_camera
+  check_robot_teleop_safety
+  info "Deje cabeza, grips, gatillos, botones y joysticks completamente neutros."
+
+  local start_line enable_line deadline next_progress detect_json operation_type
+  start_line="$(($(wc -l < "$backend_log") + 1))"
+  "$pico_control_executable" \
+    --websocket_url ws://127.0.0.1:8082 \
+    --arm_type clamp --enable_hand_pose 0 --push_rate 90 &
+  official_client_pid=$!
+
+  deadline=$((SECONDS + 10))
+  operation_type="unknown"
+  while ((SECONDS < deadline)); do
+    kill -0 "$official_client_pid" 2>/dev/null ||
+      die "pico_control terminó durante START."
+    detect_json="$(backend_detect_json)"
+    operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
+    [[ "$operation_type" == "2" ]] && break
+    sleep 0.1
+  done
+  [[ "$operation_type" == "2" ]] || die "pico_control no confirmó operation_type=2."
+
+  check_controller_inputs_neutral "$start_line"
+  enable_line="$(($(wc -l < "$backend_log") + 1))"
+  cat <<'EOF'
+
+========== PULSE Y IZQUIERDO UNA VEZ Y SUÉLTELO ==========
+No toque grips ni mueva las manos hasta ver ENABLE_OFICIAL_CONFIRMADO=1.
+EOF
+
+  deadline=$((SECONDS + 15))
+  while ! tail -n "+$enable_line" "$backend_log" |
+    grep -q 'Callback received data:.*"enable":1'; do
+    kill -0 "$official_client_pid" 2>/dev/null ||
+      die "pico_control terminó antes de Y/enable."
+    ((SECONDS < deadline)) || die "No se observó Y/enable=1 dentro de 15 s."
+    sleep 0.05
+  done
+  info "ENABLE_OFICIAL_CONFIRMADO=1"
+  info "BIMANUAL_CONTROL_ENABLED=$allow_bimanual"
+  if [[ "$allow_bimanual" == "1" ]]; then
+    info "UNO_O_AMBOS_BRAZOS=1; mantenga cada grip sólo durante su movimiento"
+  else
+    info "MUEVA_UN_BRAZO_POR_VEZ=1; ambos grips solicitarán STOP"
+  fi
+
+  local active_start=$SECONDS active_deadline=$((SECONDS + official_teleop_seconds))
+  local bimanual_active=0
+  next_progress=$SECONDS
+  while ((SECONDS < active_deadline)); do
+    kill -0 "$official_client_pid" 2>/dev/null ||
+      die "pico_control terminó durante la ventana activa."
+    detect_json="$(backend_detect_json)"
+    robot_link_runtime_ok || die "Se perdió el enlace del robot durante la teleoperación oficial."
+    pico_camera_runtime_ok || die "Se perdió la cámara principal durante la teleoperación oficial."
+    [[ "$(jq -r '.content.vr_status' <<<"$detect_json")" == "1" ]] ||
+      die "Se perdió HEAD+CONTROLLERS durante la teleoperación oficial."
+    operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
+    [[ "$operation_type" == "2" ]] || die "La sesión perdió operation_type=2."
+    if tail -n "+$enable_line" "$backend_log" |
+      grep 'Callback received data:.*"enable":[01]' | tail -n1 |
+      grep -q '"enable":0'; then
+      die "Y deshabilitó la sesión; se solicitará STOP."
+    fi
+    if tail -n "+$start_line" "$backend_log" |
+      grep -qE 'No heartbeat for .+ seconds, stoping operation'; then
+      die "El watchdog oficial perdió heartbeat; se solicitará STOP."
+    fi
+    if both_grips_currently_pressed_since "$start_line"; then
+      if [[ "$allow_bimanual" == "0" ]]; then
+        die "Se detectaron ambos grips y PICO_ALLOW_BIMANUAL=0; se solicitará STOP."
+      fi
+      if ((bimanual_active == 0)); then
+        info "BIMANUAL_GRIPS_ACTIVE=1"
+        bimanual_active=1
+      fi
+    elif ((bimanual_active == 1)); then
+      info "BIMANUAL_GRIPS_ACTIVE=0"
+      bimanual_active=0
+    fi
+    if ((SECONDS >= next_progress)); then
+      info "OFFICIAL_TELEOP_LIVE=1 ELAPSED=$((SECONDS - active_start))s REMAINING=$((active_deadline - SECONDS))s"
+      next_progress=$((SECONDS + 5))
+    fi
+    sleep 0.5
+  done
+
+  cleanup_official_teleop
+  info "OFFICIAL_TELEOP_WINDOW_COMPLETED=${official_teleop_seconds}s"
+  trap - ERR INT TERM EXIT
 }
 
 abort_gate() {
@@ -732,6 +1351,7 @@ run_arm_motion_test() {
       ;;
   esac
 
+  require_official_enable_protocol_validation
   [[ -t 0 && -t 1 ]] ||
     die "La prueba de movimiento exige un terminal interactivo local."
   check_pc
@@ -776,10 +1396,13 @@ Motion y armar exclusivamente esta prueba del brazo $side_es.
 EOF
   read -r _
 
-  # Se ejecuta después de la confirmación humana para reducir el intervalo
-  # entre el snapshot de seguridad del robot y el START real.
+  # La cámara debe estar viva antes del snapshot físico final para que la
+  # espera/interacción del visor no vuelva obsoleto ese preflight.
+  start_pico_camera
+
+  # Se ejecuta después de la cámara y de la confirmación humana para reducir
+  # el intervalo entre el snapshot de seguridad del robot y el START real.
   check_robot_teleop_safety
-  check_controller_inputs_neutral
 
   local start_line
   start_line="$(wc -l < "$backend_log")"
@@ -801,6 +1424,7 @@ EOF
   done
 
   info "ARM_TYPE_CONFIRMED=clamp"
+  check_controller_inputs_neutral "$((start_line + 1))"
   info "PUBLISHER_ARMED=1"
   printf '\a\n'
   info "========== TOQUE AHORA: GATILLO IZQUIERDO UNA VEZ Y SUÉLTELO =========="
@@ -810,6 +1434,7 @@ EOF
   local enable_deadline=$((SECONDS + 8))
   while ((SECONDS < enable_deadline)); do
     detect_json="$(backend_detect_json)"
+    assert_runtime_links "$detect_json" "antes de habilitar el brazo $side_es"
     operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
     enable_control="$(jq -r '.content.enable_control' <<<"$detect_json")"
     if [[ "$operation_type" == "2" && "$enable_control" == "1" ]]; then
@@ -836,7 +1461,7 @@ EOF
   info "LEFT_TRIGGER_RELEASE_CONFIRMED=1"
 
   # Antes de una maniobra real se exige una ventana completa sin grips. Esto
-  # prueba estabilidad del enlace, no la presencia del heartbeat (timeout 300 s).
+  # prueba estabilidad del enlace, no la presencia del heartbeat del proveedor.
   info "STABILITY_WINDOW=60s; MANDOS Y CABEZA QUIETOS; GRIPS LIBRES"
   local stability_start=$SECONDS
   local stability_deadline=$((stability_start + 60))
@@ -856,6 +1481,7 @@ EOF
     fi
 
     detect_json="$(backend_detect_json)"
+    assert_runtime_links "$detect_json" "durante la estabilidad del brazo $side_es"
     operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
     enable_control="$(jq -r '.content.enable_control' <<<"$detect_json")"
     if [[ "$operation_type" != "2" || "$enable_control" != "1" ]]; then
@@ -897,6 +1523,7 @@ EOF
       break
     fi
     detect_json="$(backend_detect_json)"
+    assert_runtime_links "$detect_json" "esperando el grip $side_es"
     operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
     enable_control="$(jq -r '.content.enable_control' <<<"$detect_json")"
     if [[ "$operation_type" != "2" || "$enable_control" != "1" ]]; then
@@ -926,6 +1553,7 @@ EOF
       break
     fi
     detect_json="$(backend_detect_json)"
+    assert_runtime_links "$detect_json" "durante el gesto del brazo $side_es"
     operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
     enable_control="$(jq -r '.content.enable_control' <<<"$detect_json")"
     if [[ "$operation_type" != "2" || "$enable_control" != "1" ]]; then
@@ -1034,13 +1662,14 @@ print(f"CONTROL_RIGHT_FORCE_CLICK_EDGES={edges(right, 'thumbstick')}")
 print(f"CONTROL_LEFT_JOYSTICK_MAX={left['axis_x']:.3f},{left['axis_y']:.3f}")
 print(f"CONTROL_RIGHT_JOYSTICK_MAX={right['axis_x']:.3f},{right['axis_y']:.3f}")
 print(f"ALL_REQUIRED_CONTROLLER_INPUTS_OBSERVED={int(all(observed.values()))}")
-print("CONTROL_LEFT_TRIGGER_NOTE=usado_como_enable_vendor_Y; cierre_de_mano_izquierda_no_disponible")
+print("CONTROL_LEFT_TRIGGER_NOTE=legacy-5.3-workaround-disabled-on-4.7")
 print("CONTROL_EFFECTS_MACHINE_VERIFIED=0")
 print("FINAL_STATIONARY_MODE_MACHINE_VERIFIED=0")
 PY
 }
 
 run_all_controls_test() {
+  require_official_enable_protocol_validation
   [[ "$all_controls_seconds" =~ ^[0-9]+$ ]] ||
     die "PICO_ALL_CONTROLS_SECONDS debe ser un entero entre 120 y 180."
   ((all_controls_seconds >= 120 && all_controls_seconds <= 180)) ||
@@ -1084,14 +1713,12 @@ EOF
   cat <<'EOF'
 
 PREPARACIÓN INMEDIATA
-Mandos, cabeza, grips, gatillos y joysticks neutros. Pulse Enter para ejecutar
-el preflight Motion fresco y armar. Después use el gatillo izquierdo una sola
-vez y suéltelo cuando aparezca TOQUE AHORA. El backend sólo publicará el
-flanco inicial y el script comprobará que el gatillo haya quedado libre.
+Este gate legado no se ejecuta con 4.7.0 hasta validar el botón Y oficial y
+una señal observable de habilitación.
 EOF
   read -r _
+  start_pico_camera
   check_robot_teleop_safety
-  check_controller_inputs_neutral
 
   local start_line
   start_line="$(wc -l < "$backend_log")"
@@ -1110,6 +1737,7 @@ EOF
   done
 
   info "ARM_TYPE_CONFIRMED=clamp"
+  check_controller_inputs_neutral "$((start_line + 1))"
   printf '\a\n'
   info "========== TOQUE AHORA: GATILLO IZQUIERDO UNA VEZ Y SUÉLTELO =========="
   info "EL BACKEND PUBLICA SÓLO EL FLANCO; NO VUELVA A TOCARLO"
@@ -1118,6 +1746,7 @@ EOF
   local enable_deadline=$((SECONDS + 8))
   while ((SECONDS < enable_deadline)); do
     detect_json="$(backend_detect_json)"
+    assert_runtime_links "$detect_json" "antes de habilitar la prueba integral"
     operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
     enable_control="$(jq -r '.content.enable_control' <<<"$detect_json")"
     if [[ "$operation_type" == "2" && "$enable_control" == "1" ]]; then
@@ -1161,6 +1790,7 @@ EOF
       die "Se pulsó un grip durante la fase neutra; STOP enviado."
     fi
     detect_json="$(backend_detect_json)"
+    assert_runtime_links "$detect_json" "durante la estabilidad integral"
     operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
     enable_control="$(jq -r '.content.enable_control' <<<"$detect_json")"
     if [[ "$operation_type" != "2" || "$enable_control" != "1" ]]; then
@@ -1193,8 +1823,7 @@ Puede probar los comandos documentados, con movimientos lentos y pequeños:
 - click de cada joystick: conmuta protección de fuerza; si se prueba, hacer
   dos clicks completos y separados para RESTAURAR el estado inicial.
 
-El trigger izquierdo ya se usó como enable/Y y no debe repetirse. No permite
-probar cierre de mano izquierda en esta build. Antes de los últimos 30 s deje
+El mapeo legado del gatillo izquierdo está desactivado en 4.7.0. Antes de los últimos 30 s deje
 X en modo en sitio, B cerrado, clicks restaurados y todos los mandos neutros.
 EOF
 
@@ -1213,6 +1842,7 @@ EOF
       die "El watchdog cerró la ventana integral; STOP enviado."
     fi
     detect_json="$(backend_detect_json)"
+    assert_runtime_links "$detect_json" "durante la ventana integral"
     operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
     enable_control="$(jq -r '.content.enable_control' <<<"$detect_json")"
     if [[ "$operation_type" != "2" || "$enable_control" != "1" ]]; then
@@ -1262,6 +1892,7 @@ EOF
 }
 
 run_gate() {
+  require_official_enable_protocol_validation
   [[ -t 0 && -t 1 ]] ||
     die "El gate requiere un terminal interactivo local; no lo ejecute mediante pipe o job en segundo plano."
   check_pc
@@ -1279,10 +1910,8 @@ libres; nadie tocando el robot; toda la envolvente despejada y paro físico
 preparado. La web 192.168.11.3 debe mostrar 遥操模式 (Remote control mode)
 arriba.
 
-El backend usa temporalmente un timeout de heartbeat de 300 s por autorización
-del propietario. Esta prueba dura 60 s y por sí sola NO demuestra que el robot
-esté enviando heartbeat. STOP manual, pérdida de habilitación y el resto de
-protecciones permanecen activos.
+El backend 4.7.0 conserva su binario y watchdog oficiales sin modificaciones.
+Este gate legado permanece bloqueado hasta validar su protocolo de enable.
 
 Escriba exactamente TELEOPERACION SEGURA Y MODO REMOTO para armar el flujo del PC:
 EOF
@@ -1301,7 +1930,8 @@ izquierdo y suéltelo. El backend publicará sólo el flanco inicial y el script
 comprobará la liberación; no vuelva a pulsarlo durante el gate.
 EOF
   read -r _
-  check_controller_inputs_neutral
+
+  start_pico_camera
 
   local start_line
   start_line="$(wc -l < "$backend_log")"
@@ -1320,6 +1950,7 @@ EOF
   done
 
   info "ARM_TYPE_CONFIRMED=clamp"
+  check_controller_inputs_neutral "$((start_line + 1))"
   info "PUBLISHER_ARMED=1"
   info "ENABLE_CONTROL_BEFORE_TRIGGER=0"
   printf '\a\n'
@@ -1330,6 +1961,7 @@ EOF
   local enable_deadline=$((SECONDS + 8))
   while ((SECONDS < enable_deadline)); do
     detect_json="$(backend_detect_json)"
+    assert_runtime_links "$detect_json" "antes de habilitar el gate"
     operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
     enable_control="$(jq -r '.content.enable_control' <<<"$detect_json")"
     if [[ "$operation_type" == "2" && "$enable_control" == "1" ]]; then
@@ -1366,6 +1998,7 @@ EOF
       die "El watchdog no recibió heartbeat; STOP enviado y UI cerrada."
     fi
     detect_json="$(backend_detect_json)"
+    assert_runtime_links "$detect_json" "durante el gate"
     operation_type="$(jq -r '.content.operation_type' <<<"$detect_json")"
     enable_control="$(jq -r '.content.enable_control' <<<"$detect_json")"
     if [[ "$operation_type" != "2" || "$enable_control" != "1" ]]; then
@@ -1400,7 +2033,7 @@ EOF
   fi
   info "DIAGNOSTIC_WINDOW_COMPLETED=60s"
   info "HEARTBEAT_VALIDATED=0"
-  info "HEARTBEAT_WATCHDOG_TIMEOUT=${heartbeat_timeout_seconds}s"
+  info "HEARTBEAT_WATCHDOG=vendor-default-unmodified"
   info "WATCHDOG_TRIP=0"
   info "TELEOPERATION_STOPPED_AFTER_GATE=1"
   info "Gatillo liberable: la teleoperación queda desarmada tras el gate."
@@ -1411,10 +2044,20 @@ case "$mode" in
   --check)
     check_pc
     ;;
+  --check-arms-only)
+    check_robot_arms_only_loaded
+    ;;
+  --check-reload-ready)
+    check_robot_teleop_safety
+    info "MOTION_RELOAD_READY_CHECK_OK=1; no se cambió de modo ni se envió movimiento."
+    ;;
   --check-motion-ready)
     check_pc
     check_robot_teleop_safety
     info "MOTION_READY_CHECK_OK=1; no se envió START ni se movió el robot."
+    ;;
+  --teleoperate)
+    run_official_arm_teleop
     ;;
   --open-ui)
     open_ui

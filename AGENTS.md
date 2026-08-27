@@ -26,6 +26,8 @@ instrucciones son obligatorias para cualquier agente que trabaje aquí.
      [`docs/guides/CRUZR_V020_BOOT_GUARD.md`](docs/guides/CRUZR_V020_BOOT_GUARD.md).
    - Apagado y discrepancia del hardware real:
      [`docs/support/UBTECH_SHUTDOWN_PROCEDURE_MISMATCH_V020.md`](docs/support/UBTECH_SHUTDOWN_PROCEDURE_MISMATCH_V020.md).
+   - Contacto, sobreesfuerzo, paro, fault de servo o recuperación post-PICO:
+     [`docs/guides/CRUZR_S2_RECUPERACION_TRAS_CONTACTO_TELEOP.md`](docs/guides/CRUZR_S2_RECUPERACION_TRAS_CONTACTO_TELEOP.md).
 
 No reutilice una orden antigua del chat sin contrastarla con el script y la
 documentación actuales. Tras un cambio de software, efector o conexión, vuelva
@@ -67,21 +69,31 @@ Este baseline es histórico y debe verificarse al comienzo de una intervención:
 
 - Unidad Cruzr S2 `WAE001UBT60000669`, software genérico `v0.2.0`.
 - Efector operativo actual: abrazaderas; `HW_TYPE=cruzr_s2_v1`.
-- Motion: `192.168.11.2`; Vision/web: `192.168.11.3`. Ruta canónica desde el
-  PC: Wi-Fi `Cruzr S2-0669` por `wlx80afcad40bd6`, gateway
-  `192.168.42.2`, ruta persistente `192.168.11.0/24`; esa Wi-Fi debe usarse
-  para **todos los dispositivos y servicios del robot**, además de la subred
-  directa `192.168.42.0/24` del PICO. La IP PC observada fue
-  `192.168.42.215/24` por DHCP. `wlo1`/`DSA CORPORATE` conserva en exclusiva
-  la ruta por defecto de Internet. Ethernet `192.168.11.250/24` queda como
-  histórico y no debe exigirse. No publique contraseñas ni las añada a Git.
+- Motion: `192.168.11.2`; Vision/web: `192.168.11.3`. Desde el 26-08 la ruta
+  preferida PC → Motion/Vision es Ethernet directa `eno1`, perfil `cruzr-s2`,
+  `192.168.11.250/24`, 1 Gb/s full duplex, autonegociación y never-default.
+  Wi-Fi `Cruzr S2-0669` por `wlx80afcad40bd6` conserva PICO/servicios en
+  `192.168.42.0/24` y la ruta persistente de fallback `.11.0/24` vía `.42.2`;
+  la IP PC observada fue `192.168.42.215/24` por DHCP. `wlo1`/`DSA CORPORATE`
+  conserva en exclusiva la ruta por defecto de Internet. El perfil Cruzr Wi-Fi
+  tiene powersave desactivado:
+  el Realtek USB `0bda:b812` se reseteó durante una prueba y debe vigilarse;
+  otra desaparición exige cambiar puerto/adaptador o driver antes de mover.
+  No publique contraseñas ni las añada a Git.
 - Teleoperación robot: `TELE_DEVICE=pico`, `transmit=local`; `MC_SCENE` se
   encontró vacío. La build DAC beta requerida por el SOP no está demostrada.
-- El último relevo documentado dejó el robot recuperado a `home`; el estado
-  físico, modo, cargador y zona deben recomprobarse. El backend PICO del PC está
-  activo con el parche de flanco `5083e9f0…`, UI inactiva y STOP confirmado;
-  el `--check` de las 12:44 recuperó PICO/stream y pasó 7/7 con `vr_status=1`.
-  No iniciar una prueba sin repetir el preflight físico fresco.
+- El último relevo dejó el PC en STOP y las articulaciones inmóviles, pero los
+  brazos estaban en postura inicial PICO, no en `home`; recomprobar el estado
+  físico. Se usa robot v0.2.0 + `ubt-controller 4.7.0` + UI 4.1.0, binario
+  vendor `e88b83b7…`; Y/enable y STOP oficiales ya se verificaron. Motion
+  confirmó tarea/mano `clamp`; el overlay reversible arms-only `4e8d79a4…`
+  quedó instalado y recargado mediante `teleop→auto_task→teleop`. El último
+  arranque demuestra `clamp,waist=0,leg=0`, articulaciones inmóviles, PC en
+  STOP, UI inactiva y sin `pico_control`. Una prueba posterior mantuvo el torso
+  quieto y no produjo fallos IK. Por autorización del propietario,
+  `--teleoperate` permite uno o ambos brazos cuando vuelve a verificar el
+  hash/modos; `PICO_ALLOW_BIMANUAL=0` restaura el bloqueo estricto. ADB Wi-Fi
+  del PICO puede desaparecer sin cortar XR.
 - No se renombraron topics, colas ni servicios PICO. `walker28` es sólo el
   `channel_name` del backend del PC. `walker28_web` no se encontró.
 - VLA: imágenes y `checkpoint-40000` instalados, `restart=no`, contenedores
