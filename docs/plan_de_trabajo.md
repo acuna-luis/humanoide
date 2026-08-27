@@ -265,9 +265,11 @@ existe al volver al prompt.
 ```
 
 El script crea su propio directorio `<timestamp>_E1.2`, valida antes de escribir,
-comprueba el hash XML y los cuatro task IDs, y extrae de forma determinista
+comprueba el hash XML y los cuatro task IDs, y extrae muestras próximas a
 inicio/medio/final. Los tiempos proceden de la longitud de cada episodio
-dividida por 120 FPS. Al terminar debe mostrar:
+dividida por 120 FPS. El seek temporal de VLC puede escoger frames adyacentes
+entre ejecuciones: los hashes prueban integridad dentro de cada run, no una
+identidad canónica entre runs. Al terminar debe mostrar:
 
 ```text
 E1.2_ARTIFACTS_OK=/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/...
@@ -289,6 +291,12 @@ borde gris, con tiras/marcas negras estrechas en algunos frames y un pequeño
 elemento con lazo dentro; no es cartón. Permanecen `UNRESOLVED` la definición de
 `clamp_s2_joints_trajectory`, task ready instalado, alturas low/middle y pose
 horizontal del fixture. No hubo conexión al robot, inferencia ni publicadores.
+
+**Repetición del operador:** `20260827T142214_E1.2`, estado `PASS` tras revisión
+visual. Todos sus artefactos validan contra sus hashes; varios PNG no son
+bit-idénticos al run anterior porque VLC escogió frames adyacentes, pero la hoja
+de contacto conserva el mismo tote, escenario y significado visual. No se usan
+los hashes PNG como patrón canónico. Sin conexión al robot ni inferencia.
 
 **Resultado esperado:** hash S2
 `f4025124491eba995ec824db3e3be91875f781a4b4e98928654bde9a021d8323`;

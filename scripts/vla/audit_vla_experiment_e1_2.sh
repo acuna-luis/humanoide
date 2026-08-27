@@ -134,6 +134,8 @@ confirmed:
   xml_final_action: clamp_s2_joints_trajectory
   task_ids: [0, 1, 2, 3]
   reference_frame_count: 12
+  frame_sampling: vlc_time_seek_near_requested_timestamp
+  frame_hashes_are_integrity_per_run_not_canonical: true
   sdk_platform_height_m: 1.0
 unresolved:
   installed_canonical_ready_task: null
@@ -157,6 +159,7 @@ actual_observations:
   - xml_sha256=$ACTUAL_XML_SHA256
   - task_catalog_exact=true
   - reference_frame_count=$FRAME_COUNT
+  - frame_sampling=vlc_time_seek_not_bit_exact_between_runs
   - robot_connections=0
   - inference_started=false
   - command_publishers_started=false
