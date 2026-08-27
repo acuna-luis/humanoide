@@ -80,6 +80,22 @@ nominales `1,85 m` de ancho × `0,80 m` de fondo × `1,00 m` de altura. Es
 nivelación, rigidez, estabilidad y registrar patas/travesaños. Su disponibilidad
 no resuelve `D_BUMPER_PLATFORM` ni autoriza acercarla al robot.
 
+#### Inventario mínimo de superficies
+
+| Elemento | Para qué se usa | Estado y decisión |
+|---|---|---|
+| `MESA_T1` | Reproducir el fixture del SDK a 1 m; PICK/PLACE del escenario que E4.2 consiga mapear a esa altura | Disponible, pendiente de E1.0 |
+| `PLATAFORMA_TASK_AJUSTABLE` | Reproducir `H_TASK_0_1` y `H_TASK_2_3` si resultan diferentes de 1 m | No adquirir/fabricar hasta E4.2. Puede ser una sola mesa elevadora rígida, bloqueable y estable, recalibrada para cada altura; no se usan mesas apiladas ni calzos |
+| `RECEPTOR_VOLCADO` | Recibir el contenido de B0 durante `TIP/POUR` | No pertenece a los tasks 0–3 ni al checkpoint actual; dimensiones, borde y altura se definirán con la primitiva y los datos propios de volcado |
+| `MESA_DESTINO_VACIA` | Recibir B0 después de vaciarla a otra altura | Sólo para la misión ampliada. Será una estación separada o una superficie existente cuya altura/pose entren en el nuevo dataset |
+
+No hace falta una repisa con compartimientos para caracterizar el checkpoint
+actual. Tampoco hacen falta simultáneamente dos plataformas low/middle: las
+pruebas 0–3 se ejecutan una por una y una plataforma regulable validada puede
+reutilizarse. Para ensayar posteriormente la misión completa en una sola
+ejecución sí deberán coexistir origen, receptor de volcado y destino de la caja
+vacía, cada uno con pose y geometría versionadas.
+
 Antes de E1.1 el robot, si está encendido, debe estar estable y sin movimiento,
 la teleoperación/PICO/UI cerradas y VLA detenido. Ningún experimento 1–5
 autoriza liberar un paro, cambiar de postura ni mover una articulación.
@@ -180,6 +196,17 @@ red Motion/Vision debe estar disponible.
 **Comandos, en este orden:**
 
 ```bash
+(
+set -euo pipefail
+export VLA_EXPERIMENT_ID="E1.1"
+export VLA_RUN_ID="$(date +%Y%m%dT%H%M%S)_${VLA_EXPERIMENT_ID}"
+export VLA_EVIDENCE_ROOT="/home/lacuna/proyectos/Robots/Humanoide-vla-evidence"
+export VLA_RUN_DIR="$VLA_EVIDENCE_ROOT/$VLA_RUN_ID"
+mkdir -p "$VLA_RUN_DIR"
+test -d "$VLA_RUN_DIR"
+test -w "$VLA_RUN_DIR"
+printf 'VLA_RUN_DIR=%s\n' "$VLA_RUN_DIR"
+
 ./scripts/vla/install_ubtech_vla.sh --check \
   2>&1 | tee "$VLA_RUN_DIR/01_install_check.log"
 ./scripts/vla/install_ubtech_vla.sh --verify \
@@ -190,6 +217,11 @@ red Motion/Vision debe estar disponible.
   2>&1 | tee "$VLA_RUN_DIR/04_shadow_status.log"
 ./scripts/vla/run_ubtech_vla_shadow.sh --stop \
   2>&1 | tee "$VLA_RUN_DIR/05_shadow_stop.log"
+
+test "$(find "$VLA_RUN_DIR" -maxdepth 1 -type f -name '*.log' -size +0c | wc -l)" -eq 5
+sha256sum "$VLA_RUN_DIR"/*.log > "$VLA_RUN_DIR/logs.sha256"
+printf 'E1.1_EVIDENCE_OK=%s\n' "$VLA_RUN_DIR"
+)
 ```
 
 **Resultado esperado:** checkpoint/config/runtime presentes, contenedores
@@ -202,6 +234,13 @@ Motion/Vision no accesible o publisher físico presente.
 
 **Resultado real:** copiar al YAML versiones, hashes, hosts, estados de los dos
 contenedores, contador de publishers y el error completo si falla.
+
+**Primer intento observado el 2026-08-27:** los cinco comandos reportaron hosts,
+paquete, instalación deshabilitada, contenedores `exited`, cero publishers y
+STOP; sin embargo, `VLA_RUN_DIR` no estaba definido y `tee` intentó escribir en
+`/`, por lo que no conservó los cinco logs. Estado:
+`INCOMPLETE_EVIDENCE_EMPTY_VLA_RUN_DIR`; repetir este mismo bloque no mueve el
+robot y es obligatorio antes de marcar E1.1 como `PASS`.
 
 #### Experimento 1.2 — Auditar el fixture, el dataset y la pose S2 suministrada
 
