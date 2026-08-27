@@ -52,8 +52,12 @@ Para eliminar “aproximadamente” y “frente al robot” se define:
    baseline inicial del S2. Sólo podrán añadirse después como variantes si se
    demuestra su mapeo con los tasks low/middle.
 7. La plataforma S2 inicial tiene una única superficie a
-   `H_VENDOR_PLATFORM=1,000 ± 0,010 m`, mide al menos `0,80 × 0,75 m`, está
-   nivelada y es rígida. No se permiten mesas apiladas ni calzos.
+   `H_VENDOR_PLATFORM=1,000 ± 0,010 m`, está nivelada y es rígida. El SDK no
+   fija su ancho ni su fondo: `0,80 × 0,75 m` es un **mínimo provisional del
+   proyecto, no un máximo ni una dimensión del proveedor**. Puede ser mayor,
+   pero se medirán y registrarán sus dimensiones exteriores reales para que E4.1
+   compruebe toda la plataforma en el modelo de colisiones. No se permiten
+   mesas apiladas ni calzos.
 8. Para seguridad se usa `B0_SAFE`, vacía. Los frames del dataset muestran un
    tote rígido gris abierto, con borde/asas negras y a veces un objeto pequeño
    dentro; una caja de cartón o un tote de otro aspecto es OOD aunque mida lo
@@ -138,7 +142,9 @@ la distancia horizontal al robot.
 3. Medir desde el mismo suelo la superficie a `1,000 m` en sus cuatro esquinas.
    Cada medida debe quedar en `0,990…1,010 m` y la diferencia máxima entre
    esquinas no debe superar `0,010 m`.
-4. Medir ancho/fondo y verificar mínimos `0,80 × 0,75 m`.
+4. Medir y registrar el ancho/fondo reales. Verificar el mínimo provisional del
+   proyecto `0,80 × 0,75 m`; se admite una superficie mayor y no se recorta su
+   geometría al modelar colisiones en E4.1.
 5. Con B0 aún fuera, verificar estabilidad de la plataforma manualmente.
 6. Pegar marcas de cinta para plataforma, centro de B0, cara frontal de B0 y
    orientación `yaw=0°`.
@@ -1163,10 +1169,13 @@ estas dos alturas. Primero se reproduce `S_VENDOR_1M`; los tasks low/middle no
 pasan a prueba física hasta resolver su altura con frames, estado/FK y
 confirmación del proveedor.
 
-La superficie será horizontal, rígida, inmóvil y de al menos `0,80 m` de ancho
-por `0,75 m` de fondo. No se apilarán mesas ni se improvisarán calzos. La zona
-debajo, encima y alrededor de brazos/caja estará despejada; para gates físicos
-se mantendrá una envolvente mínima de 1,5 m y una persona junto al paro.
+La superficie será horizontal, rígida e inmóvil. El SDK no especifica ancho ni
+fondo: `0,80 × 0,75 m` es el mínimo provisional adoptado por el proyecto, no un
+máximo. Puede utilizarse una plataforma mayor si se registran sus dimensiones
+exteriores completas y E4.1 demuestra que no invade el volumen barrido. No se
+apilarán mesas ni se improvisarán calzos. La zona debajo, encima y alrededor de
+brazos/caja estará despejada; para gates físicos se mantendrá una envolvente
+mínima de 1,5 m y una persona junto al paro.
 
 Se define `PLATFORM_FRAME` con origen en el centro del borde frontal de la
 superficie, `x` hacia la derecha del robot, `y` alejándose del robot y `z`
