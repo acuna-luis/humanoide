@@ -41,6 +41,7 @@ MODE="status"
 SHADOW_DURATION=180
 TASK_ID=0
 INFERENCE_DURATION=8
+EXPORT_DIR=""
 
 usage() {
   cat <<'EOF'
@@ -52,9 +53,12 @@ Uso:
   ./scripts/vla/run_ubtech_vla_shadow.sh --trigger [--task-id 0] [--inference-duration 8]
   ./scripts/vla/run_ubtech_vla_shadow.sh --status
   ./scripts/vla/run_ubtech_vla_shadow.sh --stop
+  ./scripts/vla/run_ubtech_vla_shadow.sh --export-evidence DIR
 
 --trigger sólo solicita inferencia si el validador shadow está activo y el
 canal /mc/sdk/robot_command tiene cero publicadores. No mueve el robot.
+--export-evidence recupera logs de los contenedores, incluso detenidos, sin
+arrancarlos ni conectarlos a una ruta de mando.
 EOF
 }
 
@@ -67,6 +71,11 @@ while (($#)); do
   case "$1" in
     --deploy|--check|--start-shadow|--start-inference|--trigger|--status|--stop)
       MODE="${1#--}"
+      ;;
+    --export-evidence)
+      shift
+      EXPORT_DIR="${1:?Falta directorio de exportación}"
+      MODE="export-evidence"
       ;;
     --shadow-duration)
       shift
@@ -95,7 +104,7 @@ done
 [[ "$SHADOW_DURATION" =~ ^[0-9]+([.][0-9]+)?$ ]] || die "Duración shadow inválida."
 [[ "$INFERENCE_DURATION" =~ ^[0-9]+([.][0-9]+)?$ ]] || die "Duración de inferencia inválida."
 
-for command_name in nc readlink rsync setsid ssh; do
+for command_name in find grep nc readlink rsync setsid sha256sum ssh; do
   command -v "$command_name" >/dev/null 2>&1 || die "Falta '$command_name'."
 done
 
@@ -316,6 +325,61 @@ stop_session() {
   printf 'SHADOW_SESSION_STOPPED=yes\n'
 }
 
+export_container_file() {
+  local host="$1"
+  local container="$2"
+  local source_path="$3"
+  local destination_path="$4"
+
+  run_ssh "$host" "docker cp '$container:$source_path' - | tar -xOf -" \
+    > "$destination_path"
+  [[ -s "$destination_path" ]] || die "No se recuperó $source_path desde $container."
+}
+
+export_evidence() {
+  [[ -n "$EXPORT_DIR" ]] || die "Falta directorio de exportación."
+  EXPORT_DIR="$(readlink -m -- "$EXPORT_DIR")"
+  [[ "$EXPORT_DIR" != "/" ]] || die "El directorio de exportación no puede ser /."
+  [[ ! -e "$EXPORT_DIR" || -d "$EXPORT_DIR" ]] || \
+    die "La ruta de exportación existe y no es un directorio: $EXPORT_DIR"
+  if [[ -d "$EXPORT_DIR" ]] &&
+     find "$EXPORT_DIR" -mindepth 1 -print -quit | grep -q .; then
+    die "El directorio de exportación debe estar vacío: $EXPORT_DIR"
+  fi
+  mkdir -p "$EXPORT_DIR"
+  [[ -d "$EXPORT_DIR" && -w "$EXPORT_DIR" ]] || \
+    die "El directorio no existe o no permite escritura: $EXPORT_DIR"
+  local evidence_name
+  for evidence_name in \
+    shadow.jsonl shadow-process.log inference-process.log \
+    status_after_export.log exported_logs.sha256; do
+    [[ ! -e "$EXPORT_DIR/$evidence_name" ]] || \
+      die "No se sobrescribirá evidencia existente: $EXPORT_DIR/$evidence_name"
+  done
+
+  assert_containers
+  export_container_file "$MOTION_HOST" "$CONTROL_CONTAINER" \
+    /home/ubt/additional/safe-runtime/logs/shadow.jsonl \
+    "$EXPORT_DIR/shadow.jsonl"
+  export_container_file "$MOTION_HOST" "$CONTROL_CONTAINER" \
+    /home/ubt/additional/safe-runtime/logs/shadow-process.log \
+    "$EXPORT_DIR/shadow-process.log"
+  export_container_file "$VISION_HOST" "$INFERENCE_CONTAINER" \
+    /home/ubt/additional/safe-runtime-logs/inference-process.log \
+    "$EXPORT_DIR/inference-process.log"
+  show_status > "$EXPORT_DIR/status_after_export.log"
+  (
+    cd "$EXPORT_DIR"
+    sha256sum \
+      shadow.jsonl \
+      shadow-process.log \
+      inference-process.log \
+      status_after_export.log
+  ) > "$EXPORT_DIR/exported_logs.sha256"
+  printf 'SHADOW_EVIDENCE_EXPORTED=%s\n' "$EXPORT_DIR"
+  printf 'SHADOW_EVIDENCE_MODE=read-only,containers-not-started\n'
+}
+
 case "$MODE" in
   deploy) deploy_runtime ;;
   check) check_installation ;;
@@ -324,4 +388,5 @@ case "$MODE" in
   trigger) trigger_inference ;;
   status) show_status ;;
   stop) stop_session ;;
+  export-evidence) export_evidence ;;
 esac

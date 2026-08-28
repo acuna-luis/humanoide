@@ -13,8 +13,7 @@ EOF
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
-EVIDENCE_ROOT="${VLA_EVIDENCE_ROOT:-/home/lacuna/proyectos/Robots/Humanoide-vla-evidence}"
-RUN_ID="$(date +%Y%m%dT%H%M%S)_E1.2"
+EVIDENCE_SCRIPT="$SCRIPT_DIR/new_vla_evidence_run.sh"
 RUN_DIR=""
 
 while (($#)); do
@@ -36,8 +35,6 @@ while (($#)); do
   esac
 done
 
-[[ -n "$RUN_DIR" ]] || RUN_DIR="$EVIDENCE_ROOT/$RUN_ID"
-
 XML_REL="cruzrss2_vla_pack-002/codes-S2/motion/s2_vla_scripts/s2_bio_vla/s2_vla_pick_large_teleop_ready.xml"
 TASKS_REL="cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319/meta/tasks.jsonl"
 VIDEOS_REL="cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319/videos/chunk-000/observation.images.rgb"
@@ -57,7 +54,15 @@ for episode in 000000 000001 000090 000091; do
   test -s "$VIDEOS_REL/episode_${episode}.mp4"
 done
 
-mkdir -p "$RUN_DIR/reference_frames"
+test -x "$EVIDENCE_SCRIPT"
+if [[ -n "$RUN_DIR" ]]; then
+  RUN_DIR="$("$EVIDENCE_SCRIPT" --experiment E1.2 --output-dir "$RUN_DIR")"
+else
+  RUN_DIR="$("$EVIDENCE_SCRIPT" --experiment E1.2)"
+fi
+START_TIME="$(date --iso-8601=seconds)"
+
+mkdir -- "$RUN_DIR/reference_frames"
 test -w "$RUN_DIR"
 printf 'VLA_RUN_DIR=%s\n' "$RUN_DIR"
 printf 'E1.2_MODE=local-read-only,no-robot,no-inference,no-publisher\n'
@@ -120,12 +125,17 @@ FRAME_COUNT="$(find "$RUN_DIR/reference_frames" -maxdepth 1 -type f -name '*.png
   echo "ERROR: se esperaban 12 frames; se obtuvieron $FRAME_COUNT" >&2
   exit 1
 }
-sha256sum "$RUN_DIR"/reference_frames/*.png > "$RUN_DIR/reference_frames.sha256"
+(
+  cd "$RUN_DIR"
+  sha256sum reference_frames/*.png
+) > "$RUN_DIR/reference_frames.sha256"
 montage "${CONTACT_SHEET_INPUTS[@]}" -thumbnail 480x288 -tile 3x4 \
   -geometry +6+6 "$RUN_DIR/reference_frames/contact_sheet.png"
 test -s "$RUN_DIR/reference_frames/contact_sheet.png"
-sha256sum "$RUN_DIR/reference_frames/contact_sheet.png" \
-  > "$RUN_DIR/contact_sheet.sha256"
+(
+  cd "$RUN_DIR"
+  sha256sum reference_frames/contact_sheet.png
+) > "$RUN_DIR/contact_sheet.sha256"
 
 cat > "$RUN_DIR/confirmed_unresolved.yaml" <<EOF
 confirmed:
@@ -150,6 +160,7 @@ cat > "$RUN_DIR/actual_result.yaml" <<EOF
 experiment_id: E1.2
 run_id: $(basename -- "$RUN_DIR")
 operator: ${USER:-unknown}
+start_time: $START_TIME
 end_time: $(date --iso-8601=seconds)
 status: ARTIFACTS_EXTRACTED_PENDING_VISUAL_REVIEW
 scenario_id: LOCAL_VENDOR_ARTIFACT_AUDIT
@@ -176,14 +187,17 @@ recovery_or_stop: NOT_APPLICABLE_LOCAL_READ_ONLY
 next_experiment_authorized: false
 EOF
 
-sha256sum \
-  "$RUN_DIR/s2_ready.sha256" \
-  "$RUN_DIR/s2_ready.xml.txt" \
-  "$RUN_DIR/tasks.tsv" \
-  "$RUN_DIR/reference_frames.sha256" \
-  "$RUN_DIR/contact_sheet.sha256" \
-  "$RUN_DIR/confirmed_unresolved.yaml" \
-  > "$RUN_DIR/audit_files.sha256"
+(
+  cd "$RUN_DIR"
+  sha256sum \
+    s2_ready.sha256 \
+    s2_ready.xml.txt \
+    tasks.tsv \
+    reference_frames.sha256 \
+    contact_sheet.sha256 \
+    confirmed_unresolved.yaml \
+    actual_result.yaml
+) > "$RUN_DIR/audit_files.sha256"
 
 printf 'E1.2_ARTIFACTS_OK=%s\n' "$RUN_DIR"
 printf 'E1.2_STATUS=ARTIFACTS_EXTRACTED_PENDING_VISUAL_REVIEW\n'

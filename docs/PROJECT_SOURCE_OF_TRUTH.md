@@ -1,6 +1,6 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
-**Última actualización:** 27 de agosto de 2026
+**Última actualización:** 28 de agosto de 2026
 **Unidad:** Cruzr S2, SN `WAE001UBT60000669`  
 **Propósito:** relevo técnico y operativo entre sesiones, personas y agentes
 
@@ -212,6 +212,24 @@ La inferencia shadow produjo chunks finitos de forma esperada y confirmó cero
 publicadores en `/mc/sdk/robot_command`. Desde `home`, los chunks se rechazaron
 por diferencias de hasta aproximadamente 1,35 rad en ocho articulaciones. No
 se habilitó movimiento VLA.
+
+El 2026-08-28 se ejecutó task 0 otra vez desde una postura/escena viva no
+documentada, por lo que el run se clasifica `OOD_RUNTIME_SMOKE`, no prueba
+nominal. Generó dos chunks y el validador rechazó ambos por siete saltos del
+primer punto; el máximo fue `R_shoulder_yaw_joint=1,339886 rad` frente a
+`0,35 rad`. El goal solicitado por 8 s concluyó en `10,063076 s`, al terminar
+el ciclo de inferencia en curso. STOP dejó ambos contenedores `exited` y cero
+publicadores. Los logs se recuperaron de los contenedores detenidos en
+`Humanoide-vla-evidence/20260828T080202_E2.0_recovered/`. Estado:
+`PASS_SHADOW_SAFETY_ONLY`; E1.0/E1.3 y la validación de task siguen pendientes.
+
+La evidencia VLA ya no depende de variables exportadas por un bloque anterior.
+`new_vla_evidence_run.sh` crea cada run de forma exclusiva y rechaza `/` y
+rutas existentes. E1.1/E1.2, los smoke E2.0/E2.1 y las repeticiones E2.3 tienen
+wrappers autocontenidos; E2.3 usa sesiones independientes y STOP entre runs.
+Los ejemplos de E2.2, E3.2, E4.1, E5.1/E5.2 y VLA-T00…T09 inicializan su
+directorio en el mismo bloque. Es un cambio de PC/repositorio; no arrancó
+inferencia ni alteró Motion/Vision.
 
 El paquete local sí contiene
 `codes-S2/motion/s2_vla_scripts/s2_bio_vla/s2_vla_pick_large_teleop_ready.xml`,
@@ -699,6 +717,8 @@ actualizarse este archivo antes de cerrar la sesión.
 
 | Fecha | Hito | Resultado |
 |---|---|---|
+| 2026-08-28 | disciplina de evidencia VLA endurecida para todos los ejercicios | se añadió un creador exclusivo de runs que rechaza raíz/rutas existentes, wrapper completo E1.1, protección de no sobrescritura y hashes relativos en E1.2, y wrapper E2.3 con sub-runs/STOP independientes. E2.0/E2.1 usan el mismo creador. Todos los bloques actuales/futuros del plan que escriben evidencia inicializan su ruta localmente; se eliminaron dependencias de `$VLA_RUN_ID`/`$VLA_EVIDENCE_ROOT` heredadas. Validación local solamente: no se inició inferencia, no se cambió el robot y no hubo movimiento |
+| 2026-08-28 | E2.0 task 0 ejecutado fuera de secuencia y recuperado | el bloque manual sí ejecutó check, inferencia shadow y STOP, pero `$VLA_RUN_DIR` estaba vacío y todos los `tee` fallaron contra `/`. La evidencia persistente se recuperó en modo read-only desde los contenedores detenidos: dos chunks, ambos rechazados por `first_point_delta_violations:7`, máximo `R_shoulder_yaw_joint=1,339886 rad` frente a 0,35; duración real `10,063076 s` ante 8 s solicitados. Estado final verificado: inferencia/control `exited`, publicadores `0`, ningún movimiento. Se añadieron `--export-evidence` y `run_vla_shadow_smoke.sh` para evidencia autocontenida y STOP en fallo. Clasificación `PASS_SHADOW_SAFETY_ONLY`; escena/postura no documentadas y E1.0/E1.3 pendientes, por lo que E2.1 no está autorizado |
 | 2026-08-27 | referencia visual del dataset VLA identificada | se validó en `/tmp`, sin alterar el dataset, el muestreo automatizado de 12 frames —inicio/medio/final de episodios 0/1/90/91— mediante VLC. Muestran un tote rígido gris abierto de paredes altas y borde gris, con tiras/marcas negras estrechas en algunos frames y un pequeño elemento con lazo visible dentro. El seek puede elegir frames adyacentes entre runs, por lo que sus hashes son de integridad por run, no canónicos. El plan distingue `B0_SAFE` vacía de la referencia: cartón u otro tote es OOD aunque mida 60×40×22 cm. No hubo inferencia ni movimiento |
 | 2026-08-27 | mesa candidata disponible para fixture VLA | el propietario declara disponible `MESA_T1`, nominalmente `1,85 × 0,80 × 1,00 m` (ancho × fondo × altura). Se registró como `PENDIENTE`: E1.0 debe medir tablero/cuatro esquinas y comprobar nivelación, rigidez, estabilidad, patas y travesaños. No determina la separación horizontal ni autoriza acercarla al robot |
 | 2026-08-27 | inventario mínimo de superficies VLA definido | para tasks 0–3 se reutilizará `MESA_T1` a 1 m y sólo se considerará una plataforma regulable rígida después de que E4.2 resuelva las alturas low/middle; no se requieren compartimientos ni dos repisas simultáneas. `RECEPTOR_VOLCADO` y `MESA_DESTINO_VACIA` corresponden a la misión ampliada y quedan pendientes de nueva primitiva/dataset, no del checkpoint actual. No se adquirió ni movió mobiliario |

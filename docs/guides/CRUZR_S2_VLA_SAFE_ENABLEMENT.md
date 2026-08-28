@@ -22,6 +22,14 @@ antes de cualquier ejecución física. El primer punto difería de la postura re
 en ocho articulaciones de brazo, con diferencias máximas próximas a 1,35 rad.
 Esto demuestra que el VLA no debe activarse directamente desde `home`.
 
+Una segunda ejecución de task 0 el 2026-08-28, desde una postura y escena que
+no se documentaron, produjo dos chunks adicionales. Ambos fueron rechazados por
+siete violaciones del primer punto; la máxima fue
+`R_shoulder_yaw_joint=1,339886 rad` con límite `0,35 rad`. La duración real fue
+`10,063076 s` para un máximo solicitado de 8 s. Se mantuvieron cero
+publicadores, STOP dejó ambos contenedores detenidos y no hubo movimiento. Este
+run es `PASS_SHADOW_SAFETY_ONLY`, no evidencia de que task 0 pueda hacer PICK.
+
 ## Incompatibilidades corregidas en el overlay
 
 El paquete original no arrancaba tal como fue entregado:
@@ -41,6 +49,36 @@ VLA siguen con política `restart=no` y quedan detenidos al terminar.
 
 ## Uso en shadow mode
 
+Los runs no deben construirse concatenando una variable que proceda de otro
+shell. Para medidas o herramientas futuras, crear la salida en el mismo bloque:
+
+```bash
+VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment ID)"
+```
+
+E1.1 y E1.2 disponen de wrappers que crean y validan esa ruta internamente:
+
+```bash
+./scripts/vla/audit_vla_experiment_e1_1.sh
+./scripts/vla/audit_vla_experiment_e1_2.sh
+```
+
+Para un smoke autocontenido de task 0 o 2, con directorio propio, STOP ante
+fallo y exportación de evidencia:
+
+```bash
+./scripts/vla/run_vla_shadow_smoke.sh --task-id 0
+```
+
+Después de que E1.0, E1.3 y E2.1 liberen el gate, cinco repeticiones E2.3 se
+ejecutan sin mezclar logs/chunks y con STOP entre runs:
+
+```bash
+./scripts/vla/run_vla_shadow_repetitions.sh --task-id 0 --repetitions 5
+```
+
+La secuencia manual de bajo nivel continúa disponible para diagnóstico:
+
 ```bash
 ./scripts/vla/run_ubtech_vla_shadow.sh --deploy
 ./scripts/vla/run_ubtech_vla_shadow.sh --start-shadow --shadow-duration 300
@@ -48,6 +86,15 @@ VLA siguen con política `restart=no` y quedan detenidos al terminar.
 ./scripts/vla/run_ubtech_vla_shadow.sh --status
 ./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id 0 --inference-duration 8
 ./scripts/vla/run_ubtech_vla_shadow.sh --stop
+```
+
+Si la secuencia ya terminó pero no se conservaron los logs locales, se pueden
+extraer desde los contenedores detenidos sin arrancarlos:
+
+```bash
+VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh \
+  --experiment RECOVERED-SHADOW)"
+./scripts/vla/run_ubtech_vla_shadow.sh --export-evidence "$VLA_RUN_DIR"
 ```
 
 El script aborta si detecta un publicador en `/mc/sdk/robot_command`. El

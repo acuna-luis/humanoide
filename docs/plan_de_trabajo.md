@@ -1,6 +1,6 @@
 # Plan de trabajo: recoger, transportar, vaciar y depositar una caja
 
-**Fecha:** 2026-08-27
+**Fecha:** 2026-08-28
 
 **Estado:** `PLANIFICADO`; este documento no autoriza movimiento físico
 
@@ -103,15 +103,16 @@ autoriza liberar un paro, cambiar de postura ni mover una articulación.
 ### Formulario obligatorio del resultado real
 
 Cada experimento crea un directorio independiente y termina con un
-`actual_result.yaml`. No se escribe “funcionó” sin datos:
+`actual_result.yaml`. No se escribe “funcionó” sin datos. Éste es el patrón,
+no una orden adicional a ejecutar antes de cada tarjeta:
 
 ```bash
-export VLA_EXPERIMENT_ID="E1.0"
-export VLA_RUN_ID="$(date +%Y%m%dT%H%M%S)_${VLA_EXPERIMENT_ID}"
-export VLA_EVIDENCE_ROOT="/home/lacuna/proyectos/Robots/Humanoide-vla-evidence"
-export VLA_RUN_DIR="$VLA_EVIDENCE_ROOT/$VLA_RUN_ID"
-mkdir -p "$VLA_RUN_DIR"
+VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment ID_DE_LA_TARJETA)"
+printf 'VLA_RUN_DIR=%s\n' "$VLA_RUN_DIR"
 ```
+
+Cada sección manual sustituye `ID_DE_LA_TARJETA` una sola vez; los wrappers
+crean el run internamente y no requieren ejecutar este patrón.
 
 ```yaml
 experiment_id: E1.0
@@ -154,25 +155,32 @@ la distancia horizontal al robot.
 
 **Pasos:**
 
-1. Mantener el robot inmóvil; si existe una sesión VLA anterior, ejecutar:
+1. Crear el run E1.0 en el mismo terminal y conservar la ruta mostrada:
+
+   ```bash
+   VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment E1.0)"
+   printf 'VLA_RUN_DIR=%s\n' "$VLA_RUN_DIR"
+   ```
+
+2. Mantener el robot inmóvil; si existe una sesión VLA anterior, ejecutar:
 
    ```bash
    ./scripts/vla/run_ubtech_vla_shadow.sh --stop
    ```
 
-2. Colocar la plataforma a más de `1,5 m` de cualquier parte del robot; esta
+3. Colocar la plataforma a más de `1,5 m` de cualquier parte del robot; esta
    separación sólo mantiene el fixture fuera de la envolvente y no se registra
    como distancia de trabajo.
-3. Medir desde el mismo suelo la superficie a `1,000 m` en sus cuatro esquinas.
+4. Medir desde el mismo suelo la superficie a `1,000 m` en sus cuatro esquinas.
    Cada medida debe quedar en `0,990…1,010 m` y la diferencia máxima entre
    esquinas no debe superar `0,010 m`.
-4. Medir y registrar el ancho/fondo reales. Verificar el mínimo provisional del
+5. Medir y registrar el ancho/fondo reales. Verificar el mínimo provisional del
    proyecto `0,80 × 0,75 m`; se admite una superficie mayor y no se recorta su
    geometría al modelar colisiones en E4.1.
-5. Con B0 aún fuera, verificar estabilidad de la plataforma manualmente.
-6. Pegar marcas de cinta para plataforma, centro de B0, cara frontal de B0 y
+6. Con B0 aún fuera, verificar estabilidad de la plataforma manualmente.
+7. Pegar marcas de cinta para plataforma, centro de B0, cara frontal de B0 y
    orientación `yaw=0°`.
-7. Fotografiar vista frontal/lateral con cinta métrica y la altura de las
+8. Fotografiar vista frontal/lateral con cinta métrica y la altura de las
    cuatro esquinas.
 
 **Resultado esperado:** todas las cotas dentro de tolerancia, plataforma estable,
@@ -196,33 +204,12 @@ red Motion/Vision debe estar disponible.
 **Comandos, en este orden:**
 
 ```bash
-(
-set -euo pipefail
-export VLA_EXPERIMENT_ID="E1.1"
-export VLA_RUN_ID="$(date +%Y%m%dT%H%M%S)_${VLA_EXPERIMENT_ID}"
-export VLA_EVIDENCE_ROOT="/home/lacuna/proyectos/Robots/Humanoide-vla-evidence"
-export VLA_RUN_DIR="$VLA_EVIDENCE_ROOT/$VLA_RUN_ID"
-mkdir -p "$VLA_RUN_DIR"
-test -d "$VLA_RUN_DIR"
-test -w "$VLA_RUN_DIR"
-printf 'VLA_RUN_DIR=%s\n' "$VLA_RUN_DIR"
-
-./scripts/vla/install_ubtech_vla.sh --check \
-  2>&1 | tee "$VLA_RUN_DIR/01_install_check.log"
-./scripts/vla/install_ubtech_vla.sh --verify \
-  2>&1 | tee "$VLA_RUN_DIR/02_install_verify.log"
-./scripts/vla/run_ubtech_vla_shadow.sh --check \
-  2>&1 | tee "$VLA_RUN_DIR/03_shadow_check.log"
-./scripts/vla/run_ubtech_vla_shadow.sh --status \
-  2>&1 | tee "$VLA_RUN_DIR/04_shadow_status.log"
-./scripts/vla/run_ubtech_vla_shadow.sh --stop \
-  2>&1 | tee "$VLA_RUN_DIR/05_shadow_stop.log"
-
-test "$(find "$VLA_RUN_DIR" -maxdepth 1 -type f -name '*.log' -size +0c | wc -l)" -eq 5
-sha256sum "$VLA_RUN_DIR"/*.log > "$VLA_RUN_DIR/logs.sha256"
-printf 'E1.1_EVIDENCE_OK=%s\n' "$VLA_RUN_DIR"
-)
+./scripts/vla/audit_vla_experiment_e1_1.sh
 ```
+
+El wrapper crea un run exclusivo, rechaza contenedores activos, conserva los
+cinco logs y genera `actual_result.yaml` más hashes relativos. No reutiliza
+`VLA_RUN_DIR` del terminal.
 
 **Resultado esperado:** checkpoint/config/runtime presentes, contenedores
 instalados, final detenidos, `restart=no` y cero publicadores en
@@ -314,12 +301,19 @@ con cartón/B0 vacía. **FAIL:** falta un artefacto o el hash cambió.
 
 **Estado:** `EJECUTABLE_LECTURA`; robot inmóvil y sin usar su detector.
 
-1. Pesar B0 vacía.
-2. Colocarla sobre la plataforma a `x=0`, cara frontal `0,050 m` detrás del
+1. Crear un run nuevo; no reutilizar el directorio E1.0:
+
+   ```bash
+   VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment E1.3)"
+   printf 'VLA_RUN_DIR=%s\n' "$VLA_RUN_DIR"
+   ```
+
+2. Pesar B0 vacía.
+3. Colocarla sobre la plataforma a `x=0`, cara frontal `0,050 m` detrás del
    borde, lado de 0,603 m paralelo al borde y `yaw=0°`.
-3. Medir L/W/H, centro y altura superior esperada
+4. Medir L/W/H, centro y altura superior esperada
    `1,000 + 0,217 = 1,217 m`.
-4. Fotografiar frontal/lateral/superior y retirar de nuevo plataforma+B0 fuera
+5. Fotografiar frontal/lateral/superior y retirar de nuevo plataforma+B0 fuera
    de la envolvente.
 
 **PASS:** dimensiones dentro de `±0,010 m`, superficie a `1,000 ±0,010 m`,
@@ -329,26 +323,29 @@ pose marcada y masa registrada. `D_BUMPER_PLATFORM` continúa `null`.
 
 #### Experimento 2.0 — Task 0, PICK bajo, una inferencia sin movimiento
 
-**Estado:** `EJECUTABLE_SHADOW` después de PASS en E1.0–E1.2.
+**Estado:** `PASS_SHADOW_SAFETY_ONLY` observado fuera de secuencia el
+2026-08-28. E1.0 y E1.3 continúan pendientes; por ello este resultado no
+autoriza E2.1 ni valida `PICK`.
 
 **Escenario:** plataforma y B0 fuera de la envolvente; robot inmóvil en su
 postura actual. Es un smoke test OOD: no representa `SUPPORTED_LOW`.
 
-**Comandos:**
+**Comando canónico:** el wrapper crea y valida su propio directorio de
+evidencia, solicita STOP ante error/señal y exporta los logs de los contenedores
+después de detenerlos:
 
 ```bash
-./scripts/vla/run_ubtech_vla_shadow.sh --check \
-  2>&1 | tee "$VLA_RUN_DIR/01_check.log"
-./scripts/vla/run_ubtech_vla_shadow.sh --start-shadow --shadow-duration 180 \
-  2>&1 | tee "$VLA_RUN_DIR/02_start_shadow.log"
-./scripts/vla/run_ubtech_vla_shadow.sh --start-inference \
-  2>&1 | tee "$VLA_RUN_DIR/03_start_inference.log"
-./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id 0 --inference-duration 8 \
-  2>&1 | tee "$VLA_RUN_DIR/04_task0.log"
-./scripts/vla/run_ubtech_vla_shadow.sh --status \
-  2>&1 | tee "$VLA_RUN_DIR/05_status.log"
-./scripts/vla/run_ubtech_vla_shadow.sh --stop \
-  2>&1 | tee "$VLA_RUN_DIR/06_stop.log"
+./scripts/vla/run_vla_shadow_smoke.sh --task-id 0
+```
+
+No reconstruir manualmente esa secuencia. Si los contenedores ya están
+detenidos y sólo faltan logs, crear una ruta exclusiva y recuperarlos sin
+arrancarlos con:
+
+```bash
+VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh \
+  --experiment RECOVERED-SHADOW)"
+./scripts/vla/run_ubtech_vla_shadow.sh --export-evidence "$VLA_RUN_DIR"
 ```
 
 **Resultado esperado:** goal task 0 aceptado por el action server, uno o más
@@ -364,18 +361,33 @@ chunk inválido sin rechazo, publisher o movimiento.
 **Resultado real:** registrar `ACCEPT/REJECT`, razón, máximo primer delta,
 ejes implicados, latencia, chunk IDs, `flag_pred` y publishers.
 
+**Ejecución observada y recuperada:** el intento manual comenzó el
+2026-08-28 08:02 CEST. Como `$VLA_RUN_DIR` estaba vacío, los seis `tee`
+fallaron contra `/`; no obstante, STOP dejó inferencia/control `exited` y
+`COMMAND_PATH_SAFE=publishers:0`. Los logs persistentes se recuperaron, sin
+arrancar contenedores, en
+`Humanoide-vla-evidence/20260828T080202_E2.0_recovered/` y validan contra
+SHA-256. Task 0 produjo dos chunks: `0 ACCEPT / 2 REJECT`, ambos por
+`first_point_delta_violations:7`. El máximo fue
+`R_shoulder_yaw_joint=1,339886 rad` frente al límite `0,35 rad`. La petición de
+8 s terminó en `10,063076 s` —sobrepaso `2,063076 s` al completarse el ciclo en
+curso—. La escena, dimensiones y postura inicial no quedaron documentadas, por
+lo que se etiqueta `LIVE_CURRENT_SCENE_UNDOCUMENTED_OOD`. Resultado:
+`PASS_SHADOW_SAFETY_ONLY`, nunca éxito físico de PICK. No se publicaron
+comandos ni se movió el robot.
+
 #### Experimento 2.1 — Task 2, smoke test medio sin fixture nominal
 
-**Estado:** `EJECUTABLE_SHADOW` después de E1.3 y E2.0.
+**Estado:** `BLOCKED_E1.0_E1.3`; ejecutar sólo después de completar las medidas
+de plataforma y B0 y revisar E2.0.
 
 **Escenario:** idéntico a E2.0; plataforma y B0 fuera de la envolvente. Sólo
 cambia el task ID para verificar el catálogo y runtime.
 
-**Comandos:** repetir exactamente E2.0 cambiando sólo:
+**Comando:** cuando se libere el gate, usar el mismo wrapper con task 2:
 
 ```bash
-./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id 2 --inference-duration 8 \
-  2>&1 | tee "$VLA_RUN_DIR/04_task2.log"
+./scripts/vla/run_vla_shadow_smoke.sh --task-id 2
 ```
 
 **Resultado esperado/PASS:** iguales a E2.0, pero task/texto deben ser
@@ -393,6 +405,7 @@ offline de un episodio de place o un mock 20D+RGB documentado.
 **Orden especificada para cuando exista el evaluador:**
 
 ```bash
+VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment E2.2)"
 python3 scripts/vla/evaluate_checkpoint_offline.py \
   --checkpoint cruzrss2_vla_pack-002/weight/checkpoint-40000 \
   --dataset cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319 \
@@ -409,8 +422,9 @@ episodio inicial HELD. Hasta que el script exista, el resultado real es
 
 #### Experimento 2.3 — Repetibilidad P20 OOD de tasks 0 y 2
 
-**Estado:** `EJECUTABLE_SHADOW`; sólo mide runtime actual P20, no máscaras
-14–19.
+**Estado:** `BLOCKED_E1.0_E1.3_E2.1`; el wrapper está implementado, pero sólo se
+ejecuta después de aprobar las medidas y el smoke task 2. Mide runtime P20, no
+máscaras 14–19.
 
 **Escenario:** plataforma/B0 fuera de la envolvente. Ejecutar cinco repeticiones
 task 0 y cinco task 2 sin cambiar escena, robot ni cámara. Esto mide
@@ -419,21 +433,14 @@ repetibilidad del runtime en una entrada OOD, no fidelidad de pick low/middle.
 **Secuencia por bloque:**
 
 ```bash
-./scripts/vla/run_ubtech_vla_shadow.sh --check
-./scripts/vla/run_ubtech_vla_shadow.sh --start-shadow --shadow-duration 300
-./scripts/vla/run_ubtech_vla_shadow.sh --start-inference
-for VLA_REP in 1 2 3 4 5; do
-  ./scripts/vla/run_ubtech_vla_shadow.sh \
-    --trigger --task-id 0 --inference-duration 8 \
-    2>&1 | tee "$VLA_RUN_DIR/task0_rep_${VLA_REP}.log"
-done
-./scripts/vla/run_ubtech_vla_shadow.sh --status
-./scripts/vla/run_ubtech_vla_shadow.sh --stop
+./scripts/vla/run_vla_shadow_repetitions.sh --task-id 0 --repetitions 5
+./scripts/vla/run_vla_shadow_repetitions.sh --task-id 2 --repetitions 5
 ```
 
-Para task 2 repetir cambiando únicamente `--task-id 0` por `--task-id 2` y el
-prefijo de log. **PASS:** 5/5 ejecuciones terminan con verdict y cero publishers;
-se reporta variación de latencia, endpoint, primer delta y `flag_pred`.
+Cada repetición usa un sub-run independiente y confirma STOP antes de iniciar la
+siguiente; así no mezcla chunks, logs ni estado de inferencia. **PASS:** 5/5
+ejecuciones por task terminan con verdict y cero publishers; se reporta
+variación de latencia, endpoint, primer delta y `flag_pred`.
 
 ### Serie 3 — Dataset, OOD y contrato temporal
 
@@ -477,6 +484,7 @@ activo o perder la foto/medida.
 **Comando previsto:**
 
 ```bash
+VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment E3.2)"
 python3 scripts/vla/test_vla_executor_sink.py \
   --axis-profile P20_AHLW --fixture low --fault-suite all \
   --output "$VLA_RUN_DIR"
@@ -545,6 +553,7 @@ completa `platform_in_base={x,y,z,roll,pitch,yaw}`, más
 `D_BUMPER_PLATFORM`, error de reproyección y margen cinemático.
 
 ```bash
+VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment E4.1)"
 test -n "$VLA_READY_TASK"
 test -s "$VLA_S2_URDF"
 test -d "$VLA_E1_2_RUN_DIR/reference_frames"
@@ -629,6 +638,7 @@ no cero; fault suite aprobada y cero import/publicación de `RobotCommand`.
 **Comando de cada celda:**
 
 ```bash
+VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment E5.1)"
 ./scripts/vla/run_vla_shadow_matrix.sh \
   --scenario SUPPORTED_LOW --task-id 0 --axis-profile P14_A \
   --repetitions 5 --output "$VLA_RUN_DIR"
@@ -642,9 +652,11 @@ no un agarre físico. **PASS:** 160 bundles y cero publishers.
 **Estado:** `PENDIENTE_CODIGO`.
 
 ```bash
+VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment E5.2)"
 python3 scripts/vla/analyze_vla_campaign.py \
-  --input "$VLA_EVIDENCE_ROOT" --select-minimal-profile \
-  --output "$VLA_EVIDENCE_ROOT/shadow-profile-selection.json"
+  --input /home/lacuna/proyectos/Robots/Humanoide-vla-evidence \
+  --select-minimal-profile \
+  --output "$VLA_RUN_DIR/shadow-profile-selection.json"
 ```
 
 **PASS:** perfil candidato por task y razón cuantitativa para H/L/W. No autoriza
@@ -772,11 +784,12 @@ pasa directamente al robot.
 
 ### Punto exacto de comienzo
 
-El próximo experimento es **E1.0**. Después de medir la plataforma se ejecuta E1.1.
-La primera inferencia permitida es E2.0 y es shadow. El primer experimento con
-movimiento determinista sería E4.3 y el primer canary VLA sería E6.0; ambos
-están hoy bloqueados por dependencias explícitas y requieren autorización
-física futura independiente.
+El próximo experimento es **E1.0** y después **E1.3**. E1.1 y E1.2 ya están
+aprobados y no se repiten. E2.0 quedó registrado sólo como smoke OOD seguro;
+tras cerrar las medidas se revisa ese resultado y se habilita E2.1. El primer
+experimento con movimiento determinista sería E4.3 y el primer canary VLA sería
+E6.0; ambos siguen bloqueados por dependencias explícitas y requieren
+autorización física futura independiente.
 
 ## 0. Próximo bloque prioritario: caracterización integral del VLA
 
@@ -1291,6 +1304,9 @@ chunk.
 
 | Orden en el PC | Efecto | Movimiento |
 |---|---|---|
+| `./scripts/vla/new_vla_evidence_run.sh --experiment ID` | crea un directorio exclusivo y muestra su ruta; rechaza `/` y runs existentes | no |
+| `./scripts/vla/audit_vla_experiment_e1_1.sh` | ejecuta E1.1 con logs/hashes autocontenidos | no |
+| `./scripts/vla/audit_vla_experiment_e1_2.sh` | ejecuta E1.2 local y rechaza sobrescritura | no |
 | `./scripts/vla/install_ubtech_vla.sh --check` | valida paquete local y prerequisitos | no |
 | `./scripts/vla/install_ubtech_vla.sh --verify` | comprueba instalación/contenedores | no |
 | `./scripts/vla/run_ubtech_vla_shadow.sh --deploy` | sincroniza runtime seguro; cambia archivos remotos | no |
@@ -1300,6 +1316,9 @@ chunk.
 | `./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id N --inference-duration 8` | solicita inferencia para task `N`; exige shadow activo | no |
 | `./scripts/vla/run_ubtech_vla_shadow.sh --status` | muestra contenedores, logs y publicadores | no |
 | `./scripts/vla/run_ubtech_vla_shadow.sh --stop` | detiene VLA y verifica cero publicadores físicos | no |
+| `./scripts/vla/run_ubtech_vla_shadow.sh --export-evidence DIR` | recupera logs incluso desde contenedores detenidos sin arrancarlos | no |
+| `./scripts/vla/run_vla_shadow_smoke.sh --task-id 0\|2` | ejecuta una secuencia shadow autocontenida, detiene y conserva evidencia | no |
+| `./scripts/vla/run_vla_shadow_repetitions.sh --task-id 0\|2 --repetitions 5` | ejecuta E2.3 en sub-runs independientes con STOP entre ellos | no |
 | `./scripts/cruzr_blue_workbin_cycle.sh --measure-box-fast` | mide/detecta B0 para registrar geometría | no debe mover; confirmar `--help` antes |
 | `./scripts/cruzr_recover_to_home.sh --check` | diagnóstico de estado para recuperación | no |
 
@@ -1307,16 +1326,15 @@ No se combina este flujo con PICO, UI web, joystick ni otro cliente de control.
 `--deploy` se usa sólo al cambiar runtime; no se repite como parte de cada
 inferencia.
 
-La secuencia shadow canónica disponible es:
+La secuencia shadow canónica para un único smoke es:
 
 ```bash
-./scripts/vla/run_ubtech_vla_shadow.sh --check
-./scripts/vla/run_ubtech_vla_shadow.sh --start-shadow --shadow-duration 180
-./scripts/vla/run_ubtech_vla_shadow.sh --start-inference
-./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id 0 --inference-duration 8
-./scripts/vla/run_ubtech_vla_shadow.sh --status
-./scripts/vla/run_ubtech_vla_shadow.sh --stop
+./scripts/vla/run_vla_shadow_smoke.sh --task-id 0
 ```
+
+El wrapper encadena internamente `--check`, `--start-shadow`,
+`--start-inference`, `--trigger`, `--status`, `--stop` y
+`--export-evidence`; no debe ejecutarse en paralelo con la secuencia manual.
 
 El script envía internamente el goal ROS 2 siguiente; se documenta para auditar
 el contrato, **no para abrir un segundo cliente en paralelo**:
@@ -1367,10 +1385,15 @@ Antes de cada tarjeta se crea un directorio fuera de Git y se completa un
 manifiesto. En este PC se propone:
 
 ```bash
-export VLA_RUN_ID="YYYYMMDD-HHMMSS_gate-task-profile_rep"
-export VLA_EVIDENCE_ROOT="/home/lacuna/proyectos/Robots/Humanoide-vla-evidence"
-mkdir -p "$VLA_EVIDENCE_ROOT/$VLA_RUN_ID"
+VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh \
+  --experiment gate-task-profile-rep)"
+printf 'VLA_RUN_DIR=%s\n' "$VLA_RUN_DIR"
 ```
+
+No se reutilizan `VLA_RUN_DIR`, `VLA_RUN_ID` ni `VLA_EVIDENCE_ROOT` de otra
+orden, subshell o sesión. Cada bloque que necesite una ruta la crea en ese mismo
+bloque; los wrappers ejecutables la crean internamente. Un directorio ya
+existente se rechaza aunque esté vacío.
 
 El manifiesto debe contener como mínimo:
 
@@ -1421,14 +1444,12 @@ cuenta.
   checkpoint, metadata, DataConfig, YAML y runtime.
 
   ```bash
-  ./scripts/vla/install_ubtech_vla.sh --check
-  ./scripts/vla/install_ubtech_vla.sh --verify
-  ./scripts/vla/run_ubtech_vla_shadow.sh --check
-  ./scripts/vla/run_ubtech_vla_shadow.sh --status
+  ./scripts/vla/audit_vla_experiment_e1_1.sh
+  VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh \
+    --experiment VLA-T00-manifest)"
   find cruzrss2_vla_pack-002/weight/checkpoint-40000 \
     -type f -print0 | sort -z | xargs -0 sha256sum \
-    > "$VLA_EVIDENCE_ROOT/$VLA_RUN_ID/checkpoint.sha256"
-  ./scripts/vla/run_ubtech_vla_shadow.sh --stop
+    > "$VLA_RUN_DIR/checkpoint.sha256"
   ```
 - **Prueba:** comparar catálogo 0–3 de `tasks.jsonl` con goal/action, comprobar
   orden 20D y registrar las cinco contradicciones de 0.4.
@@ -1455,11 +1476,13 @@ cuenta.
   Invocación especificada, disponible sólo después de implementar el script:
 
   ```bash
+  VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh \
+    --experiment VLA-T01)"
   python3 scripts/vla/evaluate_checkpoint_offline.py \
     --checkpoint cruzrss2_vla_pack-002/weight/checkpoint-40000 \
     --dataset cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319 \
     --split test --task-id 0 --seed 0 \
-    --output "$VLA_EVIDENCE_ROOT/$VLA_RUN_ID"
+    --output "$VLA_RUN_DIR"
   ```
 - **Mensaje:** misma instrucción textual exacta del catálogo más un estado 20D
   y una RGB del episodio; salida esperada 10×20 finita.
@@ -1488,11 +1511,13 @@ cuenta.
 
   ```bash
   # Especificación futura; hoy este archivo no existe.
+  VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh \
+    --experiment VLA-T02)"
   python3 scripts/vla/evaluate_checkpoint_offline.py \
     --checkpoint cruzrss2_vla_pack-002/weight/checkpoint-40000 \
     --dataset cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319 \
     --split test --task-id 0 --seed 0 --fault-suite all \
-    --output "$VLA_EVIDENCE_ROOT/$VLA_RUN_ID"
+    --output "$VLA_RUN_DIR"
   ```
 - **PASS:** 100 % de mensajes estructuralmente inválidos rechazados; cada
   variante válida queda etiquetada `NOMINAL`, `OOD_ACCEPTED` o `OOD_REJECTED`.
@@ -1514,13 +1539,8 @@ cuenta.
   inferencia, entre chunks y tras timeout.
 
   ```bash
-  ./scripts/vla/run_ubtech_vla_shadow.sh --check
-  ./scripts/vla/run_ubtech_vla_shadow.sh --start-shadow --shadow-duration 300
-  ./scripts/vla/run_ubtech_vla_shadow.sh --start-inference
-  ./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id 0 --inference-duration 8
-  ./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id 2 --inference-duration 8
-  ./scripts/vla/run_ubtech_vla_shadow.sh --status
-  ./scripts/vla/run_ubtech_vla_shadow.sh --stop
+  ./scripts/vla/run_vla_shadow_smoke.sh --task-id 0
+  ./scripts/vla/run_vla_shadow_smoke.sh --task-id 2
   ```
 - **Mensaje:** `InferenceTask{task_id, max_inference_duration:8.0,
   end_threshold:0.1}`; observar `chunk_id`, diez `time_from_start`, feedback,
@@ -1553,11 +1573,7 @@ cuenta.
 
   ```bash
   # Existe y es shadow:
-  ./scripts/vla/run_ubtech_vla_shadow.sh --check
-  ./scripts/vla/run_ubtech_vla_shadow.sh --start-shadow --shadow-duration 300
-  ./scripts/vla/run_ubtech_vla_shadow.sh --start-inference
-  ./scripts/vla/run_ubtech_vla_shadow.sh --trigger --task-id 0 --inference-duration 8
-  ./scripts/vla/run_ubtech_vla_shadow.sh --stop
+  ./scripts/vla/run_vla_shadow_smoke.sh --task-id 0
 
   # Especificación futura; --run no queda autorizado por este documento:
   test -n "$VLA_READY_TASK"  # salida canónica de E4.0
@@ -1585,9 +1601,11 @@ cuenta.
 
   ```bash
   # Especificación futura; no publica al robot.
+  VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh \
+    --experiment VLA-T05)"
   python3 scripts/vla/test_vla_executor_sink.py \
     --axis-profile P14_A --fixture low --fault-suite all \
-    --output "$VLA_EVIDENCE_ROOT/$VLA_RUN_ID"
+    --output "$VLA_RUN_DIR"
   ```
 - **Mensajes:** entrada `Gr00tMotionChunk`; salida sólo un comando serializado al
   sink. Los ejes bloqueados deben conservar exactamente el hold inicial.
@@ -1613,9 +1631,11 @@ cuenta.
 
   ```bash
   # Especificación de una celda futura; repetir task/perfil según la matriz.
+  VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh \
+    --experiment VLA-T06-task0-P14-A)"
   ./scripts/vla/run_vla_shadow_matrix.sh \
     --scenario SUPPORTED_LOW --task-id 0 --axis-profile P14_A \
-    --repetitions 5 --output "$VLA_EVIDENCE_ROOT/$VLA_RUN_ID"
+    --repetitions 5 --output "$VLA_RUN_DIR"
   ```
 - **Orden:** task 0 perfiles 14→20, task 1 sólo tras establecer HELD; después 2
   y 3. Un perfil no avanza si la celda anterior falla por seguridad.
@@ -1761,9 +1781,12 @@ peligroso. Contenido, chasis, navegación, otra caja y volcado quedan fuera.
 
   ```bash
   # Especificación futura; sólo analiza evidencia.
+  VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh \
+    --experiment VLA-T09)"
   python3 scripts/vla/analyze_vla_campaign.py \
-    --input "$VLA_EVIDENCE_ROOT" --select-minimal-profile \
-    --output "$VLA_EVIDENCE_ROOT/profile-selection.json"
+    --input /home/lacuna/proyectos/Robots/Humanoide-vla-evidence \
+    --select-minimal-profile \
+    --output "$VLA_RUN_DIR/profile-selection.json"
   ```
 - **Comparación:** por task, P14 frente a todos los superconjuntos; seguridad,
   recovery, éxito, continuidad/fuerza y sólo después tiempo.

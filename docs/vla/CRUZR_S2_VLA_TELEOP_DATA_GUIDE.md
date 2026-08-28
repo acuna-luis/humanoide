@@ -182,6 +182,24 @@ diferencia llegó a aproximadamente 1,35 rad. El validador rechazó el movimient
 Por tanto, el modelo depende de una postura inicial de preparación que no se
 debe sustituir por `home`.
 
+El 2026-08-28, task 0 volvió a ejecutarse en shadow desde una escena/postura
+viva no registrada. Produjo dos chunks: `0 ACCEPT / 2 REJECT`, ambos por siete
+violaciones del primer punto, con máximo
+`R_shoulder_yaw_joint=1,339886 rad` frente a `0,35 rad`. La solicitud de 8 s
+acabó en `10,063076 s`; el runtime comprobó el límite tras concluir el ciclo en
+curso. Ambos contenedores terminaron `exited`, el canal físico conservó cero
+publicadores y no hubo movimiento. Es un resultado de seguridad del runtime,
+no una evaluación válida de PICK, porque faltan escenario, medidas y postura
+inicial reproducibles.
+
+Para evitar repetir la pérdida de evidencia causada por una variable vacía,
+cada ejercicio crea ahora un run exclusivo mediante
+`new_vla_evidence_run.sh`; las rutas `/` y existentes se rechazan. E1.1/E1.2 y
+E2.0/E2.1 disponen de wrappers autocontenidos. E2.3 ejecuta cada repetición en
+una sesión independiente, confirma STOP y conserva su propio manifiesto antes
+de avanzar. Las herramientas futuras deben recibir un `--output` creado en el
+mismo bloque y no leer `VLA_RUN_DIR` heredado de otra terminal o subshell.
+
 ## 4. VLA frente a programación tradicional
 
 | Necesidad | Enfoque preferente |
