@@ -500,18 +500,50 @@ requisito para continuar el trabajo offline.
 
 #### Experimento 3.0 — Evaluación offline tasks 0–3
 
-**Estado:** `PENDIENTE_CODIGO`. El evaluador E2.2 ya cubre un frame de tasks 1
-y 3; falta ampliarlo a tasks 0–3, varios frames/seeds y agregación por episodio
-sin reutilizar una muestra entre particiones.
+**Estado:** `PASS_OFFLINE_CAMPAIGN_WITH_CONSERVATIVE_VIOLATIONS` el 2026-08-28.
+No demuestra éxito físico ni generalización.
 
 **Escenario:** sin robot ni plataforma. Crear split por episodio/sesión, no por frame.
 Para cada task ejecutar seeds `0,1,2,3,4`; repetir seed 0 cinco veces.
 
-**Comando:** todavía no existe. El wrapper E2.2 ejecuta conjuntamente sólo
-tasks 1/3 y rechaza 0/2; no se altera manualmente para simular E3.0. **PASS:**
-salida 10×20 finita, métricas por eje/horizonte/task, ningún episodio compartido
-entre train/test y C0 inmutable. **Resultado actual:**
-`BLOCKED_MISSING_FOUR_TASK_MULTI_SAMPLE_EVALUATOR`.
+**Comando implementado:**
+
+```bash
+./scripts/vla/run_vla_offline_campaign_e3_0.sh --check
+./scripts/vla/run_vla_offline_campaign_e3_0.sh --run
+```
+
+Selecciona cinco episodios únicos por task de la cola estratificada del 15 % y
+usa frames en fases 0/25/50/75/100 % del horizonte válido. Ejecuta una vez los
+seeds 0–4 y cuatro repeticiones adicionales del seed 0: 20 muestras y 36
+inferencias. El checkpoint se carga una vez, montado read-only en un contenedor
+transitorio de Vision con `--network none`, sin ROS ni estado del robot.
+
+**Resultado real:** run `20260828T114346_E3.0`, evidencia válida. El split local
+tiene 424 episodios train y 76 test, solapamiento cero; los 20 seleccionados
+pertenecen a test. Esto no es un split del proveedor —sólo declara `train`— y
+no se conoce qué episodios vio C0, por lo que no se permite afirmar
+generalización. MAE media sobre los cinco seeds:
+
+| Task | Operación | MAE media | Mín.–máx. | Baselines con violación |
+|---:|---|---:|---:|---:|
+| 0 | PICK low | 0,004908891 | 0,003158109–0,009572752 | 0/5 |
+| 1 | PLACE low | 0,006516288 | 0,003833456–0,008368238 | 0/5 |
+| 2 | PICK middle | 0,009686776 | 0,006181108–0,017767872 | 1/5 |
+| 3 | PLACE middle | 0,008983554 | 0,005781233–0,014605022 | 1/5 |
+
+Task 2, episodio 270/frame 0, predijo `lifter_pitch_1_joint=0,051654458`
+frente al límite superior `0,000336618` en el primer punto. Task 3, episodio
+287/frame 0, excedió ese mismo límite en 7/10 puntos, máximo
+`0,060465574`. No hubo violaciones del salto conservador inicial. Las cinco
+ejecuciones seed 0 de cada task fueron idénticas (`max_abs_diff=0`). C0 mantuvo
+idénticos los hashes completos antes/después; cierre
+`exited/exited/publishers:0`, sin leer ni mover el robot.
+
+**Interpretación:** E3.0 valida selección, replay, contrato 10×20, métricas por
+eje/horizonte/task y repetibilidad. Los límites del elevador bloquean cualquier
+uso físico del chunk observado; el único siguiente paso liberado es E3.1
+offline.
 
 #### Experimento 3.1 — OOD geométrico offline, una variable cada vez
 

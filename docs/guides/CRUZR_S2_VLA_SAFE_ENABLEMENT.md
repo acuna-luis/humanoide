@@ -72,6 +72,18 @@ es `PASS_OFFLINE_INFERENCE_ONLY`: valida el camino de inferencia, no PLACE
 físico, generalización ni seguridad de ejecución. El cierre confirmó
 `exited/exited/publishers:0` y cero acceso al estado del robot.
 
+E3.0, run `20260828T114346_E3.0`, evaluó offline cinco episodios y fases por
+cada task 0–3, con 20 muestras y 36 inferencias. Las MAE medias por task fueron
+`0,004908891`, `0,006516288`, `0,009686776` y `0,008983554`; las cinco
+ejecuciones seed 0 de cada task fueron idénticas. Dos baselines violaron el
+rango de `lifter_pitch_1_joint`: task 2/episodio 270/frame 0 en un punto y
+task 3/episodio 287/frame 0 en siete puntos, hasta `0,060465574` frente al
+máximo `0,000336618`. Por ello el resultado es
+`PASS_OFFLINE_CAMPAIGN_WITH_CONSERVATIVE_VIOLATIONS`, no candidato ejecutable.
+El split local 424/76 no se solapa, pero no demuestra episodios inéditos para
+C0. Hashes completos del checkpoint sin cambios y cierre
+`exited/exited/publishers:0`; sólo queda autorizado continuar con E3.1 offline.
+
 ## Incompatibilidades corregidas en el overlay
 
 El paquete original no arrancaba tal como fue entregado:
@@ -121,6 +133,15 @@ Para repetir E2.2 offline con tasks PLACE 1 y 3:
 
 Esta orden no sustituye una prueba física: no usa estado vivo ni comprueba que
 una caja se deposite correctamente.
+
+Para repetir la campaña E3.0 completa:
+
+```bash
+./scripts/vla/run_vla_offline_campaign_e3_0.sh --check
+./scripts/vla/run_vla_offline_campaign_e3_0.sh --run
+```
+
+Las violaciones se conservan como resultado y nunca se envían al robot.
 
 Después de que E1.0, E1.3 y E2.1 liberen el gate, cinco repeticiones E2.3 se
 ejecutan sin mezclar logs/chunks y con STOP entre runs:

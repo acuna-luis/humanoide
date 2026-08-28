@@ -246,14 +246,30 @@ y quedaron documentados. La limpieza de JSON root-owned se corrigió y el
 residuo temporal se retiró. Hashes de evidencia válidos; estado final
 `exited/exited/publishers:0`, sin leer estado ni ordenar movimiento físico.
 
+E3.0 amplió esa ruta a tasks 0–3, cinco episodios/fases por task y cinco
+ejecuciones totales del seed 0: run `20260828T114346_E3.0`, 20 muestras y 36
+inferencias. Las MAE medias fueron task 0 `0,004908891`, task 1 `0,006516288`,
+task 2 `0,009686776` y task 3 `0,008983554`; las repeticiones seed 0 fueron
+idénticas (`max_abs_diff=0`). Dos de 20 baselines excedieron el rango del
+perfil: task 2/episodio 270/frame 0 predijo `lifter_pitch_1_joint=0,051654458`
+en el primer punto, y task 3/episodio 287/frame 0 llegó a `0,060465574` y
+excedió el máximo `0,000336618` en 7/10 puntos. No hubo violaciones del salto
+inicial. El split local fue 424/76 episodios con solapamiento cero, pero el
+proveedor sólo declara `train` y no se conoce la membresía del entrenamiento
+de C0; no se permite afirmar generalización. Los hashes completos del
+checkpoint coincidieron antes/después. Resultado
+`PASS_OFFLINE_CAMPAIGN_WITH_CONSERVATIVE_VIOLATIONS`; sólo libera E3.1 offline,
+no publicación física. Cierre `exited/exited/publishers:0`, sin estado ni
+movimiento del robot.
+
 La evidencia VLA ya no depende de variables exportadas por un bloque anterior.
 `new_vla_evidence_run.sh` crea cada run de forma exclusiva y rechaza `/` y
 rutas existentes. E1.1/E1.2, los smoke E2.0/E2.1 y las repeticiones E2.3 tienen
 wrappers autocontenidos; E2.3 usa sesiones independientes y STOP entre runs.
-E2.2 dispone ahora de evaluador y wrapper autocontenidos. Los ejemplos aún no
+E2.2 y E3.0 disponen ahora de evaluador y wrappers autocontenidos. Los ejemplos aún no
 implementados de E3.2, E4.1, E5.1/E5.2 y VLA-T00…T09 inicializan su directorio
 en el mismo bloque. Las herramientas de evidencia son cambios del
-PC/repositorio; E2.2 sólo arrancó un contenedor offline transitorio en Vision y
+PC/repositorio; E2.2/E3.0 sólo arrancaron contenedores offline transitorios en Vision y
 no alteró Motion ni los contenedores VLA persistentes.
 
 El paquete local sí contiene

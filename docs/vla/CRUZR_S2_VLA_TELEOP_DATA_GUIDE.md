@@ -228,6 +228,24 @@ demuestra reproducibilidad del contrato RGB+20D→10×20, no generalización ni
 éxito físico de PLACE. Estado final: contenedores persistentes detenidos, cero
 publicadores y sin lectura o movimiento del robot.
 
+E3.0, run `20260828T114346_E3.0`, extendió el mismo evaluador a tasks 0–3 con
+cinco episodios distintos por task y frames en fases 0/25/50/75/100 %. Fueron
+20 muestras y 36 inferencias; las cinco ejecuciones seed 0 por task dieron
+salidas idénticas. MAE media: task 0 `0,004908891`, task 1 `0,006516288`, task
+2 `0,009686776`, task 3 `0,008983554`. Los baselines task 2/episodio 270/frame
+0 y task 3/episodio 287/frame 0 excedieron el máximo del perfil para
+`lifter_pitch_1_joint`; el segundo lo hizo en 7/10 puntos, hasta
+`0,060465574` frente a `0,000336618`. Los otros 18 baselines no tuvieron
+violaciones conservadoras y ninguno violó el salto inicial.
+
+La partición local contiene 424 episodios train y 76 test, sin solapamiento, y
+los 20 evaluados pertenecen a test. Como UBTECH sólo declaró `train` y no se
+conoce qué usó C0, estas métricas describen replay y repetibilidad, no
+generalización. C0 permaneció read-only y conservó hashes completos; el cierre
+fue `exited/exited/publishers:0`. El estado
+`PASS_OFFLINE_CAMPAIGN_WITH_CONSERVATIVE_VIOLATIONS` bloquea uso físico y sólo
+permite continuar con pruebas offline.
+
 ## 4. VLA frente a programación tradicional
 
 | Necesidad | Enfoque preferente |
