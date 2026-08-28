@@ -1,6 +1,6 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
-**Última actualización:** 27 de agosto de 2026<br>
+**Última actualización:** 28 de agosto de 2026<br>
 **Estado del documento:** operativo y en evolución<br>
 **Plataforma:** Cruzr S2 con abrazaderas, PICO 4 Ultra Enterprise y PC Ubuntu<br>
 **Responsable de actualización:** registrar aquí cada cambio antes de reanudar una prueba física
@@ -1137,6 +1137,32 @@ Ctrl+C, fallo o vencimiento terminan el cliente y solicitan STOP con un
 WebSocket corto; nunca debe mantenerse un segundo cliente abierto después de
 STOP. Los modos legados siguen bloqueados.
 
+El 28-08 se añadió el lanzador separado
+`scripts/teleoperation/probar_pico_full.sh`, sin modificar
+`probar_pico.sh`. Su `--teleoperate` reutiliza el cliente oficial 4.7.0 pero
+exige el hash vendor exacto `5f08b30c…` y evidencia del último arranque con
+`Hand type: clamp`, `Waist tele mode: 1` y `Leg tele mode: 2`. Habilita cabeza,
+brazos, cintura, elevador/torso y chasis durante 120 s por defecto; exige ruta
+Wi-Fi Cruzr para que no haya un Ethernet sujeto al robot y rechaza clicks de
+joystick porque conmutan la protección de fuerza. Un monitor SSH de sólo
+lectura sigue el log Motion desde antes de START y solicita STOP ante fallo IK,
+sobreesfuerzo, fallo EtherCAT o pérdida del monitor. `--prepare-full` sólo
+restaura el YAML vendor después de comprobar STOP y Motion; no recarga modo ni
+mueve. La recarga `teleop→auto_task→teleop` continúa siendo una acción física
+separada. **Estado al cerrar el cambio:** código validado localmente; el check
+full real rechazó correctamente el hash activo `4e8d79a4…` y el check original
+confirmó `ARMS_ONLY_LOADED=hand:clamp,waist:0,leg:0`. El perfil full no fue
+restaurado ni cargado; sin START y sin movimiento.
+
+El primer `--prepare-full` ejecutado el 28-08 a las 09:48 pasó el preflight
+Motion y abortó antes de modificar el YAML. La causa fue local al script: el
+comprobador pasivo usaba `BACKEND_LOG=…` como asignación de entorno aunque
+`BACKEND_LOG` era una constante shell `readonly`; Python recibió entonces un
+entorno sin esa clave. Se cambió el nombre de paso a `BACKEND_LOG_PATH`. La
+validación posterior del mismo parser devolvió `operation_type=1` y
+`--check-arms-only` confirmó otra vez hash `4e8d79a4…` y tarea viva
+`clamp/waist=0/leg=0`. No hubo rollback parcial, recarga, START ni movimiento.
+
 El cambio reversible de Motion se gestiona con
 `scripts/teleoperation/install_cruzr_pico_arms_only.sh`. `--install` respalda el
 YAML vendor y cambia exclusivamente `waist_mode: 1→0` y `leg_mode: 2→0`;
@@ -1290,7 +1316,7 @@ trap de salida y lo restaura byte a byte incluso ante una interrupción. El
 decir, las tres entradas originales estaban restauradas. Este perfil no cambia
 el canal `walker28` ni los topics de teleoperación.
 
-### 8.14 Recuperación explícita desde PICO con una caja prescindible
+### 8.14 Recuperación desde PICO con una caja prescindible
 
 El 27-08 una teleoperación terminó con una caja de cartón sujeta. El retorno
 normal se bloqueó correctamente porque el nuevo log de Motion no contenía aún
@@ -1303,24 +1329,26 @@ reiniciado al salir de teleoperación, y `robot_app` seguía esperando el servic
 seleccionarse `自动任务模式`/`auto_task` y demostrarse que el servidor de acción
 y las muestras de seguridad reaparecieron.
 
-Por autorización explícita del propietario se añadió a
+Históricamente, por autorización explícita del propietario, se añadió a
 `cruzr_recover_to_home.sh` el modo:
 
 ```bash
 ./scripts/cruzr_recover_to_home.sh --run --force-held-home
 ```
 
-Este modo acepta que el objeto puede caer y omite únicamente la clasificación
-histórica del log. Conserva el preflight completo de versión/hashes, servidor
-de manipulación, ausencia de acciones activas, ambos paros, cargador y batería;
-es incompatible con `--fast`. Fija `RETREAT_REQUIRED=false`, por lo que nunca
-mueve el chasis. Exige confirmar que la caja es prescindible y que la zona de
-caída está libre. Después ejecuta la tarea instalada y verificada por hash
-`cruzr/open_arm_before_home`: en 3 s lleva primero los brazos a una postura
-separada y después interpola brazos, cintura, elevador y cabeza a cero en 2 s.
-La separación puede liberar la caja; la secuencia no desactiva paros ni límites.
-Su sintaxis, ayuda y rechazos `--check`/`--fast` se validaron sin enviar ningún
-comando al robot. La ejecución física permanece pendiente de preflight fresco.
+**RETIRADO EL 28-08:** esa premisa fue refutada físicamente. Desde una postura
+PICO cruzada, `open_arm_before_home` movió ambos brazos, cintura y elevador en
+paralelo, aumentó el contacto del brazo izquierdo contra el torso, produjo
+`Force-X=-370,944 N`, `MoveToGoalFailed` y faults 4002/4003/4004. Aceptar la
+caída de una caja no vuelve segura la trayectoria cinemática.
+
+El script rechaza ahora `--force-held-home`, bloquea cualquier postura PICO
+no-home y exige una muestra fresca de los 20 ejes. Si ya están a menos de
+0,02 rad de cero, termina sin goals. Sólo conserva la tarea vendor para estados
+reconocidos del ciclo de caja, con revalidación antes y medición después. Desde
+PICO, la opción preferida es volver físicamente a home dentro de la misma
+sesión antes de STOP; si ya hubo contacto, fault o STOP en postura cruzada,
+aplicar la guía de recuperación/apagado sin enviar otra trayectoria.
 
 ## 9. Acciones intentadas que no solucionan el problema
 
@@ -1696,6 +1724,8 @@ AnswerSession: sent heartbeat
   [`../../scripts/teleoperation/pico_camera_relay.py`](../../scripts/teleoperation/pico_camera_relay.py)
 - Instalación, comprobación y rollback del perfil PICO sólo brazos:
   [`../../scripts/teleoperation/install_cruzr_pico_arms_only.sh`](../../scripts/teleoperation/install_cruzr_pico_arms_only.sh)
+- Lanzador separado para el perfil vendor de cuerpo completo:
+  [`../../scripts/teleoperation/probar_pico_full.sh`](../../scripts/teleoperation/probar_pico_full.sh)
 - Paquete externo e instalación:
   [`../../utats/README.md`](../../utats/README.md)
 - Guía de teleoperación, captura y VLA:
@@ -1727,6 +1757,8 @@ son parte de la evidencia.
 
 | Fecha/hora | Cambio o prueba | Resultado | Evidencia | Próxima decisión |
 |---|---|---|---|---|
+| 2026-08-28 09:48 PC/Motion | primer `--prepare-full` real abortado y bug local corregido | el preflight confirmó paros 0/0, cargador desconectado, articulaciones inmóviles y tarea clamp, pero el flujo abortó antes de restaurar el YAML: `BACKEND_LOG=…` intentó reasignar una constante shell de sólo lectura y Python no recibió la ruta. Se sustituyó el nombre de entorno por `BACKEND_LOG_PATH`. El parser real de sólo lectura reconstruyó `operation_type=1` y el check posterior demostró perfil aún arms-only `4e8d79a4…`, `clamp/0/0`; sin cambio parcial, recarga, START ni movimiento | salida del operador; diff del instalador; `bash -n`; `git diff --check`; `PASSIVE_OPERATION_TYPE=1`; `--check-arms-only` | volver a ejecutar `probar_pico_full.sh --prepare-full`; no recargar TeleopMode hasta que termine con `FULL_BODY_CONFIG_RESTORED=1` y exista una confirmación física nueva |
+| 2026-08-28 PC/repositorio | lanzador separado de teleoperación full-body | se creó `probar_pico_full.sh` sin modificar `probar_pico.sh`. El nuevo flujo distingue preparación, recarga y movimiento; exige YAML vendor `5f08b30c…`, tarea viva `clamp/waist=1/leg=2`, Wi-Fi sin Ethernet sujeto, preflight/neutralidad/Y oficiales y STOP. Vigila en vivo el log Motion y aborta ante IK, fuerza o EtherCAT; los clicks que conmutan protección quedan prohibidos. El comprobador de STOP del gestor de perfil dejó de abrir WebSocket y reconstruye estado pasivamente para evitar la carrera auto-START 4.7.0. El check full real rechazó de forma esperada el hash arms-only activo y el check original confirmó `clamp/0/0`; no se restauró YAML, no se recargó TeleopMode, no hubo START ni movimiento | diff de tres scripts; `bash -n`; `git diff --check`; ayudas; rechazo no-TTY; checks reales de perfil; `probar_pico.sh` sin diff. `shellcheck` no está instalado | si se decide probar: ejecutar primero `probar_pico_full.sh --prepare-full`; después, con confirmación física nueva, recargar `teleop→auto_task→teleop`, ejecutar `--check` y sólo entonces `--teleoperate`. Restaurar arms-only y recargar al terminar |
 | 2026-08-27 10:43–10:49 PC / 16:43–16:49 robot | arranque controlado después del trip FT | chasis, `KEY1` y arranque trasero se activaron con paro accionado; Control Center quedó en `WaitEStopRelease`. Tras liberar con robot estable no hubo movimiento inesperado. La consulta de estado a Docker activó `docker.service` por socket; no envió movimiento. Motion cargó ambos contenedores, readiness x86 3/3 y cámaras 2/2; self-check global `passed=true`, `StartMotion` exitoso y estado final `AutoTaskMode`. El check de ciclo aprobó actuadores Operation Enabled, gates de error/velocidad/delta, paros 0/0, cargador fuera, baterías suficientes y action server. El check de recuperación bloqueó sólo la clasificación de postura. Boot guard terminó `unexpected_control_state_unknown`, `RECOVERY_ELIGIBLE=0`, sin reiniciar ni mover | confirmaciones físicas; ping/SSH; systemd/Docker; logs Motion/Control Center; journal boot guard; ambos checks versionados | infraestructura recuperada sin movimiento. No ejecutar home por clasificación `unknown`; no teleoperar hasta cambiar a `teleop`, demostrar de nuevo `clamp,waist=0,leg=0`, postura/zona y preflight fresco. Revisar el parser del boot guard para `AutoTaskMode` antes de confiar en su estado visual |
 | 2026-08-27 10:25–10:40 PC / 16:25–16:40 robot | diagnosticar robot inmóvil después de tomar una caja y completar apagado | el cliente oficial mantuvo enable y recibió 5.931 muestras de cada mando y 5.931 poses a 90 Hz; no hubo segundo Y, pérdida XR, watchdog ni error del script antes del `Ctrl+C`. A las 16:25:59 Motion midió `Force-X=-305,6…-307,0 N` en FT izquierda, superó el umbral `[120,120,120] N`, registró `Excessive force` y abortó la tarea. Después aparecieron servo 5003 `0x1001/0x2007`, saltos de consigna en ambos hombros y EtherCAT SAFEOP ERROR. Ambos checks versionados terminaron `exit 25`. El operador confirmó caja retirada y robot estable y autorizó apagado completo. `/emb/pm_shutdown` respondió `success=True`; Control Center transitó `TeleopMode→WaitShutdownReady→Shutdown→Term`. Motion/Vision dejaron de responder; tras confirmar pantalla y luces apagadas, el operador pulsó `KEY1` y luego apagó el chasis. Indicador verde apagado, robot estable | salida adjunta; logs PC; Motion `robot_app`, `rosa_control_node`, `ecmaster`; `docker inspect`; checks; respuesta ShutDown; log persistente Control Center; red; confirmaciones físicas | robot completamente apagado. Antes de encender, confirmar paro, abrazaderas, zona, cargador y persona; después descubrir todo desde cero y exigir action server, controladores, errores cero, Operation Enabled, velocidades cero y posición/consigna coincidentes. No home/teleop antes de esos gates |
 | 2026-08-27 10:12–10:17 PC/PICO | diagnosticar `operation_type=2` previo y eliminar carrera de auto-START | dos conexiones locales de lectura coincidieron con el ciclo `Broadcasting publisher states`: a las 10:12:28.614 y 10:12:48.983 el backend registró `device detected online, starting remote operation` y `Pico publisher start` sin recibir `collect operation_type=2`. Es comportamiento/race de 4.7.0, no otro cliente persistente: cada socket se cerró en ~30 ms y no había UI ni `pico_control`. El segundo fue detectado por CHECK 7/7; cleanup envió STOP y el último `Pico publisher stop` fue 10:12:54.828. Se añadió `backend_passive_state_json`, que reconstruye `vr_status` desde la última transición y operación desde el último start/stop posterior al arranque vigente de systemd. `wait_for_pico_tracking_ready`, CHECK 7/7 y cleanup final ya no abren WebSocket; este queda sólo para START oficial autorizado o STOP de emergencia. `--check` real 10:17 terminó con `CLIENT_CONNECTIONS_DELTA=0` y `PUBLISHER_STARTS_DELTA=0`; bloqueó porque PICO había pasado a `vr_status=0` a las 10:15:26. `bash -n`, shellcheck y `git diff --check` aprobaron; no hubo movimiento | log backend con conexiones/broadcasts/start/stop; contadores antes/después de `--check`; procesos, sockets, validaciones estáticas | reactivar Working y ejecutar primero `PICO_TELEOP_CAMERA=off ./scripts/teleoperation/probar_pico.sh --check`. Debe mostrar `BACKEND_STATE_SOURCE=passive-log-no-websocket`; sólo después, con estado físico fresco, repetir `--teleoperate` |

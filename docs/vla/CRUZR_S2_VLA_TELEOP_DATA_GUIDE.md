@@ -150,6 +150,13 @@ LeRobot v2.1 y declara:
 - 20 valores de acción;
 - task index, episodio, frame, timestamp e instrucción.
 
+Hay una contradicción de esquema demostrada en E2.2: `meta/info.json` anuncia
+la feature `frame_index`, pero los parquets de los episodios 465 y 265 no
+contienen esa columna. Sus filas sí pertenecen a un único episodio/task y los
+timestamps comienzan en cero con paso exacto de 1/120 s. El replay offline usa
+el índice de fila sólo cuando verifica esas tres condiciones; no debe suponerse
+este fallback para otro dataset.
+
 Distribución:
 
 | Tarea | Episodios | Frames |
@@ -199,6 +206,27 @@ E2.0/E2.1 disponen de wrappers autocontenidos. E2.3 ejecuta cada repetición en
 una sesión independiente, confirma STOP y conserva su propio manifiesto antes
 de avanzar. Las herramientas futuras deben recibir un `--output` creado en el
 mismo bloque y no leer `VLA_RUN_DIR` heredado de otra terminal o subshell.
+
+El piloto E2.3 del 2026-08-28 ejecutó dos sesiones independientes task 0 y dos
+task 2. Los ocho chunks fueron rechazados de forma reproducible por siete
+discontinuidades del primer punto. En task 0 el máximo por chunk fue
+`1,361919…1,367893 rad`; en task 2, `1,372170…1,379845 rad`, siempre en
+`R_shoulder_yaw_joint`. Las duraciones permanecieron próximas a 10 s pese al
+límite solicitado de 8 s. Cada repetición terminó con STOP, los hashes validan
+y el estado final fue `exited/exited/publishers:0`. Esto caracteriza el runtime
+P20 en una entrada OOD; no evalúa semántica PICK ni sustituye `VLA_READY`.
+
+E2.2 añadió replay offline para PLACE sin sujetar físicamente una caja. El run
+`20260828T112730_E2.2`, aislado con `--network none` y sin ROS, seleccionó de
+forma determinista task 1/episodio 465 y task 3/episodio 265 en frame 0. El
+checkpoint produjo chunks 10×20 con MAE `0,007283609` y `0,011394879`
+respectivamente; no hubo violaciones conservadoras de rango o primer salto.
+El llamado split `test` es el último 15 % estratificado definido localmente:
+el dataset del proveedor sólo declara `train` y no se sabe si el checkpoint se
+entrenó con esos mismos episodios. Por tanto, `PASS_OFFLINE_INFERENCE_ONLY`
+demuestra reproducibilidad del contrato RGB+20D→10×20, no generalización ni
+éxito físico de PLACE. Estado final: contenedores persistentes detenidos, cero
+publicadores y sin lectura o movimiento del robot.
 
 ## 4. VLA frente a programación tradicional
 

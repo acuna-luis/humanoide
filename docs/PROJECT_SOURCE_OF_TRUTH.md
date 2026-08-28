@@ -33,20 +33,28 @@ nuevo el estado físico y lógico.
 
 | Elemento | Último estado documentado | Confianza |
 |---|---|---|
-| Postura | caja retirada, brazos y robot estables por confirmación del operador. Los actuadores están sanos e inmóviles, pero el nuevo log no permite clasificar la postura como `home` | **FÍSICAMENTE ESTABLE; POSTURA LÓGICA `unknown`; NO HOME AUTOMÁTICO** |
-| Modo robot | tras el apagado completo se realizó arranque controlado. Control Center completó self-check y `StartMotion`, pasó brevemente por `TeleopMode` y quedó en `AutoTaskMode` | **VERIFICADO EN LOG; NO TELEOPERACIÓN ACTIVA** |
-| Efector | abrazaderas, `HW_TYPE=cruzr_s2_v1`; caja retirada por confirmación del operador | **LÓGICO Y OBJETO VERIFICADOS; ABRAZADERAS NO RECOMPROBADAS VISUALMENTE** |
-| Actuadores | el arranque desde cero restauró EtherCAT y controladores. El preflight verificó todos los actuadores sin fault, `Operation Enabled`, velocidad/delta de consigna dentro de límites y servidor de acciones listo | **RECUPERADOS 27-08; SIN MOVIMIENTO DE PRUEBA** |
+| Postura | el propietario informa robot encendido y en `home`. El check fresco de sólo lectura confirmó Motion disponible, acciones listas y no envió movimiento, pero no pudo certificar la postura 20D porque la muestra de actuadores omitió `2001/2002/2003/3001` | **ESTABLE SEGÚN OPERADOR; HOME LÓGICO NO VERIFICADO** |
+| Modo robot | Motion/Vision accesibles, máquina de tareas desbloqueada y sin módulo activo; no se consultó/cambió el modo de trabajo ni se inició cliente físico | **ENCENDIDO; MODO NO INFERIDO** |
+| Efector | abrazaderas, `HW_TYPE=cruzr_s2_v1` confirmado por el check fresco | **VERIFICADO POR SOFTWARE; VACÍO DEBE RECONFIRMARSE ANTES DE MOVIMIENTO** |
+| Actuadores | `ACTUATORS_OPERATION_ENABLED=1` y acciones `ready`, pero el gate de postura rechazó la muestra incompleta por faltar `2001/2002/2003/3001`; no se envió goal ni se diagnosticó la causa de esas ausencias | **MOVIMIENTO NO AUTORIZADO; COMPLETAR MUESTRA 20D** |
 | Teleoperación PC | combinación oficial robot v0.2.0 + controller 4.7.0 + UI 4.1.0, overlay `clamp,0,0` y control bimanual. La sesión 10:25 terminó por protección FT, no por VR. Tras el reinicio el robot quedó en `AutoTaskMode`; no se ha recargado ni reanudado PICO | **BLOQUEADA HASTA NUEVO PREFLIGHT Y CAMBIO DE MODO AUTORIZADO** |
 | Servicio PC/PICO | el STOP oficial tras `Ctrl+C` quedó confirmado; PC permaneció encendido durante el power cycle del robot | **STOP VERIFICADO; SIN CLIENTE FÍSICO** |
 | VLA | contenedores detenidos, `restart=no`, sin mando físico | **VERIFICADO** |
-| Cargador | desconectado; baterías 51,5/63,2 % en los checks posteriores al arranque | **VERIFICADO 27-08; RECOMPROBAR ANTES DE MOVER** |
-| Paros, ruedas y zona | caja retirada, zona despejada y robot estable por confirmación física; topics posteriores al arranque `0,0` | **VERIFICADO EN EL ÚLTIMO CHECK; RECOMPROBAR ANTES DE MOVER** |
+| Cargador | `disconnected` en el check fresco | **VERIFICADO POR SOFTWARE** |
+| Paros, ruedas y zona | ambos paros reportaron `0`; zona, ruedas y persona junto al paro no se verificaron porque sólo se hizo diagnóstico VLA/home de lectura | **RECONFIRMAR FÍSICAMENTE ANTES DE CUALQUIER MOVIMIENTO** |
 | Mapa/localización | `test_route_01` se conservó; activación y localización son volátiles | **RECOMPROBAR** |
 
 La rama `main` estaba limpia y sincronizada con `origin/main` en el commit
 `4536f8a` antes de crear esta fuente global. El estado Git actual prevalece
 sobre esa referencia.
+
+El 28-08 se endureció localmente return-to-home mientras el robot permanecía
+completamente apagado. El script no mueve ya sin `--run`, mide los 20 ejes,
+trata todo inicio de home como no confirmado hasta observar las posiciones,
+bloquea PICO/unknown/fuerza/autocolisión/fault y restringe la tarea vendor a
+estados del ciclo de caja. `--force-held-home` quedó retirado y `--fast` ya no
+omite gates. Las regresiones locales pasaron; **no existe aún validación física
+de la ruta revisada y este cambio no modifica el estado apagado vigente**.
 
 ### 2.2 Primeros pasos de la siguiente sesión
 
@@ -223,13 +231,30 @@ publicadores. Los logs se recuperaron de los contenedores detenidos en
 `Humanoide-vla-evidence/20260828T080202_E2.0_recovered/`. Estado:
 `PASS_SHADOW_SAFETY_ONLY`; E1.0/E1.3 y la validación de task siguen pendientes.
 
+El 2026-08-28 se implementó y ejecutó E2.2 para PLACE sin utilizar el robot.
+`run_vla_offline_place_e2_2.sh` creó un contenedor NVIDIA transitorio en Vision
+con red desactivada, sin ROS ni `RobotCommand`, y cargó el checkpoint una sola
+vez. El run válido `20260828T112730_E2.2` reprodujo task 1/episodio 465 y task
+3/episodio 265 desde frame 0: salidas 10×20 finitas, MAE `0,007283609` y
+`0,011394879`, sin violaciones de rango ni de primer salto. El split es el
+último 15 % estratificado definido por el proyecto; el dataset sólo declara
+`train`, por lo que no prueba generalización ni exclusión del entrenamiento.
+`meta/info.json` anuncia `frame_index`, pero los parquets inspeccionados lo
+omiten; se usó índice de fila únicamente tras validar task, episodio y la línea
+temporal exacta a 120 Hz. Los dos intentos previos fallaron antes de inferencia
+y quedaron documentados. La limpieza de JSON root-owned se corrigió y el
+residuo temporal se retiró. Hashes de evidencia válidos; estado final
+`exited/exited/publishers:0`, sin leer estado ni ordenar movimiento físico.
+
 La evidencia VLA ya no depende de variables exportadas por un bloque anterior.
 `new_vla_evidence_run.sh` crea cada run de forma exclusiva y rechaza `/` y
 rutas existentes. E1.1/E1.2, los smoke E2.0/E2.1 y las repeticiones E2.3 tienen
 wrappers autocontenidos; E2.3 usa sesiones independientes y STOP entre runs.
-Los ejemplos de E2.2, E3.2, E4.1, E5.1/E5.2 y VLA-T00…T09 inicializan su
-directorio en el mismo bloque. Es un cambio de PC/repositorio; no arrancó
-inferencia ni alteró Motion/Vision.
+E2.2 dispone ahora de evaluador y wrapper autocontenidos. Los ejemplos aún no
+implementados de E3.2, E4.1, E5.1/E5.2 y VLA-T00…T09 inicializan su directorio
+en el mismo bloque. Las herramientas de evidencia son cambios del
+PC/repositorio; E2.2 sólo arrancó un contenedor offline transitorio en Vision y
+no alteró Motion ni los contenedores VLA persistentes.
 
 El paquete local sí contiene
 `codes-S2/motion/s2_vla_scripts/s2_bio_vla/s2_vla_pick_large_teleop_ready.xml`,
@@ -366,9 +391,57 @@ el solver registró fallos de alcance repetidos; el torso/elevador compensó en
 CoreMode 7. Se instaló de forma reversible un overlay que cambia únicamente
 esos dos modos a cero, SHA-256 `4e8d79a4…`, conservando clamp, brazos,
 anticolisión y umbrales de fuerza. El backup vendor `5f08b30c…` y el overlay
-persisten en Motion bajo `$HOME/.local/share/cruzr-pico-arms-only/`. La tarea
-viva aún contiene `waist=1`/`leg=2`: no autoriza movimiento hasta recargar
-TeleopMode y obtener `ARMS_ONLY_LOADED=hand:clamp,waist:0,leg:0`.
+persisten en Motion bajo `$HOME/.local/share/cruzr-pico-arms-only/`. El overlay
+se recargó después y el último baseline conocido quedó
+`ARMS_ONLY_LOADED=hand:clamp,waist:0,leg:0`.
+
+El 28-08 se añadió `scripts/teleoperation/probar_pico_full.sh` como lanzador
+separado, dejando `probar_pico.sh` sin cambios. Puede preparar el rollback
+exacto al YAML vendor y sólo permite START full-body si demuestra hash
+`5f08b30c…` más tarea viva `clamp,waist=1,leg=2`; exige Wi-Fi sin Ethernet
+sujeto al robot, conserva los gates oficiales y añade STOP ante clicks de
+protección, fallos IK, sobreesfuerzo, EtherCAT o pérdida del monitor Motion.
+La preparación, recarga de TeleopMode y movimiento son pasos separados. El
+cambio quedó validado localmente y con checks de sólo lectura: el full rechazó
+correctamente el hash activo `4e8d79a4…` y el original confirmó
+`ARMS_ONLY_LOADED=hand:clamp,waist:0,leg:0`. **No se restauró ni cargó el perfil
+full, no hubo START ni movimiento**. El primer `--prepare-full` real del
+28-08 a las 09:48 superó el preflight Motion, pero abortó antes del rollback:
+el comprobador pasivo intentaba asignar temporalmente la constante shell
+`readonly BACKEND_LOG`, por lo que Python no recibió la ruta. Se corrigió usando
+el nombre de entorno independiente `BACKEND_LOG_PATH`. La reproducción de sólo
+lectura devolvió `PASSIVE_OPERATION_TYPE=1` y el check posterior volvió a
+demostrar `clamp,waist=0,leg=0`; por tanto no hubo cambio parcial.
+
+Más tarde, tras una sesión PICO, `cruzr_recover_to_home.sh --run --yes`
+clasificó correctamente `teleoperated_pose` y lanzó la tarea vendor verificada
+`cruzr/open_arm_before_home`. Su primera fase no es una separación cartesiana
+condicionada por postura: manda en paralelo ambos brazos a objetivos articulares
+intermedios, y también cintura/elevador a cero. Desde la postura cruzada real,
+Motion registró primero anticolisión torso–codo/muñeca izquierda durante el
+final de teleoperación y, ya en recovery, `Force-X=-370,944 N` en el FT
+izquierdo. El brazo derecho y cintura terminaron; el izquierdo falló con
+errores articulares grandes y el elevador abortó. La acción acabó
+`MoveToGoalFailed`, state `7104050`, `status=6`. Después 4004, 4003 y 4002
+registraron `0x1003`/`Operation disabled unexpected:0x123f`; `hw` y
+`manipulation_robot_app` reiniciaron. Con el paro accionado, rosa_control espera
+`/mc/rosa_control/start`, `/mc/actuator_state` tiene cero publicadores y la
+acción de manipulación cero servidores. **DESCARTADO** usar
+`open_arm_before_home` como retorno universal desde cualquier postura PICO.
+No se liberó el paro, rearmó, reinició, cambió modo ni envió otro movimiento
+durante el diagnóstico; el siguiente paso requiere confirmación física fresca
+y, si procede, apagado completo controlado, no otra trayectoria.
+
+El operador confirmó después paro accionado, brazo izquierdo apoyado sin
+presión apreciable, robot/brazos estables, abrazaderas vacías, cargador fuera,
+zona de descenso despejada y persona junto al paro. La solicitud oficial
+`/emb/pm_shutdown` con `confirm-to-shutdown` respondió `success=True`; Motion y
+Vision pasaron de accesibles a no responder. Tras confirmar físicamente
+pantalla y luces apagadas, el operador pulsó `KEY1` y luego apagó el chasis.
+Estado final: indicador verde apagado, hosts sin respuesta, robot y brazos
+estables. No se liberó el paro, rearmó ningún servo ni se envió otra
+trayectoria. Los faults y consignas deben redescubrirse desde cero en el
+próximo arranque controlado.
 
 El drop-in de lifecycle de 15 s permanece instalado. Una parada anterior de
 5.3.0 agotó el margen y recibió SIGKILL; durante la migración el servicio se
@@ -594,11 +667,13 @@ Seguimiento:
 
 1. Confirmar visualmente efector, carga y obstáculos.
 2. Ejecutar `./scripts/cruzr_recover_to_home.sh --check`.
-3. Leer `--help` y elegir el modo de recuperación compatible con el estado.
+3. Leer `RECOVERY_ROUTE`: `already-home` no envía objetivos;
+   `known-workbin` es la única ruta automática candidata.
 4. No enviar `home` con una carga o contacto dentro de la trayectoria.
-5. Tras PICO no usar `cruzr/home` directo: el script canónico ejecuta
-   `cruzr/open_arm_before_home`, separando los brazos antes de llevarlos a
-   cero. Su primera validación física sigue pendiente.
+5. Tras PICO no usar `cruzr/home` ni `open_arm_before_home`: el script canónico
+   bloquea toda postura no-home de PICO. Volver a home dentro de la propia
+   sesión PICO antes de STOP o usar el procedimiento de recuperación por
+   fault/apagado; no adivinar una trayectoria desde una postura cruzada.
 
 ### 8.2 Caja mesa 1 → mesa 2
 
@@ -717,6 +792,13 @@ actualizarse este archivo antes de cerrar la sesión.
 
 | Fecha | Hito | Resultado |
 |---|---|---|
+| 2026-08-28 | E2.3 piloto reducido de repetibilidad P20 | se ejecutaron dos runs independientes task 0 y dos task 2, con STOP entre ellos. Task 0: 4 chunks, todos rechazados por 7 discontinuidades, duración 10,006055–10,039981 s y máximo `R_shoulder_yaw_joint` 1,361919–1,367893 rad. Task 2: 4 chunks, todos rechazados por 7 discontinuidades, duración 10,005578–10,006689 s y máximo 1,372170–1,379845 rad en el mismo eje. Ambos manifests validan; cada run y los finales quedaron `exited/exited`, `publishers:0`, sin movimiento. Estado `PASS_PILOT_2X2_SHADOW_ONLY`: rechazo/runtime reproducibles, no éxito de PICK |
+| 2026-08-28 | E1.0/E1.3 reducidos y E2.1 task 2 completado en shadow | por decisión del propietario, E1.0 cerró con medidas `1,80 × 0,80 × 1,00 m`, cuatro esquinas a 1 m, rigidez/estabilidad y separación >1,5 m; fotos/marcas se difieren a E4. E1.3 reutiliza B0 `0,603 × 0,397 × 0,217 m` y difiere masa/colocación a E4/E6, sólo para liberar shadow. E2.1 `20260828T105547_E2.1` produjo dos chunks task 2 en 10,065 s; ambos fueron rechazados por siete saltos iniciales, máximo `R_shoulder_yaw_joint=1,376502 rad` frente a 0,35. Inferencia/control terminaron `exited`, publicadores `0`, hashes válidos y ningún movimiento. Estado `PASS_SHADOW_SAFETY_ONLY`, no PICK validado |
+| 2026-08-28 | reanudación VLA en E1.0 con robot encendido | el propietario informó `home`; el diagnóstico fresco confirmó Motion/Vision accesibles, `HW_TYPE=cruzr_s2_v1`, baterías 70,0/77,7 %, paros 0/0, cargador fuera, acciones listas y máquina de tareas libre. El gate de home no certificó los 20 ejes porque faltaron `2001/2002/2003/3001`, por lo que no se autorizó movimiento. VLA permaneció `exited/exited` con `publishers:0`. Se abrió `Humanoide-vla-evidence/20260828T104622_E1.0/actual_result.yaml`; E1.0 queda pendiente de cuatro alturas, ancho/fondo, estabilidad y fotografías reales de `MESA_T1` a más de 1,5 m del robot |
+| 2026-08-28 | return-to-home condicionado por muestra 20D y estado | `cruzr_recover_to_home.sh` pasa a `--check` por omisión, exige 20 ejes presentes, error cero, Operation Enabled, velocidad ≤0,02 rad/s, delta consigna ≤0,01 rad y usa `<0,02 rad` para declarar home sin enviar goals. Un inicio de tarea home ya no prueba éxito. Posturas PICO/unknown/caja posiblemente sujeta/intento no confirmado y eventos posteriores de fuerza, autocolisión, `MoveToGoalFailed`, fault o SAFEOP quedan bloqueados. La primitiva vendor sólo puede ejecutarse internamente desde estados reconocidos del ciclo de caja, con gates antes/después; `cycle.sh --home` delega al recovery, `--force-held-home` se retiró y `--fast` no omite auditorías. `--self-test`, `bash -n`, compilación Python y diff aprobaron localmente con el robot apagado; ruta física revisada pendiente de validación controlada |
+| 2026-08-28 | `open_arm_before_home` falla desde postura PICO cruzada; apagado controlado completado | el goal `54f7beb2…` inició ambos brazos, cintura y elevador en paralelo. El FT izquierdo llegó a `Force-X=-370,944 N`; el brazo izquierdo no alcanzó el objetivo y el elevador abortó, terminando `MoveToGoalFailed`/`7104050`/`status=6`. El final previo de PICO ya mostraba autocolisión torso–codo/muñeca izquierda a 17–25 mm. Después 4004/4003/4002 registraron `0x1003` y `0x123f`; `hw`/manipulation reiniciaron y quedaron sin publisher de actuadores ni servidor de acción. Con confirmación física completa y paro mantenido, `/emb/pm_shutdown` respondió `success=True`; Motion/Vision cayeron, pantalla/luces se confirmaron apagadas, y sólo entonces se pulsó `KEY1` y apagó el chasis. Indicador verde apagado, robot/brazos estables. Se descarta esa tarea como home universal desde postura PICO; faults/consignas pendientes de redescubrir antes de cualquier movimiento |
+| 2026-08-28 | corregido aborto de `--prepare-full` antes del rollback | el primer intento superó el preflight Motion, pero la asignación de entorno `BACKEND_LOG=…` chocó con la constante shell de sólo lectura y dejó a Python sin ruta. Se cambió únicamente el nombre exportado a `BACKEND_LOG_PATH`. `bash -n` y `git diff --check` aprobaron; el mismo parser pasivo obtuvo `operation_type=1` y `--check-arms-only` confirmó hash `4e8d79a4…`, `clamp/waist=0/leg=0`. El perfil full no fue restaurado, no se recargó modo, no hubo START ni movimiento |
+| 2026-08-28 | lanzador PICO full-body separado, aún no activado | se creó `probar_pico_full.sh` sin modificar `probar_pico.sh`. El nuevo flujo exige el YAML vendor exacto y la tarea viva `clamp/waist=1/leg=2`, separa restauración, recarga y START, requiere Wi-Fi sin Ethernet sujeto y conserva preflight/Y/STOP. Añade monitor de log Motion y aborta ante IK, fuerza, EtherCAT, pérdida del monitor o click que conmute protección. El gestor de perfil comprueba STOP mediante log pasivo, sin abrir el WebSocket que podía autoarrancar 4.7.0. Sintaxis, ayudas, diff y bloqueos no-TTY aprobados; `shellcheck` no disponible. Checks reales: full rechazó el hash arms-only activo y el original confirmó `clamp/0/0`. No se cambió configuración robot/PC, no se recargó TeleopMode y no hubo movimiento; el baseline sigue arms-only |
 | 2026-08-28 | disciplina de evidencia VLA endurecida para todos los ejercicios | se añadió un creador exclusivo de runs que rechaza raíz/rutas existentes, wrapper completo E1.1, protección de no sobrescritura y hashes relativos en E1.2, y wrapper E2.3 con sub-runs/STOP independientes. E2.0/E2.1 usan el mismo creador. Todos los bloques actuales/futuros del plan que escriben evidencia inicializan su ruta localmente; se eliminaron dependencias de `$VLA_RUN_ID`/`$VLA_EVIDENCE_ROOT` heredadas. Validación local solamente: no se inició inferencia, no se cambió el robot y no hubo movimiento |
 | 2026-08-28 | E2.0 task 0 ejecutado fuera de secuencia y recuperado | el bloque manual sí ejecutó check, inferencia shadow y STOP, pero `$VLA_RUN_DIR` estaba vacío y todos los `tee` fallaron contra `/`. La evidencia persistente se recuperó en modo read-only desde los contenedores detenidos: dos chunks, ambos rechazados por `first_point_delta_violations:7`, máximo `R_shoulder_yaw_joint=1,339886 rad` frente a 0,35; duración real `10,063076 s` ante 8 s solicitados. Estado final verificado: inferencia/control `exited`, publicadores `0`, ningún movimiento. Se añadieron `--export-evidence` y `run_vla_shadow_smoke.sh` para evidencia autocontenida y STOP en fallo. Clasificación `PASS_SHADOW_SAFETY_ONLY`; escena/postura no documentadas y E1.0/E1.3 pendientes, por lo que E2.1 no está autorizado |
 | 2026-08-27 | referencia visual del dataset VLA identificada | se validó en `/tmp`, sin alterar el dataset, el muestreo automatizado de 12 frames —inicio/medio/final de episodios 0/1/90/91— mediante VLC. Muestran un tote rígido gris abierto de paredes altas y borde gris, con tiras/marcas negras estrechas en algunos frames y un pequeño elemento con lazo visible dentro. El seek puede elegir frames adyacentes entre runs, por lo que sus hashes son de integridad por run, no canónicos. El plan distingue `B0_SAFE` vacía de la referencia: cartón u otro tote es OOD aunque mida 60×40×22 cm. No hubo inferencia ni movimiento |

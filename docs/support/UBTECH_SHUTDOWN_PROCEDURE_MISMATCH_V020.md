@@ -1,6 +1,7 @@
 # Discrepancia del procedimiento de apagado — Cruzr S2 v0.2.0
 
 Fecha de la observación: 2026-08-21  
+Última verificación en esta unidad: 2026-08-28
 Robot: Cruzr S2, SN `WAE001UBT60000669`  
 Configuración: abrazaderas, `HW_TYPE=cruzr_s2_v1`  
 Sistema: v0.2.0  
@@ -148,6 +149,30 @@ esperada, la transición normal es:
 ```text
 WaitShutdownReady --(ActionSucc)-> Shutdown
 ```
+
+### 3.4 Segundo apagado completo verificado tras fault de manipulación
+
+El 28-08, después de un `MoveToGoalFailed`, exceso de fuerza y faults de tres
+servos izquierdos, el robot quedó estable con el paro ya accionado. Se
+confirmaron abrazaderas vacías, cargador desconectado, zona de descenso
+despejada y brazo izquierdo apoyado contra el torso sin presión apreciable.
+
+La solicitud:
+
+```text
+deadline_sec: 15
+confirm_str: confirm-to-shutdown
+```
+
+respondió `success=True`. Motion y Vision dejaron de responder en la siguiente
+ventana de comprobación. El operador confirmó entonces pantalla y luces
+apagadas; sólo después pulsó `KEY1` y finalmente apagó el chasis. Confirmó
+indicador verde apagado y robot/brazos estables. No se liberó el paro, rearmó
+ningún servo ni se envió otra trayectoria durante el flujo.
+
+Este segundo caso respalda el orden lógico usado en esta unidad —solicitud,
+esperar terminación, confirmación visual, `KEY1`, chasis—, pero no resuelve la
+discrepancia con el manual ni sustituye la confirmación oficial de UBTECH.
 
 ## 4. Riesgo observado al utilizar KEY1 aisladamente
 

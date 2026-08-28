@@ -146,6 +146,8 @@ def command_select(args: argparse.Namespace) -> int:
     dataset = pathlib.Path(args.dataset).resolve()
     output = pathlib.Path(args.output).resolve()
     task_id = int(args.task_id)
+    if task_id not in PLACE_TASK_IDS:
+        raise ValueError("E2.2 only supports PLACE task IDs 1 and 3")
     if args.split != "test":
         raise ValueError("E2.2 currently defines only the project test holdout")
     info_path = dataset / "meta" / "info.json"
@@ -196,6 +198,154 @@ def command_select(args: argparse.Namespace) -> int:
     write_json_exclusive(output, manifest)
     print(f"OFFLINE_SAMPLE_SELECTED=task:{task_id},episode:{episode_index},frame:{args.frame_index}")
     print(f"OFFLINE_SAMPLE_MANIFEST={output}")
+    return 0
+
+
+def command_campaign(args: argparse.Namespace) -> int:
+    dataset = pathlib.Path(args.dataset).resolve()
+    output_dir = pathlib.Path(args.output_dir).resolve()
+    if output_dir.exists():
+        raise FileExistsError(output_dir)
+    output_dir.mkdir(parents=True)
+    info_path = dataset / "meta" / "info.json"
+    tasks_path = dataset / "meta" / "tasks.jsonl"
+    episodes_path = dataset / "meta" / "episodes.jsonl"
+    for required in (info_path, tasks_path, episodes_path):
+        if not required.is_file():
+            raise FileNotFoundError(required)
+    episodes = load_episode_catalog(episodes_path)
+    metadata_hashes = {
+        "info_sha256": sha256_file(info_path),
+        "tasks_sha256": sha256_file(tasks_path),
+        "episodes_sha256": sha256_file(episodes_path),
+    }
+
+    split_tasks: dict[str, Any] = {}
+    all_train: set[int] = set()
+    all_test: set[int] = set()
+    sample_entries: list[dict[str, Any]] = []
+    selected_episode_indices: set[int] = set()
+    for task_id in sorted(TASKS):
+        train, held_out = train_and_test_pools_for_task(episodes, task_id)
+        train_indices = [int(row["episode_index"]) for row in train]
+        test_indices = [int(row["episode_index"]) for row in held_out]
+        all_train.update(train_indices)
+        all_test.update(test_indices)
+        split_tasks[str(task_id)] = {
+            "task_text": TASKS[task_id],
+            "train_episode_count": len(train_indices),
+            "test_episode_count": len(test_indices),
+            "train_episode_indices": train_indices,
+            "test_episode_indices": test_indices,
+            "test_episodes_shorter_than_action_horizon": [
+                int(row["episode_index"]) for row in held_out if int(row["length"]) < 10
+            ],
+        }
+        for seed in CAMPAIGN_SEEDS:
+            selected, train_count, held_out_count = select_campaign_episode(
+                episodes, task_id, seed
+            )
+            episode_index = int(selected["episode_index"])
+            if episode_index in selected_episode_indices:
+                raise ValueError(f"campaign selected duplicate episode {episode_index}")
+            selected_episode_indices.add(episode_index)
+            episode_length = int(selected["length"])
+            max_frame_index = episode_length - 10
+            phase_fraction = seed / (len(CAMPAIGN_SEEDS) - 1)
+            frame_index = int(round(max_frame_index * phase_fraction))
+            parquet, video = episode_paths(dataset, episode_index)
+            for required in (parquet, video):
+                if not required.is_file() or required.stat().st_size == 0:
+                    raise FileNotFoundError(required)
+            sample_id = f"task{task_id}_seed{seed}"
+            relative_manifest = pathlib.Path("samples") / sample_id / "selection.json"
+            manifest = {
+                "schema": "cruzr-s2-vla-offline-sample-v2",
+                "mode": "offline_dataset_only_no_robot",
+                "campaign_id": "E3.0",
+                "sample_id": sample_id,
+                "task_id": task_id,
+                "task_text": TASKS[task_id],
+                "episode_index": episode_index,
+                "episode_length": episode_length,
+                "frame_index": frame_index,
+                "phase_fraction": phase_fraction,
+                "initial_state_semantics": "DATASET_REPLAY_TASK_PHASE_NOT_LIVE_ROBOT",
+                "split_requested": "test",
+                "split_definition": "project_stratified_tail_15_percent_not_vendor_split",
+                "selection_policy": "task_tail15_deterministic_shuffle_unique_seed_slots",
+                "frame_policy": "phase_grid_0_25_50_75_100_percent_valid_horizon",
+                "train_episode_count": train_count,
+                "held_out_episode_count": held_out_count,
+                "seed": seed,
+                "source": {
+                    "dataset": str(dataset),
+                    "parquet": str(parquet),
+                    "video": str(video),
+                    **metadata_hashes,
+                    "parquet_sha256": sha256_file(parquet),
+                    "video_sha256": sha256_file(video),
+                },
+                "staged_parquet": "episode.parquet",
+                "staged_video": "episode.mp4",
+            }
+            write_json_exclusive(output_dir / relative_manifest, manifest)
+            sample_entries.append(
+                {
+                    "sample_id": sample_id,
+                    "task_id": task_id,
+                    "seed": seed,
+                    "episode_index": episode_index,
+                    "frame_index": frame_index,
+                    "phase_fraction": phase_fraction,
+                    "manifest": str(relative_manifest),
+                }
+            )
+            print(
+                f"CAMPAIGN_SAMPLE_SELECTED={sample_id},episode:{episode_index},"
+                f"frame:{frame_index},phase:{phase_fraction:.2f}"
+            )
+
+    overlap = sorted(all_train & all_test)
+    if overlap:
+        raise ValueError(f"global train/test episode overlap: {overlap}")
+    split_audit = {
+        "schema": "cruzr-s2-vla-project-split-audit-v1",
+        "split_definition": "project_stratified_tail_15_percent_not_vendor_split",
+        "provider_declared_splits": ["train"],
+        "checkpoint_training_membership_known": False,
+        "checkpoint_generalization_claim_allowed": False,
+        "tasks": split_tasks,
+        "global_train_episode_count": len(all_train),
+        "global_test_episode_count": len(all_test),
+        "global_train_test_overlap": overlap,
+        "selected_test_episode_count": len(selected_episode_indices),
+        "selected_test_episode_indices": sorted(selected_episode_indices),
+        "selected_episodes_all_in_project_test": selected_episode_indices <= all_test,
+        "source": {"dataset": str(dataset), **metadata_hashes},
+    }
+    split_path = output_dir / "split_audit.json"
+    write_json_exclusive(split_path, split_audit)
+    campaign = {
+        "schema": "cruzr-s2-vla-offline-e3.0-selection-v1",
+        "campaign_id": "E3.0",
+        "mode": "offline_dataset_only_no_robot",
+        "tasks": sorted(TASKS),
+        "seeds": list(CAMPAIGN_SEEDS),
+        "seed0_total_repetitions_per_task": int(args.seed0_repetitions),
+        "unique_sample_count": len(sample_entries),
+        "expected_inference_run_count": len(sample_entries)
+        + len(TASKS) * (int(args.seed0_repetitions) - 1),
+        "sample_manifests": sample_entries,
+        "split_audit": "split_audit.json",
+        "split_audit_sha256": sha256_file(split_path),
+        "physical_task_success_evaluated": False,
+    }
+    write_json_exclusive(output_dir / "campaign.json", campaign)
+    print(
+        f"E3_0_CAMPAIGN_SELECTED=samples:{len(sample_entries)},"
+        f"runs:{campaign['expected_inference_run_count']},overlap:0"
+    )
     return 0
 
 
@@ -389,6 +539,7 @@ def _metrics(
             name: float(value)
             for name, value in zip(profile["joint_names"], np.mean(np.abs(error), axis=0))
         },
+        "per_horizon_mae": [float(value) for value in np.mean(np.abs(error), axis=1)],
         "max_first_point_delta": {
             "joint": profile["joint_names"][int(np.argmax(first_delta))],
             "value": float(np.max(first_delta)),
@@ -409,6 +560,84 @@ def _flag_value(action_chunk: dict[str, Any]) -> float | None:
     return float(value)
 
 
+def _campaign_aggregates(
+    results: Sequence[dict[str, Any]], profile: dict[str, Any], seed0_repetitions: int
+) -> dict[str, Any]:
+    import numpy as np
+
+    aggregates: dict[str, Any] = {}
+    for task_id in sorted(TASKS):
+        task_runs = [row for row in results if int(row["task_id"]) == task_id]
+        baseline = [row for row in task_runs if int(row["repetition_index"]) == 0]
+        seed0_runs = [row for row in task_runs if int(row["seed"]) == 0]
+        if len(baseline) != len(CAMPAIGN_SEEDS):
+            raise ValueError(f"task {task_id} does not contain five unique-seed baselines")
+        if {int(row["seed"]) for row in baseline} != set(CAMPAIGN_SEEDS):
+            raise ValueError(f"task {task_id} baseline seeds are incomplete")
+        if len(seed0_runs) != seed0_repetitions:
+            raise ValueError(f"task {task_id} seed 0 repetition count is incorrect")
+        baseline_mae = np.asarray([row["metrics"]["mae"] for row in baseline], dtype=float)
+        baseline_mse = np.asarray([row["metrics"]["mse"] for row in baseline], dtype=float)
+        joint_values = np.asarray(
+            [
+                [row["metrics"]["per_joint_mae"][name] for name in profile["joint_names"]]
+                for row in baseline
+            ],
+            dtype=float,
+        )
+        horizon_values = np.asarray(
+            [row["metrics"]["per_horizon_mae"] for row in baseline], dtype=float
+        )
+        repeat_reference = np.asarray(seed0_runs[0]["predicted_action_10x20"], dtype=float)
+        repeat_differences = [
+            float(
+                np.max(
+                    np.abs(
+                        np.asarray(row["predicted_action_10x20"], dtype=float)
+                        - repeat_reference
+                    )
+                )
+            )
+            for row in seed0_runs
+        ]
+        aggregates[str(task_id)] = {
+            "task_text": TASKS[task_id],
+            "unique_seed_count": len(baseline),
+            "unique_episode_count": len({int(row["episode_index"]) for row in baseline}),
+            "total_inference_run_count": len(task_runs),
+            "baseline_mae": {
+                "mean": float(np.mean(baseline_mae)),
+                "min": float(np.min(baseline_mae)),
+                "max": float(np.max(baseline_mae)),
+            },
+            "baseline_mse": {
+                "mean": float(np.mean(baseline_mse)),
+                "min": float(np.min(baseline_mse)),
+                "max": float(np.max(baseline_mse)),
+            },
+            "per_joint_mae_mean": {
+                name: float(value)
+                for name, value in zip(profile["joint_names"], np.mean(joint_values, axis=0))
+            },
+            "per_horizon_mae_mean": [
+                float(value) for value in np.mean(horizon_values, axis=0)
+            ],
+            "baseline_runs_with_range_violations": sum(
+                bool(row["metrics"]["range_violations"]) for row in baseline
+            ),
+            "baseline_runs_with_first_point_delta_violations": sum(
+                bool(row["metrics"]["first_point_delta_violations"]) for row in baseline
+            ),
+            "seed0_repeatability": {
+                "total_runs": len(seed0_runs),
+                "max_abs_prediction_difference_vs_rep0_by_run": repeat_differences,
+                "max_abs_prediction_difference": max(repeat_differences),
+                "bitwise_numeric_repeatability_observed": max(repeat_differences) == 0.0,
+            },
+        }
+    return aggregates
+
+
 def command_infer(args: argparse.Namespace) -> int:
     os.environ.setdefault("HF_HUB_OFFLINE", "1")
     os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
@@ -420,9 +649,42 @@ def command_infer(args: argparse.Namespace) -> int:
     profile = load_json(profile_path)
     if int(profile["action_dim"]) != 20 or int(profile["action_horizon"]) != 10:
         raise ValueError("profile must be 10x20")
-    manifests = [pathlib.Path(path).resolve() for path in args.sample_manifest]
-    if not manifests:
-        raise ValueError("at least one sample manifest is required")
+    campaign: dict[str, Any] | None = None
+    split_audit: dict[str, Any] | None = None
+    if args.campaign_manifest:
+        campaign_path = pathlib.Path(args.campaign_manifest).resolve()
+        campaign = load_json(campaign_path)
+        if campaign.get("campaign_id") != "E3.0":
+            raise ValueError("offline campaign must be E3.0")
+        if campaign.get("tasks") != sorted(TASKS) or campaign.get("seeds") != list(
+            CAMPAIGN_SEEDS
+        ):
+            raise ValueError("E3.0 campaign task/seed matrix is incomplete")
+        campaign_parent = campaign_path.parent
+        manifests = []
+        for entry in campaign.get("sample_manifests", []):
+            candidate = (campaign_parent / entry["manifest"]).resolve()
+            if campaign_parent != candidate and campaign_parent not in candidate.parents:
+                raise ValueError("campaign sample manifest escapes its staging directory")
+            manifests.append(candidate)
+        if len(manifests) != 20 or len(set(manifests)) != 20:
+            raise ValueError("E3.0 campaign must contain 20 distinct sample manifests")
+        split_path = (campaign_parent / campaign["split_audit"]).resolve()
+        if sha256_file(split_path) != campaign["split_audit_sha256"]:
+            raise ValueError("campaign split audit SHA-256 mismatch")
+        split_audit = load_json(split_path)
+        if split_audit.get("global_train_test_overlap") != []:
+            raise ValueError("campaign split audit contains train/test overlap")
+        if split_audit.get("selected_episodes_all_in_project_test") is not True:
+            raise ValueError("campaign selected a non-test episode")
+        seed0_repetitions = int(campaign["seed0_total_repetitions_per_task"])
+        if seed0_repetitions != 5:
+            raise ValueError("E3.0 requires five total seed-0 runs per task")
+    else:
+        manifests = [pathlib.Path(path).resolve() for path in args.sample_manifest]
+        if not manifests:
+            raise ValueError("at least one sample manifest is required")
+        seed0_repetitions = 1
 
     override_parent = pathlib.Path(args.override_parent).resolve()
     sys.path.insert(0, str(override_parent))
@@ -456,64 +718,98 @@ def command_infer(args: argparse.Namespace) -> int:
         for manifest_path in manifests:
             manifest = load_json(manifest_path)
             if int(manifest["task_id"]) not in TASKS:
-                raise ValueError("manifest contains a non-PLACE task")
+                raise ValueError("manifest contains an unsupported task")
+            if campaign is None and int(manifest["task_id"]) not in PLACE_TASK_IDS:
+                raise ValueError("non-campaign inference only supports PLACE tasks")
             if manifest["task_text"] != TASKS[int(manifest["task_id"])]:
                 raise ValueError("manifest task text does not match task ID")
             table_sample = _extract_table_sample(manifest, manifest_path)
-            torch.manual_seed(int(manifest["seed"]))
-            np.random.seed(int(manifest["seed"]))
-            started_inference = time.monotonic()
-            action_chunk = policy.get_action(_policy_sample(table_sample, manifest["task_text"]))
-            inference_seconds = time.monotonic() - started_inference
-            predicted = _flatten_prediction(action_chunk)
-            metrics = _metrics(
-                predicted,
-                table_sample["ground_truth"],
-                table_sample["state20"],
-                profile,
+            repetitions = (
+                seed0_repetitions
+                if campaign is not None and int(manifest["seed"]) == 0
+                else 1
             )
-            result = {
-                "task_id": int(manifest["task_id"]),
-                "task_text": manifest["task_text"],
-                "episode_index": int(manifest["episode_index"]),
-                "frame_index": int(manifest["frame_index"]),
-                "initial_state_semantics": manifest["initial_state_semantics"],
-                "split_definition": manifest["split_definition"],
-                "input": {
-                    "state20": table_sample["state20"],
-                    "force_torque12": table_sample["force_torque12"],
-                    "timestamp": table_sample["timestamp"],
-                    "parquet_rows": table_sample["parquet_rows"],
-                    "video": table_sample["video_info"],
-                    "frame_index_source": table_sample["frame_index_source"],
-                    "parquet_sha256": manifest["source"]["parquet_sha256"],
-                    "video_sha256": manifest["source"]["video_sha256"],
-                },
-                "predicted_action_10x20": predicted,
-                "ground_truth_action_10x20": table_sample["ground_truth"],
-                "flag_pred": _flag_value(action_chunk),
-                "metrics": metrics,
-                "inference_seconds": inference_seconds,
-                "verdict": (
-                    "PASS_OFFLINE_INFERENCE_WITH_CONSERVATIVE_VIOLATIONS"
-                    if metrics["range_violations"] or metrics["first_point_delta_violations"]
-                    else "PASS_OFFLINE_INFERENCE_CONSERVATIVE_CHECKS_CLEAR"
-                ),
-                "physical_task_success_evaluated": False,
-            }
-            task_output = output_dir / f"task{result['task_id']}_result.json"
-            write_json_exclusive(task_output, result)
-            results.append(result)
-            print(
-                f"OFFLINE_TASK_RESULT=task:{result['task_id']},episode:{result['episode_index']},"
-                f"mae:{metrics['mae']:.9f},verdict:{result['verdict']}"
-            )
+            for repetition_index in range(repetitions):
+                torch.manual_seed(int(manifest["seed"]))
+                np.random.seed(int(manifest["seed"]))
+                started_inference = time.monotonic()
+                action_chunk = policy.get_action(
+                    _policy_sample(table_sample, manifest["task_text"])
+                )
+                inference_seconds = time.monotonic() - started_inference
+                predicted = _flatten_prediction(action_chunk)
+                metrics = _metrics(
+                    predicted,
+                    table_sample["ground_truth"],
+                    table_sample["state20"],
+                    profile,
+                )
+                sample_id = manifest.get("sample_id", f"task{manifest['task_id']}")
+                run_id = (
+                    f"{sample_id}_rep{repetition_index}"
+                    if campaign is not None
+                    else sample_id
+                )
+                result = {
+                    "run_id": run_id,
+                    "sample_id": sample_id,
+                    "task_id": int(manifest["task_id"]),
+                    "task_text": manifest["task_text"],
+                    "seed": int(manifest["seed"]),
+                    "repetition_index": repetition_index,
+                    "episode_index": int(manifest["episode_index"]),
+                    "frame_index": int(manifest["frame_index"]),
+                    "phase_fraction": manifest.get("phase_fraction"),
+                    "initial_state_semantics": manifest["initial_state_semantics"],
+                    "split_definition": manifest["split_definition"],
+                    "input": {
+                        "state20": table_sample["state20"],
+                        "force_torque12": table_sample["force_torque12"],
+                        "timestamp": table_sample["timestamp"],
+                        "parquet_rows": table_sample["parquet_rows"],
+                        "video": table_sample["video_info"],
+                        "frame_index_source": table_sample["frame_index_source"],
+                        "parquet_sha256": manifest["source"]["parquet_sha256"],
+                        "video_sha256": manifest["source"]["video_sha256"],
+                    },
+                    "predicted_action_10x20": predicted,
+                    "predicted_action_sha256": hashlib.sha256(
+                        json.dumps(predicted, separators=(",", ":")).encode("utf-8")
+                    ).hexdigest(),
+                    "ground_truth_action_10x20": table_sample["ground_truth"],
+                    "flag_pred": _flag_value(action_chunk),
+                    "metrics": metrics,
+                    "inference_seconds": inference_seconds,
+                    "verdict": (
+                        "PASS_OFFLINE_INFERENCE_WITH_CONSERVATIVE_VIOLATIONS"
+                        if metrics["range_violations"]
+                        or metrics["first_point_delta_violations"]
+                        else "PASS_OFFLINE_INFERENCE_CONSERVATIVE_CHECKS_CLEAR"
+                    ),
+                    "physical_task_success_evaluated": False,
+                }
+                task_output = (
+                    output_dir / "runs" / f"{run_id}.json"
+                    if campaign is not None
+                    else output_dir / f"task{result['task_id']}_result.json"
+                )
+                write_json_exclusive(task_output, result)
+                results.append(result)
+                print(
+                    f"OFFLINE_TASK_RESULT=run:{run_id},task:{result['task_id']},"
+                    f"episode:{result['episode_index']},frame:{result['frame_index']},"
+                    f"mae:{metrics['mae']:.9f},verdict:{result['verdict']}"
+                )
     finally:
         del policy
         torch.cuda.empty_cache()
 
-    summary = {
-        "schema": "cruzr-s2-vla-offline-e2.2-v1",
+    summary: dict[str, Any] = {
+        "schema": (
+            "cruzr-s2-vla-offline-e3.0-v1"
+            if campaign is not None
+            else "cruzr-s2-vla-offline-e2.2-v1"
+        ),
         "mode": "offline_network_none_no_ros_no_robot",
         "checkpoint": {
             "path": str(checkpoint),
@@ -530,8 +826,33 @@ def command_infer(args: argparse.Namespace) -> int:
         "robot_state_read": False,
         "network_available": False,
     }
+    if campaign is not None and split_audit is not None:
+        summary.update(
+            {
+                "campaign_id": "E3.0",
+                "campaign_selection_sha256": sha256_file(
+                    pathlib.Path(args.campaign_manifest).resolve()
+                ),
+                "split_audit_sha256": campaign["split_audit_sha256"],
+                "split_train_test_overlap": split_audit["global_train_test_overlap"],
+                "checkpoint_training_membership_known": False,
+                "generalization_claim_allowed": False,
+                "unique_sample_count": int(campaign["unique_sample_count"]),
+                "inference_run_count": len(results),
+                "seed0_total_repetitions_per_task": seed0_repetitions,
+                "aggregates": _campaign_aggregates(
+                    results, profile, seed0_repetitions
+                ),
+            }
+        )
     write_json_exclusive(output_dir / "summary.json", summary)
-    print(f"OFFLINE_E2_2_COMPLETE=samples:{len(results)},movement:none,network:none")
+    if campaign is not None:
+        print(
+            f"OFFLINE_E3_0_COMPLETE=samples:{campaign['unique_sample_count']},"
+            f"runs:{len(results)},movement:none,network:none"
+        )
+    else:
+        print(f"OFFLINE_E2_2_COMPLETE=samples:{len(results)},movement:none,network:none")
     return 0
 
 
@@ -541,18 +862,28 @@ def build_parser() -> argparse.ArgumentParser:
 
     select_parser = subparsers.add_parser("select", help="select a deterministic PLACE sample")
     select_parser.add_argument("--dataset", required=True)
-    select_parser.add_argument("--task-id", type=int, choices=sorted(TASKS), required=True)
+    select_parser.add_argument("--task-id", type=int, choices=PLACE_TASK_IDS, required=True)
     select_parser.add_argument("--split", choices=("test",), default="test")
     select_parser.add_argument("--seed", type=int, default=0)
     select_parser.add_argument("--frame-index", type=int, default=0)
     select_parser.add_argument("--output", required=True)
     select_parser.set_defaults(func=command_select)
 
+    campaign_parser = subparsers.add_parser(
+        "campaign", help="select the complete deterministic E3.0 campaign"
+    )
+    campaign_parser.add_argument("--dataset", required=True)
+    campaign_parser.add_argument("--seed0-repetitions", type=int, choices=(5,), default=5)
+    campaign_parser.add_argument("--output-dir", required=True)
+    campaign_parser.set_defaults(func=command_campaign)
+
     infer_parser = subparsers.add_parser("infer", help="run model inference over staged samples")
     infer_parser.add_argument("--checkpoint", required=True)
     infer_parser.add_argument("--profile", required=True)
     infer_parser.add_argument("--override-parent", required=True)
-    infer_parser.add_argument("--sample-manifest", action="append", required=True)
+    manifest_group = infer_parser.add_mutually_exclusive_group(required=True)
+    manifest_group.add_argument("--sample-manifest", action="append")
+    manifest_group.add_argument("--campaign-manifest")
     infer_parser.add_argument("--output-dir", required=True)
     infer_parser.add_argument("--seed", type=int, default=0)
     infer_parser.set_defaults(func=command_infer)

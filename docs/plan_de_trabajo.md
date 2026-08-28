@@ -194,6 +194,13 @@ ajustando el robot para “compensar”.
 `front.jpg`, `side.jpg`, `height_corners.jpg` y un croquis. Registrar
 `bumper_to_platform_m: null`: E1.0 no calcula esa distancia.
 
+**Resultado real 2026-08-28:** `PASS` para progresar en lectura/shadow. El
+propietario midió `1,80 × 0,80 m`, las cuatro esquinas a `1,00 m`, confirmó
+rigidez, estabilidad y más de `1,5 m` respecto de toda parte del robot. Para
+reducir carga operativa, fotos y marcas se aplazan explícitamente a E4, antes
+de acercar el fixture o permitir movimiento; esta dispensa no autoriza una
+prueba física. Evidencia: `20260828T104622_E1.0`.
+
 #### Experimento 1.1 — Baseline PC/VLA sin inferencia
 
 **Estado:** `EJECUTABLE_LECTURA`.
@@ -319,6 +326,13 @@ con cartón/B0 vacía. **FAIL:** falta un artefacto o el hash cambió.
 **PASS:** dimensiones dentro de `±0,010 m`, superficie a `1,000 ±0,010 m`,
 pose marcada y masa registrada. `D_BUMPER_PLATFORM` continúa `null`.
 
+**Resultado real 2026-08-28:** `PASS_FOR_OOD_SHADOW_ONLY`. Se reutilizan las
+dimensiones ya registradas de B0 `0,603 × 0,397 × 0,217 m` y se congela la pose
+nominal sólo como metadato. Masa, fotos y validación de la colocación real se
+aplazan hasta E4/E6 y siguen siendo obligatorias antes de cualquier canary
+físico. Evidencia: `20260828T105453_E1.3`. Esto sólo libera E2.1 como smoke OOD
+sin publicador; no valida semántica PICK/PLACE ni autoriza movimiento.
+
 ### Serie 2 — Primera inferencia shadow con las herramientas actuales
 
 #### Experimento 2.0 — Task 0, PICK bajo, una inferencia sin movimiento
@@ -378,8 +392,8 @@ comandos ni se movió el robot.
 
 #### Experimento 2.1 — Task 2, smoke test medio sin fixture nominal
 
-**Estado:** `BLOCKED_E1.0_E1.3`; ejecutar sólo después de completar las medidas
-de plataforma y B0 y revisar E2.0.
+**Estado:** `PASS_SHADOW_SAFETY_ONLY`; ejecutado después de cerrar E1.0/E1.3
+para progresión shadow y revisar E2.0.
 
 **Escenario:** idéntico a E2.0; plataforma y B0 fuera de la envolvente. Sólo
 cambia el task ID para verificar el catálogo y runtime.
@@ -394,37 +408,64 @@ cambia el task ID para verificar el catálogo y runtime.
 `Pick up the large box from the middle level of shelf`. Comparar low y middle
 sin afirmar que la diferencia sea correcta físicamente.
 
+**Resultado real 2026-08-28:** run `20260828T105547_E2.1`. Task 2 terminó
+`SUCCEEDED` como servicio de inferencia en `10,065012 s` para 8 s solicitados y
+produjo dos chunks 10×20. El validador rechazó ambos por siete discontinuidades
+del primer punto: `0 ACCEPT / 2 REJECT`; el máximo fue
+`R_shoulder_yaw_joint=1,376502 rad` frente a `0,35 rad`. Los dos contenedores
+terminaron `exited`, `COMMAND_PATH_SAFE=publishers:0`, hashes correctos y no se
+ordenó movimiento. Resultado `PASS_SHADOW_SAFETY_ONLY`, no éxito de PICK medio.
+
 #### Experimento 2.2 — Tasks 1 y 3, PLACE, con entrada reproducible
 
-**Estado:** `PENDIENTE_CODIGO`.
+**Estado:** `PASS_OFFLINE_INFERENCE_ONLY` el 2026-08-28. No demuestra PLACE
+físico ni generalización.
 
 **Razón:** un PLACE necesita `HELD_LOW` o `HELD_MIDDLE`. No se pondrá al robot a
 sujetar B0 sólo para crear una entrada shadow. Primero se implementa replay
 offline de un episodio de place o un mock 20D+RGB documentado.
 
-**Orden especificada para cuando exista el evaluador:**
+**Orden implementada:**
 
 ```bash
-VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment E2.2)"
-python3 scripts/vla/evaluate_checkpoint_offline.py \
-  --checkpoint cruzrss2_vla_pack-002/weight/checkpoint-40000 \
-  --dataset cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319 \
-  --split test --task-id 1 --seed 0 --output "$VLA_RUN_DIR/task1"
-python3 scripts/vla/evaluate_checkpoint_offline.py \
-  --checkpoint cruzrss2_vla_pack-002/weight/checkpoint-40000 \
-  --dataset cruzrss2_vla_pack-002/data/utars_clamp_and_place_large_box_full_data_bio_lerobot_0319 \
-  --split test --task-id 3 --seed 0 --output "$VLA_RUN_DIR/task3"
+./scripts/vla/run_vla_offline_place_e2_2.sh --check
+./scripts/vla/run_vla_offline_place_e2_2.sh --run --seed 0
 ```
 
-**Resultado esperado:** chunks 10×20 para place bajo/medio y provenance del
-episodio inicial HELD. Hasta que el script exista, el resultado real es
-`BLOCKED_MISSING_OFFLINE_EVALUATOR` y no se improvisa otra prueba.
+El wrapper selecciona de forma determinista el último 15 % de episodios de
+cada task como holdout **del proyecto**. El dataset sólo declara `train`, por
+lo que no es un split test del proveedor ni demuestra que el checkpoint no
+haya visto esos episodios. Staging e inferencia ocurren en un contenedor nuevo
+de Vision con `--network none`, sin ROS, estado vivo ni `RobotCommand`; los
+contenedores VLA persistentes permanecen detenidos.
+
+**Resultado real:** run `20260828T112730_E2.2`. Task 1 seleccionó episodio 465
+y task 3 episodio 265, ambos en frame 0 con semántica
+`HELD_FROM_PLACE_EPISODE_TASK_AND_FRAME_0`. Los parquets reales omiten
+`frame_index` aunque `meta/info.json` lo anuncia; el evaluador aceptó el índice
+de fila sólo después de comprobar `timestamp=frame/120` y task/episodio
+exclusivos. El checkpoint cargó en `27,296552 s`; inferencia task 1 tardó
+`1,586348 s`, MAE `0,007283609`, y task 3 `0,401792 s`, MAE `0,011394879`.
+Ambas salidas fueron 10×20 finitas, sin violaciones de rango ni del salto
+conservador desde el estado replay. Al cierre:
+`exited/exited/publishers:0`, hashes válidos, sin leer ni mover el robot.
+
+Los runs `20260828T112327_E2.2` y `20260828T112419_E2.2` documentan fallos
+previos antes de inferencia: incompatibilidad de `setup.bash` con `nounset` y
+la contradicción de esquema citada. El run válido dejó inicialmente tres JSON
+temporales propiedad de root; se eliminaron con otro contenedor sin red y el
+wrapper quedó corregido para hacer esa limpieza también ante fallo.
+
+**Interpretación:** PASS valida carga, replay RGB+20D, contrato de salida y
+comparación contra diez acciones registradas. No evalúa que el robot deposite
+una caja, altura low/middle, contacto, colisiones ni generalización fuera del
+dataset; no libera publicación física.
 
 #### Experimento 2.3 — Repetibilidad P20 OOD de tasks 0 y 2
 
-**Estado:** `BLOCKED_E1.0_E1.3_E2.1`; el wrapper está implementado, pero sólo se
-ejecuta después de aprobar las medidas y el smoke task 2. Mide runtime P20, no
-máscaras 14–19.
+**Estado:** `PASS_PILOT_2X2_SHADOW_ONLY`; se ejecutó el piloto reducido acordado
+por el propietario después de E1.0/E1.3/E2.1. Mide runtime P20, no máscaras
+14–19 ni éxito físico de las tareas.
 
 **Escenario:** plataforma/B0 fuera de la envolvente. Ejecutar cinco repeticiones
 task 0 y cinco task 2 sin cambiar escena, robot ni cámara. Esto mide
@@ -442,24 +483,40 @@ siguiente; así no mezcla chunks, logs ni estado de inferencia. **PASS:** 5/5
 ejecuciones por task terminan con verdict y cero publishers; se reporta
 variación de latencia, endpoint, primer delta y `flag_pred`.
 
+**Resultado real 2026-08-28:** dos repeticiones independientes por task, con
+STOP entre runs. Task 0 (`20260828T110217_E2.3-task0`) produjo cuatro chunks:
+`0 ACCEPT / 4 REJECT`; duración `10,006055…10,039981 s` y máximo delta por
+chunk `1,361919…1,367893 rad`, siempre en `R_shoulder_yaw_joint`. Task 2
+(`20260828T110617_E2.3-task2`) produjo cuatro chunks: `0 ACCEPT / 4 REJECT`;
+duración `10,005578…10,006689 s` y máximo `1,372170…1,379845 rad`, también en
+`R_shoulder_yaw_joint`. Todos los chunks repitieron siete violaciones del
+primer punto. Los dos manifiestos SHA-256 validan; cada repetición y ambos
+parents terminaron `exited/exited/publishers:0`. Resultado: runtime y rechazo
+reproducibles en esta escena OOD; no se valida PICK ni se autoriza movimiento.
+Las cinco repeticiones originales quedan como ampliación opcional, no como
+requisito para continuar el trabajo offline.
+
 ### Serie 3 — Dataset, OOD y contrato temporal
 
 #### Experimento 3.0 — Evaluación offline tasks 0–3
 
-**Estado:** `PENDIENTE_CODIGO` hasta implementar
-`scripts/vla/evaluate_checkpoint_offline.py`.
+**Estado:** `PENDIENTE_CODIGO`. El evaluador E2.2 ya cubre un frame de tasks 1
+y 3; falta ampliarlo a tasks 0–3, varios frames/seeds y agregación por episodio
+sin reutilizar una muestra entre particiones.
 
 **Escenario:** sin robot ni plataforma. Crear split por episodio/sesión, no por frame.
 Para cada task ejecutar seeds `0,1,2,3,4`; repetir seed 0 cinco veces.
 
-**Comando patrón:** el de E2.2 cambiando `--task-id` y `--seed`. **PASS:** salida
-10×20 finita, métricas por eje/horizonte/task, ningún episodio compartido entre
-train/test y C0 inmutable. **Resultado real mientras falta el script:**
-`BLOCKED_MISSING_OFFLINE_EVALUATOR`.
+**Comando:** todavía no existe. El wrapper E2.2 ejecuta conjuntamente sólo
+tasks 1/3 y rechaza 0/2; no se altera manualmente para simular E3.0. **PASS:**
+salida 10×20 finita, métricas por eje/horizonte/task, ningún episodio compartido
+entre train/test y C0 inmutable. **Resultado actual:**
+`BLOCKED_MISSING_FOUR_TASK_MULTI_SAMPLE_EVALUATOR`.
 
 #### Experimento 3.1 — OOD geométrico offline, una variable cada vez
 
-**Estado:** `PENDIENTE_CODIGO` hasta disponer del evaluador/replay de imágenes.
+**Estado:** `PENDIENTE_CODIGO`. Ya existe replay nominal para E2.2; falta la
+transformación OOD versionada de imagen/geometría y su verificación.
 
 **Escenario base:** frames de dataset task 0/2. Variantes sintéticas exactas:
 
@@ -784,9 +841,10 @@ pasa directamente al robot.
 
 ### Punto exacto de comienzo
 
-El próximo experimento es **E1.0** y después **E1.3**. E1.1 y E1.2 ya están
-aprobados y no se repiten. E2.0 quedó registrado sólo como smoke OOD seguro;
-tras cerrar las medidas se revisa ese resultado y se habilita E2.1. El primer
+E1.0 y E1.3 quedaron cerrados para progresión shadow; fotos, marcas, masa y
+colocación real siguen diferidas a E4/E6 antes de cualquier movimiento. E1.1 y
+E1.2 ya están aprobados y no se repiten. E2.0 quedó registrado sólo como smoke
+OOD seguro; el próximo experimento es **E2.1**, también OOD y sin publicador. El primer
 experimento con movimiento determinista sería E4.3 y el primer canary VLA sería
 E6.0; ambos siguen bloqueados por dependencias explícitas y requieren
 autorización física futura independiente.

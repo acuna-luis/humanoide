@@ -1,13 +1,13 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
-**Última actualización:** 27 de agosto de 2026  
+**Última actualización:** 28 de agosto de 2026
 **Unidad observada:** Cruzr S2 `WAE001UBT60000669`  
 **Baseline:** robot v0.2.0, abrazaderas, `HW_TYPE=cruzr_s2_v1`, PC controller 4.7.0  
 **Ámbito:** contacto contra mobiliario, objeto posiblemente sujeto, postura no
 `home`, paro de emergencia, fault de servo y consignas latentes.
 
-Este documento describe un incidente real y el procedimiento conservador que
-permitió recuperar el robot. No convierte un apagado abrupto ni un reset de
+Este documento describe incidentes reales y el procedimiento conservador que
+permitió recuperar el robot en los casos cerrados. No convierte un apagado abrupto ni un reset de
 servo en procedimientos aprobados por UBTECH. El estado físico y lógico debe
 comprobarse de nuevo en cada incidente.
 
@@ -180,6 +180,41 @@ física o de un transitorio/bias del sensor, no de cuánto se apretó el botón.
 También confirma que un reinicio automático de contenedores no equivale a
 recuperación cuando EtherCAT cae; debe exigirse el preflight completo.
 
+### 2.7 Tercer incidente: home vendor incompatible con postura cruzada
+
+El 28-08, después de una sesión PICO, el script clasificó
+`teleoperated_pose` y ejecutó por primera vez físicamente la tarea vendor
+`cruzr/open_arm_before_home`, goal `54f7beb2-ffd2-45bd-86e6-07559fae709b`.
+El XML no calcula una retirada condicionada por la postura: en su primera fase
+manda en paralelo el brazo derecho a
+`[0,-0.332024,0,0,0,0,0]`, el izquierdo a
+`[0,-0.348983,0,0,0,0,0]`, y cintura/elevador a cero.
+
+El final de PICO ya había registrado autocolisión entre torso y codo/muñeca
+izquierdos, con distancias de aproximadamente 17–25 mm, rechazando comandos.
+Durante el recovery, 1,76 s después del inicio del goal, la protección midió:
+
+```text
+Excessive force detected ... left ft sensor: -370.944 [Force-X]
+```
+
+El brazo derecho y la cintura informaron éxito; el brazo izquierdo no alcanzó
+el objetivo —incluido un error de codo de `-1,30408 rad`— y el elevador quedó
+abortado. El resultado global fue `MoveToGoalFailed`, state `7104050`,
+`status=6`. Inmediatamente después, los servos izquierdos 4004 (codo roll),
+4003 (hombro yaw) y 4002 (hombro roll) registraron `error_code=0x1003` y
+`Operation disabled unexpected:0x123f`.
+
+El operador accionó el paro. `hw` y `manipulation_robot_app` reiniciaron una
+vez; el nuevo rosa_control quedó esperando `/mc/rosa_control/start`,
+`/mc/actuator_state` sin publicador y `/mc/manipulation/action` sin servidor.
+Los checks versionados terminaron con código 25. El diagnóstico mantuvo el
+paro y no rearmó, reinició, cambió modo ni envió otra trayectoria.
+
+**DESCARTADO:** considerar `open_arm_before_home` una retirada segura universal
+desde cualquier postura PICO. Hasta diseñar y validar una recuperación por
+regiones de postura, el script no debe ejecutarse de nuevo después de PICO.
+
 ## 3. Posibles causas
 
 Mantener separadas las observaciones de las explicaciones evita convertir una
@@ -194,6 +229,7 @@ hipótesis en procedimiento.
 | **VERIFICADO** | una acción abortada puede modificar consignas sin mover | `status=6`, posiciones iguales y deltas de consigna posteriores de hasta 0,1043 rad |
 | **OBSERVADO** | `KEY1` puede desenergizar la parte superior de forma abrupta | los brazos descendieron sin trayectoria; un uso anterior coincidió con registros Docker corruptos |
 | **OBSERVADO** | el boot guard no puede recuperar cualquier estado de arranque | con seguridad `1,0,0` leyó `CONTROL_STATE=unknown` y terminó `unexpected_control_state_unknown`; Motion se inicializó al liberar el paro |
+| **VERIFICADO** | la primera fase de `open_arm_before_home` puede aumentar el contacto desde una postura PICO cruzada | el XML mueve ambos brazos, cintura y elevador en paralelo; produjo `Force-X=-370,944 N`, fallo del brazo izquierdo y faults 4002/4003/4004 |
 
 No está demostrado que el fault implique daño mecánico permanente: desapareció
 en el arranque final. Tampoco está demostrado que repetir un power cycle sea
@@ -280,11 +316,13 @@ No ejecutar `home` si se cumple cualquiera:
 - objeto posiblemente sujeto sin zona de caída libre;
 - cargador conectado, batería insuficiente o paros sin comprobar;
 - robot, brazo o caja apoyados contra mobiliario;
+- postura PICO cruzada o con codo/muñeca dentro del margen de autocolisión: la
+  tarea `open_arm_before_home` no es una retirada segura demostrada;
 - falta una persona con acceso inmediato al paro.
 
-`--force-held-home` sólo omite la clasificación histórica de la fase de
-manipulación y permite aceptar la caída de una caja prescindible. No omite los
-gates anteriores y no debe combinarse con `--fast`.
+`--force-held-home` queda **RETIRADO**. El incidente demostró que aceptar la
+caída de una caja no vuelve geométricamente segura la trayectoria: desde la
+postura PICO real aumentó el contacto contra el torso antes de abortar.
 
 ### Fase D — fault o consignas latentes
 
@@ -335,9 +373,20 @@ Si están sanos pero no en `home`, repetir primero:
 ./scripts/cruzr_recover_to_home.sh --check
 ```
 
-Sólo con comprobación física fresca ejecutar el modo apropiado. No usar
-`--force-held-home` con abrazaderas vacías salvo que el estado histórico siga
-siendo realmente indeterminable; nunca usarlo para ignorar un fault.
+El script canónico aplica ahora esta decisión de forma automática:
+
+- muestra 20D sana y `abs(position)<0,02`: declara `home_measured` y envía
+  **cero objetivos**;
+- último estado demostrado de depósito/apertura del ciclo de caja: permite
+  retirada del chasis y la tarea vendor, con un segundo gate antes y una
+  medición 20D después;
+- postura PICO, estado desconocido, caja posiblemente sujeta, intento de home
+  no confirmado o evento posterior de fuerza/autocolisión/fault: bloquea antes
+  de publicar un goal.
+
+`--fast` se conserva sólo por compatibilidad con los flujos exteriores, pero
+ya no omite ninguna auditoría de seguridad de return-to-home. Sin argumentos,
+el script equivale a `--check`; el movimiento requiere `--run` explícito.
 
 ## 6. Checklist breve para la persona junto al robot
 
@@ -371,7 +420,35 @@ error_code != 0
 status con bit FAULT
 estado distinto de Operation Enabled
 abs(cmd_pos-position) > 0.01 rad
+abs(velocity) > 0.02 rad/s
 ```
+
+Además, `cruzr_recover_to_home.sh`:
+
+- exige una muestra fresca de los 20 ejes de cuerpo y no confunde el inicio de
+  una tarea con un home completado;
+- busca eventos posteriores de exceso de fuerza, autocolisión,
+  `MoveToGoalFailed`, fault de servo y EtherCAT `SAFEOP`;
+- prohíbe `open_arm_before_home` desde `teleoperated_pose`, `unknown` o un
+  intento anterior no confirmado;
+- restringe la primitiva vendor a estados conocidos del ciclo de caja;
+- revalida después del retroceso/reset y confirma el home final por posición,
+  velocidad y consigna, no sólo por `status=4`;
+- centraliza también `cruzr_blue_workbin_cycle.sh --home`, que ya no puede
+  invocar directamente la trayectoria;
+- retira `--force-held-home` y hace que `--fast` no salte gates.
+
+Las regresiones locales se ejecutan con:
+
+```bash
+./scripts/cruzr_recover_to_home.sh --self-test
+```
+
+El 28-08 pasaron los casos home, non-home, consigna latente, eje en movimiento,
+fault 4003, eje ausente, PICO bloqueado, intento de home fallido, fuerza
+bloqueada y estado conocido de workbin. Esta validación fue exclusivamente
+local con el robot completamente apagado; la nueva ruta de caja aún requiere
+una prueba física controlada posterior y no autoriza el arranque actual.
 
 El XML temporal de liberación sólo con el brazo derecho se retiró del robot y
 del repositorio. No debe recrearse como workaround automático.
@@ -403,3 +480,27 @@ Al cerrar el incidente:
 Antes de otro movimiento: comprobar Control Center, repetir ambos `--check`,
 inspeccionar visualmente hombro izquierdo/abrazaderas y hacer una prueba vacía
 de amplitud mínima con persona en el paro.
+
+### Punto de reanudación vigente tras el incidente del 28-08
+
+El punto anterior queda histórico. El estado vigente es:
+
+- apagado lógico aceptado por `/emb/pm_shutdown` con `success=True`;
+- Motion y Vision sin respuesta; pantalla y luces confirmadas apagadas;
+- `KEY1` pulsado únicamente después de esa confirmación;
+- chasis apagado e indicador verde apagado;
+- postura no `home`, con brazo izquierdo apoyado contra el torso sin presión
+  apreciable antes del apagado; robot y brazos estables al final;
+- abrazaderas vacías, cargador desconectado y zona de descenso despejada por
+  confirmación del operador;
+- FT izquierdo disparado a `-370,944 N` durante la apertura previa;
+- faults 4002/4003/4004 observados antes del reinicio automático;
+- no se rearmó ningún servo ni se envió otra trayectoria.
+
+No encender para “probar”. El siguiente arranque debe comenzar con paro
+accionado, abrazaderas vacías, cargador fuera, zona completa despejada y una
+persona junto al paro. Después hay que descubrir contenedores desde cero y,
+antes de liberar el paro o seleccionar modo, demostrar EtherCAT/controladores,
+errores, status, velocidad y deltas posición–consigna. No ejecutar `home` ni
+teleoperación hasta resolver una retirada segura específica para esta región
+de postura.

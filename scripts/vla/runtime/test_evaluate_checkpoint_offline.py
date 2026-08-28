@@ -38,6 +38,30 @@ class OfflineSelectionTests(unittest.TestCase):
         second = MODULE.select_episode(episodes, 1, 0)
         self.assertEqual(first, second)
 
+    def test_campaign_selection_uses_five_unique_test_episodes(self) -> None:
+        episodes = [
+            {"episode_index": index, "tasks": MODULE.TASKS[0], "length": 20}
+            for index in range(40)
+        ]
+        selected = [
+            MODULE.select_campaign_episode(episodes, 0, seed)[0]["episode_index"]
+            for seed in MODULE.CAMPAIGN_SEEDS
+        ]
+        self.assertEqual(len(set(selected)), 5)
+        self.assertTrue(all(index >= 34 for index in selected))
+
+    def test_project_train_and_test_episode_sets_are_disjoint(self) -> None:
+        episodes = [
+            {"episode_index": index, "tasks": MODULE.TASKS[2], "length": 20}
+            for index in range(100)
+        ]
+        train, test = MODULE.train_and_test_pools_for_task(episodes, 2)
+        train_ids = {row["episode_index"] for row in train}
+        test_ids = {row["episode_index"] for row in test}
+        self.assertFalse(train_ids & test_ids)
+        self.assertEqual(len(train), 85)
+        self.assertEqual(len(test), 15)
+
     def test_json_write_is_exclusive(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = pathlib.Path(temporary) / "result.json"

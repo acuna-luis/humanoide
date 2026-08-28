@@ -372,22 +372,20 @@ Los componentes de bajo nivel que reutiliza el orquestador son:
   --run --yes --fast
 ```
 
-La recuperación anterior presupone que el depósito terminó y que las
-abrazaderas están vacías. Para el caso distinto de una postura PICO no
-reconocida con una caja **prescindible** todavía sujeta, el propietario autorizó
-un modo específico:
+La recuperación anterior presupone que el depósito terminó, que las
+abrazaderas están vacías y que el estado pertenece al ciclo de caja. El modo
+histórico para una postura PICO no reconocida con caja prescindible era:
 
 ```bash
 ./scripts/cruzr_recover_to_home.sh --run --force-held-home
 ```
 
-No debe combinarse con `--fast`. Sólo omite la inferencia histórica del log y
-no mueve el chasis; conserva el preflight completo. La separación inicial de
-los brazos puede dejar caer la caja, por lo que exige una zona de caída vacía y
-una persona junto al paro. Después de teleoperación debe seleccionarse primero
-`自动任务模式`/`auto_task` y esperar a que `/mc/manipulation/action` vuelva a
-tener servidor. Si el servidor o los estados frescos de seguridad no aparecen,
-el modo se bloquea y no se debe forzar más.
+**RETIRADO EL 28-08:** `open_arm_before_home` produjo sobreesfuerzo y faults al
+usarse desde una postura PICO cruzada. El script rechaza ahora esa opción; una
+caja prescindible permite aceptar su caída, pero no autoriza una trayectoria
+incompatible con la postura. Si PICO no terminó en home medido, conservar el
+estado, aplicar la guía de recuperación tras contacto y no cambiar a
+`auto_task` para volver a intentar la misma primitiva.
 
 El intento de recuperación del 27-08 confirmó además que un servidor de acción
 activo no demuestra que todos los ejes estén habilitados. Después del contacto

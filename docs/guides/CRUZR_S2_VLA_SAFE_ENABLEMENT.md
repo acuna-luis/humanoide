@@ -30,6 +30,48 @@ siete violaciones del primer punto; la máxima fue
 publicadores, STOP dejó ambos contenedores detenidos y no hubo movimiento. Este
 run es `PASS_SHADOW_SAFETY_ONLY`, no evidencia de que task 0 pueda hacer PICK.
 
+Al reanudar la campaña el 2026-08-28, el propietario informó que el robot ya
+estaba encendido y en `home`. Un check fresco de sólo lectura confirmó
+Motion/Vision, acciones listas, paros `0/0`, cargador desconectado y
+`ACTUATORS_OPERATION_ENABLED=1`, pero el gate no pudo certificar la postura 20D
+porque la muestra omitió los IDs `2001/2002/2003/3001`. No se envió movimiento.
+VLA permaneció con ambos contenedores `exited` y cero publicadores. El siguiente
+paso sigue siendo E1.0/E1.3 de medida física fuera de la envolvente; `home`
+informado no autoriza repetir shadow desde una entrada nominal ni ejecutar VLA.
+
+Para reducir carga operativa, el propietario cerró E1.0 con las medidas
+`1,80 × 0,80 × 1,00 m`, cuatro esquinas a 1 m, rigidez/estabilidad y más de
+1,5 m de separación; las fotos y marcas se difieren a E4. E1.3 conserva la
+geometría medida de B0 `0,603 × 0,397 × 0,217 m` y difiere masa/colocación real
+a E4/E6. Esta dispensa sólo libera shadow OOD. E2.1 task 2, run
+`20260828T105547_E2.1`, generó dos chunks en `10,065012 s`; ambos fueron
+rechazados por siete saltos del primer punto, máximo
+`R_shoulder_yaw_joint=1,376502 rad` frente a `0,35 rad`. STOP dejó ambos
+contenedores `exited`, publicadores `0` y hashes válidos. Es
+`PASS_SHADOW_SAFETY_ONLY`, no evidencia de PICK medio ni autorización física.
+
+E2.3 se redujo por decisión del propietario a un piloto 2+2. Task 0, run
+`20260828T110217_E2.3-task0`, produjo cuatro chunks rechazados por las mismas
+siete discontinuidades; duraciones `10,006055…10,039981 s` y máximo delta
+`1,361919…1,367893 rad` en `R_shoulder_yaw_joint`. Task 2, run
+`20260828T110617_E2.3-task2`, produjo otros cuatro rechazos equivalentes;
+duraciones `10,005578…10,006689 s` y máximo `1,372170…1,379845 rad`. Cada
+repetición confirmó STOP y los parents terminaron `exited/exited/publishers:0`;
+ambos manifests validan. Es `PASS_PILOT_2X2_SHADOW_ONLY`: demuestra
+repetibilidad del runtime/rechazo OOD, no capacidad de PICK ni seguridad para
+publicación física.
+
+E2.2 ya cubre los tasks PLACE 1 y 3 sin crear una postura HELD en el robot. El
+run `20260828T112730_E2.2` cargó `checkpoint-40000` en un contenedor transitorio
+con `--network none`, sin ROS ni mensajes de mando, y reprodujo frame 0 de los
+episodios 465 y 265. Produjo dos chunks 10×20: MAE `0,007283609` para task 1 y
+`0,011394879` para task 3, sin violaciones conservadoras de rango o primer
+salto. El holdout es una partición local del último 15 % por task; no es un
+split del proveedor y puede haber formado parte del entrenamiento. El resultado
+es `PASS_OFFLINE_INFERENCE_ONLY`: valida el camino de inferencia, no PLACE
+físico, generalización ni seguridad de ejecución. El cierre confirmó
+`exited/exited/publishers:0` y cero acceso al estado del robot.
+
 ## Incompatibilidades corregidas en el overlay
 
 El paquete original no arrancaba tal como fue entregado:
@@ -69,6 +111,16 @@ fallo y exportación de evidencia:
 ```bash
 ./scripts/vla/run_vla_shadow_smoke.sh --task-id 0
 ```
+
+Para repetir E2.2 offline con tasks PLACE 1 y 3:
+
+```bash
+./scripts/vla/run_vla_offline_place_e2_2.sh --check
+./scripts/vla/run_vla_offline_place_e2_2.sh --run --seed 0
+```
+
+Esta orden no sustituye una prueba física: no usa estado vivo ni comprueba que
+una caja se deposite correctamente.
 
 Después de que E1.0, E1.3 y E2.1 liberen el gate, cinco repeticiones E2.3 se
 ejecutan sin mezclar logs/chunks y con STOP entre runs:
