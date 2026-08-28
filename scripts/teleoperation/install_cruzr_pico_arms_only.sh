@@ -10,6 +10,7 @@ readonly TASK_NAME="teleoperation/cruzr_clamp_pico_teleoperation"
 readonly ORIGINAL_SHA256="5f08b30cd5032a9fccd6b3becd933ff3884d9795d02f98cc2433fc0da33fc62a"
 readonly ARMS_ONLY_SHA256="4e8d79a40e8b1f1fa5915de27ef60676fce4c9b5cec41cacfc0a1d9a7d117a44"
 readonly BACKEND_UNIT="ubt-controller.service"
+readonly BACKEND_LOG="/opt/ubt/ubt_controller/logs/ubt_controller.log"
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly MOTION_ASKPASS="$SCRIPT_DIR/../cruzr_blue_workbin_cycle.sh"
 
@@ -61,22 +62,56 @@ require_pc_stop() {
   if pgrep -x pico_control >/dev/null 2>&1; then
     die "pico_control sigue ejecutándose; termine la sesión antes de cambiar configuración."
   fi
-  local operation_type
-  operation_type="$(python3 - <<'PY'
+  local backend_start_text backend_start_ts operation_type
+  backend_start_text="$(
+    timeout 5s systemctl show "$BACKEND_UNIT" -p ActiveEnterTimestamp --value
+  )" || die "No se pudo obtener el arranque vigente de $BACKEND_UNIT."
+  backend_start_ts="$(date -d "$backend_start_text" '+%Y-%m-%d:%H:%M:%S')" ||
+    die "Timestamp de arranque inválido para $BACKEND_UNIT."
+  operation_type="$(
+  BACKEND_LOG_PATH="$BACKEND_LOG" BACKEND_START_TS="$backend_start_ts" \
+      timeout 5s python3 - <<'PY'
 import json
-import websocket
+import os
 
-ws = websocket.create_connection("ws://127.0.0.1:8082", timeout=3)
-try:
-    message = json.loads(ws.recv())
-finally:
-    ws.close()
-print(message.get("content", {}).get("operation_type", "unknown"))
+path = os.environ["BACKEND_LOG_PATH"]
+start_ts = os.environ["BACKEND_START_TS"]
+operation_type = None
+
+with open(path, "r", encoding="utf-8", errors="replace") as stream:
+    lines = stream.readlines()
+
+for line in reversed(lines):
+    if len(line) >= 19 and line[:19] < start_ts:
+        break
+    if "Pico publisher stop" in line:
+        operation_type = 1
+        break
+    if "Pico publisher start" in line:
+        operation_type = 2
+        break
+    raw_json = None
+    marker = 'Send message to client: {"type":"detect"'
+    if marker in line:
+        raw_json = line.split("Send message to client: ", 1)[1]
+    elif "Pico connect state from " in line and " changed to {" in line:
+        raw_json = line.split(" changed to ", 1)[1].rsplit(", broadcast it", 1)[0]
+    if raw_json is not None:
+        try:
+            message = json.loads(raw_json)
+        except json.JSONDecodeError:
+            continue
+        value = message.get("content", {}).get("operation_type")
+        if value in (1, 2):
+            operation_type = value
+            break
+
+print(operation_type if operation_type is not None else "unknown")
 PY
-)" || die "El backend no devolvió estado WebSocket."
+  )" || die "No se pudo reconstruir pasivamente el estado del backend."
   [[ "$operation_type" == "1" ]] ||
     die "El backend no está en STOP (operation_type=$operation_type)."
-  printf 'PC_TELEOP_STOP_CONFIRMED=1\n'
+  printf 'PC_TELEOP_STOP_CONFIRMED=1,source=passive-log\n'
 }
 
 ssh_motion() {

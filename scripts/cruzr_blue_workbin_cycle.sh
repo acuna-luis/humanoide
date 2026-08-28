@@ -27,10 +27,9 @@ readonly ARMS_READY_TASK="transport/clamp_ready_cruzr"
 readonly DETECT_TASK="cruzr/blue_workbin_detect_only"
 readonly CLAMP_TASK="cruzr/blue_workbin_clamp_only"
 readonly DEPOSIT_TASK="cruzr/blue_workbin_auto_deposit"
-# La vuelta directa a cero interpola los siete ejes de cada brazo a la vez.
-# Con las abrazaderas orientadas hacia abajo tras TeleopMode esa trayectoria
-# pasó demasiado cerca del cuerpo. La imagen v0.2.0 incluye una tarea Cruzr
-# específica que abre primero los brazos y sólo después completa home.
+# Esta tarea vendor queda restringida a posturas conocidas del ciclo de caja.
+# El 28-08 produjo sobreesfuerzo y faults al invocarse desde una postura PICO
+# cruzada; no es una retirada universal ni un planificador de colisiones.
 readonly HOME_TASK="cruzr/open_arm_before_home"
 
 readonly HEAD_LOWER_SHA="f3a73626f97b471d4a0a03c98c24de32243651116c497328e69b5ddc57ea46c1"
@@ -61,6 +60,7 @@ readonly TEMPLATE_DIR="$SCRIPT_DIR/custom_tasks"
 readonly DETECT_TEMPLATE="$TEMPLATE_DIR/test_blue_workbin_detect_only.xml"
 readonly CLAMP_TEMPLATE="$TEMPLATE_DIR/test_blue_workbin_clamp_only.xml"
 readonly DEPOSIT_TEMPLATE="$TEMPLATE_DIR/blue_workbin_auto_deposit.xml"
+readonly RECOVERY_SCRIPT="$SCRIPT_DIR/cruzr_recover_to_home.sh"
 
 MODE="check"
 YES=0
@@ -102,9 +102,11 @@ Modos:
   --deposit-held
              Verifica un agarre vigente, baja hasta contacto con el apoyo y
              abre los cogedores. No mueve el chasis.
-  --home     Usa la secuencia Cruzr protegida: separa primero los brazos y
+  --home     Solicita la ruta restringida del ciclo de caja: separa primero
+             los brazos y
              después devuelve brazos, cabeza, cintura y elevador a cero.
-             Úsese sólo después de retirar caja y mesa.
+             Ahora delega siempre en cruzr_recover_to_home.sh, que exige una
+             postura fresca y bloquea estados PICO/indeterminados.
   --prepare-vision
              Baja únicamente la cabeza para observar la caja; no mueve brazos
              ni chasis.
@@ -152,7 +154,7 @@ warn() {
 
 while (($#)); do
   case "$1" in
-    --check|--install|--run|--grasp|--verify-grasp|--deposit-held|--home|--prepare-vision|--measure-box|--measure-box-fast|--grasp-after-approach)
+    --check|--install|--run|--grasp|--verify-grasp|--deposit-held|--home|--home-workbin-internal|--prepare-vision|--measure-box|--measure-box-fast|--grasp-after-approach)
       MODE="${1#--}"
       ;;
     --hold)
@@ -187,6 +189,8 @@ require_local_tools() {
     command -v "$command_name" >/dev/null 2>&1 || \
       die "Falta el comando local '$command_name'."
   done
+  [[ -x "$RECOVERY_SCRIPT" ]] || \
+    die "No existe o no es ejecutable: $RECOVERY_SCRIPT"
 }
 
 select_connection() {
@@ -349,8 +353,9 @@ grep -q 'Action server count: 1' <<<"$vision_info" || exit 26
 # ejecutar una trayectoria. Tras un choque, el proceso de manipulación puede
 # seguir activo mientras un único eje permanece en FAULT. Bloqueamos antes de
 # consultar o enviar objetivos si cualquier articulación (excepto las ruedas)
-# tiene un código de error, el bit FAULT, no está Operation Enabled o conserva
-# una consigna latente alejada más de 0,01 rad de su posición inmóvil.
+# tiene un código de error, el bit FAULT, no está Operation Enabled, se mueve
+# por encima de 0,02 rad/s o conserva una consigna latente alejada más de
+# 0,01 rad de su posición inmóvil.
 actuator_state="$(docker exec "$motion_container" bash -lc '
   source /opt/walker/setup.bash
   timeout 8 rosa topic echo --once --no-daemon /mc/actuator_state
@@ -368,17 +373,19 @@ for actuator in message.get("act_item", []):
     error_code = int(actuator.get("error_code", 0))
     status = int(actuator.get("status", 0))
     position = float(actuator.get("position", 0.0))
+    velocity = float(actuator.get("velocity", 0.0))
     command_position = float(actuator.get("cmd_pos", position))
     command_delta = command_position - position
     operation_enabled = (status & 0x0007) == 0x0007
     fault = bool(status & 0x0008)
     stale_command = abs(command_delta) > 0.01
-    if error_code or fault or not operation_enabled or stale_command:
+    moving = abs(velocity) > 0.02
+    if error_code or fault or not operation_enabled or stale_command or moving:
         name = actuator.get("name", "unknown")
         faults.append(
             f"{actuator_id},{name},"
             f"error=0x{error_code:04x},status=0x{status:04x},"
-            f"command_delta={command_delta:.6f}"
+            f"velocity={velocity:.6f},command_delta={command_delta:.6f}"
         )
 print("\n".join(faults))
 ' <<<"$actuator_state")"
@@ -919,18 +926,32 @@ EOF
 }
 
 run_home() {
-  if ((YES == 0)); then
-    cat <<'EOF'
-Confirma que caja y mesa ya fueron retiradas, que las abrazaderas están vacías
-y que hay espacio libre debajo, delante y a ambos lados de los brazos.
-Escribe EJECUTAR HOME para continuar:
-EOF
-    local answer
-    read -r answer
-    [[ "$answer" == "EJECUTAR HOME" ]] || die "Home cancelado."
-  fi
+  local -a args=(--run)
+  ((YES == 0)) || args+=(--yes)
+  ((FAST == 0)) || args+=(--fast)
+  info "HOME_DELEGATED_TO_RECOVERY=1"
+  flock -u 9
+  exec "$RECOVERY_SCRIPT" "${args[@]}"
+}
+
+run_home_workbin_internal() {
+  local source_state="${CRUZR_VALIDATED_HOME_STATE:-}"
+  local gate="${CRUZR_VALIDATED_HOME_GATE:-}"
+
+  [[ "$gate" == "workbin-history-and-actuators-v1" ]] || \
+    die "El home interno exige el gate central de recuperación."
+  ((FAST == 0)) || die "El home interno nunca admite --fast."
+  case "$source_state" in
+    deposited_open_near_table|arms_extended_near_table)
+      ;;
+    *)
+      die "Estado de origen no permitido para home vendor: ${source_state:-unset}."
+      ;;
+  esac
+
+  info "VENDOR_HOME_SOURCE_STATE=$source_state"
   run_motion_task "$HOME_TASK" 20
-  info "Robot devuelto a home mediante apertura previa de brazos; el chasis permaneció inmóvil."
+  info "VENDOR_HOME_ACTION_SUCCEEDED=1; falta validación articular fresca en el recovery padre."
 }
 
 main() {
@@ -987,6 +1008,9 @@ main() {
       ;;
     home)
       run_home
+      ;;
+    home-workbin-internal)
+      run_home_workbin_internal
       ;;
     prepare-vision)
       confirm_once

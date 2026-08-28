@@ -35,12 +35,15 @@ camera_pid=""
 camera_ready_file=""
 official_client_pid=""
 official_cleanup_done=0
+motion_safety_monitor_pid=""
+motion_safety_monitor_file=""
 robot_user="${CRUZR_ROBOT_USER:-walker}"
 motion_ros_container="walker-ros.ros2-1"
 motion_app_container="walker-motion.manipulation_robot_app-1"
 expected_teleop_task="teleoperation/cruzr_clamp_pico_teleoperation"
 arms_only_config_path="/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_teleoperation/cruzr_clamp_pico_tele.yaml"
 arms_only_config_sha256="4e8d79a40e8b1f1fa5915de27ef60676fce4c9b5cec41cacfc0a1d9a7d117a44"
+vendor_full_body_config_sha256="5f08b30cd5032a9fccd6b3becd933ff3884d9795d02f98cc2433fc0da33fc62a"
 minimum_battery_soc=30
 
 if [[ "${CRUZR_TELEOP_DEBUG:-0}" == "1" ]]; then
@@ -111,7 +114,12 @@ robot_link_runtime_ok() {
     grep -q "dev $robot_iface" || return 1
 }
 
-check_robot_arms_only_loaded() {
+check_robot_teleop_profile_loaded() {
+  local profile_name="$1"
+  local expected_sha="$2"
+  local expected_waist="$3"
+  local expected_leg="$4"
+
   ensure_cmd ssh
   ensure_cmd setsid
   [[ -x "$motion_askpass" ]] ||
@@ -133,17 +141,22 @@ check_robot_arms_only_loaded() {
       -o StrictHostKeyChecking=accept-new \
       "$robot_user@$motion_ip" bash -s -- \
         "$motion_app_container" "$arms_only_config_path" \
-        "$arms_only_config_sha256" "$expected_teleop_task" <<'REMOTE'
+        "$expected_sha" "$expected_teleop_task" \
+        "$profile_name" "$expected_waist" "$expected_leg" <<'REMOTE'
 set -Eeuo pipefail
 container="$1"
 config_path="$2"
 expected_sha="$3"
 task_name="$4"
+profile_name="$5"
+expected_waist="$6"
+expected_leg="$7"
 
 [[ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null)" == "true" ]] || exit 31
 actual_sha="$(docker exec "$container" sha256sum "$config_path" | awk '{print $1}')"
 [[ "$actual_sha" == "$expected_sha" ]] || {
-  printf 'ARMS_ONLY_CONFIG_SHA_ERROR=%s\n' "$actual_sha"
+  printf 'TELEOP_PROFILE_CONFIG_SHA_ERROR=profile:%s,actual:%s,expected:%s\n' \
+    "$profile_name" "$actual_sha" "$expected_sha"
   exit 32
 }
 
@@ -154,19 +167,99 @@ block="$(sed -n "${last_start},$((last_start + 79))p" "$latest")"
 waist="$(sed -nE 's/.*Waist tele mode: ([0-9]+).*/\1/p' <<<"$block" | sed -n '1p')"
 leg="$(sed -nE 's/.*Leg tele mode: ([0-9]+).*/\1/p' <<<"$block" | sed -n '1p')"
 hand="$(sed -nE 's/.*Hand type: ([^ ]+).*/\1/p' <<<"$block" | sed -n '1p')"
-[[ "$waist" == "0" && "$leg" == "0" && "$hand" == "clamp" ]] || {
-  printf 'ARMS_ONLY_NOT_LOADED=hand:%s,waist:%s,leg:%s\n' \
-    "${hand:-unknown}" "${waist:-unknown}" "${leg:-unknown}"
+[[ "$waist" == "$expected_waist" && "$leg" == "$expected_leg" && "$hand" == "clamp" ]] || {
+  printf 'TELEOP_PROFILE_NOT_LOADED=profile:%s,hand:%s,waist:%s,leg:%s,expected:clamp/%s/%s\n' \
+    "$profile_name" "${hand:-unknown}" "${waist:-unknown}" \
+    "${leg:-unknown}" "$expected_waist" "$expected_leg"
   exit 34
 }
-printf 'ARMS_ONLY_CONFIG_SHA256=%s\n' "$actual_sha"
-printf 'ARMS_ONLY_LOADED=hand:%s,waist:%s,leg:%s\n' "$hand" "$waist" "$leg"
+printf 'TELEOP_PROFILE_CONFIG_SHA256=%s\n' "$actual_sha"
+printf 'TELEOP_PROFILE_LOADED=%s,hand:%s,waist:%s,leg:%s\n' \
+  "$profile_name" "$hand" "$waist" "$leg"
+if [[ "$profile_name" == "arms-only" ]]; then
+  printf 'ARMS_ONLY_CONFIG_SHA256=%s\n' "$actual_sha"
+  printf 'ARMS_ONLY_LOADED=hand:%s,waist:%s,leg:%s\n' "$hand" "$waist" "$leg"
+else
+  printf 'FULL_BODY_CONFIG_SHA256=%s\n' "$actual_sha"
+  printf 'FULL_BODY_LOADED=hand:%s,waist:%s,leg:%s\n' "$hand" "$waist" "$leg"
+fi
 REMOTE
   } 2>&1)"; then
     printf '%s\n' "$output" >&2
-    die "Motion todavía no ejecuta el perfil arms-only; salga de TeleopMode, vuelva a entrar y repita sólo --check-arms-only."
+    die "Motion no ejecuta el perfil $profile_name esperado; recargue TeleopMode de forma controlada y repita su check antes de START."
   fi
   printf '%s\n' "$output"
+}
+
+check_robot_arms_only_loaded() {
+  check_robot_teleop_profile_loaded \
+    "arms-only" "$arms_only_config_sha256" 0 0
+}
+
+check_robot_full_body_loaded() {
+  check_robot_teleop_profile_loaded \
+    "vendor-full-body" "$vendor_full_body_config_sha256" 1 2
+}
+
+start_motion_safety_monitor() {
+  [[ -z "$motion_safety_monitor_pid" ]] ||
+    die "El monitor Motion ya estaba iniciado."
+  motion_safety_monitor_file="$(mktemp /tmp/cruzr-pico-full-motion.XXXXXX.log)"
+
+  CRUZR_INTERNAL_ASKPASS=1 \
+  SSH_ASKPASS="$motion_askpass" \
+  SSH_ASKPASS_REQUIRE=force \
+  DISPLAY="${DISPLAY:-:0}" \
+  setsid -w ssh \
+    -o ConnectTimeout=6 \
+    -o ConnectionAttempts=1 \
+    -o PreferredAuthentications=password \
+    -o PubkeyAuthentication=no \
+    -o NumberOfPasswordPrompts=1 \
+    -o StrictHostKeyChecking=accept-new \
+    "$robot_user@$motion_ip" bash -s <<'REMOTE' \
+      >"$motion_safety_monitor_file" 2>&1 &
+set -Eeuo pipefail
+latest="$(find /etc/walker/log/motion -maxdepth 1 -type f -name 'robot_app*.log' -printf '%T@ %p\n' | sort -nr | sed -n '1p' | cut -d' ' -f2-)"
+[[ -n "$latest" && -r "$latest" ]] || exit 31
+printf 'MOTION_SAFETY_MONITOR_READY=%s\n' "$latest"
+exec tail -n0 -F -- "$latest"
+REMOTE
+  motion_safety_monitor_pid=$!
+
+  local deadline=$((SECONDS + 8))
+  until grep -q '^MOTION_SAFETY_MONITOR_READY=' "$motion_safety_monitor_file"; do
+    kill -0 "$motion_safety_monitor_pid" 2>/dev/null || {
+      cat "$motion_safety_monitor_file" >&2 || true
+      die "No se pudo iniciar el monitor de seguridad Motion."
+    }
+    ((SECONDS < deadline)) ||
+      die "El monitor Motion no confirmó su fuente dentro de 8 s."
+    sleep 0.1
+  done
+  grep '^MOTION_SAFETY_MONITOR_READY=' "$motion_safety_monitor_file" | tail -n1
+}
+
+motion_safety_monitor_ok() {
+  [[ -n "$motion_safety_monitor_pid" && -n "$motion_safety_monitor_file" ]] ||
+    return 1
+  kill -0 "$motion_safety_monitor_pid" 2>/dev/null || return 1
+  ! grep -Eqi \
+    'Excessive force|CalcS2[^[:space:]]*.*failed|MoveToGoalFailed|SAFEOP ERROR|EtherCAT.*(ERROR|failed)|servo[^[:space:]]*.*fault' \
+    "$motion_safety_monitor_file"
+}
+
+stop_motion_safety_monitor() {
+  if [[ -n "$motion_safety_monitor_pid" ]] &&
+     kill -0 "$motion_safety_monitor_pid" 2>/dev/null; then
+    kill "$motion_safety_monitor_pid" 2>/dev/null || true
+    wait "$motion_safety_monitor_pid" 2>/dev/null || true
+  fi
+  motion_safety_monitor_pid=""
+  if [[ -n "$motion_safety_monitor_file" ]]; then
+    rm -f -- "$motion_safety_monitor_file"
+  fi
+  motion_safety_monitor_file=""
 }
 
 pico_camera_runtime_ok() {
@@ -214,9 +307,11 @@ usage() {
 Uso:
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check-arms-only
+  ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check-full-body
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check-reload-ready
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check-motion-ready
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --teleoperate
+  ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --teleoperate-full
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --open-ui
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --gate-local
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --move-left-arm
@@ -228,6 +323,9 @@ Uso:
 --check    Sólo lectura; valida PC, red, PICO y backend mostrando 7 etapas.
 --check-arms-only
            Sólo lectura; demuestra hash y modos cargados de la tarea Motion.
+--check-full-body
+           Sólo lectura; exige el YAML vendor exacto y demuestra que la tarea
+           viva cargó clamp, waist_mode=1 y leg_mode=2.
 --check-reload-ready
            Sólo lectura; comprueba seguridad Motion sin depender del visor.
 --check-motion-ready
@@ -238,6 +336,11 @@ Uso:
            inicia si Motion demuestra que la tarea clamp viva cargó
            waist_mode=0 y leg_mode=0. PICO_ALLOW_BIMANUAL=0 restaura el gate
            estricto de un brazo. Cualquier otro fallo sigue enviando STOP.
+--teleoperate-full
+           Teleoperación oficial de cuerpo completo para el lanzador separado
+           probar_pico_full.sh. Exige el perfil vendor exacto clamp/1/2 y
+           habilita cabeza, brazos, cintura, elevador y chasis. Los clicks de
+           joystick siguen prohibidos porque conmutan protección de fuerza.
 --open-ui  Abre la interfaz después del backend. No inicia la publicación.
 --gate-local
            Gate interactivo local recomendado. Exige confirmación física,
@@ -1135,6 +1238,7 @@ cleanup_official_teleop() {
     wait "$official_client_pid" 2>/dev/null || true
   fi
   official_client_pid=""
+  stop_motion_safety_monitor
 
   # pico_control envía operation_type=1 al recibir SIGINT. Verificarlo desde el
   # log: abrir otro WebSocket sólo para leer puede volver a arrancar 4.7.0 si
@@ -1169,7 +1273,15 @@ cleanup_official_teleop() {
   info "OFFICIAL_TELEOP_STOP_CONFIRMED=$([[ "$operation_type" == "1" ]] && printf 1 || printf 0)"
 }
 
-run_official_arm_teleop() {
+run_official_teleop() {
+  local teleop_profile="${1:-arms-only}"
+  local full_body=0
+  case "$teleop_profile" in
+    arms-only) ;;
+    vendor-full-body) full_body=1 ;;
+    *) die "Perfil de teleoperación interno no admitido: $teleop_profile" ;;
+  esac
+
   [[ -t 0 && -t 1 ]] ||
     die "La teleoperación física debe ejecutarse directamente en el terminal local del PC."
   [[ "$official_teleop_seconds" =~ ^[0-9]+$ ]] ||
@@ -1185,14 +1297,42 @@ run_official_arm_teleop() {
   trap 'printf "\nABORT_REQUESTED=TERM\n" >&2; exit 143' TERM
 
   # Este gate es independiente del visor y debe fallar primero: evita esperar
-  # 30 s por Working cuando Motion aún conserva el perfil de cuerpo completo.
-  check_robot_arms_only_loaded
+  # 30 s por Working cuando el YAML y la tarea viva no coinciden con el modo
+  # solicitado por el lanzador.
+  if ((full_body == 1)); then
+    check_robot_full_body_loaded
+  else
+    check_robot_arms_only_loaded
+  fi
   wait_for_pico_tracking_ready
   check_pc
   systemctl --user is-active --quiet "$ui_unit" &&
     die "$ui_unit está activo; ciérrelo para conservar un solo cliente de control."
 
-  cat <<EOF
+  local confirmation_expected
+  if ((full_body == 1)); then
+    [[ "$robot_link_kind" == "wifi" ]] ||
+      die "El modo full incluye chasis: retire físicamente Ethernet y use la Wi-Fi Cruzr antes de START."
+    confirmation_expected="INICIAR TELEOPERACION OFICIAL DE CUERPO COMPLETO"
+    cat <<EOF
+
+TELEOPERACIÓN OFICIAL 4.7.0 — CUERPO COMPLETO, ${official_teleop_seconds} SEGUNDOS
+
+Esta ventana habilita cabeza, uno o ambos brazos, cintura, elevador/torso y,
+al conmutar X, el chasis. Empiece en modo en sitio y pruebe primero un único
+eje con recorridos mínimos. No pulse los clicks de los joysticks: conmutan la
+protección de fuerza y este lanzador solicitará STOP si los detecta.
+
+Antes de continuar confirme AHORA: abrazaderas vacías; robot estable y en
+home; cargador, Ethernet y cualquier otro cable retirados; ambos paros
+liberados; ruedas preparadas; suelo llano; envolvente completa y recorrido
+360 grados despejados; una persona junto al paro y otra en el terminal.
+
+Escriba exactamente: $confirmation_expected
+EOF
+  else
+    confirmation_expected="INICIAR TELEOPERACION OFICIAL DE BRAZOS"
+    cat <<EOF
 
 TELEOPERACIÓN OFICIAL 4.7.0 — BRAZOS, ${official_teleop_seconds} SEGUNDOS
 
@@ -1204,15 +1344,19 @@ No use gatillos, joysticks, clicks, X/A/B ni comandos de chasis/elevador.
 Confirme ahora: abrazaderas vacías, postura actual despejada, cargador fuera,
 paros liberados, persona junto al paro y nadie dentro de la trayectoria.
 
-Escriba exactamente: INICIAR TELEOPERACION OFICIAL DE BRAZOS
+Escriba exactamente: $confirmation_expected
 EOF
+  fi
   local confirmation
   read -r confirmation
-  [[ "$confirmation" == "INICIAR TELEOPERACION OFICIAL DE BRAZOS" ]] ||
+  [[ "$confirmation" == "$confirmation_expected" ]] ||
     die "Confirmación incorrecta; no se enviará START."
 
   start_pico_camera
   check_robot_teleop_safety
+  if ((full_body == 1)); then
+    start_motion_safety_monitor
+  fi
   info "Deje cabeza, grips, gatillos, botones y joysticks completamente neutros."
 
   local start_line enable_line deadline next_progress detect_json operation_type
@@ -1252,7 +1396,19 @@ EOF
   done
   info "ENABLE_OFICIAL_CONFIRMADO=1"
   info "BIMANUAL_CONTROL_ENABLED=$allow_bimanual"
-  if [[ "$allow_bimanual" == "1" ]]; then
+  if ((full_body == 1)); then
+    cat <<'EOF'
+FULL_BODY_CONTROL_ENABLED=clamp,waist:1,leg:2
+CONTROLES_FULL:
+- cabeza: seguimiento suave de cabeza;
+- grips: seguimiento de cada brazo;
+- joysticks en sitio: cintura y elevador/torso;
+- X: conmuta modo móvil; joysticks controlan traslación y giro del chasis;
+- A: reset del tren superior sólo con toda la trayectoria despejada;
+- B: conmuta captura; púlselo por pares si decide usarla.
+PROHIBIDO: clicks de joystick/protección de fuerza.
+EOF
+  elif [[ "$allow_bimanual" == "1" ]]; then
     info "UNO_O_AMBOS_BRAZOS=1; mantenga cada grip sólo durante su movimiento"
   else
     info "MUEVA_UN_BRAZO_POR_VEZ=1; ambos grips solicitarán STOP"
@@ -1280,6 +1436,15 @@ EOF
       grep -qE 'No heartbeat for .+ seconds, stoping operation'; then
       die "El watchdog oficial perdió heartbeat; se solicitará STOP."
     fi
+    if ((full_body == 1)) && ! motion_safety_monitor_ok; then
+      tail -n 20 "$motion_safety_monitor_file" >&2 || true
+      die "Motion registró fallo IK, sobreesfuerzo, error EtherCAT o se perdió su monitor; se solicitará STOP."
+    fi
+    if ((full_body == 1)) &&
+       tail -n "+$start_line" "$backend_log" |
+         grep -qE '(Left|Right) hand state:.*"thumbstick"[[:space:]]*:[[:space:]]*true'; then
+      die "Se detectó click de joystick, que conmuta protección de fuerza; se solicitará STOP."
+    fi
     if both_grips_currently_pressed_since "$start_line"; then
       if [[ "$allow_bimanual" == "0" ]]; then
         die "Se detectaron ambos grips y PICO_ALLOW_BIMANUAL=0; se solicitará STOP."
@@ -1300,6 +1465,9 @@ EOF
   done
 
   cleanup_official_teleop
+  if ((full_body == 1)); then
+    info "FULL_BODY_TELEOP_WINDOW_COMPLETED=${official_teleop_seconds}s"
+  fi
   info "OFFICIAL_TELEOP_WINDOW_COMPLETED=${official_teleop_seconds}s"
   trap - ERR INT TERM EXIT
 }
@@ -2047,6 +2215,9 @@ case "$mode" in
   --check-arms-only)
     check_robot_arms_only_loaded
     ;;
+  --check-full-body)
+    check_robot_full_body_loaded
+    ;;
   --check-reload-ready)
     check_robot_teleop_safety
     info "MOTION_RELOAD_READY_CHECK_OK=1; no se cambió de modo ni se envió movimiento."
@@ -2057,7 +2228,10 @@ case "$mode" in
     info "MOTION_READY_CHECK_OK=1; no se envió START ni se movió el robot."
     ;;
   --teleoperate)
-    run_official_arm_teleop
+    run_official_teleop arms-only
+    ;;
+  --teleoperate-full)
+    run_official_teleop vendor-full-body
     ;;
   --open-ui)
     open_ui
