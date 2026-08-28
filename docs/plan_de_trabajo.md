@@ -547,10 +547,14 @@ offline.
 
 #### Experimento 3.1 — OOD geométrico offline, una variable cada vez
 
-**Estado:** `PENDIENTE_CODIGO`. Ya existe replay nominal para E2.2; falta la
-transformación OOD versionada de imagen/geometría y su verificación.
+**Estado:** `PASS_IMAGE_SPACE_PROXY_METRIC_GRID_BLOCKED` el 2026-08-28. El
+proxy visual está completo; la parrilla geométrica métrica continúa bloqueada.
 
-**Escenario base:** frames de dataset task 0/2. Variantes sintéticas exactas:
+**Escenario:** sin robot ni fixture físico. Se usan de forma determinista task
+0/episodio 482/frame 109 y task 2/episodio 288/frame 104. El dataset sólo
+contiene RGB: no aporta profundidad, intrínsecos/extrínsecos, máscara o pose 6D
+de la caja ni plano/borde métrico de la repisa. Por eso no es técnicamente
+válido sintetizar todavía las variantes solicitadas:
 
 ```text
 x = -0,100; -0,050; 0; +0,050; +0,100 m
@@ -558,35 +562,99 @@ cara frontal detrás del borde = 0,050; 0,100; 0,150 m
 yaw = -15; -5; 0; +5; +15 grados
 ```
 
-Se cambia una sola variable por transformación reproducible del frame/metadata.
-No se aproxima físicamente plataforma o caja al robot para generar OOD.
+En su lugar E3.1 caracteriza, como aproximación explícita y sin equivalencia
+métrica, una variable de imagen cada vez:
 
-**Resultado esperado:** un verdict por punto y mapa de sensibilidad. `ACCEPT`
-significa sólo chunk estructuralmente aceptable, no capacidad de agarre.
-**FAIL metodológico:** cambiar dos variables, recolocar mientras VLA está
-activo o perder la foto/medida.
+```text
+desplazamiento horizontal global = -10 %, -5 %, 0 %, +5 %, +10 % del ancho
+zoom global centrado             = 0,90; 1,00; 1,10
+perspectiva trapezoidal global   = -15; -5; 0; +5; +15 grados-proxy
+```
+
+**Comando implementado:**
+
+```bash
+./scripts/vla/run_vla_offline_ood_e3_1.sh --check
+./scripts/vla/run_vla_offline_ood_e3_1.sh --run
+```
+
+El wrapper crea 26 variantes, fija estado/task/frame/seed, cambia sólo RGB,
+carga C0 una vez y ejecuta en Vision dentro de un contenedor transitorio
+`--network none`, sin ROS ni `RobotCommand`. Guarda imagen aplicada, matriz,
+hashes, chunk 10×20, métricas y verdict por punto.
+
+**Resultado real:** run `20260828T120228_E3.1`, 26/26
+`ACCEPT_STRUCTURAL`, tres nominales idénticos por task y cero violaciones de
+rango/salto conservador. Máximo cambio absoluto del chunk respecto al nominal:
+
+| Task | desplazamiento | zoom | perspectiva |
+|---:|---:|---:|---:|
+| 0 PICK low | 0,027470 | 0,040258 | 0,030194 |
+| 2 PICK middle | 0,036843 | 0,053590 | 0,014256 |
+
+Los máximos por eje aparecieron en `R_elbow_roll_joint`,
+`L_wrist_pitch_joint` y `lifter_pitch_3_joint`; son diferencias de salida
+expresadas en radianes, no errores cartesianos. Los hashes completos de C0
+coincidieron antes/después y
+el cierre fue `exited/exited/publishers:0`. La primera ejecución
+`20260828T115905_E3.1` falló de forma segura después de una muestra porque
+`ssh` consumía el stdin del bucle de hardlinks; se corrigió cerrando su stdin y
+exigiendo fallo estricto en cada enlace.
+
+**Interpretación:** `ACCEPT_STRUCTURAL` significa únicamente que el chunk es
+finito y satisface el perfil conservador. No demuestra x/profundidad/yaw
+métricos, OOD físico, generalización ni capacidad de agarre. Para desbloquear
+la parrilla original se requiere RGB-D/calibración y segmentación/pose de la
+caja y repisa. El siguiente paso liberado es E3.2 con sink offline; no se
+autoriza publicador físico.
 
 #### Experimento 3.2 — Mensajes inválidos y fault injection
 
-**Estado:** `PENDIENTE_CODIGO`; sólo sink, nunca robot.
+**Estado:** `PASS_LOCAL_SINK_ALL_INVALID_REJECTED` el 2026-08-28; sólo sink,
+nunca robot. No habilita el ejecutor físico.
 
-**Comando previsto:**
+**Comando implementado y ejecutado:**
 
 ```bash
-VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment E3.2)"
+./scripts/vla/run_vla_executor_sink_e3_2.sh --check
+./scripts/vla/run_vla_executor_sink_e3_2.sh --run
+```
+
+El runner directo permanece disponible para una campaña explícita:
+
+```bash
+VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment E3.2-MANUAL)"
 python3 scripts/vla/test_vla_executor_sink.py \
   --axis-profile P20_AHLW --fixture low --fault-suite all \
   --output "$VLA_RUN_DIR"
 ```
 
-**Entradas:** NaN, Inf, dimensión distinta, orden permutado, estado >1 s,
-chunk duplicado/regresivo, tiempo no monótono, rango/salto/velocidad excedidos,
-cancel y doble cliente. **PASS:** 100 % rechazadas y cero publishers.
+**Resultado real:** run `20260828T121832_E3.2`. Dos chunks válidos consecutivos
+fueron aceptados y las 32 entradas inválidas fueron rechazadas: identidad de
+runtime/checkpoint/task/perfil/fixture/cliente, ID inválido/duplicado/regresivo,
+orden o dimensión incorrectos, NaN/Inf, estado/imagen/chunk obsoletos o futuros,
+timeline no monótona/fuera de cadencia, rango/salto/velocidad, cancelación,
+STOP, deadman ausente/expirado y doble cliente. Cancel y STOP fueron
+idempotentes; un mensaje inválido no consumió el `chunk_id`.
+
+El sink sólo devuelve un diccionario serializado 10×20. En perfiles
+enmascarados copia los ejes habilitados y conserva para los bloqueados una pose
+hold sintética no nula; no usa cero como hold. Ocho tests cubren las máscaras
+`P14_A…P20_AHLW`, pero la fault suite certificada de E3.2 corresponde sólo a
+`P20_AHLW`/`low`. El AST no contiene imports ROS/red, símbolos de mensajes de
+mando, llamadas de publisher/action ni el literal del topic físico. Antes y
+después se verificó `exited/exited/publishers:0`; no se leyó estado ni se movió
+el robot.
+
+**Deuda:** el perfil no define un límite certificado de aceleración; E3.2 no
+lo inventa ni cierra todavía VLA-5. El siguiente paso permitido es E3.3
+offline para el contrato temporal/end/cancel; el ejecutor físico continúa
+bloqueado.
 
 #### Experimento 3.3 — Tiempo, huecos, cancelación y end flag
 
-**Estado:** parte `EJECUTABLE_SHADOW`, cancel/fault completo
-`PENDIENTE_CODIGO`.
+**Estado:** `PASS_LOCAL_TEMPORAL_FAIL_CLOSED_VENDOR_SEMANTICS_UNRESOLVED`;
+Gate VLA-3 continúa abierto y todo movimiento sigue bloqueado.
 
 **Escenario:** para runtime vivo, plataforma/B0 fuera de la envolvente y robot
 inmóvil; para semántica nominal, replay del dataset. Ejecutar E2.0 guardando
@@ -596,6 +664,30 @@ goal, feedback, timestamps de los diez puntos, siguiente chunk y STOP.
 de inferencia y hueco hasta el siguiente chunk. **PASS final:** existe una sola
 semántica demostrada para hold, chunk viejo, `continuous_end_chunk_num`, timeout
 y cancel. Mientras no se resuelva, no avanzar a ejecución física.
+
+**Comandos reproducibles:**
+
+```bash
+./scripts/vla/run_vla_temporal_contract_e3_3.sh --check
+./scripts/vla/run_vla_temporal_contract_e3_3.sh --run
+```
+
+**Resultado real:** run `20260828T124011_E3.3`, 22/22 casos locales pasaron.
+El scheduler no tiene ROS/red/publicador y sólo emite eventos en memoria.
+Demostró diez puntos exactos a 80 ms, no replay tras el endpoint, timeout de
+hueco a 0,5 s, rechazo/purge por overlap o dispatch tardío, cancel antes,
+durante y entre chunks, STOP, pérdida de estado/imagen y timeout de sesión. La
+política local candidata exige cinco flags consecutivos y completa sólo tras
+el último punto del quinto chunk.
+
+La auditoría estática encontró que esta política **no es** la semántica UBTECH
+actual: Vision usa `0,2 Hz`, un solo `flag_pred > 0,1` y no lee
+`continuous_end_chunk_num=5`. El chunk declarado dura 0,72 s; el ejecutor
+`src` lo interpola a 900 puntos/9 s y el `install` a 600/6 s. La evidencia E2
+observó además goals de 8 s terminando en ~10,006 s porque el timeout sólo se
+revisa entre inferencias bloqueantes. Antes/después:
+`exited/exited/publishers:0`, sin estado ni movimiento. Se permite seguir a
+E4.0 únicamente en lectura; no se cierra VLA-3 ni se autoriza canary.
 
 ### Serie 4 — Obtener y validar las posturas `VLA_READY`
 
@@ -710,7 +802,9 @@ campo queda `null`, toda la Serie 7 permanece bloqueada.
 
 #### Experimento 5.0 — Tests de los ocho perfiles
 
-**Estado:** `PENDIENTE_CODIGO`.
+**Estado:** `PARCIAL`. E3.2 ya demuestra aceptación/máscara/hold para los ocho
+perfiles en tests unitarios y fault suite completa para `P20_AHLW/low`. Falta
+ejecutar la fault suite completa sobre las ocho combinaciones y low/middle.
 
 **Escenario:** sin robot. Chunks guardados y poses hold low/middle. Ejecutar
 `test_vla_executor_sink.py` para `P14_A`, `P15_AW`, `P16_AH`, `P17_AL`,
@@ -1057,6 +1151,10 @@ y mapa OOD por tarea publicado.
 
 ### 0.7 Gate VLA-3 — Resolver el contrato temporal y el fin de tarea
 
+**Estado 2026-08-28:** `PARCIAL_LOCAL_PASS / VENDOR_UNRESOLVED`. E3.3 prueba
+un contrato fail-closed offline, pero no selecciona cuál de los timelines
+UBTECH sería el físico.
+
 Antes de movimiento se debe elegir y demostrar una sola semántica temporal:
 
 1. determinar si los 120 FPS representan muestras físicas, interpolación o
@@ -1072,6 +1170,12 @@ Antes de movimiento se debe elegir y demostrar una sola semántica temporal:
 
 **Criterio de avance:** timeline documentada extremo a extremo —sensor,
 inferencia, chunk, ejecutor y feedback— y STOP con latencia medida.
+
+E3.3 ya cubre localmente no-replay, purge y cancelación en el mismo evento
+lógico. Siguen pendientes para cerrar el gate: escoger/eliminar la discrepancia
+0,72/6/9 s, aplicar oficialmente una sola regla de end, medir cancel/STOP en
+runtime sin una inferencia bloqueante pendiente y definir el hold físico. El
+dataset a 120 FPS no resuelve ninguno de esos puntos.
 
 ### 0.8 Gate VLA-4 — Posturas `VLA-ready` baja y media
 
@@ -1447,8 +1551,9 @@ client después de STOP.
 
 #### Herramientas que deben existir antes de completar la campaña
 
-Los nombres siguientes son especificaciones de trabajo; **aún no existen** y
-no deben copiarse al terminal como si estuvieran implementados:
+Los nombres siguientes son especificaciones de trabajo. Algunos ya se
+implementaron; el estado de su experimento prevalece y los restantes no deben
+copiarse al terminal como si existieran:
 
 | Herramienta requerida | Interfaz mínima | Gate que desbloquea |
 |---|---|---|
@@ -1457,7 +1562,8 @@ no deben copiarse al terminal como si estuvieran implementados:
 | `scripts/vla/run_vla_shadow_matrix.sh` | `--scenario`, `--task-id`, `--axis-profile`, `--repetitions`, `--output` | VLA-6 |
 | `scripts/vla/cruzr_vla_ready_pose.sh` | primero `--check --task TASK`; `--run` sólo con autorización futura | VLA-4 |
 | `scripts/vla/derive_vla_fixture_pose.py` | `--ready-task`, `--urdf`, `--box-lwh`, `--platform-height`, `--reference-frames`, `--output` | VLA-4/geometría |
-| `scripts/vla/test_vla_executor_sink.py` | `--axis-profile`, `--fixture`, `--fault-suite`, `--output` | VLA-5 |
+| `scripts/vla/test_vla_executor_sink.py` | `--axis-profile`, `--fixture`, `--fault-suite`, `--output`; implementado para E3.2 | VLA-5 parcial; E5.0 pendiente |
+| `scripts/vla/run_vla_temporal_contract_e3_3.sh` | `--check`/`--run`; auditoría vendor + scheduler offline, sin ROS/red/publicador | VLA-3 parcial; semántica física pendiente |
 | `scripts/vla/run_cruzr_vla_canary.sh` | `--check`, `--one-point`, `--one-chunk`, `--window`, `--stop`; siempre `--task-id`, `--axis-profile` y `--scenario` | VLA-7/8 |
 | `scripts/vla/analyze_vla_campaign.py` | `--input`, `--select-minimal-profile`, `--output` | VLA-9 |
 | `scripts/vla/train_cruzr_vla_candidate.sh` | `--base`, `--dataset-manifest`, `--data-config`, `--output` | VLA-10 |
@@ -1621,6 +1727,11 @@ cuenta.
 
 #### `VLA-T03` — Timeline, timeout y end flag (Gate VLA-3)
 
+**Resultado parcial E3.3:** el comando reproducible es
+`./scripts/vla/run_vla_temporal_contract_e3_3.sh --run`. Pasó 22/22 en local,
+pero el PASS completo de esta tarjeta sigue bloqueado por la contradicción
+vendor 0,72/6/9 s y single-flag frente a cinco flags declarados.
+
 - **Escenario:** robot inmóvil con plataforma/B0 fuera de la envolvente para el
   timeline de runtime; o replay de dataset para timeline nominal. No atribuir
   semántica low/middle a la escena viva hasta E4.4.
@@ -1641,7 +1752,8 @@ cuenta.
 - **FAIL:** cola ejecutable después de STOP, chunk duplicado/regresivo aceptado,
   end con un criterio diferente al documentado o hueco de mando indefinido.
 - **Evidencia:** timeline monotónica sensor→goal→chunk→end y logs de cuatro
-  puntos de cancelación.
+  puntos de cancelación. E3.3 ya conserva cancel antes/durante/entre chunks y
+  después del timeout en reloj lógico; falta medirlos en el action runtime.
 - **Recuperación:** `--stop`; este test no debe haber movido el robot.
 
 #### `VLA-T04` — Completar ready S2 y geometría del fixture (Gate VLA-4)

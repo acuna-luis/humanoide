@@ -246,6 +246,57 @@ fue `exited/exited/publishers:0`. El estado
 `PASS_OFFLINE_CAMPAIGN_WITH_CONSERVATIVE_VIOLATIONS` bloquea uso físico y sólo
 permite continuar con pruebas offline.
 
+E3.1, run `20260828T120228_E3.1`, midió sensibilidad visual manteniendo fijos
+task, estado 20D, frame y seed. Aplicó por separado desplazamiento horizontal
+global de ±5/±10 %, zoom 0,9/1,1 y perspectiva trapezoidal de ±5/±15
+grados-proxy a un frame de task 0 y otro de task 2. Las 26 salidas fueron
+`ACCEPT_STRUCTURAL`, sin violaciones de rango/salto, y los tres nominales por
+task coincidieron exactamente. Los máximos cambios absolutos de acción fueron:
+
+| Task | desplazamiento | zoom | perspectiva |
+|---:|---:|---:|---:|
+| 0 | 0,027470 | 0,040258 | 0,030194 |
+| 2 | 0,036843 | 0,053590 | 0,014256 |
+
+Esta campaña no evaluó transformaciones métricas: el dataset no incluye
+profundidad, calibración, máscara/pose de objeto o geometría de la repisa. Los
+resultados no prueban generalización, agarre ni seguridad física. C0 permaneció
+read-only, con hashes idénticos y cierre `exited/exited/publishers:0`; el único
+siguiente paso autorizado es fault injection contra un sink offline.
+
+E3.2, run `20260828T121832_E3.2`, materializó ese sink como proceso Python
+local sin ROS, red o ruta de hardware. Dos chunks de control fueron aceptados y
+32/32 mensajes inválidos fueron rechazados. La campaña cubrió identidad del
+runtime/checkpoint/task/perfil/fixture/cliente, esquema 10×20 y orden, NaN/Inf,
+frescura de chunk/estado/imagen, timeline, rango, primer salto, velocidad,
+secuencia de IDs, cancelación, STOP, deadman y doble cliente. Un inválido no
+avanza el último ID aceptado y cancel/STOP son idempotentes.
+
+Los ocho perfiles `P14_A…P20_AHLW` pasan pruebas unitarias de máscara: los ejes
+bloqueados mantienen un hold sintético no nulo. Sin embargo, la fault suite de
+este run sólo certifica `P20_AHLW/low`, donde low es una pose mock derivada del
+midpoint del perfil, no la postura física VLA-ready. El perfil no aporta un
+límite de aceleración certificado; por ello E3.2 no habilita un ejecutor real.
+Estado final `exited/exited/publishers:0`, sin leer ni mover el robot. El
+siguiente trabajo autorizado es exclusivamente E3.3 offline.
+
+E3.3, run `20260828T124011_E3.3`, añadió un contrato temporal local y una
+campaña reproducible de 22 casos. Pasaron el timeline 10×20/80 ms, ausencia de
+replay, timeout de hueco, overlap y lateness fail-closed, IDs, cancelación en
+tres momentos, STOP idempotente, pérdidas de imagen/estado, timeout de sesión
+y una política candidata de cinco flags consecutivos. Todo output fue un
+evento Python en memoria; cero imports ROS/red, cero publisher/action, cero
+estado del robot y `exited/exited/publishers:0` al cierre.
+
+La auditoría separa esta política local de UBTECH. Vision declara inferencia a
+0,2 Hz y decide fin con un solo `flag_pred > end_threshold`; no referencia el
+`continuous_end_chunk_num=5` del YAML. Los diez puntos terminan a 0,72 s, pero
+los ejecutores suministrados discrepan: 900 puntos/9 s en `src` y 600/6 s en
+`install`. El dataset a 120 Hz sólo acredita su timeline de exportación, no
+equivalencia de ejecución. E3.3 queda
+`PASS_LOCAL_TEMPORAL_FAIL_CLOSED_VENDOR_SEMANTICS_UNRESOLVED`: no habilita un
+ejecutor real; sólo permite resolver E4.0 en lectura.
+
 ## 4. VLA frente a programación tradicional
 
 | Necesidad | Enfoque preferente |

@@ -1,0 +1,17 @@
+{
+  "schema": "cruzr-s2-vla-temporal-contract-e3.3-v1",
+  "scope": "local_offline_candidate_not_vendor_physical_semantics",
+  "action_horizon": 10,
+  "point_dt_seconds": 0.08,
+  "point_time_tolerance_seconds": 0.015,
+  "max_dispatch_lateness_seconds": 0.015,
+  "max_interchunk_gap_seconds": 0.5,
+  "max_session_duration_seconds": 8.0,
+  "end_threshold": 0.1,
+  "continuous_end_chunk_num": 5,
+  "gap_policy": "emit_nothing_and_never_replay_old_point",
+  "overlap_policy": "latch_fault_and_purge",
+  "cancel_stop_fault_policy": "purge_pending_points_immediately",
+  "end_policy": "five_consecutive_chunks_then_complete_after_final_chunk",
+  "physical_executor_authorized": false
+}

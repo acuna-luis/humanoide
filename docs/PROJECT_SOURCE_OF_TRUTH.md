@@ -262,15 +262,64 @@ checkpoint coincidieron antes/después. Resultado
 no publicación física. Cierre `exited/exited/publishers:0`, sin estado ni
 movimiento del robot.
 
+E3.1 se ejecutó offline sobre dos frames fijos de tasks 0/2. El dataset carece
+de RGB-D, calibración, máscara/pose 6D de la caja y geometría métrica de repisa;
+por tanto la parrilla solicitada en metros/yaw real queda explícitamente
+`BLOCKED_MISSING_RGBD_CALIBRATION_MASK_AND_SCENE_GEOMETRY`. El run válido
+`20260828T120228_E3.1` aplicó una sola transformación global de imagen por vez:
+desplazamiento horizontal ±5/±10 %, zoom 0,9/1,1 y perspectiva trapezoidal
+±5/±15 grados-proxy. Las 26 variantes fueron `ACCEPT_STRUCTURAL`, las tres
+entradas nominales por task produjeron exactamente lo mismo y no hubo
+violaciones conservadoras. Los máximos cambios del chunk para task 0 fueron
+`0,027470/0,040258/0,030194 rad`; para task 2,
+`0,036843/0,053590/0,014256 rad`, respectivamente. Esto es sensibilidad a
+imagen, no OOD métrico, éxito de agarre ni generalización. Checkpoint intacto;
+cierre `exited/exited/publishers:0`, sin leer ni mover el robot. Sólo libera
+E3.2 en sink offline.
+
+E3.2 implementó un sink Python local sin ROS, red, mensajes de mando ni API de
+publisher/action. El run `20260828T121832_E3.2` aceptó dos chunks válidos
+consecutivos y rechazó 32/32 fallos de identidad, esquema, finitud, frescura,
+timeline, límites, secuencia, control y cliente. Cancel/STOP son idempotentes,
+el deadman expira con STOP enclavado y los chunks inválidos no consumen el ID.
+Los ocho perfiles `P14_A…P20_AHLW` tienen cobertura unitaria de máscara/hold no
+nulo, pero la campaña completa se ejecutó sólo para `P20_AHLW/low`. La pose
+low es un midpoint sintético del perfil, no `VLA_READY_LOW`. Antes/después:
+`exited/exited/publishers:0`; no se leyó estado ni se mandó movimiento. Falta
+un límite certificado de aceleración, por lo que VLA-5 y todo ejecutor físico
+siguen bloqueados. Sólo queda liberado E3.3 offline.
+
+E3.3 se ejecutó como simulación temporal Python local y auditoría estática del
+runtime suministrado, run `20260828T124011_E3.3`. Pasaron 22/22 casos: diez
+puntos exactos a 80 ms, no repetición durante huecos, timeout inter-chunk,
+solapamiento/dispatch tardío fail-closed, IDs, cancel antes/durante/entre
+chunks, STOP, pérdida de imagen/estado, timeout de sesión y política candidata
+de cinco flags. Cancel/STOP/fault purgan la cola en el mismo evento lógico. El
+módulo no importa ROS/red, no contiene API de publisher/action ni topic físico;
+antes/después quedó `exited/exited/publishers:0`, sin leer estado ni mover.
+
+La auditoría UBTECH no permite cerrar VLA-3: Vision declara `0,2 Hz`, chunks
+10×20 a `0,08 s` (horizonte `0,72 s`) y termina con un único
+`flag_pred > 0,1`, mientras el YAML declara `continuous_end_chunk_num=5` sin
+que el Python lo consulte. Además, el ejecutor bajo `src/` interpola a 900
+puntos/9 s y la copia bajo `install/` a 600 puntos/6 s. El contrato local de
+cinco flags y timeout de hueco a 0,5 s es una propuesta fail-closed, no la
+semántica física del proveedor. Resultado
+`PASS_LOCAL_TEMPORAL_FAIL_CLOSED_VENDOR_SEMANTICS_UNRESOLVED`; sólo se libera
+E4.0 de resolución de artefactos en lectura, nunca movimiento.
+
 La evidencia VLA ya no depende de variables exportadas por un bloque anterior.
 `new_vla_evidence_run.sh` crea cada run de forma exclusiva y rechaza `/` y
 rutas existentes. E1.1/E1.2, los smoke E2.0/E2.1 y las repeticiones E2.3 tienen
 wrappers autocontenidos; E2.3 usa sesiones independientes y STOP entre runs.
-E2.2 y E3.0 disponen ahora de evaluador y wrappers autocontenidos. Los ejemplos aún no
-implementados de E3.2, E4.1, E5.1/E5.2 y VLA-T00…T09 inicializan su directorio
+E2.2, E3.0, E3.1, E3.2 y E3.3 disponen ahora de evaluador/sink y wrappers
+autocontenidos. Los ejemplos aún no
+implementados de E4.1, E5.1/E5.2 y VLA-T00…T09 inicializan su directorio
 en el mismo bloque. Las herramientas de evidencia son cambios del
-PC/repositorio; E2.2/E3.0 sólo arrancaron contenedores offline transitorios en Vision y
-no alteró Motion ni los contenedores VLA persistentes.
+PC/repositorio; E2.2/E3.0/E3.1 sólo arrancaron contenedores offline transitorios
+en Vision; E3.2/E3.3 fueron procesos Python locales y E3.3 sólo consultó el
+estado remoto antes/después. No alteraron Motion ni los contenedores VLA
+persistentes.
 
 El paquete local sí contiene
 `codes-S2/motion/s2_vla_scripts/s2_bio_vla/s2_vla_pick_large_teleop_ready.xml`,
@@ -808,6 +857,9 @@ actualizarse este archivo antes de cerrar la sesión.
 
 | Fecha | Hito | Resultado |
 |---|---|---|
+| 2026-08-28 | E3.3 contrato temporal offline | run `20260828T124011_E3.3`: 22/22 casos locales pasan y cancel/STOP/fault purgan sin replay ni publicador. Auditoría estática: chunk 10×20 a 80 ms/horizonte 0,72 s, inferencia 0,2 Hz; `continuous_end_chunk_num=5` sólo está en YAML, mientras Vision termina con un único `flag_pred>0,1`; ejecutores suministrados discrepan entre 900/9 s (`src`) y 600/6 s (`install`). `exited/exited/publishers:0`, sin estado ni movimiento. Estado `PASS_LOCAL_TEMPORAL_FAIL_CLOSED_VENDOR_SEMANTICS_UNRESOLVED`; VLA-3 y ejecución física siguen bloqueados, sólo E4.0 read-only queda autorizado |
+| 2026-08-28 | E3.2 fault injection contra sink local | run `20260828T121832_E3.2`: 2/2 chunks de control aceptados y 32/32 inválidos rechazados; cubre identidad, esquema/orden/dimensión, NaN/Inf, frescura, timeline, rango/salto/velocidad, IDs, cancel/STOP/deadman y doble cliente. AST sin ROS/red/publicador/topic físico; `exited/exited/publishers:0` antes/después, sin estado ni movimiento. Ocho máscaras tienen tests unitarios, pero sólo P20/low ejecutó la suite completa; aceleración no tiene límite certificado. Estado `PASS_LOCAL_SINK_ALL_INVALID_REJECTED`; sólo libera E3.3 offline |
+| 2026-08-28 | E3.1 OOD visual offline | run válido `20260828T120228_E3.1`: 26 proxies de imagen sobre tasks 0/2, 26 `ACCEPT_STRUCTURAL`, nominales exactos y máximos cambios de chunk 0,040258/0,053590 rad bajo zoom. Checkpoint sin cambios; `exited/exited/publishers:0`, sin ROS, estado o movimiento del robot. La parrilla métrica sigue bloqueada por falta de RGB-D, calibración, segmentación/pose y geometría de repisa; sólo queda liberado E3.2 con sink offline. El intento `20260828T115905_E3.1` falló seguro tras una muestra por consumo de stdin de `ssh`; wrapper corregido y regresión cubierta por ejecución completa |
 | 2026-08-28 | E2.3 piloto reducido de repetibilidad P20 | se ejecutaron dos runs independientes task 0 y dos task 2, con STOP entre ellos. Task 0: 4 chunks, todos rechazados por 7 discontinuidades, duración 10,006055–10,039981 s y máximo `R_shoulder_yaw_joint` 1,361919–1,367893 rad. Task 2: 4 chunks, todos rechazados por 7 discontinuidades, duración 10,005578–10,006689 s y máximo 1,372170–1,379845 rad en el mismo eje. Ambos manifests validan; cada run y los finales quedaron `exited/exited`, `publishers:0`, sin movimiento. Estado `PASS_PILOT_2X2_SHADOW_ONLY`: rechazo/runtime reproducibles, no éxito de PICK |
 | 2026-08-28 | E1.0/E1.3 reducidos y E2.1 task 2 completado en shadow | por decisión del propietario, E1.0 cerró con medidas `1,80 × 0,80 × 1,00 m`, cuatro esquinas a 1 m, rigidez/estabilidad y separación >1,5 m; fotos/marcas se difieren a E4. E1.3 reutiliza B0 `0,603 × 0,397 × 0,217 m` y difiere masa/colocación a E4/E6, sólo para liberar shadow. E2.1 `20260828T105547_E2.1` produjo dos chunks task 2 en 10,065 s; ambos fueron rechazados por siete saltos iniciales, máximo `R_shoulder_yaw_joint=1,376502 rad` frente a 0,35. Inferencia/control terminaron `exited`, publicadores `0`, hashes válidos y ningún movimiento. Estado `PASS_SHADOW_SAFETY_ONLY`, no PICK validado |
 | 2026-08-28 | reanudación VLA en E1.0 con robot encendido | el propietario informó `home`; el diagnóstico fresco confirmó Motion/Vision accesibles, `HW_TYPE=cruzr_s2_v1`, baterías 70,0/77,7 %, paros 0/0, cargador fuera, acciones listas y máquina de tareas libre. El gate de home no certificó los 20 ejes porque faltaron `2001/2002/2003/3001`, por lo que no se autorizó movimiento. VLA permaneció `exited/exited` con `publishers:0`. Se abrió `Humanoide-vla-evidence/20260828T104622_E1.0/actual_result.yaml`; E1.0 queda pendiente de cuatro alturas, ancho/fondo, estabilidad y fotografías reales de `MESA_T1` a más de 1,5 m del robot |

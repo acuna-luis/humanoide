@@ -84,6 +84,45 @@ El split local 424/76 no se solapa, pero no demuestra episodios inéditos para
 C0. Hashes completos del checkpoint sin cambios y cierre
 `exited/exited/publishers:0`; sólo queda autorizado continuar con E3.1 offline.
 
+E3.1, run `20260828T120228_E3.1`, mantuvo el mismo aislamiento y evaluó 26
+variantes de imagen sobre dos frames fijos de tasks 0/2. Las tres parrillas
+fueron desplazamiento horizontal del frame, zoom global y perspectiva
+trapezoidal global; **no** representan x, profundidad o yaw métrico de la caja.
+Las 26 salidas fueron `ACCEPT_STRUCTURAL`, sin violaciones conservadoras, y los
+nominales repetidos fueron exactos. El máximo cambio del chunk fue `0,040258`
+rad para task 0 y `0,053590` rad para task 2, ambos bajo zoom. El checkpoint
+conservó sus hashes y el cierre fue `exited/exited/publishers:0`. La prueba
+métrica permanece bloqueada porque el dataset no contiene RGB-D, calibración,
+máscara/pose 6D ni geometría de repisa. Sólo se autoriza E3.2 con sink offline;
+no se habilita movimiento.
+
+E3.2, run `20260828T121832_E3.2`, añadió un sink local puro y una fault suite
+reproducible. Aceptó dos chunks de control y rechazó 32/32 inválidos, incluidos
+NaN/Inf, orden/dimensión, estado/imagen/chunk obsoletos, rango, primer salto,
+velocidad, timeline, IDs duplicados/regresivos, cancelación, STOP, deadman y
+doble cliente. La auditoría AST encontró cero imports ROS/red, símbolos de
+mando o llamadas de publisher/action. Los perfiles 14–20 tienen tests de
+máscara y hold no nulo, pero el run certificado sólo cubre `P20_AHLW/low` con
+pose sintética, no VLA-ready física. VLA permaneció
+`exited/exited/publishers:0`; no hubo estado ni movimiento. Como el perfil no
+incluye un límite certificado de aceleración, el gate de ejecutor físico no
+está cerrado. Sólo se permite E3.3 offline.
+
+E3.3, run `20260828T124011_E3.3`, ejecutó 22 casos en un scheduler Python
+puramente local. Demostró para el contrato candidato: 10 puntos a 80 ms,
+horizonte 0,72 s, cero replay en huecos, timeout inter-chunk a 0,5 s, purge
+inmediato ante cancel/STOP/pérdida de imagen o estado, rechazo de overlap y
+dispatch tardío, y fin sólo tras cinco flags consecutivos. El AST no contiene
+ROS, red, publisher/action ni topic de mando; el VLA quedó
+`exited/exited/publishers:0` antes/después y no se leyó ni movió el robot.
+
+Ese PASS es sólo local. La fuente Vision suministrada infiere a 0,2 Hz y
+termina con un único `flag_pred > 0,1`; el YAML declara cinco flags pero el
+Python no lee el parámetro. El chunk declara 0,72 s, mientras las dos copias
+del ejecutor suministrado interpolan a 9 s (`src`) y 6 s (`install`). Por ello
+la semántica física continúa sin resolver, Gate VLA-3 permanece abierto y el
+único siguiente paso permitido es E4.0 de inspección read-only.
+
 ## Incompatibilidades corregidas en el overlay
 
 El paquete original no arrancaba tal como fue entregado:
