@@ -1,0 +1,21 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+
+            <Parallel threshold="4">
+                <!-- Cruzr S2 v0.2.0 exposes one waist joint (waist_yaw). -->
+                <Action ID="MetaMove" type="waist" location="single" duration="1.5"
+                    joint_angles="0.0" />
+                <Action ID="MetaMove" type="head" location="single" duration="1.5"
+                    joint_angles="-0.0; -0.65" />
+                <Action ID="MetaMove" type="arm" location="right"
+                    joint_angles="0.0; -0.6; 0.0; 0.0; 0.0; 0.0; 0.0" duration="1.5" />
+                <Action ID="MetaMove" type="arm" location="left"
+                    joint_angles="0.0; -0.6; 0.0; 0.0; 0.0; 0.0; 0.0" duration="1.5" />
+            </Parallel>
+
+            <Action ID="MetaMove" name="clamp_s2_joints_trajectory" />
+
+        </Sequence>
+    </BehaviorTree>
+</root>

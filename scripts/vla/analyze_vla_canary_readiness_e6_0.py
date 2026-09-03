@@ -33,6 +33,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--e6-0m", type=pathlib.Path, required=True)
     parser.add_argument("--e6-0n", type=pathlib.Path, required=True)
     parser.add_argument("--e6-0o", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0q", type=pathlib.Path, required=True)
     parser.add_argument("--profile", type=pathlib.Path, required=True)
     parser.add_argument("--physical-executor", type=pathlib.Path, required=True)
     parser.add_argument("--ready-script", type=pathlib.Path, required=True)
@@ -132,6 +133,7 @@ def main() -> int:
         "E6.0M": args.e6_0m.resolve(),
         "E6.0N": args.e6_0n.resolve(),
         "E6.0O": args.e6_0o.resolve(),
+        "E6.0Q": args.e6_0q.resolve(),
     }
     actual = {
         name: load_flat_yaml(path / "actual_result.yaml")
@@ -186,6 +188,15 @@ def main() -> int:
         and actual["E6.0O"].get("physical_movement_commanded") is False
         and actual["E6.0O"].get("physical_publishers") == 0
     )
+    recovery_physically_validated = (
+        actual["E6.0Q"].get("ready_physically_validated") is True
+        and actual["E6.0Q"].get("recovery_physically_validated") is True
+        and actual["E6.0Q"].get("recovery_runtime_corrected") is True
+        and actual["E6.0Q"].get("recovery_meta_path_correct") is True
+        and actual["E6.0Q"].get("measured_home") is True
+        and actual["E6.0Q"].get("vla_containers_stopped") is True
+        and actual["E6.0Q"].get("physical_publishers") == 0
+    )
 
     expected_statuses = {
         "E3.3": "PASS_LOCAL_TEMPORAL_FAIL_CLOSED_VENDOR_SEMANTICS_UNRESOLVED",
@@ -209,6 +220,7 @@ def main() -> int:
         "E6.0M": "PASS_EXACT_RECOVERY_BUNDLE_LOCAL_ACTIVE_MODES_BLOCKED_PENDING_PHYSICAL_VALIDATION",
         "E6.0N": "PASS_RECOVERY_INSTALLED_AND_REGISTERED_ON_DISK_NOT_RELOADED",
         "E6.0O": "PASS_DEDICATED_TASK_MANAGER_RELOADED_UNDER_ESTOP",
+        "E6.0Q": "PASS_DETERMINISTIC_READY_RECOVERY_PHYSICALLY_VALIDATED_NO_BOX",
     }
     for name, expected in expected_statuses.items():
         if actual[name].get("status") != expected:
@@ -274,15 +286,19 @@ def main() -> int:
         ),
         gate(
             "recovery_exact_and_validated",
-            "BLOCKED",
+            "PASS" if recovery_physically_validated else "BLOCKED",
             (
-                "E6.0M packages the audited home->staging->A->B->A->staging->numeric-home "
-                "sequence and proves the named segment is the exact reverse. E6.0N installed "
-                "the exact recovery with backup, and E6.0O restarted only the dedicated task "
-                "manager under E-stop after the recovery config. Runtime load order is established, "
-                "but action registration and the trajectory still require supervised physical validation"
-                if recovery_runtime_loaded
-                else "Recovery installation/runtime load evidence is incomplete"
+                "E6.0Q corrected the MetaMove runtime path and one-axis waist, then physically "
+                "validated deterministic READY->HOME without a box: the action returned "
+                "SUCCEED/status=4 and a fresh 20-axis sample proved measured home, zero velocity, "
+                "VLA stopped and zero physical publishers"
+                if recovery_physically_validated
+                else (
+                    "E6.0M packages the exact reverse and E6.0N/O establish the historical "
+                    "installation/load sequence, but supervised physical validation is incomplete"
+                    if recovery_runtime_loaded
+                    else "Recovery installation/runtime load evidence is incomplete"
+                )
             ),
         ),
         gate(
@@ -442,7 +458,7 @@ def main() -> int:
                 "runtime_load_order"
             ),
             "recovery_runtime_loaded_under_estop": recovery_runtime_loaded,
-            "recovery_physically_validated": False,
+            "recovery_physically_validated": recovery_physically_validated,
         },
         "gates": gates,
         "blocking_gate_count": len(blocking),
@@ -456,8 +472,8 @@ def main() -> int:
         "next_safe_work": [
             "keep_vla_containers_stopped_and_physical_publishers_at_zero",
             "treat_the_owner_accepted_document_proxy_as_a_canary_only_assumption_not_certified_geometry",
-            "resolve_dynamics_and_supervised_recovery_validation_before_any physical adapter",
-            "implement and review physical command and STOP transport only after the remaining gates close",
+            "resolve the acceleration limit before any physical adapter",
+            "implement and review physical command and STOP transport before any checkpoint command",
         ],
     }
     if args.output:

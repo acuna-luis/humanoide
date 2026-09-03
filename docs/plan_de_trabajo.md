@@ -1262,6 +1262,33 @@ sección 5.3.3 y ejecutar un único preflight al volver. Si pasa, la próxima
 operación será la primera validación física ready→recovery sin caja; no se
 añadirán más auditorías.
 
+El ciclo completo posterior sí recuperó Motion y el auditor vivo
+`20260903T132151_E6.0G` pasó. En el primer intento físico de ready, el XML
+vendor falló porque su `MetaMove` de cintura entrega dos ángulos a la cintura
+S2 de un eje. El paralelo abortó cabeza y brazos tras un avance parcial pequeño;
+no hubo fuerza, colisión ni fault. Una vuelta única `cruzr/home` terminó
+`SUCCEED/status=4` y la postura volvió a home medido. E6.0P
+`20260903T133300_E6.0P` instaló sin reload ni movimiento un overlay que cambia
+exclusivamente `joint_angles="-0.0; 0.0"` por `joint_angles="0.0"`; hash
+`c767f739…a9b2`, backup remoto `20260903T133300_E6.0P`. El próximo paso es un
+reintento supervisado de **sólo ready**, inspección física y, si es estable,
+**sólo recovery**. El VLA/checkpoint permanece detenido durante ambas tareas.
+
+E6.0Q `20260903T135236_E6.0Q` completó ese paso. READY corregido terminó
+`SUCCEED/status=4`. El primer recovery reveló, antes de mover, dos defectos del
+bundle local: MetaMove instalado en la raíz de paquete incorrecta y cintura
+final todavía 2D. El fatal reinició el task manager una vez y dejó el robot
+medido en READY, inmóvil y sin faults. Tras reparar sin reload ni movimiento,
+el segundo recovery terminó `SUCCEED/status=4` y dejó `MEASURED_HOME=1`, 20
+ejes inmóviles. Queda así cerrado el gate determinista READY/recovery sin caja.
+No se ejecutó inferencia del checkpoint. Los siguientes trabajos son, en este
+orden: implementar y revisar el transporte con STOP físico; definir/probar el
+límite de aceleración; sólo después reconsiderar `--one-point`.
+
+E6.0-CHECK `20260903T140006_E6.0-CHECK` consume ya E6.0Q y confirma por
+auditoría local esos dos únicos gates pendientes; los modos activos siguen
+cerrados antes de acceder al robot.
+
 #### Experimento 6.0 — Un punto P14 sin caja
 
 **Escenario futuro:** plataforma y B0 retiradas >1,5 m; ready S2 validado; ruedas

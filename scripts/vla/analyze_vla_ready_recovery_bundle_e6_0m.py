@@ -117,7 +117,7 @@ def main() -> int:
     if set(recovery_direct) != expected_vendor_keys:
         raise SystemExit("ERROR: retorno final no cubre waist/head/ambos brazos")
     expected_lengths = {
-        ("waist", "single"): 2,
+        ("waist", "single"): 1,
         ("head", "single"): 2,
         ("arm", "left"): 7,
         ("arm", "right"): 7,

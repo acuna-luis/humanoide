@@ -33,15 +33,15 @@ nuevo el estado físico y lógico.
 
 | Elemento | Último estado documentado | Confianza |
 |---|---|---|
-| Postura | tras el reinicio completo supervisado, una muestra fresca de los 20 ejes midió cuerpo ≤`0,002684 rad`, brazos ≤`0,000959 rad`, velocidad cero y delta posición–consigna ≤`0,002684 rad`; la recuperación declaró `MEASURED_HOME=1` y envió cero objetivos | **HOME MEDIDO; RECONFIRMAR ANTES DE MOVIMIENTO** |
-| Modo robot | Control Center había completado self-check y `StartMotion`. E6.0O reinició después sólo el contenedor dedicado del task manager bajo E-stop; el proceso está operativo y es posterior al task list, pero el action server permanece ausente mientras el paro está activo | **TASK MANAGER RECARGADO BAJO PARO; MODO OPERATIVO PENDIENTE DE REVALIDAR** |
+| Postura | E6.0Q completó físicamente la secuencia determinista sin caja: READY S2 y recovery exacto terminaron `SUCCEED/status=4`. La muestra final midió cuerpo ≤`0,002589 rad`, brazos ≤`0,000959 rad`, velocidad cero y delta posición–consigna ≤`0,002589 rad` | **HOME MEDIDO DESPUÉS DE RECOVERY; RECONFIRMAR ANTES DE MOVIMIENTO** |
+| Modo robot | el primer recovery E6.0Q abortó el task manager antes de mover por un YAML instalado en la raíz equivocada; Docker lo reinició una vez. Tras corregir ruta y cintura, el segundo recovery terminó correctamente y el contenedor siguió activo, `restart=1`, `OOMKilled=false` | **OPERATIVO DESPUÉS DEL RECOVERY; REVALIDAR ACCIONES ANTES DE OTRO GOAL** |
 | Efector | abrazaderas, `HW_TYPE=cruzr_s2_v1` confirmado por el check fresco | **VERIFICADO POR SOFTWARE; VACÍO DEBE RECONFIRMARSE ANTES DE MOVIMIENTO** |
-| Actuadores | tras liberar el E-stop principal, los topics leyeron `0/0` pero siguieron ausentes `/mc/whole_joint_states` y el action server. El log de Control Center explica el estado: el paro llevó `JoystickMode/Ready→WaitStartMotion`; la liberación registró `onEstopState=0`, pero no hubo todavía `ButtonStartMotion`. No se envió goal | **CONTROLADORES ESPERANDO START MOTION; NINGÚN MOVIMIENTO** |
+| Actuadores | muestra fresca posterior a E6.0Q: 20 ejes presentes, 14 de brazos, velocidad máxima `0`, sin fault y HOME medido | **VERIFICADO DESPUÉS DEL RECOVERY** |
 | Teleoperación PC | combinación oficial robot v0.2.0 + controller 4.7.0 + UI 4.1.0, overlay `clamp,0,0` y control bimanual. La sesión 10:25 terminó por protección FT, no por VR. Tras el reinicio el robot quedó en `AutoTaskMode`; no se ha recargado ni reanudado PICO | **BLOQUEADA HASTA NUEVO PREFLIGHT Y CAMBIO DE MODO AUTORIZADO** |
 | Servicio PC/PICO | el STOP oficial tras `Ctrl+C` quedó confirmado; PC permaneció encendido durante el power cycle del robot | **STOP VERIFICADO; SIN CLIENTE FÍSICO** |
-| VLA | contenedores detenidos, `restart=no`, sin mando físico | **VERIFICADO** |
-| Cargador | `CHARGER=0` en el check fresco; baterías `66,6/69,6 %` durante E6.0N | **VERIFICADO POR SOFTWARE** |
-| Paros, ruedas y zona | después de E6.0O el operador liberó el E-stop principal y confirmó estabilidad. Software lee `ESTOP_KEY=0`, `SERVO_ESTOP_KEY=0`; el log no contiene activación reciente del servo E-stop. El bloqueo restante es `WaitStartMotion`, no evidencia de paro de chasis activo. Cargador fuera; no hubo movimiento | **AMBOS PAROS REPORTADOS LIBERADOS; REARME START MOTION PENDIENTE** |
+| VLA | contenedores detenidos, `restart=no`, sin mando físico. READY y recovery deterministas quedaron validados sin caja; el checkpoint no participó y siguen bloqueados el transporte/STOP físico y el límite de aceleración | **RECOVERY CERRADO; PUBLICACIÓN DEL CHECKPOINT AÚN BLOQUEADA** |
+| Cargador | `CHARGER=0` y baterías `58,5/61,0 %` inmediatamente antes del recovery E6.0Q | **VERIFICADO POR SOFTWARE ANTES DEL ÚLTIMO MOVIMIENTO** |
+| Paros, ruedas y zona | antes de E6.0Q el operador confirmó clamps vacíos, READY estable, ausencia de contactos, zona despejada y persona junto al E-stop; software leyó ambos paros `0/0` y cargador fuera. Reconfirmar físicamente después del recovery | **ÚLTIMO PREFLIGHT APROBADO; NO ASUMIR QUE PERSISTE** |
 | Mapa/localización | `test_route_01` se conservó; activación y localización son volátiles | **RECOMPROBAR** |
 
 La rama `main` estaba limpia y sincronizada con `origin/main` en el commit
@@ -55,8 +55,9 @@ bloquea PICO/unknown/fuerza/autocolisión/fault y restringe la tarea vendor a
 estados del ciclo de caja. `--force-held-home` quedó retirado y `--fast` ya no
 omite gates. El 03-09 se corrigió el mapping para aceptar los IDs reales
 v0.2.0 `11004…11001`; las regresiones de ambos mappings pasaron y un `--check`
-vivo demostró `home` sin ordenar movimiento. La trayectoria de recuperación
-desde una postura no-home sigue sin validación física.
+vivo demostró `home` sin ordenar movimiento. La recuperación general desde
+una postura arbitraria no-home sigue sin validación física; la ruta específica
+VLA READY→HOME sí quedó validada por E6.0Q.
 
 ### 2.2 Primeros pasos de la siguiente sesión
 
@@ -631,13 +632,16 @@ también el paro del chasis. El run fresco E6.0G
 server con el paro activo. `SERVO_ESTOP_KEY=0` no permite afirmar por software
 que el paro del chasis esté activo.
 
-E6.0N `20260903T123940_E6.0N` instaló bajo ese E-stop únicamente los archivos
-de recuperación exacta y una entrada única en `task_list.yaml`. Respaldó el
+E6.0N `20260903T123940_E6.0N` instaló bajo ese E-stop los archivos previstos
+para la recuperación exacta y una entrada única en `task_list.yaml`. Respaldó el
 estado anterior en
 `/home/walker/cruzr-vla/backups/20260903T123940_E6.0N`; el hash del task list
 cambió de `e4ac5e43…4def7` a `0d24122c…64957`, XML
-`45359d49…cd3c` y MetaMove `bd5f588a…e3b0`. El check posterior confirmó
-`installed-on-disk-not-reloaded` y las nueve evidencias pasaron
+`45359d49…cd3c` y MetaMove `bd5f588a…e3b0`. E6.0Q demostró después que ese
+check validaba una ruta incorrecta para el MetaMove: se había instalado bajo
+`manipulation_task_manager/config/meta_move`, mientras el binario lo busca en
+`manipulation_meta_tasks/config/meta_move`. El check posterior de E6.0N había
+confirmado `installed-on-disk-not-reloaded` y las nueve evidencias pasaron
 `evidence.sha256`. No se recargó/reinició Motion, no se inició VLA y no se
 publicó movimiento. En ese punto la tarea todavía no existía en el runtime;
 su carga se resolvió en E6.0O y la validación física supervisada sigue
@@ -672,13 +676,64 @@ identificable. Una pulsación verde ya produjo sólo `Power click`; no debe
 repetirse. Desde `WaitStartMotion`, el único recovery comprobado es el ciclo
 completo supervisado de la sección 5.3.3.
 
+El ciclo completo posterior se completó y E6.0G
+`20260903T132151_E6.0G` volvió a demostrar ambos paros `0/0`, actuadores
+habilitados, un servidor de manipulación, acciones listas, cargador fuera,
+task ready/recovery cargados, VLA `exited/exited` y cero publicadores. Desde
+home medido se invocó por primera vez únicamente
+`s2_bio_vla/s2_vla_pick_large_teleop_ready`. La acción fue aceptada, pero
+terminó `MoveToGoalFailed/status=6`. El log demuestra la causa: el primer
+`MetaMove` de cintura terminó `FAILURE` antes de emitir `MoveTo`; el XML vendor
+entrega `joint_angles="-0.0; 0.0"`, mientras esta unidad expone una cintura
+S2 de un eje. El `Parallel threshold=4` abortó después cabeza y ambos brazos,
+dejando un avance parcial quieto de cuerpo `0,195870 rad` y brazos
+`0,080246 rad`. No hubo fuerza excesiva, colisión ni fault. Con confirmación
+física fresca se ejecutó una sola vuelta vendor `cruzr/home`, que devolvió
+`SUCCEED/status=4`; la medida posterior confirmó `MEASURED_HOME=1` con cuerpo
+`0,002589 rad`, brazos `0,000671 rad` y velocidad cero.
+
+E6.0P `20260903T133300_E6.0P` creó una copia versionada del ready que cambia
+exclusivamente la cintura a `joint_angles="0.0"`, validó por parseo/diff que
+no cambia ningún otro atributo de acción y sustituyó atómicamente sólo el XML
+vivo. Hash vendor `f4025124…d8323` → overlay S2
+`c767f739…a9b2`; backup
+`/home/walker/cruzr-vla/backups/20260903T133300_E6.0P`. No hubo reload,
+inferencia, publicador ni movimiento durante el cambio, y home se mantuvo
+medido. El auditor vivo distingue ahora explícitamente
+`vendor-incompatible-waist-2d` de `s2-waist-1d-overlay`.
+
+E6.0Q `20260903T135236_E6.0Q` cerró la validación física determinista sin
+caja. El READY corregido terminó `SUCCEED/status=4` y quedó medido contra las
+consignas nativas con error máximo `0,001842048 rad`, velocidad cero y sin
+faults. El primer recovery no movió: el loader no encontró el MetaMove en su
+ruta runtime y abortó fatalmente en `GetRequestFromYamlNode`, lo que reinició
+una vez el contenedor (`OOMKilled=false`) y dejó las articulaciones exactamente
+en READY. Se corrigieron dos defectos del bundle local: el YAML se instala
+ahora en `manipulation_meta_tasks/config/meta_move` y la acción final de
+cintura contiene un único valor. El XML nuevo es
+`9e47b6ee37f83f75036c203b809e9a93284d459316764615496a872ca3b4fbcc`;
+el backup remoto es
+`/home/walker/cruzr-vla/backups/20260903T134947_E6.0Q`. Sin reload ni
+movimiento durante el arreglo, el segundo recovery obtuvo el goal
+`c183c3e0-240a-4bfe-8904-535f0b2b50eb`, `SUCCEED/status=4`. La muestra final
+dio `MEASURED_HOME=1`, cuerpo `0,002589 rad`, brazos `0,000959 rad` y velocidad
+cero. VLA quedó `exited/exited` con `publishers:0`. Esto cierra el gate de
+ready/recovery, pero no autoriza el checkpoint: siguen pendientes el adaptador
+de transporte/STOP físico y un límite de aceleración aprobado.
+
+El E6.0-CHECK regenerado `20260903T140006_E6.0-CHECK` consume E6.0Q y reduce
+el inventario vigente de bloqueos de tres a dos:
+`physical_executor_implemented_and_reviewed` y
+`certified_acceleration_limit`. Continúa con `E6.0_PHYSICAL_AUTHORIZED=0`.
+
 La evidencia VLA ya no depende de variables exportadas por un bloque anterior.
 `new_vla_evidence_run.sh` crea cada run de forma exclusiva y rechaza `/` y
 rutas existentes. E1.1/E1.2, los smoke E2.0/E2.1 y las repeticiones E2.3 tienen
 wrappers autocontenidos; E2.3 usa sesiones independientes y STOP entre runs.
 E2.2, E3.0, E3.1, E3.2, E3.3, E4.0, E4.1, E4.1C, E4.1D, E4.1E,
 E4.1F, E4.2, E5.0, E5.1, E5.2, E6.0A, E6.0B, E6.0C, E6.0D, E6.0E, E6.0F,
-E6.0G, E6.0H, E6.0I, E6.0J, E6.0K, E6.0L, E6.0M, E6.0N, E6.0O y E6.0-CHECK
+E6.0G, E6.0H, E6.0I, E6.0J, E6.0K, E6.0L, E6.0M, E6.0N, E6.0O, E6.0P,
+E6.0Q y E6.0-CHECK
 disponen ahora de
 evaluador/sink y wrappers autocontenidos. Los ejemplos aún no implementados de
 VLA-T00…T08 inicializan su directorio
@@ -1232,6 +1287,9 @@ actualizarse este archivo antes de cerrar la sesión.
 
 | Fecha | Hito | Resultado |
 |---|---|---|
+| 2026-09-03 | E6.0-CHECK posterior a Q | run `20260903T140006_E6.0-CHECK`: consume la evidencia física de READY/recovery y marca ese gate PASS. Quedan 2 bloqueos: transporte/STOP físico y aceleración; `E6.0_PHYSICAL_AUTHORIZED=0` |
+| 2026-09-03 | E6.0Q READY/recovery físico sin caja | run `20260903T135236_E6.0Q`: READY S2 y segundo recovery `s2_vla_e6_0_exact_recovery` terminaron `SUCCEED/status=4`; HOME final medido en 20 ejes, velocidad cero. El primer recovery no movió y reveló YAML en la raíz de paquete errónea; el fatal reinició una vez el task manager. Se corrigieron ruta MetaMove y cintura 1D, XML `9e47b6ee…4fbcc`, backup `20260903T134947_E6.0Q`. VLA `exited/exited`, `publishers:0`. El auditor canary queda con 2 gates: transporte/STOP físico y aceleración |
+| 2026-09-03 | E6.0P primer ready físico, recovery y overlay cintura S2 | desde home medido, el ready vendor fue aceptado pero falló porque enviaba dos valores a la cintura S2 de un eje; el paralelo abortó cabeza/brazos y dejó sólo un avance parcial quieto. Sin fuerza/colisión/fault, una vuelta única `cruzr/home` terminó `SUCCEED/status=4` y home quedó medido. Se aplicó después sólo el overlay `joint_angles="0.0"`, hash `c767f739…a9b2`, con backup `20260903T133300_E6.0P`; sin reload, VLA, publicador ni movimiento. Reintento supervisado pendiente |
 | 2026-09-03 | E6.0 preflight tras liberar E-stop | topics `0/0`, cargador fuera, pero estado articular/action server ausentes. Log: `JoystickMode/Ready→WaitStartMotion` al accionar el principal y luego `onEstopState=0`, sin `ButtonStartMotion`; no hay evento servo E-stop activo. Bloqueo atribuido a rearme pendiente, no al paro de chasis. Cero goals/movimiento; auditor corregido para reportar el fallo |
 | 2026-09-03 | E6.0-CHECK consume N/O | run vigente `20260903T125333_E6.0-CHECK`: verifica recovery instalado, registrado y con proceso posterior a la configuración bajo E-stop. Mantiene 3 gates: validación física del recovery, transporte/STOP físico y aceleración aceptada; no autoriza movimiento |
 | 2026-09-03 | E6.0O recarga mínima del task manager | run `20260903T124843_E6.0O`: reinició sólo `walker-motion.manipulation_robot_app-1` bajo E-stop principal, sin llamar tareas. Proceso posterior al task list; configuración/hashes exactos, E-stop antes/después, cargador fuera, VLA detenido y cero publicadores/movimiento. `SERVO_ESTOP_KEY=0`; registro action y trayectoria aún requieren validación supervisada |

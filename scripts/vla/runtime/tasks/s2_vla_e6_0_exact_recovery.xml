@@ -3,8 +3,9 @@
         <Sequence name="root_sequence">
             <Action ID="MetaMove" name="clamp_s2_vla_e6_0_exact_recovery" />
             <Parallel threshold="4">
+                <!-- Cruzr S2 v0.2.0 exposes one waist_yaw axis. -->
                 <Action ID="MetaMove" type="waist" location="single" duration="1.5"
-                    joint_angles="0.0; 0.0" />
+                    joint_angles="0.0" />
                 <Action ID="MetaMove" type="head" location="single" duration="1.5"
                     joint_angles="0.0; 0.0" />
                 <Action ID="MetaMove" type="arm" location="right" duration="1.5"

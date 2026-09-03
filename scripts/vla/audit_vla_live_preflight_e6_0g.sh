@@ -28,7 +28,8 @@ readonly MOTION_CONTAINER="walker-motion.manipulation_robot_app-1"
 readonly TASK_ROOT="/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config"
 readonly READY_KEY="s2_vla_pick_large_teleop_ready"
 readonly READY_XML="$TASK_ROOT/s2_bio_vla/s2_vla_pick_large_teleop_ready.xml"
-readonly EXPECTED_READY_SHA256="f4025124491eba995ec824db3e3be91875f781a4b4e98928654bde9a021d8323"
+readonly EXPECTED_VENDOR_READY_SHA256="f4025124491eba995ec824db3e3be91875f781a4b4e98928654bde9a021d8323"
+readonly EXPECTED_S2_READY_SHA256="c767f7396a325d375752fbce2351837e7f5e0c750902e4815ddd7acb24e2a9b2"
 
 CRUZR_SSH_PASSWORD="${CRUZR_SSH_PASSWORD:-$DEFAULT_PASSWORD}"
 export CRUZR_SSH_PASSWORD
@@ -80,14 +81,16 @@ run_ssh() {
 
 capture_motion_snapshot() {
   run_ssh bash -s -- "$ROS_CONTAINER" "$MOTION_CONTAINER" "$TASK_ROOT" \
-    "$READY_KEY" "$READY_XML" "$EXPECTED_READY_SHA256" <<'REMOTE'
+    "$READY_KEY" "$READY_XML" "$EXPECTED_VENDOR_READY_SHA256" \
+    "$EXPECTED_S2_READY_SHA256" <<'REMOTE'
 set -Eeuo pipefail
 ros_container="$1"
 motion_container="$2"
 task_root="$3"
 ready_key="$4"
 ready_xml="$5"
-expected_ready_sha="$6"
+expected_vendor_ready_sha="$6"
+expected_s2_ready_sha="$7"
 
 for container in "$ros_container" "$motion_container"; do
   test "$(docker inspect --format '{{.State.Status}}' "$container")" = running
@@ -163,7 +166,14 @@ fi
 if docker exec "$motion_container" test -f "$ready_xml"; then
   ready_sha="$(docker exec "$motion_container" sha256sum "$ready_xml" | awk '{print $1}')"
   printf 'READY_XML_PRESENT=1\nREADY_XML_SHA256=%s\n' "$ready_sha"
-  test "$ready_sha" = "$expected_ready_sha"
+  if [[ "$ready_sha" == "$expected_vendor_ready_sha" ]]; then
+    printf 'READY_XML_VARIANT=vendor-incompatible-waist-2d\n'
+  elif [[ "$ready_sha" == "$expected_s2_ready_sha" ]]; then
+    printf 'READY_XML_VARIANT=s2-waist-1d-overlay\n'
+  else
+    printf 'READY_XML_VARIANT=unknown\n' >&2
+    exit 42
+  fi
 else
   printf 'READY_XML_PRESENT=0\nREADY_XML_SHA256=absent\n'
 fi

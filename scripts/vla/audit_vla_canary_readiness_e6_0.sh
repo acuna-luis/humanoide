@@ -42,6 +42,7 @@ readonly E6_0L_RUN="${VLA_E6_0L_RUN:-/home/lacuna/proyectos/Robots/Humanoide-vla
 readonly E6_0M_RUN="${VLA_E6_0M_RUN:-/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260903T122502_E6.0M}"
 readonly E6_0N_RUN="${VLA_E6_0N_RUN:-/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260903T123940_E6.0N}"
 readonly E6_0O_RUN="${VLA_E6_0O_RUN:-/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260903T124843_E6.0O}"
+readonly E6_0Q_RUN="${VLA_E6_0Q_RUN:-/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260903T135236_E6.0Q}"
 
 MODE="check"
 while (($#)); do
@@ -58,7 +59,7 @@ done
 for required in "$ANALYZER" "$EVIDENCE_SCRIPT" "$PROFILE"; do
   test -s "$required" || { echo "ERROR: falta $required" >&2; exit 1; }
 done
-for run_dir in "$E3_3_RUN" "$E4_0_RUN" "$E4_1C_RUN" "$E4_1F_RUN" "$E5_0_RUN" "$E5_2_RUN" "$E6_0A_RUN" "$E6_0B_RUN" "$E6_0C_RUN" "$E6_0D_RUN" "$E6_0E_RUN" "$E6_0F_RUN" "$E6_0G_RUN" "$E6_0H_RUN" "$E6_0I_RUN" "$E6_0J_RUN" "$E6_0K_RUN" "$E6_0L_RUN" "$E6_0M_RUN" "$E6_0N_RUN" "$E6_0O_RUN"; do
+for run_dir in "$E3_3_RUN" "$E4_0_RUN" "$E4_1C_RUN" "$E4_1F_RUN" "$E5_0_RUN" "$E5_2_RUN" "$E6_0A_RUN" "$E6_0B_RUN" "$E6_0C_RUN" "$E6_0D_RUN" "$E6_0E_RUN" "$E6_0F_RUN" "$E6_0G_RUN" "$E6_0H_RUN" "$E6_0I_RUN" "$E6_0J_RUN" "$E6_0K_RUN" "$E6_0L_RUN" "$E6_0M_RUN" "$E6_0N_RUN" "$E6_0O_RUN" "$E6_0Q_RUN"; do
   test -s "$run_dir/actual_result.yaml" || { echo "ERROR: falta $run_dir/actual_result.yaml" >&2; exit 1; }
   test -s "$run_dir/evidence.sha256" || { echo "ERROR: falta $run_dir/evidence.sha256" >&2; exit 1; }
   (cd "$run_dir" && sha256sum -c evidence.sha256 >/dev/null)
@@ -116,6 +117,7 @@ analyzer_args=(
   --e6-0m "$E6_0M_RUN"
   --e6-0n "$E6_0N_RUN"
   --e6-0o "$E6_0O_RUN"
+  --e6-0q "$E6_0Q_RUN"
   --profile "$PROFILE"
   --physical-executor "$PHYSICAL_EXECUTOR"
   --ready-script "$READY_SCRIPT"
@@ -154,7 +156,7 @@ trap 'exit 143' TERM
 
 cp -- "$ANALYZER" "$RUN_DIR/analyze_vla_canary_readiness_e6_0.py"
 printf '%s\n' \
-  "$E3_3_RUN" "$E4_0_RUN" "$E4_1C_RUN" "$E4_1F_RUN" "$E5_0_RUN" "$E5_2_RUN" "$E6_0A_RUN" "$E6_0B_RUN" "$E6_0C_RUN" "$E6_0D_RUN" "$E6_0E_RUN" "$E6_0F_RUN" "$E6_0G_RUN" "$E6_0H_RUN" "$E6_0I_RUN" "$E6_0J_RUN" "$E6_0K_RUN" "$E6_0L_RUN" "$E6_0M_RUN" "$E6_0N_RUN" "$E6_0O_RUN" \
+  "$E3_3_RUN" "$E4_0_RUN" "$E4_1C_RUN" "$E4_1F_RUN" "$E5_0_RUN" "$E5_2_RUN" "$E6_0A_RUN" "$E6_0B_RUN" "$E6_0C_RUN" "$E6_0D_RUN" "$E6_0E_RUN" "$E6_0F_RUN" "$E6_0G_RUN" "$E6_0H_RUN" "$E6_0I_RUN" "$E6_0J_RUN" "$E6_0K_RUN" "$E6_0L_RUN" "$E6_0M_RUN" "$E6_0N_RUN" "$E6_0O_RUN" "$E6_0Q_RUN" \
   > "$RUN_DIR/source_runs.txt"
 sha256sum \
   "$E3_3_RUN/actual_result.yaml" "$E3_3_RUN/evidence.sha256" \
@@ -191,6 +193,8 @@ sha256sum \
   "$E6_0N_RUN/install-result.log" "$E6_0N_RUN/vla-status-after.log" \
   "$E6_0O_RUN/actual_result.yaml" "$E6_0O_RUN/evidence.sha256" \
   "$E6_0O_RUN/reload-result.log" "$E6_0O_RUN/runtime-after.log" \
+  "$E6_0Q_RUN/actual_result.yaml" "$E6_0Q_RUN/evidence.sha256" \
+  "$E6_0Q_RUN/action-result.log" "$E6_0Q_RUN/home-gate-final.log" \
   > "$RUN_DIR/source_hashes.sha256"
 PYTHONDONTWRITEBYTECODE=1 python3 "$RUN_DIR/analyze_vla_canary_readiness_e6_0.py" \
   "${analyzer_args[@]}" --output "$RUN_DIR/canary-readiness.json" \
@@ -201,7 +205,7 @@ jq -e '
   and .requested_canary.task_id == 0
   and .requested_canary.axis_profile == "P14_A"
   and .requested_canary.scenario == "NO_BOX_READY"
-  and .blocking_gate_count == 3
+  and .blocking_gate_count == 2
   and .e6_0_physical_authorized == false
   and .physical_publishers == 0
   and .robot_state_read == false
@@ -212,7 +216,8 @@ jq -e '
   and ([.gates[] | select(.id == "fresh_physical_preflight") | .status] == ["PASS"])
   and ([.gates[] | select(.id == "no_box_self_collision_swept_volume") | .status] == ["PASS_WITH_DOCUMENT_PROXY_ASSUMPTION"])
   and ([.gates[] | select(.id == "physical_temporal_semantics") | .status] == ["PASS_PROJECT_ONE_POINT_CONTRACT"])
-  and ([.gates[] | select(.status == "BLOCKED")] | length == 3)
+  and ([.gates[] | select(.id == "recovery_exact_and_validated") | .status] == ["PASS"])
+  and ([.gates[] | select(.status == "BLOCKED")] | length == 2)
 ' "$RUN_DIR/canary-readiness.json" >/dev/null
 
 cat > "$RUN_DIR/actual_result.yaml" <<EOF
@@ -228,8 +233,8 @@ requested_axis_profile: P14_A
 requested_scenario: NO_BOX_READY
 fixture_e4_4_required_for_e6_0: false
 fixture_e4_4_required_for_e7_plus: true
-blocking_gate_count: 3
-blocking_gates: recovery,physical_executor,acceleration
+blocking_gate_count: 2
+blocking_gates: physical_executor,acceleration
 project_one_point_temporal_contract: passed
 clamp_geometry_basis: owner_accepted_document_proxy_not_certified
 robot_state_read: false
@@ -239,7 +244,7 @@ physical_movement_commanded: false
 physical_executor_authorized: false
 e6_0_physical_authorized: false
 recovery_or_stop: NOT_APPLICABLE_LOCAL_ONLY_NO_PHYSICAL_TRANSPORT
-next_work: KEEP_VLA_STOPPED_VALIDATE_RECOVERY_OBTAIN_ACCELERATION_LIMIT_THEN_IMPLEMENT_PHYSICAL_TRANSPORT
+next_work: KEEP_VLA_STOPPED_OBTAIN_ACCELERATION_LIMIT_THEN_IMPLEMENT_AND_REVIEW_PHYSICAL_TRANSPORT_STOP
 EOF
 
 (

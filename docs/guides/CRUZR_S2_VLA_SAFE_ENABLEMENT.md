@@ -408,6 +408,45 @@ chasis. La prueba histórica demuestra que una pulsación verde sólo genera
 `Power click`. No se debe pulsar ninguno para improvisar el rearme; corresponde
 el ciclo completo supervisado de la sección 5.3.3 y repetir después el auditor.
 
+El reinicio completo siguiente resolvió ese estado. E6.0G
+`20260903T132151_E6.0G` demostró de nuevo actuadores habilitados, action server,
+acciones listas, paros `0/0`, cargador fuera y VLA detenido con cero
+publicadores. El primer `ready` físico se lanzó desde home medido, pero el XML
+vendor falló de forma determinista: su acción de cintura contiene dos valores
+`-0.0; 0.0` y el S2 v0.2.0 sólo expone `waist_yaw`. Esa rama falló antes de
+emitir `MoveTo` y el paralelo abortó cabeza/brazos tras un avance pequeño. El
+robot quedó quieto, sin force/collision/fault; `cruzr/home` se usó una sola vez
+para invertir ese avance conocido y terminó `SUCCEED/status=4`. La medida final
+fue cuerpo `0,002589 rad`, brazos `0,000671 rad`, velocidad cero.
+
+E6.0P `20260903T133300_E6.0P` corrigió únicamente esa dimensión en una copia
+versionada: `joint_angles="0.0"`. El XML S2 tiene hash
+`c767f7396a325d375752fbce2351837e7f5e0c750902e4815ddd7acb24e2a9b2`; el
+vendor intacto permanece en el repositorio con hash `f4025124…d8323`. El XML
+vivo se sustituyó atómicamente con backup
+`/home/walker/cruzr-vla/backups/20260903T133300_E6.0P`, sin recarga, tarea,
+inferencia, publicador ni movimiento.
+
+E6.0Q `20260903T135236_E6.0Q` validó físicamente READY→HOME sin caja. READY
+terminó `SUCCEED/status=4` y quedó estacionario, sin fault y a menos de
+`0,001843 rad` de sus consignas nativas. El primer recovery abortó antes de
+movimiento: E6.0N había puesto el YAML nombrado bajo la raíz de
+`manipulation_task_manager`, pero `MetaMove` lo busca bajo
+`manipulation_meta_tasks`. El fatal `GetRequestFromYamlNode` reinició una vez
+el contenedor y las articulaciones siguieron en READY. Se movió el YAML a la
+ruta runtime correcta y se corrigió también el último remanente 2D de cintura
+en el XML recovery (`joint_angles="0.0"`); XML `9e47b6ee…4fbcc`, backup
+`/home/walker/cruzr-vla/backups/20260903T134947_E6.0Q`. El arreglo no recargó,
+invocó ni movió. El segundo recovery terminó `SUCCEED/status=4` y la medida
+final fue HOME en 20 ejes: cuerpo `0,002589 rad`, brazos `0,000959 rad`,
+velocidad cero. VLA permaneció detenido y sin publicadores. El gate
+ready/recovery queda cerrado; el canary del checkpoint continúa bloqueado por
+transporte/STOP físico y aceleración.
+
+El auditor local se regeneró como `20260903T140006_E6.0-CHECK`: recovery
+figura `PASS` y quedan exactamente dos gates `BLOCKED`, transporte/STOP físico
+y límite de aceleración. No se habilitó ningún modo activo.
+
 ## Incompatibilidades corregidas en el overlay
 
 El paquete original no arrancaba tal como fue entregado:
