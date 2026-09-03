@@ -129,8 +129,10 @@ E4.0, run final corregido `20260901T075728_E4.0`, resolvió pasivamente la primi
 `2,0 + 3,0 s`, pero no es la inversa exacta de la secuencia completa. El task
 S2 suministrado `s2_bio_vla/s2_vla_pick_large_teleop_ready` no está instalado
 ni registrado, tampoco aparece en el upgrade v0.2.0 entregado; los ready
-existentes tienen otra semántica. La revisión v2 reordenó correctamente los
-14 valores MetaMove al orden 20D del checkpoint y resolvió el segundo valor de
+existentes tienen otra semántica. La revisión v2 reordenó correctamente
+hombro/codo, pero su intercambio de muñecas fue descartado por E6.0A: el orden
+directo coincide con task 0/frame 0 a `0,002112805 rad`, frente a
+`0,614627484 rad` con swap. También resolvió el segundo valor de
 cintura como `waist_yaw=0`, porque el URDF S2 sólo tiene ese eje. El XML no
 fija los tres lifter: los hereda, el ejecutor S2 descarta sus índices 16–18 y
 los 500 episodios abarcan múltiples configuraciones. No hay límites runtime
@@ -164,24 +166,94 @@ incertidumbre es aproximadamente ±16,84/13,30/10,00 mm y ±0,868°. E4.1 queda
 `METRIC_FIXTURE_CANDIDATE_RESOLVED_PHYSICAL_GATES_OPEN`; E4.0, colisiones,
 swept volume y recovery mantienen todo movimiento bloqueado.
 
-E4.1C cerró la primera comprobación de colisiones offline en
-`20260901T090235_E4.1C`. El analizador versionado reconstruyó 121 muestras de
+E4.1C cerró la primera comprobación de colisiones offline y se repitió con el
+orden de muñecas corregido en `20260903T093408_E4.1C`. El analizador versionado
+reconstruyó 121 muestras de
 `preposition→forward→back`, con elevador del episodio 90, y transformó los
-meshes URDF de 46 links al fixture E4.1. De 210 candidatos AABB, 146 se
+meshes URDF de 46 links al fixture E4.1. De 60 candidatos AABB, 32 se
 confirmaron por intersección triángulo/plano contra la superficie de un tablero
-sólido; afectan muñecas y efectores de ambos brazos. B0 quedó libre en la
+sólido; afectan doce links de muñeca, sensor y efector. B0 quedó libre en la
 criba AABB y no se colocó. Resultado
 `SOLID_TABLETOP_CANDIDATE_REJECTED_BY_VENDOR_URDF_SWEEP`: no hacen falta aún
 medidas de patas o espesor porque el plano superior de espesor cero ya falla.
+El run `20260901T090235_E4.1C` queda descartado por el mapping anterior.
 E4.1D cerró la duda de identidad, pero no la falta de CAD, en
-`20260903T083140_E4.1D`: el SDK asocia PGC-140-50 con
+`20260903T093440_E4.1D`: el SDK asocia PGC-140-50 con
 `HW_TYPE=cruzr_s2_v1_gripper`; esta unidad lleva abrazaderas laterales pasivas
 con `HW_TYPE=cruzr_s2_v1`. El mecanismo no es el mismo y no existen cotas/CAD
 locales que validen `pgc/finger` como envolvente sustituta. La partición de
-E4.1C atribuye 101 cruces a PGC/dedos y 45 a muñecas/sensores de fuerza. Estos
-45 bastan para mantener rechazado el tablero sólido sin el efector PGC. Sólo
+E4.1C atribuye 10 cruces a PGC/dedos y 22 a muñecas/sensores de fuerza. Estos
+22 bastan para mantener rechazado el tablero sólido sin el efector PGC. Sólo
 se autoriza diseñar offline huecos u otra pose. No se conectó al robot, no
 hubo inferencia/publicador/movimiento y E4.3/E4.4 siguen bloqueados.
+
+E4.1E ejecutó el siguiente cálculo permitido en
+`20260903T093443_E4.1E`, también completamente local. Muestreó 401 estados,
+seccionó muñecas/sensores en `z=-10/0/+10 mm` y aplicó 55 mm de margen XY.
+Con B0 y su apoyo fijos, una búsqueda de tablero sólido en ±5° obtuvo 128.386
+colocaciones con apoyo y cero libres de colisión. La referencia global a
+`+76,5°`/`0,856 m` queda rechazada por salir de la alineación calibrada. Las
+muescas frontales candidatas son izquierda
+`[-0,720,-0,470]×[0,000,0,200] m` y derecha
+`[0,400,0,650]×[0,000,0,170] m`. No invaden el apoyo de B0, pero omiten la
+geometría de las abrazaderas reales, patas/espesor, entrada y recovery. No se
+autoriza fabricar, acercar la mesa, colocar B0 ni mover. E4.1F agotó después
+las especificaciones oficiales sin exigir medición manual.
+
+E4.1F (`20260903T085912_E4.1F`) verificó por hash manual SDK/producto,
+USD/URDF, XML ready y metadatos VLA. Las fuentes publican B0
+`0,60×0,40×0,22 m`, plataforma `1,00 m`, carga bimanual global `15 kg` y PGC
+`0,1385×0,075×0,075 m`/carrera `0,05 m`. La PGC requiere
+`cruzr_s2_v1_gripper` y no representa las placas `cruzr_s2_v1`. Aunque el
+manual enumera `clamp hands`, no publica envolvente, TCP, masa, CoG ni CAD; los
+modelos contienen sólo PGC. No se infieren dimensiones ni se exige medirlas.
+Los gates físicos siguen cerrados y sólo se libera E5.0 offline.
+
+E5.0 completó ese gate local en `20260903T090355_E5.0`. Pasaron las 16
+combinaciones de ocho perfiles por `low/middle`: 544 casos, 32 válidos
+aceptados, 512 inválidos rechazados y 16 probes de máscara/hold. Los holds son
+midpoints sintéticos, no estado articular vivo. El código auditado no usa ROS,
+red, publicadores ni comandos físicos y el robot no fue consultado ni movido.
+Por tanto se autoriza sólo E5.1 shadow; canary y ejecutor físico siguen
+bloqueados por los gates de ready, fixture, recovery, aceleración y contrato
+vendor.
+
+E5.1 se ejecutó después como shadow-replay local, run
+`20260903T091319_E5.1`. Las 20 inferencias C0 ya congeladas en E3.0 se
+compararon bajo los ocho perfiles, sin repetir el modelo por una variable que
+sólo existe en el ejecutor: 160 bundles, 148 aceptados, 12 rechazados de forma
+segura y 160/160 máscaras correctas. Los 12 rechazos habilitan elevador y se
+explican por límites de `lifter_pitch_1/3_joint`; los perfiles sin `L`
+aceptaron 80/80. No hubo conexión ni estado vivo del robot. Se libera sólo
+E5.2 offline; esta evidencia no autoriza mover ni seleccionar definitivamente
+un perfil físico.
+
+E5.2 (`20260903T091901_E5.2`) aplicó una regla explícita de parsimonia: menor
+perfil dentro de `max(0,0001 rad,1 %)` del mejor MAE con 5/5 aceptaciones.
+Seleccionó `P14_A` para las cuatro tasks. H no mejoró materialmente, W empeoró
+ligeramente y L empeoró claramente, además de 12/80 rechazos en perfiles que
+lo habilitan. Esta selección sólo vale para replay del dataset. E6.0 permanece
+bloqueado; no se deriva autorización física de P14.
+
+`E6.0-CHECK` vigente (`20260903T094623_E6.0-CHECK`) separó los gates por escenario.
+E4.4 y la envolvente clamp/fixture no aplican al canary sin caja cuando
+plataforma y B0 están retiradas, pero siguen bloqueando E7+. E6.0A
+`20260903T093145_E6.0A` confirmó ready B dentro del soporte del checkpoint y
+definió hold fresco de H/L/W; el run `092935` se descarta por usar el swap de
+muñecas antiguo. Para E6.0 quedan seis requisitos: ready S2
+instalado/registrado, recovery validado, barrido de
+autocolisión/entrada/salida, ejecutor revisado, límite de aceleración y
+contrato temporal físico. La auditoría y el frontend
+`run_cruzr_vla_canary.sh --check` son locales; `--one-point`, `--one-chunk`,
+`--window` y `--stop` todavía se rechazan antes de acceder al robot.
+
+E6.0B (`20260903T094547_E6.0B`) muestreó 401 estados del camino exacto
+`preposición→A→B→A→preposición`. Con FK vendor y OBB/SAT sobre 46 links
+obtuvo cero violaciones URDF y cero solapes entre links a distancia cinemática
+mayor que tres. Los 58 pares cercanos reportados no se clasifican: falta la
+SRDF/matriz de colisiones permitidas, y la geometría PGC no representa las
+abrazaderas pasivas instaladas. Es un PASS parcial de broad phase, no un PASS
+de autocolisión ni una autorización física.
 
 ## Incompatibilidades corregidas en el overlay
 

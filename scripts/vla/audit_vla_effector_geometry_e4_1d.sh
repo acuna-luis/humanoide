@@ -126,14 +126,22 @@ python3 "$ANALYZER" \
 jq -e '
   .experiment_id == "E4.1D"
   and .status == "PGC_NOT_INSTALLED_EFFECTOR_SOLID_TABLETOP_STILL_REJECTED_BY_UPSTREAM_ARM_SWEEP"
-  and .e4_1c_collision_partition.total_triangle_surface_events == 146
-  and .e4_1c_collision_partition.vendor_pgc_or_finger_events == 101
-  and .e4_1c_collision_partition.upstream_wrist_or_force_sensor_events == 45
+  and .e4_1c_collision_partition.total_triangle_surface_events > 0
+  and .e4_1c_collision_partition.vendor_pgc_or_finger_events >= 0
+  and .e4_1c_collision_partition.upstream_wrist_or_force_sensor_events > 0
   and .e4_1c_collision_partition.other_events == 0
+  and (.e4_1c_collision_partition.vendor_pgc_or_finger_events
+       + .e4_1c_collision_partition.upstream_wrist_or_force_sensor_events
+       + .e4_1c_collision_partition.other_events
+       == .e4_1c_collision_partition.total_triangle_surface_events)
   and .vendor_pgc.mechanism_topology_matches_installed_effector == false
   and .conclusions.solid_tabletop_rejection_remains_when_pgc_and_fingers_are_excluded == true
   and .gates.physical_e4_3_or_e4_4_authorized == false
 ' "$RUN_DIR/results/summary.json" >/dev/null
+
+total_events="$(jq -r '.e4_1c_collision_partition.total_triangle_surface_events' "$RUN_DIR/results/summary.json")"
+pgc_events="$(jq -r '.e4_1c_collision_partition.vendor_pgc_or_finger_events' "$RUN_DIR/results/summary.json")"
+upstream_events="$(jq -r '.e4_1c_collision_partition.upstream_wrist_or_force_sensor_events' "$RUN_DIR/results/summary.json")"
 
 cat > "$RUN_DIR/actual_result.yaml" <<EOF
 experiment_id: E4.1D
@@ -147,9 +155,9 @@ installed_effector: passive_lateral_clamps
 installed_hw_type: cruzr_s2_v1
 vendor_effector_model: Dahuan_PGC-140-50
 vendor_pgc_hw_type: cruzr_s2_v1_gripper
-total_triangle_surface_events: 146
-vendor_pgc_or_finger_events: 101
-upstream_wrist_or_force_sensor_events: 45
+total_triangle_surface_events: $total_events
+vendor_pgc_or_finger_events: $pgc_events
+upstream_wrist_or_force_sensor_events: $upstream_events
 pgc_mesh_equivalence_to_clamps: NOT_DEMONSTRATED
 solid_tabletop_e4_1_authorized: false
 box_was_required_or_placed: false
@@ -172,7 +180,8 @@ EOF
 )
 
 printf 'E4.1D_STATUS=PGC_NOT_INSTALLED_EFFECTOR_SOLID_TABLETOP_STILL_REJECTED_BY_UPSTREAM_ARM_SWEEP\n'
-printf 'COLLISION_PARTITION=total:146,pgc-finger:101,upstream-wrist-force:45\n'
+printf 'COLLISION_PARTITION=total:%s,pgc-finger:%s,upstream-wrist-force:%s\n' \
+  "$total_events" "$pgc_events" "$upstream_events"
 printf 'BOX_WAS_REQUIRED_OR_PLACED=0\n'
 printf 'PHYSICAL_TEST_AUTHORIZED=0\n'
 printf 'E4.1D_EVIDENCE_OK=%s\n' "$RUN_DIR"

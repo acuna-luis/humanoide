@@ -168,7 +168,13 @@ def run_campaign(profile: dict[str, Any], axis_profile: str, fixture: str) -> li
         ("runtime_id_mismatch", "identity", lambda message, _sink: message.__setitem__("runtime_id", "wrong")),
         ("checkpoint_id_mismatch", "identity", lambda message, _sink: message.__setitem__("checkpoint_id", "wrong")),
         ("task_id_invalid", "identity", lambda message, _sink: message.__setitem__("task_id", 99)),
-        ("axis_profile_mismatch", "identity", lambda message, _sink: message.__setitem__("axis_profile", "P14_A")),
+        (
+            "axis_profile_mismatch",
+            "identity",
+            lambda message, _sink: message.__setitem__(
+                "axis_profile", "P20_AHLW" if axis_profile == "P14_A" else "P14_A"
+            ),
+        ),
         ("fixture_mismatch", "identity", lambda message, _sink: message.__setitem__("fixture", "middle" if fixture == "low" else "low")),
         ("client_mismatch", "session", lambda message, _sink: message.__setitem__("client_id", "e3.2-second")),
         ("chunk_id_invalid", "sequence", lambda message, _sink: message.__setitem__("chunk_id", -1)),

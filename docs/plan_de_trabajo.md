@@ -1,6 +1,6 @@
 # Plan de trabajo: recoger, transportar, vaciar y depositar una caja
 
-**Fecha:** 2026-08-28
+**Fecha:** 2026-09-03
 
 **Estado:** `PLANIFICADO`; este documento no autoriza movimiento físico
 
@@ -44,9 +44,11 @@ Para eliminar “aproximadamente” y “frente al robot” se define:
    sobre la línea central del robot y proyectado verticalmente al suelo.
 4. `PLATFORM_FRONT`: línea del borde frontal de la plataforma proyectada al
    suelo. `D_BUMPER_PLATFORM` será la distancia perpendicular entre ambas.
-5. `D_BUMPER_PLATFORM=UNRESOLVED`. No se coloca la plataforma delante del
-   robot ni se ejecuta una inferencia nominal hasta resolverla en E4.1 mediante
-   pose oficial, cinemática/alcance y encuadre del dataset.
+5. E4.1 resolvió una candidata métrica para `platform_in_base`, con
+   `D_BUMPER_PLATFORM_signed_m=-0,092859226 m`, pero E4.1C/E4.1D/E4.1E
+   rechazaron un tablero sólido en esa alineación. No se coloca la plataforma
+   delante del robot ni se ejecuta inferencia nominal hasta resolver la
+   envolvente de las abrazaderas, la entrada y el recovery.
 6. Los XML `55/70/85/100/115` están en el árbol alternativo `codes` para Cruzr,
    no en el árbol S2 canónico `codes-S2`. E4.2 encontró coincidencias numéricas
    `55/70/85` en tasks 0–1 y `100/115` en tasks 2–3, pero también configuraciones
@@ -76,17 +78,17 @@ Para eliminar “aproximadamente” y “frente al robot” se define:
     activos. Primero se ejecuta `--stop`, luego se modifica el escenario y se
     fotografía, y sólo después se reinicia shadow.
 
-**Fixture disponible declarado por el propietario:** `MESA_T1`, dimensiones
-nominales `1,85 m` de ancho × `0,80 m` de fondo × `1,00 m` de altura. Es
-`PENDIENTE` hasta ejecutar E1.0: medir tablero y cuatro esquinas, comprobar
-nivelación, rigidez, estabilidad y registrar patas/travesaños. Su disponibilidad
-no resuelve `D_BUMPER_PLATFORM` ni autoriza acercarla al robot.
+**Fixture disponible medido por el propietario:** `MESA_T1`, dimensiones
+`1,80 m` de ancho × `0,80 m` de fondo × `1,00 m` de altura, con las cuatro
+esquinas a `1,00 m`, rígida y estable. E1.0 quedó cerrado para progresión
+offline/shadow; las fotos, marcas y geometría inferior continúan diferidas. La
+mesa sólida fue rechazada para la alineación E4.1 y no debe acercarse al robot.
 
 #### Inventario mínimo de superficies
 
 | Elemento | Para qué se usa | Estado y decisión |
 |---|---|---|
-| `MESA_T1` | Reproducir el fixture SDK a 1 m; E4.2 lo correlaciona con el subconjunto task 2/3, episodios 90/91, sin resolver aún `platform_in_base` | Disponible; E1.0 cerrado, uso físico bloqueado por E4.0/E4.1 |
+| `MESA_T1` | Reproducir el fixture SDK a 1 m; E4.1 resolvió una candidata métrica y E4.2 la correlaciona con tasks 2/3, episodios 90/91 | Disponible y medida; su tablero sólido no tiene pose libre en la envolvente alineada E4.1E. No acercar, cortar ni fabricar aún |
 | `PLATAFORMA_TASK_AJUSTABLE` | Futuras variantes de altura si UBTECH confirma el contrato S2 y se calibra cada pose de soporte | No adquirir/fabricar: E4.2 rechazó una altura escalar por task. Una futura solución podrá ser una sola mesa elevadora rígida, bloqueable y estable; no se usan mesas apiladas ni calzos |
 | `RECEPTOR_VOLCADO` | Recibir el contenido de B0 durante `TIP/POUR` | No pertenece a los tasks 0–3 ni al checkpoint actual; dimensiones, borde y altura se definirán con la primitiva y los datos propios de volcado |
 | `MESA_DESTINO_VACIA` | Recibir B0 después de vaciarla a otra altura | Sólo para la misión ampliada. Será una estación separada o una superficie existente cuya altura/pose entren en el nuevo dataset |
@@ -738,12 +740,12 @@ en `task_list.yaml`. Hay candidatos instalados con otros hashes y semánticas:
 `cruzr_vla/clamp_ready.xml` sí la llama pero no está registrado y omite la
 preposición S2 suministrada. No son sustitutos canónicos.
 
-La secuencia suministrada sería nominalmente `1,5 + 2,5 = 4,0 s`. La revisión
-v2 corrigió un error de contrato del análisis anterior: la primitiva MetaMove
-está en orden hombro–codo–muñeca y debe reordenarse a codo–hombro–muñeca para
-el checkpoint 20D. El candidato correcto comienza
-`[-1,383,-0,754,-0,296,-0,574,-1,888,0,204,-0,410,…]`, no por los siete
-valores MetaMove concatenados. El URDF S2 sólo contiene `waist_yaw_joint`; el
+La secuencia suministrada sería nominalmente `1,5 + 2,5 = 4,0 s`. E4.0 acertó
+al reordenar hombro/codo, pero intercambió erróneamente `wrist_pitch` y
+`wrist_roll`. E6.0A lo corrigió contra task 0/frame 0: el candidato comienza
+`[-1,383,-0,754,-0,296,-0,574,-1,888,-0,410,0,204,…]`; el error máximo es
+`0,002112805 rad`, mientras el swap produce `0,614627484 rad`. El URDF S2
+sólo contiene `waist_yaw_joint`; el
 ejecutor genérico ordena `[waist_pitch,waist_yaw]` y el ejecutor S2 conserva
 el índice 19, por lo que el segundo cero del XML resuelve `waist_yaw=0`.
 
@@ -837,13 +839,13 @@ Se implementaron y ejecutaron, sin conectar con el robot:
 ./scripts/vla/audit_vla_fixture_collision_e4_1c.sh --run
 ```
 
-El run `20260901T090235_E4.1C` reconstruyó por FK la secuencia vendor
+El run corregido `20260903T093408_E4.1C` reconstruyó por FK la secuencia vendor
 `preposition → forward_1 → forward_2 → back_1 → back_2`, usando los tres
 ángulos de elevador correlacionados del episodio 90. Muestreó 121 estados y
 transformó los meshes de colisión de 46 links al `PLATFORM_FRAME` de E4.1.
-La primera criba AABB produjo 210 candidatos; la comprobación directa
-triángulo/plano confirmó **146 intersecciones** con la superficie del tablero
-sólido, en nueve links de muñeca/efector. B0 produjo cero solapes AABB y no se
+La primera criba AABB produjo 60 candidatos; la comprobación directa
+triángulo/plano confirmó **32 intersecciones** con la superficie del tablero
+sólido, en doce links de muñeca/sensor/efector. B0 produjo cero solapes AABB y no se
 colocó ni fue necesaria para el ensayo.
 
 Esto rechaza la mesa sólida en la pose E4.1 bajo la geometría URDF vendor antes
@@ -853,7 +855,8 @@ es todavía un certificado del hardware físico, porque el URDF usa meshes
 tampoco se modeló la entrada arbitraria a la preposición y el `back` sigue sin
 ser una inversa completa. El siguiente trabajo permitido es sólo uno de estos
 dos caminos offline: validar la envolvente dimensional real de las abrazaderas
-o derivar otra pose/plataforma rígida con huecos verificados. **No colocar B0,
+o derivar otra pose/plataforma rígida con huecos verificados. El run
+`20260901T090235_E4.1C` queda descartado por el mapping anterior. **No colocar B0,
 no acercar la mesa y no ejecutar E4.3/E4.4.**
 
 ##### Experimento 4.1D — Separar el modelo PGC del brazo real
@@ -869,7 +872,7 @@ Se implementaron y ejecutaron localmente:
 ./scripts/vla/audit_vla_effector_geometry_e4_1d.sh --run
 ```
 
-El run `20260903T083140_E4.1D` cruzó el URDF, la sección 5.10 del SDK, el
+El run `20260903T093440_E4.1D` cruzó el URDF, la sección 5.10 del SDK, el
 contrato del efector instalado y los eventos E4.1C. El PGC-140-50 es una pinza
 con cuatro joints prismáticos en el URDF y el SDK exige para ella
 `HW_TYPE=cruzr_s2_v1_gripper`. La unidad verificada usa abrazaderas laterales
@@ -877,15 +880,90 @@ pasivas con `HW_TYPE=cruzr_s2_v1`: no es el mismo mecanismo. Como no se dispone
 del CAD ni de cotas completas de las abrazaderas, tampoco se acepta PGC como
 proxy geométrico validado.
 
-De las 146 intersecciones triángulo/plano, 101 corresponden a `pgc/finger` y
-45 permanecen en `wrist_pitch`, `wrist_roll` y `sixforce`. Por tanto, el
+De las 32 intersecciones triángulo/plano, 10 corresponden a `pgc/finger` y
+22 permanecen en `wrist_pitch`, `wrist_roll` y `sixforce`. Por tanto, el
 tablero sólido sigue rechazado aunque se excluya completamente el efector PGC.
 No se colocó B0 ni hubo red al robot, inferencia, publicador o movimiento.
+El intento `20260903T093412_E4.1D` queda descartado por una aserción obsoleta
+de conteos; el wrapper corregido valida ahora la partición dinámicamente.
 
 **Siguiente ensayo:** calcular offline el hueco mínimo barrido por las
 muñecas/sensores, con márgenes de incertidumbre, y compararlo con una pose
 alternativa. No acercar la mesa ni colocar la caja hasta obtener una solución
 sin intersecciones y resolver entrada/recovery.
+
+##### Experimento 4.1E — Pose sólida alternativa y huecos upstream
+
+**Estado:**
+`UPSTREAM_CUTOUT_CANDIDATE_DERIVED_SOLID_ALIGNED_POSE_NOT_FOUND_CLAMP_AND_RECOVERY_UNRESOLVED`;
+`physical_test_authorized=false`.
+
+Se implementaron y ejecutaron localmente:
+
+```bash
+./scripts/vla/audit_vla_fixture_design_e4_1e.sh --check
+./scripts/vla/audit_vla_fixture_design_e4_1e.sh --run
+```
+
+El run `20260903T093443_E4.1E` elevó el barrido a 401 estados y seccionó
+`wrist_pitch`, `wrist_roll` y `sixforce` de ambos brazos en el plano del
+tablero y a ±10 mm. A la incertidumbre XY/yaw de E4.1 añadió 20 mm de holgura
+de ingeniería y redondeó hacia fuera a un margen total de **55 mm**.
+
+Manteniendo fija la pose de B0 y 50 mm de apoyo a su alrededor, la búsqueda de
+mesa sólida en ±5° —paso angular 0,25° y traslación 10 mm— encontró 128.386
+colocaciones con apoyo válido y **cero sin colisión**. Existe sólo una
+referencia matemática muy fuera de la alineación calibrada: giro `+76,5°` y
+traslación del origen `0,856 m`; se rechaza para operación.
+
+La alternativa calculada son dos muescas rectangulares abiertas por el borde
+frontal, expresadas en el `PLATFORM_FRAME` nominal:
+
+```yaml
+left:  {x_m: [-0.720, -0.470], y_m: [0.000, 0.200]}
+right: {x_m: [ 0.400,  0.650], y_m: [0.000, 0.170]}
+```
+
+Ocupan `0,0925 m²` (`6,42 %` del tablero), dejan un puente frontal central
+de `0,870 m` y no invaden la huella de apoyo B0+50 mm. Son **sólo una candidata
+upstream**: no incluyen CAD/cotas de las abrazaderas reales, espesor/patas,
+rigidez estructural, entrada a preposición ni recovery completo. No autorizan
+acercar o cortar la mesa, colocar B0 ni ejecutar movimiento.
+
+**Siguiente ensayo único:** E4.1F, agotar las especificaciones/modelos
+oficiales y auditar si contienen una envolvente clamp trazable. No se exige
+medición manual.
+
+##### Experimento 4.1F — Auditar la geometría oficial del clamp
+
+**Estado:**
+`OFFICIAL_SOURCES_AUDITED_PASSIVE_CLAMP_DIMENSIONS_NOT_PUBLISHED_PGC_EXCLUDED`;
+`physical_test_authorized=false`; mediciones manuales `0`.
+
+Se implementaron y ejecutaron localmente:
+
+```bash
+./scripts/vla/audit_vla_official_geometry_e4_1f.sh --check
+./scripts/vla/audit_vla_official_geometry_e4_1f.sh --run
+```
+
+El run `20260903T085912_E4.1F` verificó mediante SHA-256 el manual SDK, manual
+de producto, USD/URDF `cruzr_s2_v1`, XML ready y metadatos del dataset
+suministrados. Las cotas oficiales utilizables son:
+
+- B0 `0,60 × 0,40 × 0,22 m` y plataforma a `1,00 m`;
+- carga máxima global bimanual `15 kg`, que no es un límite específico del
+  clamp;
+- PGC-140-50: cuerpo `0,1385 × 0,075 × 0,075 m`, carrera `0,05 m`; el SDK la
+  asigna a `HW_TYPE=cruzr_s2_v1_gripper`, no al clamp instalado;
+- el manual enumera `clamp hands` como familia intercambiable, pero no publica
+  su envolvente, TCP, masa, CoG ni CAD.
+
+El USD/URDF oficial contiene `PGC-140-50`/`pgc/finger`, no una geometría
+explícita de las placas pasivas. Por tanto no se sustituye PGC ni se infieren
+cotas desde fotografías. E4.3/E4.4 y cualquier modificación/uso físico del
+fixture permanecen bloqueados, pero **no se espera una medición manual**:
+queda autorizado continuar con E5.0 offline, independiente del fixture.
 
 #### Experimento 4.2 — Resolver qué alturas corresponden a low/middle
 
@@ -976,21 +1054,36 @@ campo queda `null`, toda la Serie 7 permanece bloqueada.
 
 #### Experimento 5.0 — Tests de los ocho perfiles
 
-**Estado:** `PARCIAL`. E3.2 ya demuestra aceptación/máscara/hold para los ocho
-perfiles en tests unitarios y fault suite completa para `P20_AHLW/low`. Falta
-ejecutar la fault suite completa sobre las ocho combinaciones y low/middle.
+**Estado:** `PASS_COMPLETE_SINK_MATRIX_OFFLINE`. E5.0 se ejecutó en el run
+`20260903T090355_E5.0`: 8 perfiles × 2 fixtures, 16/16 celdas aprobadas,
+544 casos totales, 32 válidos aceptados, 512 inválidos rechazados y 16/16
+pruebas explícitas de máscara/hold aprobadas. Se corrigió antes de la campaña
+el caso `axis_profile_mismatch` de `P14_A`, que antes no producía un mismatch
+real para ese mismo perfil.
 
 **Escenario:** sin robot. Chunks guardados y poses hold low/middle. Ejecutar
 `test_vla_executor_sink.py` para `P14_A`, `P15_AW`, `P16_AH`, `P17_AL`,
 `P17_AHW`, `P18_ALW`, `P19_AHL`, `P20_AHLW`.
 
-**PASS:** ejes habilitados copian el chunk; bloqueados mantienen la pose real,
-no cero; fault suite aprobada y cero import/publicación de `RobotCommand`.
+**Resultado:** los ejes habilitados copiaron valores del chunk distintos del
+hold; los bloqueados ignoraron esos valores y conservaron el hold del fixture.
+En E5.0 `low/middle` son midpoints sintéticos no nulos, no poses actuales del
+robot ni `VLA_READY_*`. El sink no contiene ROS, red, API de publisher/action
+ni `RobotCommand`; hubo cero lectura o movimiento del robot. Esto completa el
+gate offline VLA-5 y sólo autoriza implementar/ejecutar E5.1 en shadow.
+
+```bash
+./scripts/vla/run_vla_executor_sink_matrix_e5_0.sh --check
+./scripts/vla/run_vla_executor_sink_matrix_e5_0.sh --run
+```
 
 #### Experimento 5.1 — Matriz shadow 4 tasks × 8 perfiles × 5
 
-**Estado:** `PENDIENTE_CODIGO` hasta implementar
-`scripts/vla/run_vla_shadow_matrix.sh`.
+**Estado:** `PASS_COMPLETE_OFFLINE_SHADOW_REPLAY_MATRIX`. El run
+`20260903T091319_E5.1` reutilizó las 20 inferencias C0 de E3.0 con hashes
+válidos y checkpoint idéntico antes/después, y generó 32 celdas × 5 = 160
+bundles. Así cada uno de los ocho perfiles recibe exactamente el mismo chunk,
+imagen y estado 20D para cada task/seed.
 
 **Comando de cada celda:**
 
@@ -1002,11 +1095,29 @@ VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment E5.1)"
 ```
 
 Cambiar escenario/task/perfil según la tabla 0.3; tasks 1/3 usan replay HELD,
-no un agarre físico. **PASS:** 160 bundles y cero publishers.
+no un agarre físico. La matriz completa se reproduce con:
+
+```bash
+./scripts/vla/run_vla_shadow_matrix_e5_1.sh --check
+./scripts/vla/run_vla_shadow_matrix_e5_1.sh --run
+```
+
+**Resultado real:** 148 `ACCEPT_STRUCTURAL`, 12 `REJECT_SAFE` y 160/160
+máscaras correctas. Los rechazos aparecen sólo al habilitar `L`: task 1/seed 2
+excede velocidad en `lifter_pitch_3_joint`; task 2/seed 0 y task 3/seed 0
+salen del rango conservador en `lifter_pitch_1_joint`. Los perfiles sin
+elevador aceptaron 80/80 bundles. Son frames/estados grabados del dataset, no
+el fixture vivo; GPU/VRAM, frecuencia y `flag_pred` no estaban presentes en la
+evidencia E3.0. No hubo red, ROS, estado vivo, publisher ni movimiento. Sólo
+queda autorizado E5.2, selección preliminar offline; no un canary físico.
 
 #### Experimento 5.2 — Selección shadow preliminar
 
-**Estado:** `PENDIENTE_CODIGO`.
+**Estado:** `PASS_PRELIMINARY_P14_ALL_TASKS_PHYSICAL_BLOCKED`. El run
+`20260903T091901_E5.2` seleccionó `P14_A` para tasks 0–3 entre perfiles con
+5/5 bundles aceptados. La regla elige el menor número de ejes dentro de
+`max(0,0001 rad, 1 %)` del mejor MAE elegible; esta banda sólo decide el
+análisis, no es un límite mecánico.
 
 ```bash
 VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment E5.2)"
@@ -1019,10 +1130,35 @@ python3 scripts/vla/analyze_vla_campaign.py \
 **PASS:** perfil candidato por task y razón cuantitativa para H/L/W. No autoriza
 movimiento.
 
+**Resultado real:** H frente a P14 cambió el MAE medio entre `-5,0×10⁻⁹` y
+`+1,20×10⁻⁶ rad`; W lo empeoró `+6,88×10⁻⁶…+1,16×10⁻⁵ rad`; ninguno alcanza
+la banda material. L empeoró `+7,83×10⁻⁴…+3,48×10⁻³ rad` y los perfiles que lo
+incluyen rechazaron 12/80 bundles. Por ello el candidato preliminar es P14 para
+las cuatro tareas. Se reproduce de forma autocontenida con:
+
+```bash
+./scripts/vla/run_vla_profile_selection_e5_2.sh --check
+./scripts/vla/run_vla_profile_selection_e5_2.sh --run
+```
+
+No se evaluó éxito físico. E6.0 sigue bloqueado; el precheck siguiente separa
+los requisitos que sí aplican a un escenario sin caja.
+
 ### Serie 6 — Canary físico sin caja
 
-Toda esta serie está `BLOQUEADO_FISICO` hasta PASS en E4.4/E5.2, ejecutor
-revisado y primitiva `clamp_s2_joints_trajectory` demostrada.
+Toda esta serie sigue `BLOQUEADO_FISICO`. E4.4 y las cotas clamp/fixture no
+aplican mientras plataforma y B0 estén retiradas, pero vuelven a ser
+obligatorias para E7+. E6.0A autoritativo `20260903T093145_E6.0A` confirmó el
+ready P14 contra el frame 0 del dataset, definió H/L/W como hold fresco y
+derivó recovery exacto de brazos `B→A→preposición`. E6.0B
+`20260903T094547_E6.0B` recorrió 401 estados por FK/OBB: cero solapes entre
+links alejados, pero 58 pares cercanos quedan sin clasificar por falta de
+SRDF/ACM y falta la geometría clamp instalada. El run `092935` queda
+descartado por usar el swap E4.0. El precheck vigente
+`20260903T094623_E6.0-CHECK` deja seis gates: ready S2
+instalado/registrado, recovery validado, barrido de
+autocolisión/entrada/salida, ejecutor revisado, límite de aceleración y
+semántica temporal física.
 
 #### Experimento 6.0 — Un punto P14 sin caja
 
@@ -1036,6 +1172,24 @@ bloqueadas; cargador fuera; persona en paro; un cliente.
   --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY
 ./scripts/vla/run_cruzr_vla_canary.sh --stop
 ```
+
+**Estado de implementación:** sólo `--check` está disponible y se reproduce
+también con:
+
+```bash
+./scripts/vla/audit_vla_canary_readiness_e6_0.sh --check
+./scripts/vla/audit_vla_canary_readiness_e6_0.sh --run
+./scripts/vla/audit_vla_ready_recovery_e6_0a.sh --check
+./scripts/vla/audit_vla_ready_recovery_e6_0a.sh --run
+./scripts/vla/audit_vla_self_collision_e6_0b.sh --check
+./scripts/vla/audit_vla_self_collision_e6_0b.sh --run
+```
+
+El run de auditoría fue `PASS_READINESS_AUDIT_E6_0_PHYSICAL_BLOCKED`: una
+auditoría PASS significa que los bloqueos se detectaron bien, no que el
+movimiento esté habilitado. `--one-point`, `--one-chunk`, `--window` y
+`--stop` fallan antes de acceder a red/robot mientras no exista ejecutor. No
+se necesita preparar mesa, caja ni AprilTag para este precheck.
 
 **PASS:** sólo brazos, delta pequeño autorizado, velocidad/fuerza dentro de
 gate, STOP y velocidad cero. Repetir tres veces.
@@ -1232,8 +1386,11 @@ representa una capacidad prevista y puede ser físicamente inválido.
 ### 0.3 Matriz mínima de cobertura
 
 La matriz shadow base tiene `4 tareas × 8 perfiles = 32 celdas`. Cada tarea se
-ejecuta desde su postura baja o media correspondiente y con cinco repeticiones
-controladas, para un mínimo de 160 inferencias aceptadas o rechazadas con causa.
+evalúa desde su estado bajo o medio correspondiente y con cinco muestras
+controladas. Como el perfil es una máscara posterior y no una entrada del
+checkpoint, E5.1 conserva 20 inferencias base comparables —4 tasks × 5 seeds—
+y deriva exactamente 160 bundles de perfil. Repetir el checkpoint ocho veces
+con el mismo input confundiría ruido de muestreo con el efecto de la máscara.
 
 Por cada celda se registran además:
 
@@ -1735,13 +1892,13 @@ copiarse al terminal como si existieran:
 |---|---|---|
 | `scripts/vla/build_vla_manifest.sh` | `--output DIR` | VLA-0 |
 | `scripts/vla/evaluate_checkpoint_offline.py` | `--checkpoint`, `--dataset`, `--split`, `--task-id`, `--seed`, `--output` | VLA-1/2/3 |
-| `scripts/vla/run_vla_shadow_matrix.sh` | `--scenario`, `--task-id`, `--axis-profile`, `--repetitions`, `--output` | VLA-6 |
+| `scripts/vla/run_vla_shadow_matrix.sh` + `run_vla_shadow_matrix_e5_1.sh` | celda `--scenario/--task-id/--axis-profile/--repetitions/--output`; matriz `--check/--run` | VLA-6 replay offline completo; libera E5.2 preliminar |
 | `scripts/vla/cruzr_vla_ready_pose.sh` | primero `--check --task TASK`; `--run` sólo con autorización futura | VLA-4 |
 | `scripts/vla/derive_vla_fixture_pose.py` | `--ready-task`, `--urdf`, `--box-lwh`, `--platform-height`, `--reference-frames`, `--output` | VLA-4/geometría |
-| `scripts/vla/test_vla_executor_sink.py` | `--axis-profile`, `--fixture`, `--fault-suite`, `--output`; implementado para E3.2 | VLA-5 parcial; E5.0 pendiente |
+| `scripts/vla/test_vla_executor_sink.py` + `run_vla_executor_sink_matrix_e5_0.sh` | fault suite por celda y matriz local `--check`/`--run` | VLA-5 offline completo; sólo libera E5.1 shadow |
 | `scripts/vla/run_vla_temporal_contract_e3_3.sh` | `--check`/`--run`; auditoría vendor + scheduler offline, sin ROS/red/publicador | VLA-3 parcial; semántica física pendiente |
-| `scripts/vla/run_cruzr_vla_canary.sh` | `--check`, `--one-point`, `--one-chunk`, `--window`, `--stop`; siempre `--task-id`, `--axis-profile` y `--scenario` | VLA-7/8 |
-| `scripts/vla/analyze_vla_campaign.py` | `--input`, `--select-minimal-profile`, `--output` | VLA-9 |
+| `scripts/vla/audit_vla_canary_readiness_e6_0.sh` + `run_cruzr_vla_canary.sh` | auditor `--check/--run`; frontend implementa sólo `--check --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY`; modos activos bloqueados | precheck VLA-7; no autoriza VLA-7/8 físico |
+| `scripts/vla/analyze_vla_campaign.py` + `run_vla_profile_selection_e5_2.sh` | análisis `--input/--select-minimal-profile/--output`; wrapper `--check/--run` | VLA-9 preliminar offline; P14 tasks 0–3, físico bloqueado |
 | `scripts/vla/train_cruzr_vla_candidate.sh` | `--base`, `--dataset-manifest`, `--data-config`, `--output` | VLA-10 |
 
 El canary no publicará un `RobotCommand` escrito a mano desde la shell. Sólo un
@@ -2003,12 +2160,12 @@ vendor 0,72/6/9 s y single-flag frente a cinco flags declarados.
   seguro para establecerla.
 - **Posición:** B0 nominal `x=0`, `y=0,2485`, `yaw=0`; alturas y ready del
   fixture. Sin variaciones OOD dentro de esta matriz.
-- **PC:** hoy sólo puede obtenerse P20 con `run_ubtech_vla_shadow.sh`. Antes de
-  declarar completa la matriz se implementará `run_vla_shadow_matrix.sh` para
-  aplicar las máscaras/holds P14–P20 y guardar cinco repeticiones por celda.
+- **PC:** `run_vla_shadow_matrix.sh` aplica las máscaras/holds P14–P20 sobre
+  cinco outputs C0 congelados por task; `run_vla_shadow_matrix_e5_1.sh` ejecuta
+  la matriz completa. El replay E5.1 no sustituye una escena viva futura.
 
   ```bash
-  # Especificación de una celda futura; repetir task/perfil según la matriz.
+  # Reproducir una celda; la matriz completa dispone de su propio wrapper.
   VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh \
     --experiment VLA-T06-task0-P14-A)"
   ./scripts/vla/run_vla_shadow_matrix.sh \
@@ -2017,14 +2174,15 @@ vendor 0,72/6/9 s y single-flag frente a cinco flags declarados.
   ```
 - **Orden:** task 0 perfiles 14→20, task 1 sólo tras establecer HELD; después 2
   y 3. Un perfil no avanza si la celda anterior falla por seguridad.
-- **PASS de celda:** 5/5 outputs estructuralmente válidos, primer salto y
-  continuidad aceptados, sin movimiento significativo requerido en un grupo
-  bloqueado y cero publishers.
+- **Resultado E5.1:** 32 celdas, 160 bundles y 160/160 máscaras correctas;
+  148 `ACCEPT_STRUCTURAL` y 12 `REJECT_SAFE` explicados por rango/velocidad del
+  elevador. La continuidad entre muestras independientes no aplica y queda
+  para una futura sesión viva.
 - **FAIL:** un perfil elimina un grupo necesario, cambia el fixture entre
   repeticiones o no conserva el output P20 bruto para comparación.
 - **Evidencia:** 160 bundles completos y tabla 32×métricas.
-- **Recuperación:** `--stop` después de cada bloque task; verificar
-  `operation_type=1` y cero publishers.
+- **Recuperación replay:** terminar el proceso local; no se inició cliente,
+  contenedor ni publicador físico.
 
 #### `VLA-T07` — Canary físico sin caja (Gate VLA-7, bloqueado hoy)
 
@@ -2154,11 +2312,11 @@ peligroso. Contenido, chasis, navegación, otra caja y volcado quedan fuera.
 #### `VLA-T09` — Selección del perfil mínimo (Gate VLA-9)
 
 - **Escenario:** no añade movimiento; analiza T01–T08 preservando cada fixture.
-- **PC:** futura `analyze_vla_campaign.py --input EVIDENCE_ROOT
-  --select-minimal-profile --output REPORT`.
+- **PC:** `analyze_vla_campaign.py --input EVIDENCE_ROOT
+  --select-minimal-profile --output REPORT`; E5.2 lo ejecutó sobre E5.1.
 
   ```bash
-  # Especificación futura; sólo analiza evidencia.
+  # Reproducción local; sólo analiza evidencia.
   VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh \
     --experiment VLA-T09)"
   python3 scripts/vla/analyze_vla_campaign.py \

@@ -1,0 +1,36 @@
+schema: cruzr-s2-official-geometry-contract/v1
+experiment_id: E4.1F
+source_policy:
+  supplier_artifacts_only: true
+  manual_measurements_required: false
+  manual_measurements_used: false
+official_cruzr_s2:
+  bimanual_max_payload_kg: 15.0
+  payload_scope: whole_robot_bimanual_not_effector_specific
+  replaceable_effector_families:
+    - dexterous_hand
+    - clamp_hand
+    - two_finger_gripper
+official_vla_fixture:
+  box_lwh_m: [0.60, 0.40, 0.22]
+  platform_surface_height_m: 1.0
+  source: UBTECH_SDK_section_7.3.1
+official_pgc_140_50:
+  hardware_type: cruzr_s2_v1_gripper
+  body_size_lwh_m: [0.1385, 0.075, 0.075]
+  stroke_m: 0.05
+  sdk_commanded_force_range_n: [0.0, 100.0]
+  manufacturer_gripping_force_per_jaw_n: [40.0, 140.0]
+  recommended_workpiece_mass_kg: 3.0
+  applicable_to_installed_clamp: false
+installed_passive_clamp:
+  hardware_type: cruzr_s2_v1
+  family: passive_lateral_clamp
+  official_outer_envelope_m: null
+  official_cad_or_collision_mesh: null
+  reason: supplier artifacts enumerate the clamp family but publish no dimensions or clamp-specific model
+decision:
+  substitute_pgc_geometry: false
+  infer_dimensions_from_photographs: false
+  authorize_fixture_manufacture_or_physical_test: false
+  next_offline_experiment: E5.0

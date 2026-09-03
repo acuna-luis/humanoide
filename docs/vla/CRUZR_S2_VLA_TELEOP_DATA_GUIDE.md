@@ -1,6 +1,6 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
-> Versión documental 1.5 — 1 de septiembre de 2026. Estado: guía técnica del
+> Versión documental 1.6 — 3 de septiembre de 2026. Estado: guía técnica del
 > proyecto basada en evidencias locales; los puntos marcados «Pendiente DSA»
 > requieren confirmación del proveedor.
 
@@ -306,9 +306,10 @@ y `2,0 + 3,0 s`, vuelve al primer waypoint forward pero no invierte la
 secuencia completa. El task esperado por el loader vendor,
 `s2_bio_vla/s2_vla_pick_large_teleop_ready`, no está instalado ni registrado.
 Los candidatos instalados difieren en hash y semántica; el task S2 tampoco
-aparece en el upgrade v0.2.0 entregado. La revisión v2 corrigió el mapping de
-la primitiva: sus brazos están en orden MetaMove hombro–codo–muñeca y se
-reordenan a codo–hombro–muñeca para el checkpoint. El URDF S2 sólo contiene
+aparece en el upgrade v0.2.0 entregado. E4.0 reordenó hombro/codo, pero
+intercambió erróneamente los dos ejes de muñeca. E6.0A demostró contra task
+0/frame 0 que deben conservar su orden: error máximo `0,002112805 rad` directo
+frente a `0,614627484 rad` intercambiado. El URDF S2 sólo contiene
 `waist_yaw_joint`, de modo que el segundo cero del MetaMove genérico resuelve
 el índice 19 como `waist_yaw=0`. El XML no define los tres lifter, sino que los
 hereda; el ejecutor S2 los descarta y los 500 episodios abarcan múltiples
@@ -351,26 +352,92 @@ distancia indica solape de proyecciones mesa/bumper y exige modelar tablero,
 patas y swept volume antes de cualquier colocación física. Estado
 `METRIC_FIXTURE_CANDIDATE_RESOLVED_PHYSICAL_GATES_OPEN`, no PASS físico.
 
-La continuación offline E4.1C se ejecutó en
-`20260901T090235_E4.1C`. Reprodujo por FK 121 estados de la secuencia vendor
+La continuación offline E4.1C se repitió con el orden de muñecas corregido en
+`20260903T093408_E4.1C`. Reprodujo por FK 121 estados de la secuencia vendor
 desde la preposición hasta forward/back, manteniendo el elevador correlacionado
-del episodio 90. La geometría de 46 links produjo 210 posibles cruces AABB con
-el tablero y la prueba triángulo/plano confirmó 146 cruces en nueve links de
+del episodio 90. La geometría de 46 links produjo 60 posibles cruces AABB con
+el tablero y la prueba triángulo/plano confirmó 32 cruces en doce links de
 muñeca/efector. B0 tuvo cero solapes AABB y no fue colocada. Por ello la mesa
 sólida queda rechazada en la pose E4.1 bajo el URDF vendor:
 `SOLID_TABLETOP_CANDIDATE_REJECTED_BY_VENDOR_URDF_SWEEP`. El resultado no
-autoriza adaptar datos o ejecutar ready.
+autoriza adaptar datos o ejecutar ready. El run `20260901T090235_E4.1C` queda
+descartado por haber usado el mapping de muñecas anterior.
 
-E4.1D (`20260903T083140_E4.1D`) demuestra que PGC no es la identidad del
+E4.1D (`20260903T093440_E4.1D`) demuestra que PGC no es la identidad del
 efector instalado: el SDK documenta Dahuan PGC-140-50 para
 `HW_TYPE=cruzr_s2_v1_gripper`, mientras esta unidad usa abrazaderas laterales
 pasivas y `HW_TYPE=cruzr_s2_v1`. Sin CAD/cotas no puede validarse
 `pgc/finger` como envolvente geométrica de las abrazaderas. Al separar el
-barrido E4.1C quedan 101 eventos del PGC/dedos y 45 eventos independientes en
+barrido E4.1C quedan 10 eventos del PGC/dedos y 22 eventos independientes en
 muñecas/sensores de fuerza. Por tanto, excluir PGC no vuelve viable el tablero
 sólido: sólo se permite calcular offline una pose alternativa o huecos
 verificados. Todo fue local, sin conexión al robot, inferencia, publicador ni
 movimiento.
+
+E4.1E (`20260903T093443_E4.1E`) examinó localmente las dos opciones aún
+abiertas. Con 401 estados, tres secciones de altura y 55 mm de margen XY, la
+búsqueda alineada ±5° de mesa sólida halló 128.386 poses con apoyo B0 válido y
+cero libres de colisión. Una referencia global a `+76,5°` y `0,856 m` se
+descarta por no conservar la escena calibrada. Se obtuvieron dos muescas
+frontales candidatas —izquierda
+`[-0,720,-0,470]×[0,000,0,200] m`, derecha
+`[0,400,0,650]×[0,000,0,170] m`— que no invaden el apoyo B0+50 mm. Sólo cubren
+muñecas/sensores: faltan las abrazaderas instaladas, estructura de mesa,
+entrada y recovery. Por tanto no autorizan adaptar el fixture ni ejecutar el
+VLA; E4.1F audita a continuación sólo fuentes oficiales.
+
+E4.1F (`20260903T085912_E4.1F`) eliminó la medición manual del camino crítico.
+Validó por hash manuales, USD/URDF, XML ready y metadatos suministrados. Las
+especificaciones fijan B0 `0,60×0,40×0,22 m`, plataforma a 1 m, carga máxima
+global bimanual de 15 kg y PGC-140-50 `0,1385×0,075×0,075 m` con carrera de
+50 mm. La PGC pertenece a `cruzr_s2_v1_gripper`, no a las placas pasivas
+`cruzr_s2_v1`; no se usa como proxy. Para `clamp hands`, los artefactos no
+publican envolvente/TCP/masa/CoG/CAD. Sin inventar dimensiones, lo físico queda
+bloqueado y la campaña continúa por E5.0 offline.
+
+E5.0 (`20260903T090355_E5.0`) ejecutó la fault suite completa para los ocho
+perfiles `P14_A…P20_AHLW` en `low/middle`. Las 16/16 celdas pasaron: 544 casos,
+32 válidos aceptados, 512 inválidos rechazados y 16/16 probes de máscara. La
+campaña también corrigió el caso de perfil incompatible para que `P14_A` no se
+comparase consigo mismo. Los ejes bloqueados conservaron el hold sintético y
+los habilitados copiaron valores distintos del chunk. No hubo ROS, red,
+publicador, lectura ni movimiento del robot. Esto certifica el sink sólo como
+contrato offline y permite E5.1 shadow; no acredita pose real ni ejecución.
+
+E5.1 (`20260903T091319_E5.1`) reutilizó 20 inferencias C0 verificadas de E3.0
+y aplicó los ocho perfiles como máscaras posteriores, produciendo 160 bundles
+comparables. Hubo 148 `ACCEPT_STRUCTURAL`, 12 `REJECT_SAFE` y 160/160 máscaras
+correctas. Los rechazos sólo aparecen con grupo `L`: velocidad de
+`lifter_pitch_3_joint` en task 1/seed 2 y rango de `lifter_pitch_1_joint` en
+task 2/seed 0 y task 3/seed 0. Los perfiles sin elevador aprobaron 80/80. Este
+replay usa estado 20D e imagen grabados, no escena viva; no captura GPU/VRAM,
+frecuencia ni `flag_pred`. Cero red, ROS, publicador o movimiento. El siguiente
+paso permitido es E5.2 para selección preliminar offline.
+
+E5.2 (`20260903T091901_E5.2`) seleccionó preliminarmente `P14_A` para tasks
+0–3. Sólo consideró perfiles con 5/5 aceptaciones y eligió el menor dentro de
+una banda de MAE `max(0,0001 rad,1 %)`. H no aportó mejora material, W empeoró
+unos `6,88×10⁻⁶…1,16×10⁻⁵ rad` y L empeoró
+`7,83×10⁻⁴…3,48×10⁻³ rad`, con 12/80 rechazos en perfiles con elevador. La
+banda es una regla analítica y no un límite mecánico. No se evaluó éxito de
+tarea o escena viva; E6.0 y todo publicador físico siguen bloqueados.
+
+El run local vigente `20260903T094623_E6.0-CHECK` convirtió ese bloqueo en una matriz
+reproducible. Para `NO_BOX_READY`, E4.4 no aplica porque caja y plataforma
+deben estar retiradas; vuelve a ser obligatorio desde E7. E6.0A autoritativo
+`20260903T093145_E6.0A` alineó ready B con el checkpoint y definió H/L/W como
+hold fresco; su primer run `092935` queda descartado por el mapping antiguo.
+Persisten seis gates físicos: ready S2 instalado/registrado, recovery validado,
+autocolisión/swept volume, ejecutor, aceleración y temporalidad. El
+script `run_cruzr_vla_canary.sh` sólo permite `--check`; ningún modo activo
+está implementado o autorizado.
+
+E6.0B (`20260903T094547_E6.0B`) analizó offline 401 estados del camino P14
+exacto de entrada y recovery. El broad phase OBB/SAT del URDF vendor no halló
+violaciones de límites ni solapes entre links alejados; quedaron 58 pares
+cercanos/estructurales sin clasificación. Sin SRDF/ACM ni geometría de las
+abrazaderas pasivas reales no se puede convertir ese resultado en certificado
+de autocolisión o holgura. El gate E6.0 sigue cerrado y no hubo acceso al robot.
 
 ## 4. VLA frente a programación tradicional
 

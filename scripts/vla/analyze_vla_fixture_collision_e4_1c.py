@@ -25,7 +25,7 @@ import yaml
 
 META_ARM_NAMES = [
     "shoulder_pitch", "shoulder_roll", "shoulder_yaw", "elbow_roll",
-    "elbow_yaw", "wrist_roll", "wrist_pitch",
+    "elbow_yaw", "wrist_pitch", "wrist_roll",
 ]
 
 

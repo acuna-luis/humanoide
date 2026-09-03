@@ -1,0 +1,38 @@
+schema: cruzr-s2-fixture-design-contract/v1
+trajectory:
+  samples_per_segment: 101
+  sequence:
+    - preposition
+    - forward_1
+    - forward_2
+    - back_1
+    - back_2
+geometry:
+  included_links:
+    - L_wrist_pitch_link
+    - L_wrist_roll_link
+    - L_sixforce_link
+    - R_wrist_pitch_link
+    - R_wrist_roll_link
+    - R_sixforce_link
+  plane_height_offsets_m: [-0.01, 0.0, 0.01]
+  engineering_clearance_m: 0.02
+  output_rounding_m: 0.005
+support:
+  keep_B0_pose_fixed_in_nominal_platform_frame: true
+  margin_around_B0_footprint_m: 0.05
+solid_table_search:
+  aligned_yaw_range_deg: [-5.0, 5.0]
+  aligned_yaw_step_deg: 0.25
+  aligned_translation_step_m: 0.01
+  global_yaw_range_deg: [-90.0, 90.0]
+  global_yaw_step_deg: 1.0
+  global_translation_step_m: 0.01
+  refinement_yaw_half_range_deg: 2.0
+  refinement_yaw_step_deg: 0.25
+  refinement_translation_step_m: 0.005
+interpretation:
+  aligned_search_is_grid_exhaustive_within_contract: true
+  global_candidate_is_not_operationally_authorized: true
+  upstream_cutouts_exclude_actual_clamp_geometry: true
+  physical_test_authorized: false

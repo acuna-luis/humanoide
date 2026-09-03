@@ -25,7 +25,7 @@ BACK_SHA256 = (
 
 META_ARM_ORDER = [
     "shoulder_pitch", "shoulder_roll", "shoulder_yaw", "elbow_roll",
-    "elbow_yaw", "wrist_roll", "wrist_pitch",
+    "elbow_yaw", "wrist_pitch", "wrist_roll",
 ]
 CHECKPOINT_ARM_ORDER = [
     "elbow_roll", "elbow_yaw", "shoulder_pitch", "shoulder_roll",
