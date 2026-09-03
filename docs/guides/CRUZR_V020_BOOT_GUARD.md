@@ -28,7 +28,9 @@ At every Vision-computer boot, the guard:
 4. requires two successful rounds of real image samples from all six cameras
    used by the vendor self-check;
 5. reads the latest Control Center state and classifies the original failure;
-6. exits without changes if the state is already `JoystickMode`;
+6. exits without changes if the state is already `JoystickMode`, or if it is
+   safely waiting in `WaitEStopRelease` for a person to release the physical
+   E-stop;
 7. proceeds only when the state is exactly `Fault`, the log matches the known
    v0.2.0 readiness race, power/servo/overcurrent checks passed and both
    emergency stops and the charger report `0`;
@@ -45,6 +47,24 @@ does not retry indefinitely and does not bypass a failed safety input.
 Do not use the internal `KEY1` as a standalone normal shutdown control. Use the
 approved shutdown sequence for the robot; an abrupt body-computer power cut can
 corrupt Docker JSON logs and interrupt filesystem writes.
+
+After an emergency stop during normal operation, releasing the E-stop does not
+necessarily restore Motion. On 2026-09-03 this unit remained in
+`WaitStartMotion` with zero manipulation action servers. A single press of the
+external rear Power/Start button was logged as `Power click` and only announced
+the battery level; it did not generate `ButtonStartMotion`. Section 5.3.3 of the
+vendor manual prescribes powering off and restarting the complete robot after
+an emergency stop. Do not repeat the Power-button press or invoke `StartMotion`
+over ROS as an improvised recovery; perform the supervised full power cycle.
+
+That supervised restart was completed on the same date with the E-stop held.
+Control Center correctly entered `WaitEStopRelease`; after the operator
+released it, self-check and `StartMotion` passed and the terminal state was
+`JoystickMode`. The first guard revision did not recognize
+`WaitEStopRelease`, timed out with `CONTROL_STATE=unknown` and performed no
+recovery. The current revision treats this state as a safe terminal defer:
+`--run` records `NO_ACTION=waiting_for_physical_estop_release` and exits
+without restarting a container or commanding the head.
 
 ## Files installed on Vision
 

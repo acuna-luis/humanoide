@@ -1153,12 +1153,114 @@ ready P14 contra el frame 0 del dataset, definió H/L/W como hold fresco y
 derivó recovery exacto de brazos `B→A→preposición`. E6.0B
 `20260903T094547_E6.0B` recorrió 401 estados por FK/OBB: cero solapes entre
 links alejados, pero 58 pares cercanos quedan sin clasificar por falta de
-SRDF/ACM y falta la geometría clamp instalada. El run `092935` queda
+SRDF/ACM y falta la geometría clamp instalada. E6.0C
+`20260903T095600_E6.0C` clasificó esos pares (40 directos, 12 estáticos, 2
+PGC y 4 móviles upstream) y comprobó los cuatro móviles por BVH/STL + SAT en
+401 estados: cero candidatos de triángulo tras AABB y cero intersecciones;
+cuatro self-tests validaron el SAT. E6.0D `20260903T101730_E6.0D` midió luego
+las cuatro separaciones exactas en los mismos 401 estados: mínimo global
+vendor `0,016377700 m` (hombro derecho/torso, muestra 100), con 4 tests
+dirigidos y 300 aleatorios de referencia. No certifica continuidad, clamp ni
+tolerancia física. Su contrato de un punto queda deshabilitado, sin publicador
+y con aceleración/fuerza/margen físico nulos. El run `092935` queda
 descartado por usar el swap E4.0. El precheck vigente
-`20260903T094623_E6.0-CHECK` deja seis gates: ready S2
-instalado/registrado, recovery validado, barrido de
-autocolisión/entrada/salida, ejecutor revisado, límite de aceleración y
-semántica temporal física.
+`20260903T123041_E6.0-CHECK` deja tres gates: recovery validado, transporte/STOP
+del ejecutor y límite de aceleración certificado. E6.0L ya fija la semántica
+temporal del canary a un solo punto sin replay. El gate geométrico
+se acepta bajo el proxy documental E6.0J descrito abajo. Ready runtime y
+preflight articular fresco ya están demostrados.
+
+E6.0E `20260903T102652_E6.0E` pasó 42/42 pruebas del guard de un punto, con dos
+previews válidos, cero autorizaciones y cero publicadores. E6.0F
+`20260903T102931_E6.0F` congeló el despliegue/rollback ready sin aplicarlo y
+determinó que ya no queda trabajo sólo-local sin nueva entrada física o
+certificada.
+
+E6.0G `20260903T104309_E6.0G` comprobó en vivo, sólo en lectura, E-stop
+principal activo, cargador fuera, VLA detenido y cero publicadores; con el
+paro no se obtuvo estado articular ni servidor de acción. E6.0H
+`20260903T104552_E6.0H` respaldó el task list e instaló atómicamente XML y
+entrada ready sólo en disco. No hubo recarga, reinicio, publicador ni
+movimiento; registro runtime y preflight fresco siguen bloqueados.
+
+Tras liberar el E-stop principal sin movimiento inesperado, E6.0G intermedio
+`20260903T105539_E6.0G` confirmó `WaitStartMotion`; una pulsación exterior sólo
+produjo `Power click`. Se completó luego el apagado/reinicio supervisado del
+manual. Control Center pasó `WaitEStopRelease→SelfChecking→JoystickMode`, con
+self-check y `StartMotion` exitosos.
+
+E6.0G vigente `20260903T113216_E6.0G` corrigió la consulta del action server
+para usar ROSA y demostró un servidor de manipulación, proceso Motion posterior
+al task list, ready cargado en runtime, preflight canónico aprobado y robot
+inmóvil. VLA quedó detenido con cero publicadores; no se autorizó movimiento.
+
+E6.0I vigente `20260903T115129_E6.0I` cubrió el tramo omitido
+`home↔preposición` con un snapshot fresco de 20 ejes. El nuevo solape OBB
+hombro derecho/torso fue comprobado por malla exacta y no intersectó. Sumando
+la evidencia anterior se cubren 601 estados del recorrido vendor, con mínimo
+muestreado `0,011169662 m`. No incluye las abrazaderas reales ni tolerancias o
+dinámica; continúa bloqueado el movimiento físico.
+
+E6.0J vigente `20260903T120626_E6.0J` aplica la instrucción del propietario de
+usar medidas documentales sin medición manual. El proxy de cada clamp es la
+unión completa PGC del URDF oficial dilatada 25 mm por cara según su carrera
+documentada de 50 mm: `0,145×0,142×0,330 m`. En 1.201 estados del recorrido
+completo, con paso máximo `0,0092978 rad`, no hubo contactos externos ni
+intersecciones exactas. Se acepta para cerrar el supuesto geométrico de E6.0
+sin caja, pero no certifica el clamp real ni aplica a E7 con caja/mesa.
+
+E6.0K `20260903T121338_E6.0K` registró las medidas aproximadas visibles en las
+fotos: `120×52×105 mm`. Con 10 mm por cada cara, la envolvente de trabajo es
+`140×72×125 mm` y queda contenida en E6.0J para ambos brazos bajo la hipótesis
+de hardware igual/reflejado. No hace falta repetir el barrido con un volumen
+menor: la inclusión rígida en el proxy mayor ya barrido es la prueba. Las
+imágenes no están versionadas y esta cota no autoriza movimiento.
+
+E6.0L `20260903T122501_E6.0L` pasó 30 casos funcionales y 6 manipulaciones de
+contrato: consume exactamente el punto fuente 0 de un único chunk y no lo
+repite. El núcleo no contiene transporte físico ni STOP físico. E6.0M
+`20260903T122502_E6.0M` verifica el bundle local
+`home→staging→A→B→A→staging→home`; sus modos de instalación/movimiento están
+bloqueados antes de tocar el robot. Estos resultados permiten preparar la
+validación determinista de ready/recovery, pero todavía no ejecutar el
+checkpoint.
+
+La discrepancia inicial de E-stop quedó reconciliada tras volver a enclavar el
+pulsador principal: E6.0G `20260903T123632_E6.0G` leyó `ESTOP_KEY=1`, aunque
+`SERVO_ESTOP_KEY=0` no corroboró por software el paro del chasis declarado.
+Con el principal activo, E6.0N `20260903T123940_E6.0N` instaló sólo en disco el
+recovery exacto, una entrada única y su rollback en
+`/home/walker/cruzr-vla/backups/20260903T123940_E6.0N`. El task list quedó
+`0d24122c…64957`; 9/9 artefactos pasaron hashes. No se recargó ni movió. El
+bloqueo en ese punto era cargar la nueva tarea en runtime mediante una
+operación separada y validarla de forma supervisada, además de
+implementar/revisar el transporte+STOP físico y obtener un límite de
+aceleración aceptado.
+
+E6.0O `20260903T124843_E6.0O` completó ya la primera parte: bajo E-stop
+principal reinició sólo el contenedor dedicado del task manager, comprobó que
+el proceso nació después del task list y mantuvo hashes exactos, VLA detenido,
+cero tareas invocadas, publicadores y movimientos. El segundo canal continuó
+en `SERVO_ESTOP_KEY=0`. El arranque espera controladores por el E-stop y no
+presentó fatal/crash/YAML. La captura inicial de logs incluyó líneas previas
+por un quoting defectuoso; se corrigió y verificó por lectura sin recargar de
+nuevo. E6.0-CHECK `20260903T125333_E6.0-CHECK` conserva tres gates. El
+**siguiente paso físico** es liberar sólo el E-stop principal bajo supervisión,
+confirmar ausencia de movimiento, y ejecutar inmediatamente auditoría viva de
+estado/action server antes de invocar ready o recovery.
+
+Ese paso confirmó estabilidad, pero no reaparecieron
+`/mc/whole_joint_states` ni el action server. Los topics leen `0/0`; el log no
+muestra servo E-stop activo y sitúa Control Center en `WaitStartMotion` desde
+que se accionó el principal, sin `ButtonStartMotion` posterior a su liberación.
+No hubo goal ni movimiento. Las fotos posteriores invalidaron la indicación de
+pulsar un START Motion: esta revisión no presenta uno independiente
+identificable y la pulsación verde ya produjo antes sólo `Power click`. El
+procedimiento vigente es no pulsar blanco (`KEY1`), verde (Power/Start) ni
+metálico (alimentación de chasis), realizar el ciclo completo supervisado de la
+sección 5.3.3 y ejecutar un único preflight al volver. Si pasa, la próxima
+operación será la primera validación física ready→recovery sin caja; no se
+añadirán más auditorías.
 
 #### Experimento 6.0 — Un punto P14 sin caja
 
@@ -1178,11 +1280,32 @@ también con:
 
 ```bash
 ./scripts/vla/audit_vla_canary_readiness_e6_0.sh --check
+./scripts/vla/audit_vla_physical_executor_e6_0l.sh --check
+./scripts/vla/audit_vla_ready_recovery_bundle_e6_0m.sh --check
+./scripts/vla/cruzr_vla_ready_pose.sh --dry-plan
 ./scripts/vla/audit_vla_canary_readiness_e6_0.sh --run
 ./scripts/vla/audit_vla_ready_recovery_e6_0a.sh --check
 ./scripts/vla/audit_vla_ready_recovery_e6_0a.sh --run
 ./scripts/vla/audit_vla_self_collision_e6_0b.sh --check
 ./scripts/vla/audit_vla_self_collision_e6_0b.sh --run
+./scripts/vla/audit_vla_near_pair_mesh_e6_0c.sh --check
+./scripts/vla/audit_vla_near_pair_mesh_e6_0c.sh --run
+./scripts/vla/audit_vla_clearance_guards_e6_0d.sh --check
+./scripts/vla/audit_vla_clearance_guards_e6_0d.sh --run
+./scripts/vla/audit_vla_one_point_guard_e6_0e.sh --check
+./scripts/vla/audit_vla_one_point_guard_e6_0e.sh --run
+./scripts/vla/audit_vla_offline_closure_e6_0f.sh --check
+./scripts/vla/audit_vla_offline_closure_e6_0f.sh --run
+./scripts/vla/audit_vla_live_preflight_e6_0g.sh --check
+./scripts/vla/audit_vla_live_preflight_e6_0g.sh --run
+./scripts/vla/install_vla_ready_task_e6_0h.sh --check
+./scripts/vla/install_vla_ready_task_e6_0h.sh --install-on-disk
+./scripts/vla/audit_vla_home_entry_e6_0i.sh --check
+./scripts/vla/audit_vla_home_entry_e6_0i.sh --run
+./scripts/vla/audit_vla_document_proxy_clamp_e6_0j.sh --check
+./scripts/vla/audit_vla_document_proxy_clamp_e6_0j.sh --run
+./scripts/vla/audit_vla_observed_clamp_envelope_e6_0k.sh --check
+./scripts/vla/audit_vla_observed_clamp_envelope_e6_0k.sh --run
 ```
 
 El run de auditoría fue `PASS_READINESS_AUDIT_E6_0_PHYSICAL_BLOCKED`: una
@@ -1190,6 +1313,14 @@ auditoría PASS significa que los bloqueos se detectaron bien, no que el
 movimiento esté habilitado. `--one-point`, `--one-chunk`, `--window` y
 `--stop` fallan antes de acceder a red/robot mientras no exista ejecutor. No
 se necesita preparar mesa, caja ni AprilTag para este precheck.
+
+**Primer montaje físico tras cerrar lo local:** retirar caja, mesa/plataforma y
+AprilTag a más de 1,5 m; dejar 1,5 m de radio y toda la envolvente de brazos
+libres; clamps vacíos y firmes; robot estable y visualmente en home; cargador
+desconectado y ruedas bloqueadas; dos personas (una en el paro y otra en PC);
+PICO, UI y teleoperación cerrados; VLA detenido y un solo cliente. Durante el
+montaje ambos paros permanecen accionados. La liberación de paros y cualquier
+ready/movimiento serán gates separados y todavía no están autorizados.
 
 **PASS:** sólo brazos, delta pequeño autorizado, velocidad/fuerza dentro de
 gate, STOP y velocidad cero. Repetir tres veces.

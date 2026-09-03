@@ -1,6 +1,6 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
-**Última actualización:** 28 de agosto de 2026
+**Última actualización:** 3 de septiembre de 2026
 **Unidad observada:** Cruzr S2 `WAE001UBT60000669`  
 **Baseline:** robot v0.2.0, abrazaderas, `HW_TYPE=cruzr_s2_v1`, PC controller 4.7.0  
 **Ámbito:** contacto contra mobiliario, objeto posiblemente sujeto, postura no
@@ -228,7 +228,7 @@ hipótesis en procedimiento.
 | **VERIFICADO** | arranque incompleto del stack de manipulación | faltaban los controladores FT e IMU y el servidor de acción era 0; cargarlos restauró la aplicación, no el servo |
 | **VERIFICADO** | una acción abortada puede modificar consignas sin mover | `status=6`, posiciones iguales y deltas de consigna posteriores de hasta 0,1043 rad |
 | **OBSERVADO** | `KEY1` puede desenergizar la parte superior de forma abrupta | los brazos descendieron sin trayectoria; un uso anterior coincidió con registros Docker corruptos |
-| **OBSERVADO** | el boot guard no puede recuperar cualquier estado de arranque | con seguridad `1,0,0` leyó `CONTROL_STATE=unknown` y terminó `unexpected_control_state_unknown`; Motion se inicializó al liberar el paro |
+| **DESCARTADO** | el boot guard debía tratar como error un arranque detenido en `WaitEStopRelease` | el reinicio supervisado del 03-09 demostró que éste es el estado correcto mientras el paro físico sigue accionado; el guard ahora lo reconoce y sale sin reiniciar ni mover |
 | **VERIFICADO** | la primera fase de `open_arm_before_home` puede aumentar el contacto desde una postura PICO cruzada | el XML mueve ambos brazos, cintura y elevador en paralelo; produjo `Force-X=-370,944 N`, fallo del brazo izquierdo y faults 4002/4003/4004 |
 
 No está demostrado que el fault implique daño mecánico permanente: desapareció
@@ -347,9 +347,10 @@ accionado y la zona despejada. Es una observación, no un SOP universal aprobado
 
 1. Esperar el arranque completo de Motion y Vision.
 2. Descubrir contenedores con `docker ps`; no reutilizar nombres históricos.
-3. Leer el boot guard. Con el paro accionado puede terminar ineligible; no
-   reiniciarlo automáticamente si una recuperación pudiera mover cabeza o
-   brazos.
+3. Leer el boot guard. Con el paro accionado debe reconocer
+   `WaitEStopRelease` y salir con
+   `NO_ACTION=waiting_for_physical_estop_release`; no reiniciarlo
+   automáticamente si una recuperación pudiera mover cabeza o brazos.
 4. Antes de liberar el paro: abrazaderas vacías, brazos sin contacto, zona
    completa despejada y una persona preparada para volver a accionarlo.
 5. Después de liberarlo, no seleccionar PICO, UI ni `auto_task` hasta obtener
@@ -383,6 +384,12 @@ El script canónico aplica ahora esta decisión de forma automática:
 - postura PICO, estado desconocido, caja posiblemente sujeta, intento de home
   no confirmado o evento posterior de fuerza/autocolisión/fault: bloquea antes
   de publicar un goal.
+
+En la imagen v0.2.0 observada, `/mc/actuator_state` identifica elevador y
+cintura como `11004/11003/11002/11001`. El gate acepta esos IDs como aliases
+de los históricos `2001/2002/2003/3001`, exige una única muestra por eje lógico
+y sigue requiriendo los 14 IDs de brazos. No relaja límites ni permite omitir
+un eje.
 
 `--fast` se conserva sólo por compatibilidad con los flujos exteriores, pero
 ya no omite ninguna auditoría de seguridad de return-to-home. Sin argumentos,
@@ -504,3 +511,36 @@ antes de liberar el paro o seleccionar modo, demostrar EtherCAT/controladores,
 errores, status, velocidad y deltas posición–consigna. No ejecutar `home` ni
 teleoperación hasta resolver una retirada segura específica para esta región
 de postura.
+
+### Punto de reanudación vigente tras el arranque del 03-09
+
+El punto del 28-08 queda histórico. Se completó un shutdown lógico y un ciclo
+de alimentación supervisado con el E-stop principal accionado. Control Center
+pasó `WaitEStopRelease→SelfChecking→JoystickMode`; al liberar el paro, el
+operador confirmó estabilidad y ausencia de movimiento inesperado. Self-check
+y `StartMotion` terminaron con éxito.
+
+La comprobación viva final, sin objetivos, registró:
+
+```text
+ACTUATORS_OPERATION_ENABLED=1
+ESTOPS=0,0
+CHARGER=disconnected
+ACTIONS=ready
+ACTUATOR_BODY_COUNT=20
+ACTUATOR_ARM_COUNT=14
+BODY_MAX_ABS_POSITION=0.002684
+ARMS_MAX_ABS_POSITION=0.000959
+BODY_MAX_ABS_VELOCITY=0.000000
+BODY_MAX_ABS_COMMAND_DELTA=0.002684
+MEASURED_HOME=1
+RECOVERY_ROUTE=already-home,no-motion
+```
+
+El guard de arranque se corrigió e instaló en Vision con hash
+`6c3cbe48…9287b`; backup
+`/home/walker/cruzr-v020-boot-guard-backups/20260903T113735`. Su `--check`
+confirmó x86 3/3, cámaras 2/2, `JoystickMode`, seguridad `0 0 0` y
+`movement=none restart=none`. Antes de cualquier movimiento debe repetirse el
+preflight físico; esta evidencia no valida una trayectoria de recuperación
+desde una postura distinta de home.

@@ -1,0 +1,50 @@
+{
+  "schema": "cruzr-s2-document-proxy-clamp/e6.0j-v1",
+  "experiment_id": "E6.0J",
+  "decision": {
+    "authority": "project_owner_instruction_2026-09-03",
+    "scope": "offline_no_box_self_collision_audit_only",
+    "use_documented_dimensions_without_manual_measurement": true
+  },
+  "documented_sources": {
+    "geometry_contract": "scripts/vla/runtime/cruzr_s2_official_geometry_contract_e4_1f.yaml",
+    "supplier_urdf_variant": "cruzr_s2_v1",
+    "pgc_body_size_lwh_m": [
+      0.1385,
+      0.075,
+      0.075
+    ],
+    "pgc_stroke_m": 0.05,
+    "vendor_mesh_group_per_side": [
+      "pgc_base_link",
+      "finger1_link",
+      "finger2_link"
+    ],
+    "mount_frame_per_side": "sixforce_link"
+  },
+  "conservative_proxy_rule": {
+    "base_envelope": "union_of_supplier_urdf_pgc_base_and_both_fingers_at_zero_in_sixforce_frame",
+    "dilation_m_per_face_xyz": [
+      0.025,
+      0.025,
+      0.025
+    ],
+    "dilation_basis": "half_of_documented_0.05_m_stroke_on_every_face",
+    "applied_symmetrically_to_both_arms": true
+  },
+  "collision_policy": {
+    "allowed_same_side_mount_chain_suffixes": [
+      "sixforce_link",
+      "wrist_roll_link",
+      "wrist_pitch_link"
+    ],
+    "reason": "the deliberately dilated proxy extends proximally into its own designed attachment chain; no torso, shoulder, elbow, opposite arm or environment link is excluded"
+  },
+  "limitations": {
+    "represents_installed_passive_clamp_exactly": false,
+    "manual_measurement_used": false,
+    "cad_of_installed_passive_clamp_available": false,
+    "certifies_mass_center_of_gravity_force_or_flex": false,
+    "authorizes_physical_movement": false
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "schema": "cruzr-s2-observed-clamp-envelope/e6.0k-v1",
+  "experiment_id": "E6.0K",
+  "observation": {
+    "date": "2026-09-03",
+    "method": "tape_measure_visible_in_four_operator_photographs",
+    "photographs_available_in_repository": false,
+    "side_photographed": "one_installed_passive_clamp",
+    "bilateral_use_assumption": "same_or_mirrored_installed_clamp_hardware",
+    "raw_maximum_envelope_mount_axes_xyz_m": [
+      0.12,
+      0.052,
+      0.105
+    ],
+    "axis_meaning": {
+      "x": "maximum_transverse_span_across_mount_and_clamp",
+      "y": "maximum_visible_thickness",
+      "z": "mount_face_to_distal_tip"
+    },
+    "local_feature_thickness_m": 0.033,
+    "reading_precision": "approximately_1_to_3_mm_due_to_tape_alignment_and_perspective"
+  },
+  "conservative_envelope": {
+    "margin_m_per_face_xyz": [
+      0.01,
+      0.01,
+      0.01
+    ],
+    "size_xyz_m": [
+      0.14,
+      0.072,
+      0.125
+    ],
+    "placement_in_sixforce_frame": "x_and_y_center_inherited_from_document_proxy;z_from_minus_margin_to_observed_distal_plus_margin"
+  },
+  "scope": {
+    "manual_measurement_used": true,
+    "exact_cad": false,
+    "mass_center_of_gravity_force_or_flex_measured": false,
+    "authorizes_physical_movement": false
+  }
+}

@@ -33,28 +33,30 @@ nuevo el estado físico y lógico.
 
 | Elemento | Último estado documentado | Confianza |
 |---|---|---|
-| Postura | el propietario informa robot encendido y en `home`. El check fresco de sólo lectura confirmó Motion disponible, acciones listas y no envió movimiento, pero no pudo certificar la postura 20D porque la muestra de actuadores omitió `2001/2002/2003/3001` | **ESTABLE SEGÚN OPERADOR; HOME LÓGICO NO VERIFICADO** |
-| Modo robot | Motion/Vision accesibles, máquina de tareas desbloqueada y sin módulo activo; no se consultó/cambió el modo de trabajo ni se inició cliente físico | **ENCENDIDO; MODO NO INFERIDO** |
+| Postura | tras el reinicio completo supervisado, una muestra fresca de los 20 ejes midió cuerpo ≤`0,002684 rad`, brazos ≤`0,000959 rad`, velocidad cero y delta posición–consigna ≤`0,002684 rad`; la recuperación declaró `MEASURED_HOME=1` y envió cero objetivos | **HOME MEDIDO; RECONFIRMAR ANTES DE MOVIMIENTO** |
+| Modo robot | Control Center había completado self-check y `StartMotion`. E6.0O reinició después sólo el contenedor dedicado del task manager bajo E-stop; el proceso está operativo y es posterior al task list, pero el action server permanece ausente mientras el paro está activo | **TASK MANAGER RECARGADO BAJO PARO; MODO OPERATIVO PENDIENTE DE REVALIDAR** |
 | Efector | abrazaderas, `HW_TYPE=cruzr_s2_v1` confirmado por el check fresco | **VERIFICADO POR SOFTWARE; VACÍO DEBE RECONFIRMARSE ANTES DE MOVIMIENTO** |
-| Actuadores | `ACTUATORS_OPERATION_ENABLED=1` y acciones `ready`, pero el gate de postura rechazó la muestra incompleta por faltar `2001/2002/2003/3001`; no se envió goal ni se diagnosticó la causa de esas ausencias | **MOVIMIENTO NO AUTORIZADO; COMPLETAR MUESTRA 20D** |
+| Actuadores | tras liberar el E-stop principal, los topics leyeron `0/0` pero siguieron ausentes `/mc/whole_joint_states` y el action server. El log de Control Center explica el estado: el paro llevó `JoystickMode/Ready→WaitStartMotion`; la liberación registró `onEstopState=0`, pero no hubo todavía `ButtonStartMotion`. No se envió goal | **CONTROLADORES ESPERANDO START MOTION; NINGÚN MOVIMIENTO** |
 | Teleoperación PC | combinación oficial robot v0.2.0 + controller 4.7.0 + UI 4.1.0, overlay `clamp,0,0` y control bimanual. La sesión 10:25 terminó por protección FT, no por VR. Tras el reinicio el robot quedó en `AutoTaskMode`; no se ha recargado ni reanudado PICO | **BLOQUEADA HASTA NUEVO PREFLIGHT Y CAMBIO DE MODO AUTORIZADO** |
 | Servicio PC/PICO | el STOP oficial tras `Ctrl+C` quedó confirmado; PC permaneció encendido durante el power cycle del robot | **STOP VERIFICADO; SIN CLIENTE FÍSICO** |
 | VLA | contenedores detenidos, `restart=no`, sin mando físico | **VERIFICADO** |
-| Cargador | `disconnected` en el check fresco | **VERIFICADO POR SOFTWARE** |
-| Paros, ruedas y zona | ambos paros reportaron `0`; zona, ruedas y persona junto al paro no se verificaron porque sólo se hizo diagnóstico VLA/home de lectura | **RECONFIRMAR FÍSICAMENTE ANTES DE CUALQUIER MOVIMIENTO** |
+| Cargador | `CHARGER=0` en el check fresco; baterías `66,6/69,6 %` durante E6.0N | **VERIFICADO POR SOFTWARE** |
+| Paros, ruedas y zona | después de E6.0O el operador liberó el E-stop principal y confirmó estabilidad. Software lee `ESTOP_KEY=0`, `SERVO_ESTOP_KEY=0`; el log no contiene activación reciente del servo E-stop. El bloqueo restante es `WaitStartMotion`, no evidencia de paro de chasis activo. Cargador fuera; no hubo movimiento | **AMBOS PAROS REPORTADOS LIBERADOS; REARME START MOTION PENDIENTE** |
 | Mapa/localización | `test_route_01` se conservó; activación y localización son volátiles | **RECOMPROBAR** |
 
 La rama `main` estaba limpia y sincronizada con `origin/main` en el commit
 `4536f8a` antes de crear esta fuente global. El estado Git actual prevalece
 sobre esa referencia.
 
-El 28-08 se endureció localmente return-to-home mientras el robot permanecía
-completamente apagado. El script no mueve ya sin `--run`, mide los 20 ejes,
+El 28-08 se endureció localmente return-to-home. El script no mueve ya sin
+`--run`, mide los 20 ejes,
 trata todo inicio de home como no confirmado hasta observar las posiciones,
 bloquea PICO/unknown/fuerza/autocolisión/fault y restringe la tarea vendor a
 estados del ciclo de caja. `--force-held-home` quedó retirado y `--fast` ya no
-omite gates. Las regresiones locales pasaron; **no existe aún validación física
-de la ruta revisada y este cambio no modifica el estado apagado vigente**.
+omite gates. El 03-09 se corrigió el mapping para aceptar los IDs reales
+v0.2.0 `11004…11001`; las regresiones de ambos mappings pasaron y un `--check`
+vivo demostró `home` sin ordenar movimiento. La trayectoria de recuperación
+desde una postura no-home sigue sin validación física.
 
 ### 2.2 Primeros pasos de la siguiente sesión
 
@@ -188,6 +190,8 @@ cabeza baja. Se instaló en Vision un guard reversible que:
 - espera versión exacta v0.2.0 y servicios Motion funcionales;
 - exige respuestas reales de self-check y muestras de las seis cámaras;
 - sólo recupera el patrón `Fault` conocido con paros/cargador seguros;
+- reconoce `WaitEStopRelease` como espera física segura y sale sin reiniciar ni
+  mover;
 - reinicia Control Center una vez, exige `StartMotion` y `JoystickMode`;
 - devuelve la cabeza a la tarea oficial de home.
 
@@ -442,14 +446,18 @@ mecánico. No hubo red, ROS, estado vivo, publicador o movimiento. E6.0 sigue
 bloqueado.
 
 El precheck reproducible `E6.0-CHECK` se ejecutó de nuevo localmente en
-`20260903T094623_E6.0-CHECK`. Corrige el alcance del gate de fixture: E4.4 y
+`20260903T123041_E6.0-CHECK`. Corrige el alcance del gate de fixture: E4.4 y
 la geometría clamp/mesa **no aplican** al canary `NO_BOX_READY`, porque exige
 retirar plataforma y B0; sí siguen siendo obligatorios para E7+. El precheck
 cerró correctamente sin red, ROS, estado del robot, publicador ni movimiento,
-y dejó seis bloqueos físicos explícitos: task ready S2 no instalado/registrado,
-recovery sin validar, barrido de autocolisión/entrada/salida pendiente,
-ejecutor físico ausente, límite de aceleración no certificado y semántica
-temporal física sin resolver. El ready P14 ya no exige tres valores numéricos
+y dejó tres bloqueos explícitos: recovery sin validar, transporte físico/STOP
+ausente y límite de aceleración no certificado. La semántica del canary de un
+punto ya quedó cerrada por contrato de proyecto E6.0L: consume únicamente el
+índice 0 de un chunk, una vez, sin replay y sin usar el `end_flag` ambiguo del
+proveedor. El gate geométrico del canary sin caja se acepta sólo bajo el proxy
+documental conservador E6.0J ordenado por el propietario; no constituye CAD ni
+certificación del clamp real. El
+registro runtime y el preflight articular fresco ya están demostrados. El ready P14 ya no exige tres valores numéricos
 de lifter: E6.0A demuestra que sus 14 ejes comandados coinciden con el frame 0
 grabado y que H/L/W deben capturarse frescos y mantenerse bloqueados. El
 frontend `run_cruzr_vla_canary.sh` sólo implementa `--check`; todos los modos
@@ -475,11 +483,203 @@ holgura, flexión, fuerza o aceleración. Por tanto el gate de autocolisión y e
 canary físico permanecen bloqueados. Cero red, ROS, estado vivo, publicador o
 movimiento.
 
+E6.0C continuó el narrow phase local en `20260903T095600_E6.0C`. Clasificó
+los 58 pares cercanos de E6.0B en 40 uniones directas estructurales, 12 pares
+estáticos fuera de P14, 2 pares PGC no instalados y 4 pares móviles upstream.
+Estos cuatro —codo/muñeca y hombro/torso de cada lado— se comprobaron en los
+401 estados mediante BVH de los STL: las AABB de triángulos descartaron todos
+los candidatos y hubo cero intersecciones exactas; cuatro casos sintéticos
+validaron además la rama SAT coplanar/3D. Es evidencia favorable para el modelo vendor, pero no
+resuelve las abrazaderas reales, holgura mínima/tolerancias, revisión de la
+política runtime ni validación física. El gate sigue cerrado; cero red, ROS,
+estado vivo, publicador o movimiento.
+
+E6.0D cuantificó la distancia exacta muestreada en
+`20260903T101730_E6.0D`. Recorrió 401 estados (201 únicos y retorno simétrico)
+con BVH best-first y distancia exacta triángulo-triángulo. Los mínimos fueron
+`34,877144 mm` y `34,884472 mm` para codo/muñeca, y `16,378588 mm` y
+`16,377700 mm` para hombro/torso; el mínimo global fue `16,377700 mm` en la
+muestra 100. El kernel superó 4 casos dirigidos y 300 comparaciones aleatorias
+contra una implementación escalar. Es sólo holgura de malla vendor en puntos
+muestreados: no prueba continuidad, clamp pasivo, calibración, flexión ni
+tolerancia física. También derivó un contrato offline fail-closed de un punto:
+el delta efectivo es `min(delta_perfil, velocidad_perfil × 0,08 s)`, pero
+aceleración, fuerza/corriente y margen físico permanecen `null`; no contiene
+topic/publicador y `physical_execution_enabled=false`.
+
+E6.0E implementó y probó ese guard en
+`20260903T102652_E6.0E`: 35 casos de mensajes y 7 manipulaciones del contrato,
+42/42 expectativas correctas, 2 previews válidos, cero autorizaciones físicas
+y cero publicadores. Rechaza ejecución solicitada, segundo punto, identidad u
+orden incorrectos, estados no-ready, datos no finitos/obsoletos/futuros,
+rangos/deltas excedidos y cambios de H/L/W. El run `20260903T102636_E6.0E`
+queda `DESCARTADO`: sólo falló el empaquetado autocontenido de evidencia por
+copiar el módulo un nivel incorrecto; no llegó a ejecutar la campaña ni
+accedió al robot.
+
+E6.0F cerró el inventario exclusivamente local en
+`20260903T102931_E6.0F`. Congeló el XML ready, la entrada exacta de
+`task_list`, los destinos previstos y un rollback sin aplicarlos. Detectó que
+el loader vendor es interactivo y puede usar `rm -rf`, `sed -i` y reemplazo de
+`task_list`, por lo que queda prohibido ejecutarlo desatendido. Los seis
+componentes offline están agotados con las fuentes actuales; lo pendiente
+cruza necesariamente a robot vivo o entrada física/certificada. El primer
+escenario será `NO_BOX_READY_EMPTY_CELL`: sin caja, mesa/plataforma ni
+AprilTag, radio libre mínimo 1,5 m, clamps vacíos, ruedas bloqueadas, cargador
+fuera, dos personas y un solo cliente. E6.0F no autoriza ese movimiento.
+
+E6.0G ejecutó el primer preflight vivo de sólo lectura en
+`20260903T104309_E6.0G`. Confirmó `HW_TYPE=cruzr_s2_v1`, E-stop principal
+accionado (`1`) y servo E-stop liberado (`0`), cargador fuera, baterías
+79,8/82,1 %, ambos contenedores VLA detenidos y cero publicadores. El task/XML
+ready estaban ausentes. Con el paro activo no había servidor de acción ni
+`/mc/whole_joint_states`; `/mc/actuator_state` se anunciaba pero no entregó
+muestra, por lo que la inmovilidad no quedó instrumentada. No hubo instalación,
+recarga, reinicio ni movimiento.
+
+Tras liberar físicamente el E-stop principal sin movimiento inesperado, E6.0G
+se repitió inicialmente en `20260903T105539_E6.0G`: ambos paros `0`, cargador
+`0`, ready presente sólo en disco y VLA detenido/cero publicadores, pero
+Control Center permaneció en `WaitStartMotion` sin servidor de acción ni
+muestra articular. Una pulsación exterior se registró sólo como `Power click`.
+Se aplicó entonces el ciclo completo prescrito por la sección 5.3.3: shutdown
+lógico aceptado, apagado físico confirmado y arranque supervisado con E-stop.
+Control Center pasó por `WaitEStopRelease`; al liberarlo completó self-check,
+`StartMotion` y `JoystickMode`, sin movimiento inesperado.
+
+El run E6.0G vigente `20260903T113216_E6.0G` usa ahora `rosa action info` —el
+CLI `ros2 action info` había dado un falso cero bajo ROSA/DDS— y demostró un
+servidor de manipulación, proceso Motion posterior al `task_list`, ready
+cargado en runtime, preflight canónico aprobado, articulaciones inmóviles,
+paros `0/0`, cargador fuera y VLA `exited/exited` con cero publicadores. No
+envió movimiento y no autoriza el canary.
+
+E6.0H instaló únicamente en disco el XML vendor y una entrada exacta en
+`task_list.yaml` en `20260903T104552_E6.0H`, con el E-stop principal activo.
+Verificó el hash XML `f4025124…d8323`, creó el backup fresco
+`/home/walker/cruzr-vla/backups/20260903T104552_E6.0H`, cambió el hash del
+task list de `c03ea6a…21a44` a `e4ac5e43…4def7` y volvió a comprobar VLA
+detenido/cero publicadores. No recargó ni reinició el task manager; el registro
+runtime y todo movimiento continúan bloqueados. El diagnóstico shadow se
+corrigió para tratar un topic de mando inexistente como cero publicadores, sin
+ocultar otros errores de transporte. El wrapper E6.0H quedó idempotente:
+`--check` reconoce el hash postinstalación y no vuelve a escribir. El proceso
+`robot_app` es anterior al cambio del task list; ni sus strings ni sus logs
+demostraron recarga dinámica, y los logs repiten `ListControllers: service not
+available` bajo el paro. Se exige una recarga supervisada separada.
+
+E6.0I cerró el segmento geométrico omitido después del reinicio, sin ordenar
+movimiento. El primer run `20260903T114811_E6.0I` detectó conservadoramente un
+nuevo solape OBB `R_shoulder_yaw_link↔torso_link` y terminó fail-safe; queda
+reemplazado por `20260903T115129_E6.0I`, que sometió también ese par a BVH,
+SAT de triángulos y distancia exacta. Usó un snapshot fresco de 20 ejes en
+home, 101 estados `home↔preposición` y la evidencia anterior para cubrir 601
+estados compuestos. No hubo violaciones URDF, pares cercanos nuevos ni
+intersecciones exactas; el mínimo vendor muestreado fue `0,011169662 m` en
+hombro derecho/torso desde home. El resultado no incorpora las abrazaderas
+pasivas, tolerancias, continuidad ni dinámica, y no autoriza movimiento.
+
+E6.0J `20260903T120626_E6.0J` aplicó la decisión del propietario de continuar
+sin medición manual usando especificaciones y artefactos oficiales. Sustituyó
+cada clamp por la unión completa `pgc_base+finger1+finger2` del URDF vendor,
+dilatada 25 mm en cada cara a partir de la carrera documentada de 50 mm. La
+envolvente resultante por extremo es aproximadamente
+`0,145×0,142×0,330 m`. Tras declarar únicamente la cadena de montaje propia
+`sixforce/wrist_roll/wrist_pitch` como contacto permitido, auditó 1.201
+estados `home→staging→A→B→A→staging→home`, con paso máximo
+`0,0092978 rad`, cero pares OBB externos y cero intersecciones exactas. Es una
+**suposición de ingeniería aceptada para el canary sin caja**, no demuestra la
+geometría, masa, CoG, fuerza o flexión de las abrazaderas instaladas y no
+autoriza movimiento por sí sola. Los runs `120340` y `120453` son intentos
+fail-safe de implementación/formato y contacto proximal antes de fijar esta
+política.
+
+E6.0K `20260903T121338_E6.0K` registró las cuatro fotografías con cinta del
+clamp instalado como observación manual aproximada: `120×52×105 mm` en ejes
+montaje-transversal/espesor/distal y un espesor local de 33 mm. Se añadió
+10 mm por cada cara, obteniendo `140×72×125 mm`. El analizador demostró por
+inclusión que este paralelepípedo cabe en el proxy E6.0J para ambos lados bajo
+la hipótesis de hardware igual o reflejado. Por ello el barrido de 1.201
+estados del proxy mayor domina la envolvente observada; no hubo acceso al
+robot, ROS, publicador ni movimiento. Las fotos no están versionadas y la
+lectura conserva incertidumbre de perspectiva; no se convierte en CAD ni en
+certificación de carga/fuerza.
+
+E6.0L `20260903T122501_E6.0L` añadió el núcleo local del canary de un punto y
+pasó 30 casos de estado/fallo más 6 manipulaciones del contrato. Sólo acepta
+el punto fuente 0 de un único chunk ya validado por E6.0E, crea como máximo un
+intent en memoria, queda enclavado en `COMPLETED` y no repite. Cancel, STOP y
+fault purgan el preview antes de cualquier intent posterior. El módulo no
+contiene ROS, red, action, topic ni publicador; por diseño tampoco contiene el
+transporte físico o STOP físico. Resuelve la semántica temporal propia de
+E6.0, no el gate del adaptador físico.
+
+E6.0M `20260903T122502_E6.0M` empaquetó y auditó localmente la secuencia
+determinista `home→staging→A→B→A→staging→home`. El tramo nombrado de retorno
+usa los goals `B→A→staging` con duraciones invertidas `1,0/1,5 s`, y el tramo
+final lleva brazos, cabeza y cintura a cero numérico. El frontend
+`cruzr_vla_ready_pose.sh` permite sólo `--check`/`--dry-plan`; instalación,
+ready, recovery y STOP fallan antes de acceder al robot. El bundle no está
+instalado ni validado físicamente y no autoriza movimiento.
+
+Al preparar la validación física de E6.0, la primera confirmación textual de
+E-stop no coincidió con dos lecturas `ESTOPS=0,0`; ese intento se detuvo sin
+instalar ni mover. El operador volvió a enclavar el E-stop principal y declaró
+también el paro del chasis. El run fresco E6.0G
+`20260903T123632_E6.0G` confirmó `ESTOP_KEY=1`, cargador fuera, VLA
+`exited/exited`, `publishers:0` y ausencia esperada de estado articular/action
+server con el paro activo. `SERVO_ESTOP_KEY=0` no permite afirmar por software
+que el paro del chasis esté activo.
+
+E6.0N `20260903T123940_E6.0N` instaló bajo ese E-stop únicamente los archivos
+de recuperación exacta y una entrada única en `task_list.yaml`. Respaldó el
+estado anterior en
+`/home/walker/cruzr-vla/backups/20260903T123940_E6.0N`; el hash del task list
+cambió de `e4ac5e43…4def7` a `0d24122c…64957`, XML
+`45359d49…cd3c` y MetaMove `bd5f588a…e3b0`. El check posterior confirmó
+`installed-on-disk-not-reloaded` y las nueve evidencias pasaron
+`evidence.sha256`. No se recargó/reinició Motion, no se inició VLA y no se
+publicó movimiento. En ese punto la tarea todavía no existía en el runtime;
+su carga se resolvió en E6.0O y la validación física supervisada sigue
+pendiente.
+
+E6.0O `20260903T124843_E6.0O` recargó exclusivamente el contenedor dedicado
+`walker-motion.manipulation_robot_app-1` bajo la autorización física del
+operador. El proceso pasó de `10:35:33Z` a `10:48:31Z`, posterior al mtime del
+task list; persistieron el hash `0d24122c…64957`, una sola entrada y los hashes
+exactos de XML/MetaMove. El E-stop principal se verificó antes y después,
+`SERVO_ESTOP_KEY` siguió en `0`, el cargador permaneció fuera, VLA detenido y
+`publishers:0`. No se invocó tarea ni se publicó movimiento. El arranque sólo
+espera `ListControllers`, coherente con los controladores no disponibles bajo
+E-stop; no registró fatal, crash o error YAML. Se corrigió después un defecto
+de quoting que hacía que el recolector incluyera líneas anteriores en el log;
+la lectura corregida confirmó el arranque limpio sin repetir la recarga.
+
+Después, el operador liberó el E-stop principal y confirmó estabilidad. La
+lectura aislada mostró `ESTOP_KEY=0`, `SERVO_ESTOP_KEY=0`, cargador `0` y
+baterías 64,6/67,1 %, pero no `/mc/whole_joint_states` ni action server
+(`count=0`). La inspección del log de Control Center descartó la inferencia
+inicial de que el paro del chasis explicaba el bloqueo: no hay un evento
+`onServoEstopState=1`; el E-stop principal había provocado
+`JoystickMode/Ready→WaitStartMotion`, y su liberación sólo produjo
+`onEstopState=0`, sin `ButtonStartMotion`. Por tanto, telemetría y log son
+consistentes con ambos paros liberados y rearme pendiente. El preflight terminó
+antes de cualquier goal. El auditor se corrigió para imprimir el bloqueo en
+vez de salir silenciosamente. Las fotos posteriores confirman la revisión de
+hardware ya documentada: blanco=`KEY1`, aro verde=Power/Start exterior,
+metálico=alimentación del chasis y ningún START Motion independiente
+identificable. Una pulsación verde ya produjo sólo `Power click`; no debe
+repetirse. Desde `WaitStartMotion`, el único recovery comprobado es el ciclo
+completo supervisado de la sección 5.3.3.
+
 La evidencia VLA ya no depende de variables exportadas por un bloque anterior.
 `new_vla_evidence_run.sh` crea cada run de forma exclusiva y rechaza `/` y
 rutas existentes. E1.1/E1.2, los smoke E2.0/E2.1 y las repeticiones E2.3 tienen
 wrappers autocontenidos; E2.3 usa sesiones independientes y STOP entre runs.
-E2.2, E3.0, E3.1, E3.2, E3.3, E4.0, E4.1, E4.1C, E4.1D, E4.1E, E4.1F, E4.2, E5.0, E5.1, E5.2 y E6.0-CHECK disponen ahora de
+E2.2, E3.0, E3.1, E3.2, E3.3, E4.0, E4.1, E4.1C, E4.1D, E4.1E,
+E4.1F, E4.2, E5.0, E5.1, E5.2, E6.0A, E6.0B, E6.0C, E6.0D, E6.0E, E6.0F,
+E6.0G, E6.0H, E6.0I, E6.0J, E6.0K, E6.0L, E6.0M, E6.0N, E6.0O y E6.0-CHECK
+disponen ahora de
 evaluador/sink y wrappers autocontenidos. Los ejemplos aún no implementados de
 VLA-T00…T08 inicializan su directorio
 en el mismo bloque. Las herramientas de evidencia son cambios del
@@ -1032,9 +1232,31 @@ actualizarse este archivo antes de cerrar la sesión.
 
 | Fecha | Hito | Resultado |
 |---|---|---|
+| 2026-09-03 | E6.0 preflight tras liberar E-stop | topics `0/0`, cargador fuera, pero estado articular/action server ausentes. Log: `JoystickMode/Ready→WaitStartMotion` al accionar el principal y luego `onEstopState=0`, sin `ButtonStartMotion`; no hay evento servo E-stop activo. Bloqueo atribuido a rearme pendiente, no al paro de chasis. Cero goals/movimiento; auditor corregido para reportar el fallo |
+| 2026-09-03 | E6.0-CHECK consume N/O | run vigente `20260903T125333_E6.0-CHECK`: verifica recovery instalado, registrado y con proceso posterior a la configuración bajo E-stop. Mantiene 3 gates: validación física del recovery, transporte/STOP físico y aceleración aceptada; no autoriza movimiento |
+| 2026-09-03 | E6.0O recarga mínima del task manager | run `20260903T124843_E6.0O`: reinició sólo `walker-motion.manipulation_robot_app-1` bajo E-stop principal, sin llamar tareas. Proceso posterior al task list; configuración/hashes exactos, E-stop antes/después, cargador fuera, VLA detenido y cero publicadores/movimiento. `SERVO_ESTOP_KEY=0`; registro action y trayectoria aún requieren validación supervisada |
+| 2026-09-03 | E6.0N recovery exacto instalado sólo en disco | run `20260903T123940_E6.0N`: tras confirmar `ESTOP_KEY=1`, cargador fuera, VLA detenido y cero publicadores, respaldó en `/home/walker/cruzr-vla/backups/20260903T123940_E6.0N`, añadió una sola entrada y los XML/YAML hash-matched; task list `e4ac5e43…4def7`→`0d24122c…64957`. Check posterior `installed-on-disk-not-reloaded`; 9/9 artefactos verifican. Sin recarga, reinicio, VLA, publicador ni movimiento; runtime y validación supervisada pendientes |
+| 2026-09-03 | E-stop principal reconciliado para E6.0N | run `20260903T123632_E6.0G`: `ESTOP_KEY=1`, `SERVO_ESTOP_KEY=0`, cargador fuera, VLA `exited/exited`, `publishers:0`; estado articular/action server ausentes por el paro activo. El segundo paro declarado no quedó corroborado por software |
+| 2026-09-03 | E6.0K envolvente observada de clamp | run `20260903T121338_E6.0K`: cuatro fotos con cinta dan aproximadamente `120×52×105 mm`; con 10 mm por cara se usa `140×72×125 mm`. El volumen queda contenido en E6.0J para ambos lados bajo simetría, por lo que hereda su barrido mayor de 1.201 estados. Fotos no versionadas, sin CAD/carga/fuerza certificados; cero red/ROS/estado/publicador/movimiento |
+| 2026-09-03 | E6.0L núcleo temporal de un punto | run `20260903T122501_E6.0L`: 30 casos de estado/fallo y 6 tamper pasan; consume sólo punto 0 una vez, sin replay ni `end_flag`. Cero ROS/red/publicador/movimiento; transporte físico y STOP físico ausentes por diseño |
+| 2026-09-03 | E6.0M bundle ready/recovery local | run `20260903T122502_E6.0M`: valida `home→staging→A→B→A→staging→home` y la inversión exacta del segmento nombrado. Modos activos bloqueados antes del robot; no instalado ni validado físicamente |
+| 2026-09-03 | Preparación física E6.0 bloqueada por discrepancia de E-stop | confirmación textual decía E-stop principal accionado; auditor vivo y preflight canónico leyeron `ESTOPS=0,0`, actuadores habilitados, acciones listas, cargador fuera y baterías 67,1/70,1 %. No se instaló, recargó ni movió |
+| 2026-09-03 | E6.0-CHECK incorpora contrato temporal | run vigente `20260903T123041_E6.0-CHECK`: consume E6.0L/M; quedan 3 gates —recovery física, transporte/STOP físico y aceleración certificada— y no autoriza movimiento |
+| 2026-09-03 | E6.0-CHECK incorpora medida observada | run histórico `20260903T121415_E6.0-CHECK`: consumió E6.0K además de E6.0J y mantuvo 4 gates antes del contrato temporal E6.0L; no autorizó movimiento |
+| 2026-09-03 | E6.0J proxy documental conservador de clamps | run vigente `20260903T120626_E6.0J`: por decisión del propietario se usó la unión PGC completa del URDF vendor y se dilató 25 mm por cara según la carrera documentada de 50 mm; proxy por extremo `0,145×0,142×0,330 m`. En 1.201 estados del recorrido completo, paso máximo `0,0092978 rad`, no hubo pares OBB externos ni intersecciones exactas. Sólo se permiten contactos de la cadena propia `sixforce/wrist_roll/wrist_pitch`. Supuesto aceptado para canary sin caja, no CAD/certificación física; cero red/ROS/estado/publicador/movimiento |
+| 2026-09-03 | E6.0-CHECK actualizado con supuesto geométrico | run histórico `20260903T120716_E6.0-CHECK`: consumió E6.0J y marcó autocolisión como `PASS_WITH_DOCUMENT_PROXY_ASSUMPTION`. Dejó 4 gates antes de E6.0L/M. Local, sin red/ROS/publicador; E6.0 físico no autorizado |
+| 2026-09-03 | E6.0H instalación ready sólo en disco | run `20260903T104552_E6.0H`: con E-stop principal activo se respaldó `task_list.yaml`, se instaló atómicamente el XML vendor `f4025124…d8323` y una sola entrada; hash task list `c03ea6a…21a44`→`e4ac5e43…4def7`. Backup `/home/walker/cruzr-vla/backups/20260903T104552_E6.0H`. Sin recarga/reinicio, VLA detenido, cero publicadores y cero movimiento; registro runtime pendiente |
+| 2026-09-03 | E6.0G preflight vivo de sólo lectura | runs iniciales `20260903T104309`/`105539`: E-stop 1/0 y luego `WaitStartMotion`. Tras el ciclo completo supervisado, run vigente `20260903T113216_E6.0G`: `rosa action info` demuestra un servidor, ready cargado porque Motion arrancó después del task list, preflight canónico aprobado, articulaciones inmóviles, paros 0/0, cargador fuera, VLA detenido y cero publicadores. Sin movimiento ni autorización física |
+| 2026-09-03 | E6.0F cierre offline y escenario físico | run `20260903T102931_E6.0F`: 6/6 componentes locales inventariados; no queda acción exclusivamente local sin nueva entrada física/certificada. Preview no aplicado del XML/entrada ready y rollback; loader vendor marcado destructivo/interactivo. Primer escenario `NO_BOX_READY_EMPTY_CELL`, sin fixture y no autorizado. Cero red/ROS/estado/publicador/movimiento |
+| 2026-09-03 | E6.0E guard de un punto | run autoritativo `20260903T102652_E6.0E`: 35 mensajes + 7 tamper de contrato, 42/42 expectativas, 2 previews válidos, cero autorizaciones y publicadores. Guard local/in-memory; rechaza toda solicitud física. Run `102636` descartado por estructura de copia de evidencia, sin campaña ni acceso externo |
+| 2026-09-03 | E6.0D holgura vendor y contrato de guards | run `20260903T101730_E6.0D`: distancia exacta en 401 estados, mínimo global muestreado `0,016377700 m` hombro derecho/torso en muestra 100; 4 tests dirigidos y 300 aleatorios contra referencia escalar. Contrato de un punto sólo como especificación fail-closed, sin topic/publicador, con aceleración/fuerza/margen físico nulos. No certifica continuidad, clamp ni tolerancias. Cero red/ROS/estado/publicador/movimiento |
+| 2026-09-03 | E6.0C narrow phase de pares cercanos P14 | run autoritativo `20260903T095600_E6.0C`: los 58 pares E6.0B se dividieron en 40 directos, 12 estáticos fuera de P14, 2 PGC no instalados y 4 móviles upstream. BVH de STL descartó todos los pares de triángulos por AABB sobre 401 estados (cero intersecciones); 4 self-tests validaron el SAT coplanar/3D. Faltan clamp real, holgura/tolerancias, política runtime revisada y validación física; gate cerrado. Cero red/ROS/estado/publicador/movimiento |
 | 2026-09-03 | E6.0B broad phase de autocolisión P14 | run `20260903T094547_E6.0B`: 401 estados `preposición→A→B→A→preposición`, 46 links vendor, cero violaciones URDF y cero solapes OBB entre links con distancia cinemática >3. Los 58 pares cercanos quedan sin clasificar por ausencia de SRDF/ACM; PGC no representa las abrazaderas pasivas. Estado parcial, gate físico cerrado. Cero red/ROS/estado/publicador/movimiento |
 | 2026-09-03 | E6.0A contrato ready/recovery P14 | run autoritativo `20260903T093145_E6.0A`: task0/frame0 demuestra orden directo de muñecas (`0,002112805 rad`) y rechaza el swap E4.0 (`0,614627484 rad`); ready B queda dentro del soporte. P14 usa 14 valores y hold fresco H/L/W. Recovery exacto de brazos `B→A→preposición` derivado pero no validado físicamente/colisiones; `back` vendor no es inverso. Run `092935` descartado por el mapping antiguo. Cero red/ROS/estado/publicador/movimiento |
-| 2026-09-03 | E6.0-CHECK auditoría de preparación del canary | run vigente `20260903T094623_E6.0-CHECK`: P14/task 0/`NO_BOX_READY` auditado contra E6.0A/E6.0B y evidencia previa congelada. E4.4/clamp-fixture no aplica a E6.0 sin caja y sigue obligatorio para E7+. Quedan 6 gates: ready task, recovery validado, autocolisión/sweep, ejecutor, aceleración y temporalidad física. `run_cruzr_vla_canary.sh --check` disponible; modos activos fallan antes de red/robot. Cero red/ROS/estado/publicador/movimiento; E6.0 físico no autorizado |
+| 2026-09-03 | E6.0I entrada/salida home del ready | run vigente `20260903T115129_E6.0I`: snapshot fresco 20D home, 101 muestras de `home↔preposición` y cobertura compuesta de 601 estados. Un nuevo OBB hombro derecho/torso se resolvió por malla exacta; cero intersecciones, mínimo vendor `0,011169662 m`. Sin publicador/movimiento; falta geometría clamp, tolerancias, dinámica y validación física. Run `114811` es fail-safe superado por no haber probado aún ese quinto par |
+| 2026-09-03 | E6.0-CHECK auditoría inicial de preparación del canary | run `20260903T115457_E6.0-CHECK`, superado por `120716`: consumió E6.0G/H/I y dejó 5 gates antes de adoptar el proxy documental E6.0J. Local, sin red/ROS/publicador; no autorizó movimiento |
+| 2026-09-03 | recuperación de E-stop y guard de arranque | shutdown lógico aceptado y apagado completo confirmado; el arranque con E-stop pasó `WaitEStopRelease→SelfChecking→JoystickMode`, self-check y `StartMotion` exitosos. Se corrigió el guard para aceptar `WaitEStopRelease` sin reiniciar/mover; instalado en Vision hash `6c3cbe48…9287b`, backup `/home/walker/cruzr-v020-boot-guard-backups/20260903T113735`. `--check`: versión v0.2.0, estado JoystickMode, x86 3/3, cámaras 2/2, seguridad 0/0/0, `movement=none restart=none` |
+| 2026-09-03 | gate home compatible con IDs v0.2.0 | `/mc/actuator_state` usa elevador/cintura `11004/11003/11002/11001`, no los IDs históricos `2001/2002/2003/3001`. El parser acepta ambos esquemas y rechaza duplicados. Self-test completo pasó; `cruzr_recover_to_home.sh --check` vivo midió 20 ejes, cuerpo ≤0,002684 rad, brazos ≤0,000959 rad, velocidad 0 y delta ≤0,002684 rad; `MEASURED_HOME=1`, cero objetivos |
 | 2026-09-03 | E5.2 selección preliminar de perfil | run `20260903T091901_E5.2`: regla de menor dimensión dentro de `max(0,0001 rad,1 %)` del mejor MAE elegible selecciona P14 para tasks 0–3. H sin mejora material, W empeora ~`6,88e-6…1,16e-5 rad`, L empeora ~`7,83e-4…3,48e-3 rad` y presenta 12/80 rechazos. Cero red/ROS/estado vivo/publicador/movimiento. No autoriza E6.0; el desglose vigente de gates está en E6.0-CHECK |
 | 2026-09-03 | E5.1 matriz shadow-replay por perfil | run `20260903T091319_E5.1`: 20 inferencias C0 E3.0 verificadas se enmascararon bajo 8 perfiles para 160 bundles comparables. 148 ACCEPT, 12 REJECT_SAFE y 160/160 máscaras; los 12 rechazos sólo habilitan L (task1/seed2 velocidad lifter3; task2/seed0 y task3/seed0 rango lifter1). Perfiles sin L: 80/80 aceptados. Sin red/ROS/estado vivo/publicador/movimiento; sólo libera E5.2 offline |
 | 2026-09-03 | E5.0 matriz completa del sink | run `20260903T090355_E5.0`: 8 perfiles × `low/middle`, 16/16 celdas PASS, 544 casos; 32 válidos aceptados, 512 inválidos rechazados y 16/16 probes de máscara/hold. Corregido el falso `axis_profile_mismatch` de P14. Todo local, sin ROS/red/estado/publicador/movimiento. VLA-5 queda completo sólo offline; libera E5.1 shadow, no ejecución física |

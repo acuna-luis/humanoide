@@ -20,6 +20,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--e5-2", type=pathlib.Path, required=True)
     parser.add_argument("--e6-0a", type=pathlib.Path, required=True)
     parser.add_argument("--e6-0b", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0c", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0d", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0e", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0f", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0g", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0h", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0i", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0j", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0k", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0l", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0m", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0n", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0o", type=pathlib.Path, required=True)
     parser.add_argument("--profile", type=pathlib.Path, required=True)
     parser.add_argument("--physical-executor", type=pathlib.Path, required=True)
     parser.add_argument("--ready-script", type=pathlib.Path, required=True)
@@ -106,13 +119,73 @@ def main() -> int:
         "E5.2": args.e5_2.resolve(),
         "E6.0A": args.e6_0a.resolve(),
         "E6.0B": args.e6_0b.resolve(),
+        "E6.0C": args.e6_0c.resolve(),
+        "E6.0D": args.e6_0d.resolve(),
+        "E6.0E": args.e6_0e.resolve(),
+        "E6.0F": args.e6_0f.resolve(),
+        "E6.0G": args.e6_0g.resolve(),
+        "E6.0H": args.e6_0h.resolve(),
+        "E6.0I": args.e6_0i.resolve(),
+        "E6.0J": args.e6_0j.resolve(),
+        "E6.0K": args.e6_0k.resolve(),
+        "E6.0L": args.e6_0l.resolve(),
+        "E6.0M": args.e6_0m.resolve(),
+        "E6.0N": args.e6_0n.resolve(),
+        "E6.0O": args.e6_0o.resolve(),
     }
     actual = {
         name: load_flat_yaml(path / "actual_result.yaml")
         for name, path in runs.items()
     }
     selection = load_json(runs["E5.2"] / "shadow-profile-selection.json")
+    clearance = load_json(runs["E6.0D"] / "clearance-report.json")
+    guard_contract = load_json(
+        runs["E6.0D"] / "offline-executor-guard-contract.json"
+    )
+    guard_campaign = load_json(runs["E6.0E"] / "one-point-guard-campaign.json")
+    offline_closure = load_json(runs["E6.0F"] / "offline-closure-report.json")
+    home_entry = load_json(runs["E6.0I"] / "home-entry-report.json")
+    clamp_proxy = load_json(runs["E6.0J"] / "document-proxy-clamp-report.json")
+    observed_clamp = load_json(
+        runs["E6.0K"] / "observed-clamp-containment-report.json"
+    )
+    one_point_core = load_json(
+        runs["E6.0L"] / "one-point-canary-control-core.json"
+    )
+    ready_recovery_bundle = load_json(
+        runs["E6.0M"] / "ready-recovery-bundle.json"
+    )
     profile = load_json(args.profile.resolve())
+
+    ready_runtime_verified = (
+        actual["E6.0H"].get("ready_installed_on_disk") is True
+        and actual["E6.0G"].get("ready_task_registered_on_disk") == 1
+        and actual["E6.0G"].get("ready_xml_present_on_disk") == 1
+        and actual["E6.0G"].get("ready_runtime_load_order")
+        == "process_started_after_task_list"
+        and actual["E6.0G"].get("manipulation_action_servers") == 1
+    )
+    fresh_preflight_verified = (
+        actual["E6.0G"].get("expected_estop_state") == "released"
+        and actual["E6.0G"].get("estop_key") == 0
+        and actual["E6.0G"].get("servo_estop_key") == 0
+        and actual["E6.0G"].get("charger_connected") is False
+        and actual["E6.0G"].get("whole_joint_states") == "advertised"
+        and actual["E6.0G"].get("manipulation_action_servers") == 1
+        and actual["E6.0G"].get("canonical_manipulation_preflight") == "passed"
+        and actual["E6.0G"].get("robot_state_stationary_verified") is True
+        and actual["E6.0G"].get("physical_publishers") == 0
+    )
+    recovery_runtime_loaded = (
+        actual["E6.0N"].get("recovery_installed_on_disk") is True
+        and actual["E6.0N"].get("recovery_registered_on_disk") is True
+        and actual["E6.0O"].get("runtime_load_order")
+        == "process_started_after_recovery_config"
+        and actual["E6.0O"].get("estop_active_before_and_after") is True
+        and actual["E6.0O"].get("task_invoked") is False
+        and actual["E6.0O"].get("physical_movement_commanded") is False
+        and actual["E6.0O"].get("physical_publishers") == 0
+    )
 
     expected_statuses = {
         "E3.3": "PASS_LOCAL_TEMPORAL_FAIL_CLOSED_VENDOR_SEMANTICS_UNRESOLVED",
@@ -123,6 +196,19 @@ def main() -> int:
         "E5.2": "PASS_PRELIMINARY_P14_ALL_TASKS_PHYSICAL_BLOCKED",
         "E6.0A": "PARTIAL_P14_READY_ALIGNED_EXACT_ARM_RECOVERY_DERIVED_PHYSICAL_VALIDATION_PENDING",
         "E6.0B": "PASS_UPSTREAM_FAR_LINK_OBB_SWEEP_PARTIAL_SELF_COLLISION_BLOCKED_NO_ACM_OR_CLAMP_GEOMETRY",
+        "E6.0C": "PASS_VENDOR_UPSTREAM_NEAR_PAIR_MESH_SWEEP_PHYSICAL_BLOCKED_CLAMP_CLEARANCE_AND_POLICY",
+        "E6.0D": "PASS_VENDOR_MESH_SAMPLED_CLEARANCE_QUANTIFIED_PHYSICAL_BLOCKED",
+        "E6.0E": "PASS_OFFLINE_ONE_POINT_GUARD_MATRIX_PHYSICAL_BLOCKED",
+        "E6.0F": "PASS_ALL_AVAILABLE_LOCAL_ONLY_E6_0_WORK_EXHAUSTED_PHYSICAL_BOUNDARY_REACHED",
+        "E6.0G": "PASS_READ_ONLY_LIVE_AUDIT_PHYSICAL_GATES_REMAIN",
+        "E6.0H": "PASS_READY_INSTALLED_AND_REGISTERED_ON_DISK_NOT_RELOADED",
+        "E6.0I": "PASS_HOME_STAGING_VENDOR_MODEL_SWEEP_PHYSICAL_BLOCKED_NO_CLAMP_OR_DYNAMICS",
+        "E6.0J": "PASS_DOCUMENT_PROXY_SAMPLED_SWEEP_ASSUMPTION_ACCEPTED_PHYSICAL_NOT_CERTIFIED",
+        "E6.0K": "PASS_OBSERVED_CLAMP_ENVELOPE_CONTAINED_IN_E6_0J_PROXY",
+        "E6.0L": "PASS_ONE_POINT_CANARY_CONTROL_CORE_OFFLINE_PHYSICAL_TRANSPORT_BLOCKED",
+        "E6.0M": "PASS_EXACT_RECOVERY_BUNDLE_LOCAL_ACTIVE_MODES_BLOCKED_PENDING_PHYSICAL_VALIDATION",
+        "E6.0N": "PASS_RECOVERY_INSTALLED_AND_REGISTERED_ON_DISK_NOT_RELOADED",
+        "E6.0O": "PASS_DEDICATED_TASK_MANAGER_RELOADED_UNDER_ESTOP",
     }
     for name, expected in expected_statuses.items():
         if actual[name].get("status") != expected:
@@ -172,8 +258,14 @@ def main() -> int:
         ),
         gate(
             "s2_ready_task_installed_and_registered",
-            "BLOCKED",
-            "E4.0 found supplied_s2_task_installed=false and registered=false",
+            "PASS" if ready_runtime_verified else "BLOCKED",
+            (
+                "E6.0H atomically installed the hash-matched XML and one task-list entry; "
+                "E6.0G proves the current manipulation process started after that task list, "
+                "the ready files still match and the canonical ROSA action server is live"
+                if ready_runtime_verified
+                else "The ready files or post-install process load order/action server remain unverified"
+            ),
         ),
         gate(
             "ready_20d_complete",
@@ -183,36 +275,71 @@ def main() -> int:
         gate(
             "recovery_exact_and_validated",
             "BLOCKED",
-            "E6.0A derives exact B->A->staging arm reversal; collision and physical validation remain pending",
+            (
+                "E6.0M packages the audited home->staging->A->B->A->staging->numeric-home "
+                "sequence and proves the named segment is the exact reverse. E6.0N installed "
+                "the exact recovery with backup, and E6.0O restarted only the dedicated task "
+                "manager under E-stop after the recovery config. Runtime load order is established, "
+                "but action registration and the trajectory still require supervised physical validation"
+                if recovery_runtime_loaded
+                else "Recovery installation/runtime load evidence is incomplete"
+            ),
         ),
         gate(
             "no_box_self_collision_swept_volume",
-            "BLOCKED",
-            "E6.0B found zero far-link upstream OBB overlaps over 401 entry/recovery samples, but no SRDF/ACM or installed-clamp geometry exists and physical clearance remains unvalidated",
+            "PASS_WITH_DOCUMENT_PROXY_ASSUMPTION",
+            (
+                "E6.0C/E6.0I found zero vendor-model intersections. At the owner's direction, "
+                "E6.0J substitutes the complete supplier PGC mesh group dilated 25 mm on every "
+                "face (documented 50 mm stroke): approximately 330x145x142 mm per endpoint. "
+                f"It found zero non-mount intersections over {clamp_proxy['trajectory']['sample_count']} "
+                f"states at max step {clamp_proxy['trajectory']['maximum_inter_sample_joint_step_rad']:.9f} rad. "
+                "E6.0K then placed the observed 120x52x105 mm clamp inside a "
+                "140x72x125 mm envelope and proved that envelope is contained in E6.0J. "
+                "This closes the project canary's geometric assumption only; it does not certify "
+                "the installed clamp, loads, force, flex or continuous-path clearance"
+            ),
         ),
         gate(
             "physical_executor_implemented_and_reviewed",
-            "BLOCKED" if not args.physical_executor.is_file() else "PENDING_REVIEW",
+            "BLOCKED",
             (
-                f"missing {args.physical_executor}"
-                if not args.physical_executor.is_file()
-                else f"candidate exists but is not physically authorized: {args.physical_executor}"
+                f"E6.0E passed {guard_campaign['message_case_count'] + guard_campaign['contract_tamper_case_count']}/"
+                f"{guard_campaign['message_case_count'] + guard_campaign['contract_tamper_case_count']} guard cases; "
+                f"E6.0L passed {one_point_core['case_count'] + one_point_core['contract_tamper_case_count']} "
+                "control-core cases and latches after one point with no replay. The compatibility file exists, "
+                "but explicitly has no physical command/STOP transport, so this gate remains blocked"
             ),
         ),
         gate(
             "certified_acceleration_limit",
             "BLOCKED",
-            "profile has speed/delta limits but no max_interpoint_acceleration; E4.0 says explicit limits absent",
+            (
+                "E6.0D derives a fail-closed offline guard specification from speed*dt, "
+                "but maximum_acceleration_rad_s2 remains null and the source profile "
+                "limits are explicitly not certified"
+            ),
         ),
         gate(
             "physical_temporal_semantics",
-            "BLOCKED",
-            "E3.3 proves a local candidate only; vendor execution is 5 s inference plus 6/9 s interpolation with unresolved end behavior",
+            "PASS_PROJECT_ONE_POINT_CONTRACT",
+            (
+                "E6.0L defines the E6.0 canary independently of the ambiguous vendor executor: "
+                "accept only source point index 0 from one guarded chunk, consume it once, "
+                "never replay it and ignore vendor end_flag. This resolves the project-side "
+                "one-point schedule; physical command and STOP timing remain in the separate executor gate"
+            ),
         ),
         gate(
             "fresh_physical_preflight",
-            "PENDING_RUNTIME",
-            "must be measured immediately before any future authorized motion",
+            "PASS" if fresh_preflight_verified else "BLOCKED",
+            (
+                "Fresh E6.0G confirms both E-stops released, charger disconnected, "
+                "whole-joint state advertised, canonical manipulation preflight passed, "
+                "ROSA action server live, robot stationary, VLA stopped and zero publishers"
+                if fresh_preflight_verified
+                else "Fresh released-state canonical manipulation preflight remains incomplete"
+            ),
         ),
     ]
     blocking = [
@@ -245,20 +372,92 @@ def main() -> int:
             "ready_script_exists": args.ready_script.is_file(),
             "physical_executor_path": str(args.physical_executor),
             "physical_executor_exists": args.physical_executor.is_file(),
+            "offline_guard_contract_path": str(
+                runs["E6.0D"] / "offline-executor-guard-contract.json"
+            ),
+            "offline_guard_contract_state": guard_contract["state"],
+            "offline_guard_contract_physical_execution_enabled": guard_contract[
+                "physical_execution_enabled"
+            ],
+            "offline_guard_campaign_all_passed": guard_campaign[
+                "all_expectations_passed"
+            ],
+            "offline_closure_remaining_local_only_actions": offline_closure[
+                "remaining_local_only_actions_without_new_physical_or_certified_input"
+            ],
+            "offline_closure_next_boundary": offline_closure[
+                "next_required_boundary"
+            ],
+            "live_read_only_audit_consumed": True,
+            "latest_live_ready_task_registered_on_disk": actual["E6.0G"].get(
+                "ready_task_registered_on_disk"
+            ),
+            "latest_live_ready_xml_present_on_disk": actual["E6.0G"].get(
+                "ready_xml_present_on_disk"
+            ),
+            "ready_install_on_disk_completed": actual["E6.0H"].get(
+                "ready_installed_on_disk"
+            ),
+            "ready_task_manager_reloaded_during_e6_0h": actual["E6.0H"].get(
+                "task_manager_reloaded"
+            ),
+            "ready_runtime_load_order": actual["E6.0G"].get(
+                "ready_runtime_load_order"
+            ),
+            "ready_runtime_verified": ready_runtime_verified,
+            "fresh_physical_preflight_verified": fresh_preflight_verified,
+            "home_entry_vendor_model_verified": home_entry.get(
+                "complete_vendor_model_path_covered"
+            ) is True,
+            "document_proxy_clamp_assumption_consumed": clamp_proxy.get("status")
+            == "PASS_DOCUMENT_PROXY_SAMPLED_SWEEP_ASSUMPTION_ACCEPTED_PHYSICAL_NOT_CERTIFIED",
+            "document_proxy_clamp_sample_count": clamp_proxy["trajectory"]["sample_count"],
+            "document_proxy_clamp_exact_intersections": clamp_proxy["collision_audit"][
+                "exact_intersection_count"
+            ],
+            "observed_clamp_envelope_contained": observed_clamp.get("status")
+            == "PASS_OBSERVED_CLAMP_ENVELOPE_CONTAINED_IN_E6_0J_PROXY",
+            "one_point_control_core_reviewed": one_point_core.get("all_expectations_passed")
+            is True,
+            "one_point_source_indices": one_point_core.get(
+                "accepted_source_point_indices"
+            ),
+            "one_point_replay_count": one_point_core.get("replay_count"),
+            "physical_transport_implemented": one_point_core.get(
+                "physical_transport_implemented"
+            ),
+            "ready_recovery_bundle_exact_reverse": ready_recovery_bundle.get(
+                "recovery", {}
+            ).get("named_segment_is_exact_reverse"),
+            "ready_recovery_bundle_physically_validated": ready_recovery_bundle.get(
+                "physically_validated"
+            ),
+            "recovery_installed_on_disk": actual["E6.0N"].get(
+                "recovery_installed_on_disk"
+            ),
+            "recovery_registered_on_disk": actual["E6.0N"].get(
+                "recovery_registered_on_disk"
+            ),
+            "recovery_runtime_load_order": actual["E6.0O"].get(
+                "runtime_load_order"
+            ),
+            "recovery_runtime_loaded_under_estop": recovery_runtime_loaded,
+            "recovery_physically_validated": False,
         },
         "gates": gates,
         "blocking_gate_count": len(blocking),
         "blocking_gates": blocking,
-        "runtime_preflight_pending": True,
+        "runtime_preflight_pending": not fresh_preflight_verified,
         "e6_0_physical_authorized": False,
         "physical_publishers": 0,
         "robot_state_read": False,
         "network_calls": 0,
         "physical_movement_commanded": False,
         "next_safe_work": [
-            "resolve_and_validate_the_S2_ready_and_recovery_contract",
-            "resolve_near_link_allowed_collisions_and_installed_clamp_geometry_then_validate_physical_clearance",
-            "implement_and_review_an_offline_first_P14_executor_with_acceleration_and_temporal_guards",
+            "keep_vla_containers_stopped_and_physical_publishers_at_zero",
+            "treat_the_owner_accepted_document_proxy_as_a_canary_only_assumption_not_certified_geometry",
+            "resolve_dynamics_and_supervised_recovery_validation_before_any physical adapter",
+            "implement and review physical command and STOP transport only after the remaining gates close",
         ],
     }
     if args.output:

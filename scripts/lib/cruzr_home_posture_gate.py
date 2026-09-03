@@ -15,15 +15,15 @@ import sys
 from typing import Any
 
 
-BODY_IDS = (
-    1001,
-    1002,
-    2001,
-    2002,
-    2003,
-    3001,
-    *range(4001, 4008),
-    *range(5001, 5008),
+BODY_ACTUATOR_ALIASES = (
+    ("head_yaw", (1001,)),
+    ("head_pitch", (1002,)),
+    ("lifter_pitch_1", (2001, 11004)),
+    ("lifter_pitch_2", (2002, 11003)),
+    ("lifter_pitch_3", (2003, 11002)),
+    ("waist_yaw", (3001, 11001)),
+    *((f"left_arm_{actuator_id}", (actuator_id,)) for actuator_id in range(4001, 4008)),
+    *((f"right_arm_{actuator_id}", (actuator_id,)) for actuator_id in range(5001, 5008)),
 )
 ARM_IDS = (*range(4001, 4008), *range(5001, 5008))
 
@@ -55,9 +55,22 @@ def classify(message: dict[str, Any], home_tolerance: float) -> list[str]:
             raise ValueError(f"actuador duplicado: {actuator_id}")
         by_id[actuator_id] = item
 
-    missing = [actuator_id for actuator_id in BODY_IDS if actuator_id not in by_id]
+    selected: list[tuple[str, int, dict[str, Any]]] = []
+    missing: list[str] = []
+    for logical_name, aliases in BODY_ACTUATOR_ALIASES:
+        matches = [actuator_id for actuator_id in aliases if actuator_id in by_id]
+        if not matches:
+            missing.append(f"{logical_name}({'|'.join(map(str, aliases))})")
+            continue
+        if len(matches) > 1:
+            raise ValueError(
+                f"actuador lógico duplicado {logical_name}: "
+                + ",".join(map(str, matches))
+            )
+        actuator_id = matches[0]
+        selected.append((logical_name, actuator_id, by_id[actuator_id]))
     if missing:
-        raise ValueError("faltan actuadores 20D: " + ",".join(map(str, missing)))
+        raise ValueError("faltan actuadores 20D: " + ",".join(missing))
 
     faults: list[str] = []
     maximum_position = 0.0
@@ -65,8 +78,7 @@ def classify(message: dict[str, Any], home_tolerance: float) -> list[str]:
     maximum_command_delta = 0.0
     arm_maximum_position = 0.0
 
-    for actuator_id in BODY_IDS:
-        item = by_id[actuator_id]
+    for _logical_name, actuator_id, item in selected:
         name = str(item.get("name", "unknown"))
         error_code = int(item.get("error_code", 0))
         status = int(item.get("status", 0))
@@ -103,7 +115,7 @@ def classify(message: dict[str, Any], home_tolerance: float) -> list[str]:
 
     near_home = maximum_position < home_tolerance
     return [
-        f"ACTUATOR_BODY_COUNT={len(BODY_IDS)}",
+        f"ACTUATOR_BODY_COUNT={len(BODY_ACTUATOR_ALIASES)}",
         f"ACTUATOR_ARM_COUNT={len(ARM_IDS)}",
         f"BODY_MAX_ABS_POSITION={maximum_position:.6f}",
         f"ARMS_MAX_ABS_POSITION={arm_maximum_position:.6f}",

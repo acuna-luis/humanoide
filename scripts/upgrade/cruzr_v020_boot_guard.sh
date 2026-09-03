@@ -290,7 +290,7 @@ wait_for_terminal_control_state() {
   while (( SECONDS < deadline )); do
     state="$(control_state || true)"
     case "$state" in
-      Fault|JoystickMode)
+      Fault|JoystickMode|WaitEStopRelease)
         printf '%s\n' "$state"
         return 0
         ;;
@@ -371,6 +371,11 @@ fi
 
 if [[ "$state" == "JoystickMode" ]]; then
   log "NO_ACTION=already_healthy"
+  exit 0
+fi
+
+if [[ "$state" == "WaitEStopRelease" ]]; then
+  log "NO_ACTION=waiting_for_physical_estop_release"
   exit 0
 fi
 

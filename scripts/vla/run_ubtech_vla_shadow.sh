@@ -166,8 +166,18 @@ command_publisher_count() {
   run_ssh "$MOTION_HOST" "docker exec walker-ros.ros2-1 bash -lc '
     source /opt/ros/humble/setup.bash
     export ROS2CLI_DISABLE_DAEMON=1
-    ros2 topic info /mc/sdk/robot_command
-  '" | awk '/Publisher count:/ {print $3; found=1} END {if (!found) print "unknown"}'
+    output=\$(timeout 8 ros2 topic info /mc/sdk/robot_command 2>&1) && rc=0 || rc=\$?
+    if count=\$(awk '\''/Publisher count:/ {print \$3; found=1} END {exit !found}'\'' <<<\"\$output\"); then
+      printf '\''%s\\n'\'' \"\$count\"
+    elif grep -Fq '\''Unknown topic'\'' <<<\"\$output\"; then
+      # Un topic ausente no puede tener publicadores. Es un estado seguro y
+      # normal con los contenedores VLA detenidos, no un fallo de transporte.
+      printf '\''0\\n'\''
+    else
+      printf '\''%s\\n'\'' \"\$output\" >&2
+      exit \"\${rc:-1}\"
+    fi
+  '"
 }
 
 assert_command_path_absent() {

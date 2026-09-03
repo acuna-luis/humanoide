@@ -557,7 +557,8 @@ make_test_snapshot() {
   local velocity="$2"
   local command_delta="$3"
   local fault_id="${4:-0}"
-  python3 - "$position" "$velocity" "$command_delta" "$fault_id" <<'PY'
+  local id_scheme="${5:-legacy}"
+  python3 - "$position" "$velocity" "$command_delta" "$fault_id" "$id_scheme" <<'PY'
 import json
 import sys
 
@@ -565,7 +566,14 @@ position = float(sys.argv[1])
 velocity = float(sys.argv[2])
 command_delta = float(sys.argv[3])
 fault_id = int(sys.argv[4])
-ids = [1001, 1002, 2001, 2002, 2003, 3001, *range(4001, 4008), *range(5001, 5008)]
+id_scheme = sys.argv[5]
+middle_ids = {
+    "legacy": [2001, 2002, 2003, 3001],
+    "v0.2.0": [11004, 11003, 11002, 11001],
+}.get(id_scheme)
+if middle_ids is None:
+    raise SystemExit(f"unknown test id scheme: {id_scheme}")
+ids = [1001, 1002, *middle_ids, *range(4001, 4008), *range(5001, 5008)]
 items = []
 for index, actuator_id in enumerate(ids):
     value = position if index == 0 else 0.0
@@ -589,6 +597,10 @@ run_self_test() {
   snapshot="$(make_test_snapshot 0.0 0.0 0.0)"
   output="$(python3 "$POSTURE_GATE" <<<"$snapshot")"
   grep -q '^MEASURED_HOME=1$' <<<"$output" || die "self-test: home no reconocido."
+
+  snapshot="$(make_test_snapshot 0.0 0.0 0.0 0 v0.2.0)"
+  output="$(python3 "$POSTURE_GATE" <<<"$snapshot")"
+  grep -q '^MEASURED_HOME=1$' <<<"$output" || die "self-test: IDs v0.2.0 no reconocidos."
 
   snapshot="$(make_test_snapshot 0.30 0.0 0.0)"
   output="$(python3 "$POSTURE_GATE" <<<"$snapshot")"
@@ -631,7 +643,7 @@ run_self_test() {
     [[ "$HOME_ACTION_REQUIRED" == "true" && "$RETREAT_REQUIRED" == "true" ]]
   ) >/dev/null || die "self-test: la ruta conocida de caja fue rechazada."
 
-  info "RECOVERY_SELF_TEST_OK=home,non-home,latent-command,moving,fault,missing-axis,pico-block,failed-home-block,force-block,known-workbin"
+  info "RECOVERY_SELF_TEST_OK=legacy-home,v0.2.0-home,non-home,latent-command,moving,fault,missing-axis,pico-block,failed-home-block,force-block,known-workbin"
 }
 
 main() {
