@@ -133,6 +133,7 @@ Uso:
   ./scripts/cruzr_apriltag_mesa2_align.sh --measure
   ./scripts/cruzr_apriltag_mesa2_align.sh --measure-held
   ./scripts/cruzr_apriltag_mesa2_align.sh --measure-held-target [--fast]
+  ./scripts/cruzr_apriltag_mesa2_align.sh --measure-calibration-target
   ./scripts/cruzr_apriltag_mesa2_align.sh --align-empty [--yes] [--fast]
   ./scripts/cruzr_apriltag_mesa2_align.sh --align-held [--yes] [--fast]
   ./scripts/cruzr_apriltag_mesa2_align.sh --coarse-held [--yes] [--fast]
@@ -149,6 +150,9 @@ Modos:
   --measure-held-target
                 Verifica un agarre vigente y registra 20 muestras como
                 candidata de calibración con carga. No mueve.
+  --measure-calibration-target
+                Registra 20 muestras estables del tag 113 para calibración
+                geométrica sin exigir agarre. No mueve ni cambia referencias.
   --align-empty Alinea solamente el chasis durante las pruebas sin caja.
   --align-held  Exige un agarre vigente antes y después de alinear el chasis.
   --coarse-held Con la caja sujeta, usa el tag para avanzar solamente lo que
@@ -178,7 +182,7 @@ warn() {
 
 while (($#)); do
   case "$1" in
-    --check|--check-visible|--measure|--measure-held|--measure-held-target|--align-empty|--align-held|--coarse-held)
+    --check|--check-visible|--measure|--measure-held|--measure-held-target|--measure-calibration-target|--align-empty|--align-held|--coarse-held)
       MODE="${1#--}"
       ;;
     --yes)
@@ -762,6 +766,27 @@ run_held_target_measurement() {
   trap - EXIT INT TERM HUP
 }
 
+run_calibration_target_measurement() {
+  local output
+  local pose
+
+  set_detector true
+  trap 'stop_detector_silent' EXIT INT TERM HUP
+  # Para calibración métrica externa se conserva la posición. Un tag plano
+  # puede alternar entre dos ramas PnP aunque permanezca completamente fijo;
+  # este modo lo declara y no usa su cuaternión para mandar movimiento.
+  output="$(measure_tag_pose 20 1)"
+  printf '%s\n' "$output"
+  pose="$(awk -F= '/^TAG_POSE=/ {print $2; exit}' <<<"$output")"
+  [[ -n "$pose" ]] || die "No se obtuvo la candidata geométrica AprilTag."
+  info "VLA_FIXTURE_TAG_CANDIDATE=POSITION_QUATERNION_XYZW:$pose"
+  info "TAG_ID=$TAG_ID"
+  info "TAG_SIZE_M=$TAG_SIZE"
+  info "FRAME=$CAMERA_FRAME"
+  stop_detector_silent
+  trap - EXIT INT TERM HUP
+}
+
 compute_coarse_plan() {
   local pose="$1"
   python3 - "$pose" "$HELD_TARGET_X" "$HELD_TARGET_Y" "$HELD_TARGET_Z" \
@@ -1018,6 +1043,10 @@ main() {
     measure-held-target)
       detector_preflight
       run_held_target_measurement
+      ;;
+    measure-calibration-target)
+      detector_preflight
+      run_calibration_target_measurement
       ;;
     align-empty|align-held)
       require_wireless_run

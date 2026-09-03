@@ -1,6 +1,6 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
-**Última actualización:** 28 de agosto de 2026
+**Última actualización:** 1 de septiembre de 2026
 **Unidad:** Cruzr S2, SN `WAE001UBT60000669`  
 **Propósito:** relevo técnico y operativo entre sesiones, personas y agentes
 
@@ -308,13 +308,83 @@ semántica física del proveedor. Resultado
 `PASS_LOCAL_TEMPORAL_FAIL_CLOSED_VENDOR_SEMANTICS_UNRESOLVED`; sólo se libera
 E4.0 de resolución de artefactos en lectura, nunca movimiento.
 
+E4.0 se ejecutó en lectura local/remota, run final corregido
+`20260901T075728_E4.0`. Motion sí
+contiene `clamp_s2_joints_trajectory` (hash `7722b734…7f6`, 2×14,
+`1,5 + 1,0 s`) y `clamp_s2_joints_trajectory_back` (hash
+`ee39039c…389`, 2×14, `2,0 + 3,0 s`). El back termina en el primer waypoint
+forward, pero no invierte la secuencia completa ni restaura cabeza, cintura y
+elevador. El task esperado por el loader suministrado,
+`s2_bio_vla/s2_vla_pick_large_teleop_ready`, no está instalado ni registrado.
+Los candidatos presentes tienen distinta semántica y el task tampoco aparece
+en el upgrade v0.2.0 suministrado. La revisión v2 corrigió el vector: la
+primitiva 14D en orden MetaMove hombro–codo–muñeca debe reordenarse al contrato
+20D codo–hombro–muñeca. El URDF sólo contiene `waist_yaw_joint`, el ejecutor
+genérico usa `[pitch,yaw]` y el S2 conserva el índice 19, de modo que el
+segundo cero resuelve `waist_yaw=0`. Los lifter quedan heredados; el ejecutor
+los descarta y 500 episodios muestran múltiples configuraciones, no un ready
+único. Faltan límites runtime, swept volume y recuperación completa. Resultado
+`PARTIAL_RESOLUTION_BLOCKED_NOT_READY_FOR_E4_1_OR_PHYSICAL_USE`; sólo queda
+autorizado E4.2 offline, no E4.1 ni movimiento. Antes/después:
+`exited/exited/publishers:0`, sin leer estado ni ordenar movimiento.
+
+E4.2 se ejecutó sin red al robot en `20260901T081210_E4.2`. El analizador
+versionado cruzó los 500 episodios, perfiles no-S2 55/70/85/100/115 y FK del
+URDF S2. Rechazó una altura única: tasks 0/1 tienen coincidencias 55/70/85 y
+tasks 2/3 100/115 a `0,05 rad`, pero 84/95/49/58 episodios no coinciden con
+ningún perfil nombrado. Los pares task 0/2 episodios 450/206 y task 1/3
+443/171 comparten configuración de elevador a sólo
+`0,000124356/0,000206182 rad`, de modo que lifter/FK no determina nivel ni
+`platform_in_base`. Tasks 2/3 episodios 90/91 correlacionan con el perfil 100
+y la plataforma SDK de 1 m, pero el XML es no-S2 y falta calibración métrica.
+Estado `PARTIAL_HEIGHT_FAMILIES_RESOLVED_SINGLE_HEIGHT_MAPPING_REJECTED`; diez
+frames representativos y todos los hashes validan. Inferencia, publicadores,
+estado y movimiento del robot fueron cero. Sólo se permite aclaración de
+semántica o calibración métrica offline; E4.0 y lo físico siguen bloqueados.
+
+E4.1 métrico se ejecutó después, por autorización del propietario, en
+`20260901T084855_E4.1`. El VLA permaneció `exited/exited/publishers:0`; no hubo
+movimiento. CameraInfo vivo confirmó `960×576`, frame rectificado y
+`fx=fy=383,1236026`; 20 posiciones del tag 113 validaron escala/TF. La rama
+angular planar (`5,484°`) se declaró ambigua y se excluyó de la solución. Dos
+rayos del borde posterior de B0, píxeles `(307,293)…(713,293)`, reconstruyeron
+`0,603128627 m`, residual `+0,128627 mm`. Con origen en el centro del borde
+frontal de la mesa, +X ancho/+Y fondo/+Z arriba, la candidata es
+`platform_in_base=(0,261844987,-0,027738106,0,870000000,0,0,-1,545870035)`.
+`D_BUMPER_PLATFORM=-0,092859226 m` revela solape de proyecciones; la
+incertidumbre es ±16,84/13,30/10,00 mm y ±0,868°. Estado
+`METRIC_FIXTURE_CANDIDATE_RESOLVED_PHYSICAL_GATES_OPEN`: E4.0, swept volume,
+colisiones y recovery aún impiden colocar la mesa allí o mover el robot.
+
+La continuación E4.1C se ejecutó completamente local en
+`20260901T090235_E4.1C`. Sobre 121 muestras de
+`preposition→forward_1→forward_2→back_1→back_2`, el URDF vendor y sus 46
+geometrías de colisión produjeron 210 candidatos AABB contra el tablero E4.1;
+146 cruces fueron confirmados a nivel de triángulos en nueve links de
+muñeca/efector. B0 tuvo cero candidatos y no se colocó. Resultado
+`SOLID_TABLETOP_CANDIDATE_REJECTED_BY_VENDOR_URDF_SWEEP`: la mesa sólida no
+debe acercarse a esa pose.
+
+E4.1D auditó después la dependencia de ese resultado respecto del efector en
+`20260903T083140_E4.1D`. El SDK identifica los meshes como pinza Dahuan
+PGC-140-50 y exige `HW_TYPE=cruzr_s2_v1_gripper`; no son el mecanismo
+instalado `cruzr_s2_v1`, compuesto por abrazaderas laterales pasivas. Sin CAD
+o cotas de las abrazaderas, la equivalencia de envolventes queda
+`NOT_DEMONSTRATED`. Sin embargo, la partición de los 146 cruces deja 101 en
+`pgc/finger` y **45 en muñecas/sensores de fuerza**. Por ello el rechazo del
+tablero sólido se mantiene aun excluyendo todo el modelo PGC. Sólo queda
+autorizado diseñar offline otra pose o una plataforma rígida con huecos; la
+entrada a preposición y el recovery completo continúan sin resolver. E4.1C y
+E4.1D no conectaron con el robot ni iniciaron inferencia, publicadores o
+movimiento, y B0 no se colocó.
+
 La evidencia VLA ya no depende de variables exportadas por un bloque anterior.
 `new_vla_evidence_run.sh` crea cada run de forma exclusiva y rechaza `/` y
 rutas existentes. E1.1/E1.2, los smoke E2.0/E2.1 y las repeticiones E2.3 tienen
 wrappers autocontenidos; E2.3 usa sesiones independientes y STOP entre runs.
-E2.2, E3.0, E3.1, E3.2 y E3.3 disponen ahora de evaluador/sink y wrappers
-autocontenidos. Los ejemplos aún no
-implementados de E4.1, E5.1/E5.2 y VLA-T00…T09 inicializan su directorio
+E2.2, E3.0, E3.1, E3.2, E3.3, E4.0, E4.1, E4.1C, E4.1D y E4.2 disponen ahora de
+evaluador/sink y wrappers autocontenidos. Los ejemplos aún no implementados de
+E5.1/E5.2 y VLA-T00…T09 inicializan su directorio
 en el mismo bloque. Las herramientas de evidencia son cambios del
 PC/repositorio; E2.2/E3.0/E3.1 sólo arrancaron contenedores offline transitorios
 en Vision; E3.2/E3.3 fueron procesos Python locales y E3.3 sólo consultó el
@@ -323,9 +393,10 @@ persistentes.
 
 El paquete local sí contiene
 `codes-S2/motion/s2_vla_scripts/s2_bio_vla/s2_vla_pick_large_teleop_ready.xml`,
-hash `f4025124…d8323`. Preposiciona cintura, cabeza y brazos, pero termina
-llamando a `clamp_s2_joints_trajectory`, cuya definición/instalación no está
-demostrada. El SDK 7.3 confirma B0 `60×40×22 cm` sobre plataforma de **1 m de
+hash `f4025124…d8323`. Preposiciona cintura, cabeza y brazos y llama a la
+primitiva 14D ya localizada, pero el task S2 completo no está instalado, la
+pose 20D sigue incompleta y los límites/recovery/swept volume no están
+demostrados. El SDK 7.3 confirma B0 `60×40×22 cm` sobre plataforma de **1 m de
 altura** y sólo pide mover el robot a una posición adecuada; no proporciona
 distancia horizontal.
 
@@ -343,15 +414,19 @@ funcionales (`P14`…`P20`), canary progresivo y comparación del checkpoint
 intacto frente a continuación o nuevo DataConfig. Se añadieron tarjetas
 `VLA-T00…T10` con fixture, estado inicial, comandos/mensajes PC, PASS/FAIL,
 evidencia y recovery: `B0_SAFE` `0,603 × 0,397 × 0,217 m`, plataforma inicial
-a 1 m de altura confirmada por SDK y pose medible en `PLATFORM_FRAME`. Los niveles
-low/middle y la distancia horizontal no están confirmados, y el plan no
-autoriza movimiento. Las tarjetas
+a 1 m de altura confirmada por SDK y pose medible en `PLATFORM_FRAME`. E4.2
+demostró que low/middle son familias, no alturas escalares. E4.1 resolvió una
+pose métrica candidata para el episodio 90 y detectó solape firmado con el
+bumper. E4.1C rechazó esa candidata para un tablero sólido al confirmar 146
+cruces de mesh. E4.1D confirmó que 45 cruces pertenecen a muñecas/sensores y
+subsisten sin `pgc/finger`; el plan no autoriza movimiento ni colocar B0.
+Las tarjetas
 físicas permanecen bloqueadas hasta demostrar `VLA_READY`, ejecutor canary y
 primitiva de trayectoria. El manual operativo al inicio del plan ordena los
 experimentos `E1.0…E8.2`: montaje medido, baseline, primera inferencia, OOD,
 ready, perfiles 14–20, canary, cuatro tareas físicas y evolución C1/C2. Para
 experimentos 1–3 mantiene plataforma/B0 fuera de la envolvente; el 1 m es
-altura de plataforma, no separación. `platform_in_base` sigue sin definirse.
+altura de plataforma, no separación.
 
 Fuente: [`guides/CRUZR_S2_VLA_SAFE_ENABLEMENT.md`](guides/CRUZR_S2_VLA_SAFE_ENABLEMENT.md).
 
@@ -857,6 +932,11 @@ actualizarse este archivo antes de cerrar la sesión.
 
 | Fecha | Hito | Resultado |
 |---|---|---|
+| 2026-09-03 | E4.1D identidad de efector y dependencia de colisión | run `20260903T083140_E4.1D`: el SDK asigna PGC-140-50 a `HW_TYPE=cruzr_s2_v1_gripper`, distinto de las abrazaderas pasivas `cruzr_s2_v1` instaladas. Sin CAD/cotas no se validó equivalencia geométrica. Los 146 cruces E4.1C se separaron en 101 `pgc/finger` y 45 muñeca/sensor de fuerza; el tablero sólido sigue rechazado al excluir PGC. Estado `PGC_NOT_INSTALLED_EFFECTOR_SOLID_TABLETOP_STILL_REJECTED_BY_UPSTREAM_ARM_SWEEP`; sólo autoriza diseño offline de huecos u otra pose. B0 no se colocó; cero red al robot, inferencia, publicadores o movimiento |
+| 2026-09-01 | E4.1C barrido offline del fixture | run `20260901T090235_E4.1C`: 121 estados de la secuencia vendor, 46 geometrías URDF, 210 candidatos AABB y 146 intersecciones triángulo/plano confirmadas contra el tablero sólido en nueve links de muñeca/efector. B0 tuvo cero candidatos y no se colocó. Estado `SOLID_TABLETOP_CANDIDATE_REJECTED_BY_VENDOR_URDF_SWEEP`; la pose E4.1 no se usará con esta mesa. Pendiente verificar geometría real de abrazaderas frente a meshes `pgc/finger` o rediseñar pose/plataforma con huecos. Todo local, cero red al robot, inferencia, publicadores o movimiento |
+| 2026-09-01 | E4.1 calibración métrica del fixture | run válido `20260901T084855_E4.1`: CameraInfo/TF vivos, 20 posiciones tag 113 y borde posterior B0 del episodio 90. Reconstrucción `0,603128627 m` frente a `0,603 m`; `platform_in_base=(0,261844987,-0,027738106,0,870000000,0,0,-1,545870035)`, incertidumbre ±16,84/13,30/10,00 mm y ±0,868°. `D_BUMPER_PLATFORM=-0,092859226 m` revela solape de proyecciones; no se colocó la mesa ni hubo inferencia/publicador/movimiento. Estado `METRIC_FIXTURE_CANDIDATE_RESOLVED_PHYSICAL_GATES_OPEN`; siguiente: geometría de mesa, colisiones/swept volume y recovery E4.0, sólo offline/lectura |
+| 2026-09-01 | E4.2 familias de altura low/middle offline | run `20260901T081210_E4.2`: 500 episodios + XML no-S2 55/70/85/100/115 + FK URDF S2. Tasks 0/1 correlacionan con 55/70/85 y tasks 2/3 con 100/115, pero quedan 84/95/49/58 episodios sin perfil a 0,05 rad. Pares task 0/2 y 1/3 comparten lifter a 0,000124356/0,000206182 rad: no existe altura escalar deducible ni `platform_in_base`. Episodios 90/91 sólo correlacionan tasks 2/3 con 1 m/perfil 100 no-S2. Estado `PARTIAL_HEIGHT_FAMILIES_RESOLVED_SINGLE_HEIGHT_MAPPING_REJECTED`; 10 frames y hashes válidos, sin red al robot, inferencia, publicadores o movimiento. Siguiente: aclaración UBTECH o calibración métrica offline |
+| 2026-09-01 | E4.0 resolución read-only de VLA-ready | run final corregido `20260901T075728_E4.0`: forward `7722b734…7f6` 2×14/2,5 s y back `ee39039c…389` 2×14/5 s; back no invierte la secuencia. Se corrigió el orden MetaMove→checkpoint del candidato 20D y se resolvió cintura como `waist_yaw=0`. El task no está instalado/registrado ni en el upgrade v0.2.0; lifter queda heredado y 500 episodios demuestran múltiples configuraciones. Faltan límites runtime/swept volume/recovery. Resultado `PARTIAL_RESOLUTION_BLOCKED_NOT_READY_FOR_E4_1_OR_PHYSICAL_USE`; `exited/exited/publishers:0`, sin estado ni movimiento. Siguiente: E4.2 offline |
 | 2026-08-28 | E3.3 contrato temporal offline | run `20260828T124011_E3.3`: 22/22 casos locales pasan y cancel/STOP/fault purgan sin replay ni publicador. Auditoría estática: chunk 10×20 a 80 ms/horizonte 0,72 s, inferencia 0,2 Hz; `continuous_end_chunk_num=5` sólo está en YAML, mientras Vision termina con un único `flag_pred>0,1`; ejecutores suministrados discrepan entre 900/9 s (`src`) y 600/6 s (`install`). `exited/exited/publishers:0`, sin estado ni movimiento. Estado `PASS_LOCAL_TEMPORAL_FAIL_CLOSED_VENDOR_SEMANTICS_UNRESOLVED`; VLA-3 y ejecución física siguen bloqueados, sólo E4.0 read-only queda autorizado |
 | 2026-08-28 | E3.2 fault injection contra sink local | run `20260828T121832_E3.2`: 2/2 chunks de control aceptados y 32/32 inválidos rechazados; cubre identidad, esquema/orden/dimensión, NaN/Inf, frescura, timeline, rango/salto/velocidad, IDs, cancel/STOP/deadman y doble cliente. AST sin ROS/red/publicador/topic físico; `exited/exited/publishers:0` antes/después, sin estado ni movimiento. Ocho máscaras tienen tests unitarios, pero sólo P20/low ejecutó la suite completa; aceleración no tiene límite certificado. Estado `PASS_LOCAL_SINK_ALL_INVALID_REJECTED`; sólo libera E3.3 offline |
 | 2026-08-28 | E3.1 OOD visual offline | run válido `20260828T120228_E3.1`: 26 proxies de imagen sobre tasks 0/2, 26 `ACCEPT_STRUCTURAL`, nominales exactos y máximos cambios de chunk 0,040258/0,053590 rad bajo zoom. Checkpoint sin cambios; `exited/exited/publishers:0`, sin ROS, estado o movimiento del robot. La parrilla métrica sigue bloqueada por falta de RGB-D, calibración, segmentación/pose y geometría de repisa; sólo queda liberado E3.2 con sink offline. El intento `20260828T115905_E3.1` falló seguro tras una muestra por consumo de stdin de `ssh`; wrapper corregido y regresión cubierta por ejecución completa |

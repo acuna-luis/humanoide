@@ -1,0 +1,26 @@
+schema: cruzr-s2-effector-contract/v1
+unit: WAE001UBT60000669
+installed_effector:
+  hardware_type: cruzr_s2_v1
+  family: clamp
+  description: lateral passive clamps
+  actuated_finger_joints: 0
+  verification_state: VERIFIED_ON_UNIT
+  evidence:
+    - docs/PROJECT_SOURCE_OF_TRUTH.md
+    - docs/teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md
+    - docs/vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md
+vendor_pgc_reference:
+  model: Dahuan PGC-140-50
+  hardware_type: cruzr_s2_v1_gripper
+  command_topics:
+    - /ecat/left_grip/cmd
+    - /ecat/right_grip/cmd
+  evidence: Cruzr S2 SDK section 5.10
+interpretation:
+  topology_equivalence_required: true
+  mesh_envelope_equivalence_requires_dimensions_or_cad: true
+  note: >-
+    A topology mismatch disproves identity of the mechanisms, but does not by
+    itself establish whether the PGC mesh is a conservative geometric proxy
+    for the installed clamps.

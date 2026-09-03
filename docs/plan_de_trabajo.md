@@ -48,9 +48,11 @@ Para eliminar “aproximadamente” y “frente al robot” se define:
    robot ni se ejecuta una inferencia nominal hasta resolverla en E4.1 mediante
    pose oficial, cinemática/alcance y encuadre del dataset.
 6. Los XML `55/70/85/100/115` están en el árbol alternativo `codes` para Cruzr,
-   no en el árbol S2 canónico `codes-S2`; por ello `0,55/1,15 m` no son el
-   baseline inicial del S2. Sólo podrán añadirse después como variantes si se
-   demuestra su mapeo con los tasks low/middle.
+   no en el árbol S2 canónico `codes-S2`. E4.2 encontró coincidencias numéricas
+   `55/70/85` en tasks 0–1 y `100/115` en tasks 2–3, pero también configuraciones
+   sin etiqueta y configuraciones de elevador prácticamente idénticas entre
+   `low` y `middle`. Por ello ningún grupo tiene una altura escalar y esos XML
+   no autorizan por sí solos una variante física S2.
 7. La plataforma S2 inicial tiene una única superficie a
    `H_VENDOR_PLATFORM=1,000 ± 0,010 m`, está nivelada y es rígida. El SDK no
    fija su ancho ni su fondo: `0,80 × 0,75 m` es un **mínimo provisional del
@@ -84,8 +86,8 @@ no resuelve `D_BUMPER_PLATFORM` ni autoriza acercarla al robot.
 
 | Elemento | Para qué se usa | Estado y decisión |
 |---|---|---|
-| `MESA_T1` | Reproducir el fixture del SDK a 1 m; PICK/PLACE del escenario que E4.2 consiga mapear a esa altura | Disponible, pendiente de E1.0 |
-| `PLATAFORMA_TASK_AJUSTABLE` | Reproducir `H_TASK_0_1` y `H_TASK_2_3` si resultan diferentes de 1 m | No adquirir/fabricar hasta E4.2. Puede ser una sola mesa elevadora rígida, bloqueable y estable, recalibrada para cada altura; no se usan mesas apiladas ni calzos |
+| `MESA_T1` | Reproducir el fixture SDK a 1 m; E4.2 lo correlaciona con el subconjunto task 2/3, episodios 90/91, sin resolver aún `platform_in_base` | Disponible; E1.0 cerrado, uso físico bloqueado por E4.0/E4.1 |
+| `PLATAFORMA_TASK_AJUSTABLE` | Futuras variantes de altura si UBTECH confirma el contrato S2 y se calibra cada pose de soporte | No adquirir/fabricar: E4.2 rechazó una altura escalar por task. Una futura solución podrá ser una sola mesa elevadora rígida, bloqueable y estable; no se usan mesas apiladas ni calzos |
 | `RECEPTOR_VOLCADO` | Recibir el contenido de B0 durante `TIP/POUR` | No pertenece a los tasks 0–3 ni al checkpoint actual; dimensiones, borde y altura se definirán con la primitiva y los datos propios de volcado |
 | `MESA_DESTINO_VACIA` | Recibir B0 después de vaciarla a otra altura | Sólo para la misión ampliada. Será una estación separada o una superficie existente cuya altura/pose entren en el nuevo dataset |
 
@@ -693,7 +695,8 @@ E4.0 únicamente en lectura; no se cierra VLA-3 ni se autoriza canary.
 
 #### Experimento 4.0 — Completar la pose S2 suministrada
 
-**Estado:** inspección `EJECUTABLE_LECTURA`; uso físico `BLOQUEADO_FISICO`.
+**Estado:** `PARTIAL_RESOLUTION_BLOCKED_NOT_READY_FOR_E4_1_OR_PHYSICAL_USE`
+el 2026-09-01; uso físico `BLOQUEADO_FISICO`.
 
 **Evidencia disponible:**
 
@@ -711,12 +714,56 @@ duración, límites, swept volume, trayectoria inversa y precondición. Separar
 ready de PICK/PLACE si son distintos. No aceptar el primer chunk como ready.
 
 **PASS:** task canónico, hash, trayectoria completa, inverse/recovery y
-dependencias demostradas. **Resultado actual:**
-`BLOCKED_INCOMPLETE_S2_READY_AND_CLAMP_TRAJECTORY`.
+dependencias demostradas.
+
+**Comandos implementados y ejecutados:**
+
+```bash
+./scripts/vla/audit_vla_ready_e4_0.sh --check
+./scripts/vla/audit_vla_ready_e4_0.sh --run
+```
+
+**Resultado real:** run final corregido `20260901T075728_E4.0`. La instalación Motion sí
+contiene `clamp_s2_joints_trajectory.yaml`, hash `7722b734…7f6`: dos goals de
+14 valores, duraciones `1,5 + 1,0 s` y `follow_joint_space_trajectory`.
+También contiene `clamp_s2_joints_trajectory_back.yaml`, hash
+`ee39039c…389`: dos goals de 14 valores y `2,0 + 3,0 s`. La segunda devuelve
+al primer waypoint forward, pero no es su inversa exacta ni restaura
+cabeza/cintura/elevador.
+
+El task suministrado esperado por su propio loader,
+`s2_bio_vla/s2_vla_pick_large_teleop_ready`, no está instalado ni registrado
+en `task_list.yaml`. Hay candidatos instalados con otros hashes y semánticas:
+`transport/clamp_ready_s2` está registrado pero no llama a la primitiva;
+`cruzr_vla/clamp_ready.xml` sí la llama pero no está registrado y omite la
+preposición S2 suministrada. No son sustitutos canónicos.
+
+La secuencia suministrada sería nominalmente `1,5 + 2,5 = 4,0 s`. La revisión
+v2 corrigió un error de contrato del análisis anterior: la primitiva MetaMove
+está en orden hombro–codo–muñeca y debe reordenarse a codo–hombro–muñeca para
+el checkpoint 20D. El candidato correcto comienza
+`[-1,383,-0,754,-0,296,-0,574,-1,888,0,204,-0,410,…]`, no por los siete
+valores MetaMove concatenados. El URDF S2 sólo contiene `waist_yaw_joint`; el
+ejecutor genérico ordena `[waist_pitch,waist_yaw]` y el ejecutor S2 conserva
+el índice 19, por lo que el segundo cero del XML resuelve `waist_yaw=0`.
+
+El elevador sigue sin objetivo: los índices 20D `16–18` se heredan del estado
+actual y el ejecutor suministrado los descarta. Los 500 episodios confirman
+150/150/100/100 casos por task y múltiples configuraciones de elevador, no un
+único ready numérico. El task tampoco está en el upgrade v0.2.0 suministrado.
+Las velocidades nominales derivadas de los dos tramos alcanzan como máximo
+`1,239707 rad/s`, por debajo del límite URDF de brazos, pero no son un límite
+runtime certificado y siguen faltando aceleración/fuerza, swept volume y
+recovery completo. Por ello E4.0 no alcanza PASS y **E4.1 continúa
+bloqueado**. Antes/después: VLA `exited/exited`, publicadores `0`, sin leer
+estado ni mandar movimiento. El siguiente análisis permitido es E4.2 offline;
+no autoriza ninguna prueba física.
 
 #### Experimento 4.1 — Derivar offline la pose completa del fixture
 
-**Estado:** `PENDIENTE_CODIGO` hasta PASS en E4.0; no usa el robot.
+**Estado:** `METRIC_FIXTURE_CANDIDATE_RESOLVED_PHYSICAL_GATES_OPEN`; la parte
+métrica se ejecutó el 2026-09-01 sin movimiento. El experimento no es todavía
+PASS físico porque E4.0, swept volume y recovery continúan incompletos.
 
 **No se ensaya una parrilla de distancias a ojo.** Se calcula la pose de
 plataforma que satisface simultáneamente:
@@ -728,30 +775,122 @@ plataforma que satisface simultáneamente:
    de episodios 0/1/90/91;
 5. margen de alcance y no una solución en singularidad/límite.
 
-Se implementará `scripts/vla/derive_vla_fixture_pose.py` con inputs XML/task,
-URDF/TF, B0, cámara/intrínsecos y frames de referencia. Su salida será una pose
-completa `platform_in_base={x,y,z,roll,pitch,yaw}`, más
-`D_BUMPER_PLATFORM`, error de reproyección y margen cinemático.
+Se implementaron `scripts/vla/derive_vla_fixture_pose.py` y
+`scripts/vla/calibrate_vla_fixture_e4_1.sh`. El wrapper exige VLA detenido y
+cero publicadores, captura CameraInfo/TF y 20 muestras del AprilTag 113, y
+después resuelve localmente el episodio 90. El tag sólo valida posición y
+escala de la cámara; no se utiliza su rama angular planar para construir la
+pose histórica.
 
 ```bash
-VLA_RUN_DIR="$(./scripts/vla/new_vla_evidence_run.sh --experiment E4.1)"
-test -n "$VLA_READY_TASK"
-test -s "$VLA_S2_URDF"
-test -d "$VLA_E1_2_RUN_DIR/reference_frames"
-python3 scripts/vla/derive_vla_fixture_pose.py \
-  --ready-task "$VLA_READY_TASK" --urdf "$VLA_S2_URDF" \
-  --box-lwh 0.603,0.397,0.217 --platform-height 1.000 \
-  --reference-frames "$VLA_E1_2_RUN_DIR/reference_frames" \
-  --output "$VLA_RUN_DIR/fixture_pose.yaml"
+./scripts/vla/calibrate_vla_fixture_e4_1.sh --check
+./scripts/vla/calibrate_vla_fixture_e4_1.sh --run
 ```
 
-**PASS:** una única pose candidata versionada, sin colisión y reproducible. Si
-no hay solución o los criterios discrepan, `FAIL_NO_COMPATIBLE_FIXTURE_POSE`.
-Todavía no se mueve el robot ni se coloca la plataforma delante.
+**Resultado real:** run válido
+`20260901T084855_E4.1`. La cámara VLA viva confirmó
+`stereo_left_rectified_optical_frame`, `960×576`,
+`fx=fy=383,1236026`. Veinte detecciones del tag 113 dieron desviación de
+posición `0,234/0,445/3,416 mm`; la dispersión angular `5,484°` se declaró
+ambigüedad PnP y no se usó para control ni para orientar el fixture histórico.
+
+El borde posterior de B0 en el episodio 90 se anotó en
+`(307,293)…(713,293)`. Intersectar ambos rayos con
+`z_base=1,000-0,130+0,217 m` reconstruye `0,603128627 m`, residual
+`+0,128627 mm` frente a B0. Con `PLATFORM_FRAME` en el centro del borde
+frontal, +X a lo ancho, +Y hacia el fondo y +Z arriba:
+
+```yaml
+platform_in_base:
+  x_m: 0.261844987
+  y_m: -0.027738106
+  z_m: 0.870000000
+  roll_rad: 0
+  pitch_rad: 0
+  yaw_rad: -1.545870035
+  yaw_deg: -88.571829
+D_BUMPER_PLATFORM_signed_m: -0.092859226
+```
+
+Con ±2 px y ±10 mm verticales, los semirrangos son
+`±16,84/13,30/10,00 mm`, `±0,868°` y `±16,71 mm` para la distancia al
+bumper. El signo negativo indica solape de `92,9 mm` entre proyecciones al
+suelo; puede corresponder a tablero sobrevolando el chasis, pero no demuestra
+que patas, tablero y swept volume sean compatibles. La pose actual lejana de
+la mesa se midió separadamente en `+1,240785 m` respecto del bumper y no es la
+pose operativa. `physical_test_authorized=false`.
+
+**PASS métrico parcial:** pose única, versionada, hashes válidos y residual
+<5 mm. **Pendiente para PASS completo:** validar geometría de patas/tablero,
+swept volume, margen cinemático y recovery de E4.0. No se mueve el robot ni se
+coloca todavía la plataforma en la pose calculada.
+
+##### Experimento 4.1C — Barrido offline contra el tablero sólido
+
+**Estado:** `SOLID_TABLETOP_CANDIDATE_REJECTED_BY_VENDOR_URDF_SWEEP`;
+`physical_test_authorized=false`.
+
+Se implementaron y ejecutaron, sin conectar con el robot:
+
+```bash
+./scripts/vla/audit_vla_fixture_collision_e4_1c.sh --check
+./scripts/vla/audit_vla_fixture_collision_e4_1c.sh --run
+```
+
+El run `20260901T090235_E4.1C` reconstruyó por FK la secuencia vendor
+`preposition → forward_1 → forward_2 → back_1 → back_2`, usando los tres
+ángulos de elevador correlacionados del episodio 90. Muestreó 121 estados y
+transformó los meshes de colisión de 46 links al `PLATFORM_FRAME` de E4.1.
+La primera criba AABB produjo 210 candidatos; la comprobación directa
+triángulo/plano confirmó **146 intersecciones** con la superficie del tablero
+sólido, en nueve links de muñeca/efector. B0 produjo cero solapes AABB y no se
+colocó ni fue necesaria para el ensayo.
+
+Esto rechaza la mesa sólida en la pose E4.1 bajo la geometría URDF vendor antes
+de medir patas o espesor: una superficie de espesor cero ya es atravesada. No
+es todavía un certificado del hardware físico, porque el URDF usa meshes
+`pgc/finger` y debe comprobarse que representan las abrazaderas instaladas;
+tampoco se modeló la entrada arbitraria a la preposición y el `back` sigue sin
+ser una inversa completa. El siguiente trabajo permitido es sólo uno de estos
+dos caminos offline: validar la envolvente dimensional real de las abrazaderas
+o derivar otra pose/plataforma rígida con huecos verificados. **No colocar B0,
+no acercar la mesa y no ejecutar E4.3/E4.4.**
+
+##### Experimento 4.1D — Separar el modelo PGC del brazo real
+
+**Estado:**
+`PGC_NOT_INSTALLED_EFFECTOR_SOLID_TABLETOP_STILL_REJECTED_BY_UPSTREAM_ARM_SWEEP`;
+`physical_test_authorized=false`.
+
+Se implementaron y ejecutaron localmente:
+
+```bash
+./scripts/vla/audit_vla_effector_geometry_e4_1d.sh --check
+./scripts/vla/audit_vla_effector_geometry_e4_1d.sh --run
+```
+
+El run `20260903T083140_E4.1D` cruzó el URDF, la sección 5.10 del SDK, el
+contrato del efector instalado y los eventos E4.1C. El PGC-140-50 es una pinza
+con cuatro joints prismáticos en el URDF y el SDK exige para ella
+`HW_TYPE=cruzr_s2_v1_gripper`. La unidad verificada usa abrazaderas laterales
+pasivas con `HW_TYPE=cruzr_s2_v1`: no es el mismo mecanismo. Como no se dispone
+del CAD ni de cotas completas de las abrazaderas, tampoco se acepta PGC como
+proxy geométrico validado.
+
+De las 146 intersecciones triángulo/plano, 101 corresponden a `pgc/finger` y
+45 permanecen en `wrist_pitch`, `wrist_roll` y `sixforce`. Por tanto, el
+tablero sólido sigue rechazado aunque se excluya completamente el efector PGC.
+No se colocó B0 ni hubo red al robot, inferencia, publicador o movimiento.
+
+**Siguiente ensayo:** calcular offline el hueco mínimo barrido por las
+muñecas/sensores, con márgenes de incertidumbre, y compararlo con una pose
+alternativa. No acercar la mesa ni colocar la caja hasta obtener una solución
+sin intersecciones y resolver entrada/recovery.
 
 #### Experimento 4.2 — Resolver qué alturas corresponden a low/middle
 
-**Estado:** análisis `PENDIENTE_CODIGO`; físico `BLOQUEADO_FISICO`.
+**Estado:** `PARCIAL_ALTURAS_MULTIPLES_MAPEO_ESCALAR_RECHAZADO`; físico
+`BLOQUEADO_FISICO`.
 
 El SDK S2 confirma 1 m, mientras los task texts dicen low/middle y el árbol
 no-S2 incluye alturas 55/70/85/100/115. Se reconstruye cada task a partir de
@@ -759,13 +898,47 @@ frames, estados iniciales/finales, lifter y FK, y se solicita confirmación de
 UBTECH. La salida debe ser `H_TASK_0_1` y `H_TASK_2_3` con fuente e
 incertidumbre. No se asigna automáticamente `0,55/1,15 m`.
 
+```bash
+./scripts/vla/audit_vla_heights_e4_2.sh --check
+./scripts/vla/audit_vla_heights_e4_2.sh --run
+```
+
 **PASS:** cada task tiene una altura y pose de soporte demostradas. Si sólo se
 confirma la plataforma de 1 m, se valida primero únicamente el task/escenario
 que corresponda y los demás quedan bloqueados.
 
+**Resultado real 2026-09-01:** `audit_vla_heights_e4_2.sh --run`, evidencia
+`20260901T081210_E4.2`, procesó localmente los 500 episodios, los cinco XML
+vendor, el URDF S2 y diez frames representativos. Con umbral L2 de `0,05 rad`,
+tasks 0/1 contienen coincidencias de perfiles no-S2 `0,55/0,70/0,85 m` y
+tasks 2/3 `1,00/1,15 m`, además de 84/95/49/58 episodios respectivamente sin
+coincidencia con ningún perfil nombrado. No se asigna una altura única:
+
+```yaml
+H_TASK_0_1:
+  scalar_height_m: null
+  vendor_non_s2_profile_candidates_m: [0.55, 0.70, 0.85]
+H_TASK_2_3:
+  scalar_height_m: null
+  vendor_non_s2_profile_candidates_m: [1.00, 1.15]
+```
+
+La refutación es directa: episodios task 0/2 `450/206` difieren sólo
+`0,000124356 rad` en el elevador y task 1/3 `443/171` sólo `0,000206182 rad`.
+Por tanto lifter/FK no determina nivel ni pose de soporte. Los episodios 90/91
+de tasks 2/3 correlacionan con el perfil 100 (`0,000238914/0,015681228 rad`) y
+el SDK S2 confirma la plataforma a 1 m, pero el XML 100 es no-S2 y no existe
+calibración métrica `platform_in_base`; es un subconjunto correlacionado, no un
+fixture autorizado. Resultado
+`PARTIAL_HEIGHT_FAMILIES_RESOLVED_SINGLE_HEIGHT_MAPPING_REJECTED`. Todos los
+hashes validan; conexiones al robot, inferencia, publicadores y comandos de
+movimiento fueron cero. Sólo queda permitido solicitar la semántica oficial a
+UBTECH o implementar una calibración métrica offline; E4.0/E4.1 y todo ensayo
+físico siguen bloqueados.
+
 #### Experimento 4.3 — Validar la pose S2 en vacío
 
-**Estado:** `BLOQUEADO_FISICO` hasta PASS en E4.0/E4.1 e implementación de
+**Estado:** `BLOQUEADO_FISICO` hasta PASS en E4.0/E4.1C e implementación de
 `scripts/vla/cruzr_vla_ready_pose.sh`.
 
 **Escenario futuro:** plataforma/B0 retiradas más de 1,5 m; zona completa
@@ -787,7 +960,8 @@ automático.
 
 #### Experimento 4.4 — Validar y congelar el fixture calculado
 
-**Estado:** `BLOQUEADO_FISICO`.
+**Estado:** `BLOQUEADO_FISICO`; E4.1C rechazó el tablero sólido en la pose
+calculada, por lo que no debe colocarse la plataforma ni B0.
 
 Con el robot parado, colocar primero un target visual ligero en la pose
 calculada de E4.1 y ejecutar sólo shadow; validar encuadre. Retirarlo. En una
@@ -1449,8 +1623,8 @@ box_pose_in_shelf_frame:
   x: 0.000       # centrada lateralmente
   y: 0.2485      # cara frontal a 0.050 m del borde + W/2
   z_vendor_1m: 1.1085
-  z_task_low: UNRESOLVED
-  z_task_middle: UNRESOLVED
+  z_task_low: NOT_SCALAR_E4_2
+  z_task_middle: NOT_SCALAR_E4_2
   roll_deg: 0
   pitch_deg: 0
   yaw_deg: 0     # eje largo paralelo a los hombros / eje x
@@ -1513,6 +1687,8 @@ chunk.
 | `./scripts/vla/run_ubtech_vla_shadow.sh --export-evidence DIR` | recupera logs incluso desde contenedores detenidos sin arrancarlos | no |
 | `./scripts/vla/run_vla_shadow_smoke.sh --task-id 0\|2` | ejecuta una secuencia shadow autocontenida, detiene y conserva evidencia | no |
 | `./scripts/vla/run_vla_shadow_repetitions.sh --task-id 0\|2 --repetitions 5` | ejecuta E2.3 en sub-runs independientes con STOP entre ellos | no |
+| `./scripts/vla/audit_vla_ready_e4_0.sh --check\|--run` | audita task/primitivas VLA-ready y conserva evidencia; usa sólo lectura remota | no |
+| `./scripts/vla/audit_vla_heights_e4_2.sh --check\|--run` | resuelve offline familias de altura, FK y frames sin conectar al robot | no |
 | `./scripts/cruzr_blue_workbin_cycle.sh --measure-box-fast` | mide/detecta B0 para registrar geometría | no debe mover; confirmar `--help` antes |
 | `./scripts/cruzr_recover_to_home.sh --check` | diagnóstico de estado para recuperación | no |
 

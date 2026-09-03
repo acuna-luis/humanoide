@@ -1,6 +1,6 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
-> Versión documental 1.3 — 27 de agosto de 2026. Estado: guía técnica del
+> Versión documental 1.5 — 1 de septiembre de 2026. Estado: guía técnica del
 > proyecto basada en evidencias locales; los puntos marcados «Pendiente DSA»
 > requieren confirmación del proveedor.
 
@@ -296,6 +296,81 @@ los ejecutores suministrados discrepan: 900 puntos/9 s en `src` y 600/6 s en
 equivalencia de ejecución. E3.3 queda
 `PASS_LOCAL_TEMPORAL_FAIL_CLOSED_VENDOR_SEMANTICS_UNRESOLVED`: no habilita un
 ejecutor real; sólo permite resolver E4.0 en lectura.
+
+E4.0, run final corregido `20260901T075728_E4.0`, inspeccionó el paquete y la instalación
+Motion sin leer estado articular ni mandar movimiento; el único uso ROS fue
+`topic info` de sólo lectura para confirmar cero publicadores. Resolvió la primitiva
+forward instalada: hash `7722b734…7f6`, dos goals 14D y duraciones
+`1,5 + 1,0 s`; la primitiva `back`, hash `ee39039c…389`, tiene dos goals 14D
+y `2,0 + 3,0 s`, vuelve al primer waypoint forward pero no invierte la
+secuencia completa. El task esperado por el loader vendor,
+`s2_bio_vla/s2_vla_pick_large_teleop_ready`, no está instalado ni registrado.
+Los candidatos instalados difieren en hash y semántica; el task S2 tampoco
+aparece en el upgrade v0.2.0 entregado. La revisión v2 corrigió el mapping de
+la primitiva: sus brazos están en orden MetaMove hombro–codo–muñeca y se
+reordenan a codo–hombro–muñeca para el checkpoint. El URDF S2 sólo contiene
+`waist_yaw_joint`, de modo que el segundo cero del MetaMove genérico resuelve
+el índice 19 como `waist_yaw=0`. El XML no define los tres lifter, sino que los
+hereda; el ejecutor S2 los descarta y los 500 episodios abarcan múltiples
+configuraciones. Carece de límites runtime explícitos, swept volume y
+recuperación completa. Resultado
+`PARTIAL_RESOLUTION_BLOCKED_NOT_READY_FOR_E4_1_OR_PHYSICAL_USE`; sólo se
+habilita E4.2 offline, mientras E4.1 y todo uso físico continúan bloqueados.
+Cierre `exited/exited/publishers:0`.
+
+E4.2 se ejecutó completamente local en
+`20260901T081210_E4.2`. La FK del URDF S2 y los 500 `episodes_stats` demostraron
+que `low/middle` no codifican una altura escalar: tasks 0/1 coinciden con
+perfiles nombrados no-S2 55/70/85 y tasks 2/3 con 100/115, pero quedan
+84/95/49/58 episodios sin coincidencia a `0,05 rad`. Más concluyente, los
+pares task 0/2 (episodios 450/206) y task 1/3 (443/171) comparten elevador a
+`0,000124356/0,000206182 rad`; el elevador no identifica por sí solo el nivel
+ni la pose del soporte. Los episodios 90/91 de tasks 2/3 correlacionan con el
+perfil 100 y el SDK confirma una plataforma de 1 m, pero ese XML pertenece al
+árbol no-S2 y `platform_in_base` sigue sin calibrar. Estado
+`PARTIAL_HEIGHT_FAMILIES_RESOLVED_SINGLE_HEIGHT_MAPPING_REJECTED`: cero red al
+robot, inferencia, publicadores o movimiento. Sólo se permite aclaración de
+semántica o calibración métrica offline; no se libera una prueba física.
+
+La calibración métrica local se ejecutó después en
+`20260901T084855_E4.1`, con el VLA `exited/exited` y `publishers:0`. El modelo
+de cámara vivo `960×576` y la TF calibrada se combinaron con el estado estable
+de cabeza/elevador del episodio 90 y el borde posterior anotado de B0. La
+reconstrucción dio `0,603128627 m` frente a `0,603 m`, y resolvió:
+
+```text
+platform_in_base = 0.261844987 -0.027738106 0.870000000 0 0 -1.545870035
+D_BUMPER_PLATFORM_signed_m = -0.092859226
+```
+
+El frame nace en el centro del borde frontal de la mesa; +X recorre su ancho,
++Y su fondo y +Z apunta arriba. El AprilTag 113 se midió 20 veces en la pose
+lejana segura para validar cámara/escala; su ambigüedad angular planar se
+descartó y no intervino en la orientación histórica. El signo negativo de la
+distancia indica solape de proyecciones mesa/bumper y exige modelar tablero,
+patas y swept volume antes de cualquier colocación física. Estado
+`METRIC_FIXTURE_CANDIDATE_RESOLVED_PHYSICAL_GATES_OPEN`, no PASS físico.
+
+La continuación offline E4.1C se ejecutó en
+`20260901T090235_E4.1C`. Reprodujo por FK 121 estados de la secuencia vendor
+desde la preposición hasta forward/back, manteniendo el elevador correlacionado
+del episodio 90. La geometría de 46 links produjo 210 posibles cruces AABB con
+el tablero y la prueba triángulo/plano confirmó 146 cruces en nueve links de
+muñeca/efector. B0 tuvo cero solapes AABB y no fue colocada. Por ello la mesa
+sólida queda rechazada en la pose E4.1 bajo el URDF vendor:
+`SOLID_TABLETOP_CANDIDATE_REJECTED_BY_VENDOR_URDF_SWEEP`. El resultado no
+autoriza adaptar datos o ejecutar ready.
+
+E4.1D (`20260903T083140_E4.1D`) demuestra que PGC no es la identidad del
+efector instalado: el SDK documenta Dahuan PGC-140-50 para
+`HW_TYPE=cruzr_s2_v1_gripper`, mientras esta unidad usa abrazaderas laterales
+pasivas y `HW_TYPE=cruzr_s2_v1`. Sin CAD/cotas no puede validarse
+`pgc/finger` como envolvente geométrica de las abrazaderas. Al separar el
+barrido E4.1C quedan 101 eventos del PGC/dedos y 45 eventos independientes en
+muñecas/sensores de fuerza. Por tanto, excluir PGC no vuelve viable el tablero
+sólido: sólo se permite calcular offline una pose alternativa o huecos
+verificados. Todo fue local, sin conexión al robot, inferencia, publicador ni
+movimiento.
 
 ## 4. VLA frente a programación tradicional
 
@@ -1180,9 +1255,12 @@ Secuencia obligatoria:
 8. **Variaciones progresivas**: sólo después de superar el nivel anterior.
 9. **Rollback**: checkpoint anterior y servicios VLA detenidos disponibles.
 
-Para el checkpoint suministrado sigue pendiente resolver la primitiva de
-preparación `clamp_s2_joints_trajectory` y disponer de un ejecutor 20D seguro.
-No activar el ejecutor SDK incompleto ni usar el perfil Walker de 30 DOF.
+Para el checkpoint suministrado ya se localizó la definición 14D de
+`clamp_s2_joints_trajectory`, pero sigue pendiente un task S2 canónico
+instalado, completar el elevador de la pose 20D, límites, swept volume y
+recuperación exacta, además de disponer de un ejecutor 20D seguro. El mapping
+local de cintura ya está resuelto como `waist_yaw=0`. No activar el ejecutor
+SDK incompleto ni usar el perfil Walker de 30 DOF.
 
 ## 16. Capacidad esperable y límites
 
@@ -1241,8 +1319,11 @@ No activar el ejecutor SDK incompleto ni usar el perfil Walker de 30 DOF.
 6. ¿Cómo se marca oficialmente el éxito o rechazo de un episodio?
 7. ¿Se puede capturar fuerza/par como entrada de entrenamiento soportada?
 8. ¿Cuál es el data config oficial para manos v4 y cuál es su acción?
-9. ¿Cuál es la postura oficial VLA ready y dónde se define
-   `clamp_s2_joints_trajectory`?
+9. ¿Cuál es el task oficial VLA-ready que debe instalarse para S2, qué
+   configuración/condición de lifter corresponde a cada altura y cuál es su
+   recuperación completa? Localmente el mapping de cintura quedó resuelto:
+   el S2 sólo tiene `waist_yaw` y toma el segundo cero del MetaMove genérico.
+   La primitiva `clamp_s2_joints_trajectory` ya se localizó en Motion.
 10. ¿Qué ejecutor 20D y límites recomienda DSA para Cruzr S2?
 11. ¿Qué GPU/VRAM y versión exacta de GR00T recomiendan para continuar
     `checkpoint-40000`?
