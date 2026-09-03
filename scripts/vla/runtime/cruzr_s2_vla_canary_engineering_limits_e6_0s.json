@@ -1,0 +1,49 @@
+{
+  "schema": "cruzr-s2-vla-canary-engineering-limits-e6.0s-v1",
+  "experiment_id": "E6.0S",
+  "scope": "NO_BOX_READY_P14_A_ONE_SOURCE_POINT_ONLY",
+  "joint_names": [
+    "L_elbow_roll_joint",
+    "L_elbow_yaw_joint",
+    "L_shoulder_pitch_joint",
+    "L_shoulder_roll_joint",
+    "L_shoulder_yaw_joint",
+    "L_wrist_pitch_joint",
+    "L_wrist_roll_joint",
+    "R_elbow_roll_joint",
+    "R_elbow_yaw_joint",
+    "R_shoulder_pitch_joint",
+    "R_shoulder_roll_joint",
+    "R_shoulder_yaw_joint",
+    "R_wrist_pitch_joint",
+    "R_wrist_roll_joint"
+  ],
+  "maximum_target_delta_rad": [
+    0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+    0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1
+  ],
+  "maximum_velocity_rad_s": [
+    0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15,
+    0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15
+  ],
+  "maximum_acceleration_rad_s2": [
+    0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,
+    0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5
+  ],
+  "sample_period_seconds": 0.01,
+  "minimum_transition_duration_seconds": 0.5,
+  "maximum_transition_duration_seconds": 2.0,
+  "trajectory_law": "quintic_minimum_jerk_10s3_minus_15s4_plus_6s5",
+  "analytic_peak_velocity_factor": 1.875,
+  "analytic_peak_acceleration_factor": 5.773502691896258,
+  "limit_origin": "project_conservative_canary_envelope",
+  "manufacturer_certified": false,
+  "owner_acceptance_required": true,
+  "owner_accepted": false,
+  "physical_execution_authorized": false,
+  "notes": [
+    "These limits are deliberately below the 3.14 and 6.28 rad/s software speed checks found in alternate supplied executors; those supplier values are not treated as certified limits.",
+    "A zero acceleration field in a JointCommand is not an acceleration limit and is not used as evidence.",
+    "The envelope is a replaceable project canary limit, not a manufacturer or machinery-safety certification."
+  ]
+}

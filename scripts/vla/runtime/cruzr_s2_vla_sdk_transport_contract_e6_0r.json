@@ -1,0 +1,57 @@
+{
+  "schema": "cruzr-s2-vla-sdk-transport-contract-e6.0r-v1",
+  "experiment_id": "E6.0R",
+  "task_id": 0,
+  "axis_profile": "P14_A",
+  "scenario": "NO_BOX_READY",
+  "input_intent_schema": "cruzr-s2-vla-transport-neutral-preview-intent-e6.0l-v1",
+  "accepted_source_point_indices": [0],
+  "maximum_source_point_count": 1,
+  "command_topic": "/mc/sdk/robot_command",
+  "command_message_type": "mc_task_msgs/msg/RobotCommand",
+  "state_topic": "/mc/sdk/robot_state",
+  "state_message_type": "mc_state_msgs/msg/RobotState",
+  "joint_command_type": "mc_task_msgs/msg/JointCmd",
+  "position_control_mode": 2,
+  "qos": {
+    "reliability": "BEST_EFFORT",
+    "history": "KEEP_LAST",
+    "depth": 5,
+    "durability": "VOLATILE"
+  },
+  "commanded_joint_names": [
+    "L_elbow_roll_joint",
+    "L_elbow_yaw_joint",
+    "L_shoulder_pitch_joint",
+    "L_shoulder_roll_joint",
+    "L_shoulder_yaw_joint",
+    "L_wrist_pitch_joint",
+    "L_wrist_roll_joint",
+    "R_elbow_roll_joint",
+    "R_elbow_yaw_joint",
+    "R_shoulder_pitch_joint",
+    "R_shoulder_roll_joint",
+    "R_shoulder_yaw_joint",
+    "R_wrist_pitch_joint",
+    "R_wrist_roll_joint"
+  ],
+  "locked_joint_names": [
+    "head_pitch_joint",
+    "head_yaw_joint",
+    "lifter_pitch_1_joint",
+    "lifter_pitch_2_joint",
+    "lifter_pitch_3_joint",
+    "waist_yaw_joint"
+  ],
+  "ready_arm_positions": [
+    -1.383, -0.754, -0.296, -0.574, -1.888, -0.410, 0.204,
+    -1.383, 0.754, 0.296, -0.574, 1.888, 0.410, 0.204
+  ],
+  "ready_tolerance_rad": 0.01,
+  "maximum_state_age_seconds": 0.1,
+  "software_stop_semantics": "latch_stop_purge_pending_destroy_publisher_no_hold_no_replay",
+  "hardware_estop_equivalent": false,
+  "physical_execution_default": false,
+  "active_launcher_implemented": false,
+  "physical_execution_authorized": false
+}
