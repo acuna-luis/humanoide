@@ -97,6 +97,21 @@ def activation_is_enabled(value: Mapping[str, Any]) -> bool:
         bool(activation.get("authorization_scope")),
         isinstance(activation.get("authorization_run_id"), str),
         bool(activation.get("authorization_run_id")),
+        isinstance(activation.get("authorization_issued_at"), str),
+        bool(activation.get("authorization_issued_at")),
+        isinstance(activation.get("authorization_expires_at"), str),
+        bool(activation.get("authorization_expires_at")),
+        type(activation.get("authorization_valid_seconds")) is int,
+        30 <= int(activation.get("authorization_valid_seconds", 0)) <= 180,
+        all(
+            isinstance(activation.get(key), str) and len(activation[key]) == 64
+            for key in (
+                "authorization_preflight_sha256",
+                "authorization_ready_sha256",
+                "authorization_acceptance_sha256",
+                "authorization_limits_sha256",
+            )
+        ),
     )
     return all(required)
 
@@ -325,6 +340,15 @@ class OnePointCanaryRuntime:
             "physical_transport": None,
             "physical_publisher_count": 0,
         }
+        # Validate the complete trajectory before constructing the ROS backend.
+        # Backend construction creates the SDK command publisher, so even a
+        # target-delta rejection must remain publisher-free.
+        try:
+            self.transport_type.plan_minimum_jerk(
+                self.latest_arm_positions, point[:14], self.limits
+            )
+        except ValueError as exc:
+            return self._fault(f"transport:preflight:{exc}")
         try:
             self.backend = self.backend_factory()
             self.adapter = self.transport_type.OnePointSdkTransportAdapter(

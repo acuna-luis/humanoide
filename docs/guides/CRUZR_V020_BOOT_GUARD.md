@@ -66,6 +66,14 @@ recovery. The current revision treats this state as a safe terminal defer:
 `--run` records `NO_ACTION=waiting_for_physical_estop_release` and exits
 without restarting a container or commanding the head.
 
+On 2026-09-04, releasing the E-stop again left Motion without its joint-state
+stream or manipulation action server. A second complete supervised power cycle
+was performed with the main E-stop held during startup. After release, the
+Vision guard reported `JoystickMode`, all graph/camera probes passed, and the
+Motion preflight recovered `ACTUATORS_OPERATION_ENABLED=1`, joint state and the
+action server. This confirms the full power cycle as the recovery used on this
+unit; isolated Power/KEY1 presses remain unsupported.
+
 ## Files installed on Vision
 
 - `/usr/local/sbin/cruzr-v020-boot-guard`

@@ -31,6 +31,13 @@ def enabled(template: dict[str, Any]) -> dict[str, Any]:
         "physical_execution_authorized": True,
         "authorization_scope": "E6.0_NO_BOX_ONE_POINT_ONLY",
         "authorization_run_id": "OFFLINE-TEST-ONLY",
+        "authorization_issued_at": "2026-09-04T00:00:00+00:00",
+        "authorization_expires_at": "2026-09-04T00:02:00+00:00",
+        "authorization_valid_seconds": 120,
+        "authorization_preflight_sha256": "a" * 64,
+        "authorization_ready_sha256": "b" * 64,
+        "authorization_acceptance_sha256": "c" * 64,
+        "authorization_limits_sha256": "d" * 64,
         "not_authorized_reason": None,
     })
     return value
@@ -218,7 +225,8 @@ def main() -> int:
             "passed": (
                 state_ok.accepted and not decision.accepted
                 and local_runtime.state == "FAULTED"
-                and (local_factory.backend is None or local_factory.backend.stop_count == 1)
+                and local_factory.count == 0
+                and local_factory.backend is None
             ),
             "reasons": decision.reasons,
             "backend_factory_count": local_factory.count,

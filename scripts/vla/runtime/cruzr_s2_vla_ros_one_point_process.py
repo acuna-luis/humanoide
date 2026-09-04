@@ -10,6 +10,7 @@ valid checkpoint chunk have passed the pure runtime core.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import hashlib
 import importlib.util
 import json
@@ -133,6 +134,19 @@ def main() -> int:
     if actual_activation_sha != args.expected_activation_sha256:
         print("ERROR: hash del grant de activación no coincide", file=sys.stderr)
         return 3
+    try:
+        expires_at = dt.datetime.fromisoformat(activation["authorization_expires_at"])
+        issued_at = dt.datetime.fromisoformat(activation["authorization_issued_at"])
+        now_utc = dt.datetime.now(dt.timezone.utc)
+        if expires_at.tzinfo is None or issued_at.tzinfo is None:
+            raise ValueError("timezone_missing")
+        if not issued_at <= now_utc <= expires_at:
+            raise ValueError("grant_not_current")
+        if (expires_at - issued_at).total_seconds() != activation["authorization_valid_seconds"]:
+            raise ValueError("grant_duration_mismatch")
+    except (KeyError, TypeError, ValueError) as exc:
+        print(f"ERROR: grant vencido o temporalmente inválido: {exc}", file=sys.stderr)
+        return 3
 
     import rclpy
     from rclpy.node import Node
@@ -189,11 +203,16 @@ def main() -> int:
             self.timer = self.create_timer(
                 float(limits["sample_period_seconds"]), self.timer_callback
             )
+            self._last_accepted_state_log: str | None = None
             self.get_logger().info(
                 "E6.0W activo: esperando READY fresco y un solo chunk task 0"
             )
 
         def record(self, decision: Any) -> None:
+            if decision.event == "state" and decision.accepted:
+                if self._last_accepted_state_log == decision.state:
+                    return
+                self._last_accepted_state_log = decision.state
             payload = json.dumps(decision.as_dict(), sort_keys=True)
             if decision.accepted:
                 self.get_logger().info(payload)

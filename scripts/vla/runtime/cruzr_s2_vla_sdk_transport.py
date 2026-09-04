@@ -210,7 +210,10 @@ def plan_minimum_jerk(
     ]
     for index, amount in enumerate(delta):
         if abs(amount) > max_delta[index] + 1e-12:
-            raise ValueError(f"target_delta:{index}")
+            raise ValueError(
+                f"target_delta:{index}:delta={amount:.9f}:"
+                f"limit={max_delta[index]:.9f}"
+            )
 
     velocity_factor = float(limits["analytic_peak_velocity_factor"])
     acceleration_factor = float(limits["analytic_peak_acceleration_factor"])

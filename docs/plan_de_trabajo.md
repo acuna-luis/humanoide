@@ -1332,22 +1332,56 @@ guard ejecutado correctamente en Vision confirmó x86 3/3, cámaras 2/2 y
 seguridad 0/0/0, con `CONTROL_STATE=unknown`; no reinició ni movió. Antes de
 E6.0 hace falta un ciclo completo supervisado v0.2.0.
 
+El ciclo completo del 04-09 rearmó Motion. E6.0G
+`20260904T084316_E6.0G` confirmó estado/action, actuadores habilitados,
+`ESTOPS=0,0`, cargador fuera, VLA detenido y cero publicadores; el gate
+articular midió HOME. E6.0Y quedó implementado en tres movimientos separados
+(`--ready`, `--one-point`, `--recover`) con grant efímero y publicador perezoso.
+Su auditoría offline `20260904T085243_E6.0Y-OFFLINE` pasó; todavía no se ha
+ejecutado ningún punto físico del checkpoint.
+
+HOME→READY se ejecutó una vez en `20260904T085921_E6.0Y-READY` y Motion
+devolvió `SUCCEED/status=4`. El rechazo automático posterior fue un falso
+negativo: el gate mezclaba signos de motor crudos con el orden/nombres ROS del
+checkpoint. La captura `20260904T090051_E6.0V` midió READY con error máximo
+`0,001842 rad`, velocidad cero y actuadores sanos. El gate fue corregido y la
+regresión `20260904T090403_E6.0Y-OFFLINE` pasó, sin robot. VLA permaneció
+detenido y con cero publicadores. El siguiente paso ya no es repetir READY:
+es inspeccionarlo visualmente y, sólo con una autorización nueva, ejecutar el
+único punto task 0/P14.
+
+El primer intento del punto, `20260904T090909_E6.0Y`, abortó antes de importar
+ROS, crear el publicador o enviar el trigger. El PC estaba 22 s adelantado a
+Motion y éste interpretó el grant recién creado como todavía no vigente. Se
+pasó el reloj autoritativo del grant a un epoch fresco de Motion, con rechazo
+si el desfase absoluto supera 60 s; la regresión offline
+`20260904T091614_E6.0Y-OFFLINE` pasó. El cleanup dejó ambos contenedores
+detenidos y cero publicadores. Una captura posterior mantiene
+`MEASURED_READY=1`, error máximo `0,001842 rad` y velocidad cero. No se repite
+READY; el punto requiere una autorización nueva de esta corrida.
+
 #### Experimento 6.0 — Un punto P14 sin caja
 
-**Escenario futuro:** plataforma y B0 retiradas >1,5 m; ready S2 validado; ruedas
-bloqueadas; cargador fuera; persona en paro; un cliente.
+**Escenario actual:** plataforma y B0 retiradas >1,5 m; READY S2 medido;
+ruedas bloqueadas; cargador fuera; persona en paro; un cliente. Antes del punto
+falta confirmar visualmente que READY esté estable y sin contactos.
 
 ```bash
 ./scripts/vla/run_cruzr_vla_canary.sh --check \
   --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY
+./scripts/vla/run_cruzr_vla_canary.sh --ready
+# Detenerse y confirmar READY visual estable.
 ./scripts/vla/run_cruzr_vla_canary.sh --one-point \
   --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY
 ./scripts/vla/run_cruzr_vla_canary.sh --stop
+# --recover sólo si el gate vuelve a medir READY exacto.
+./scripts/vla/run_cruzr_vla_canary.sh --recover
 ```
 
-**Estado de implementación:** el runtime/proceso ROS de un punto existe y está
-probado offline, pero el launcher activo y la plantilla siguen cerrados. Sólo
-`--check` está disponible operativamente y se reproduce también con:
+**Estado de implementación:** runtime, proceso ROS y launcher por etapas están
+probados offline. La plantilla sigue cerrada y `--one-point` crea únicamente
+un grant efímero después de READY/preflight frescos y confirmación exacta. Los
+modos de más de un punto siguen bloqueados. La auditoría se reproduce con:
 
 ```bash
 ./scripts/vla/audit_vla_canary_readiness_e6_0.sh --check
@@ -1384,13 +1418,13 @@ probado offline, pero el launcher activo y la plantilla siguen cerrados. Sólo
 ./scripts/vla/audit_vla_live_state_source_e6_0v.sh --check
 ./scripts/vla/audit_vla_one_point_runtime_e6_0w.sh --check
 ./scripts/vla/audit_vla_owner_acceptance_e6_0x.sh --check
+./scripts/vla/audit_vla_active_launcher_e6_0y.sh --check
 ```
 
-El run de auditoría fue `PASS_READINESS_AUDIT_E6_0_PHYSICAL_BLOCKED`: una
-auditoría PASS significa que los gates se evaluaron bien, no que el movimiento
-esté habilitado. `--one-point`, `--one-chunk`, `--window` y `--stop` fallan
-antes de acceder a red/robot porque la activación física sigue cerrada. No se
-necesita preparar mesa, caja ni AprilTag para este precheck.
+Una auditoría PASS significa que los gates se evaluaron bien, no que exista
+autorización persistente. `--one-point` sólo puede activarse para una corrida;
+`--one-chunk` y `--window` fallan antes del robot. No se necesita preparar
+mesa, caja ni AprilTag para E6.0.
 
 **Primer montaje físico tras cerrar lo local:** retirar caja, mesa/plataforma y
 AprilTag a más de 1,5 m; dejar 1,5 m de radio y toda la envolvente de brazos
@@ -2106,7 +2140,7 @@ copiarse al terminal como si existieran:
 | `scripts/vla/derive_vla_fixture_pose.py` | `--ready-task`, `--urdf`, `--box-lwh`, `--platform-height`, `--reference-frames`, `--output` | VLA-4/geometría |
 | `scripts/vla/test_vla_executor_sink.py` + `run_vla_executor_sink_matrix_e5_0.sh` | fault suite por celda y matriz local `--check`/`--run` | VLA-5 offline completo; sólo libera E5.1 shadow |
 | `scripts/vla/run_vla_temporal_contract_e3_3.sh` | `--check`/`--run`; auditoría vendor + scheduler offline, sin ROS/red/publicador | VLA-3 parcial; semántica física pendiente |
-| `scripts/vla/audit_vla_canary_readiness_e6_0.sh` + `run_cruzr_vla_canary.sh` | auditor `--check/--run`; frontend implementa sólo `--check --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY`; modos activos bloqueados | precheck VLA-7; no autoriza VLA-7/8 físico |
+| `scripts/vla/audit_vla_canary_readiness_e6_0.sh` + `run_cruzr_vla_canary.sh` | auditor `--check/--run`; E6.0Y separa `--ready`, `--one-point`, `--recover`, con grant efímero task 0/P14/NO_BOX; `--one-chunk`/`--window` bloqueados | primer canary VLA-7; cada movimiento requiere autorización actual |
 | `scripts/vla/analyze_vla_campaign.py` + `run_vla_profile_selection_e5_2.sh` | análisis `--input/--select-minimal-profile/--output`; wrapper `--check/--run` | VLA-9 preliminar offline; P14 tasks 0–3, físico bloqueado |
 | `scripts/vla/train_cruzr_vla_candidate.sh` | `--base`, `--dataset-manifest`, `--data-config`, `--output` | VLA-10 |
 

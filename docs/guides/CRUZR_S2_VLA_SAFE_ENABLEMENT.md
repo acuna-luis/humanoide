@@ -477,6 +477,48 @@ consume el punto 0, H/L/W se mantienen en su medida fresca y STOP destruye el
 publicador. La plantilla del repositorio permanece desactivada y rechaza
 `--run` antes de importar ROS.
 
+E6.0X `20260904T075519_E6.0X` registra la aceptación del propietario de la
+envolvente provisional sólo para `NO_BOX_READY`, task 0/P14 y un punto. No es
+una certificación ni una autorización de movimiento. Después de un rearme
+completo, E6.0G `20260904T084316_E6.0G` volvió a demostrar `ESTOPS=0,0`,
+cargador fuera, estado/action disponibles, HOME medido, VLA detenido y cero
+publicadores.
+
+E6.0Y implementa el launcher activo por etapas sin habilitarlo por defecto.
+`--ready` exige HOME medido; `--one-point` exige READY medido y crea un grant
+efímero ligado por hashes a preflight, READY, aceptación y límites;
+`--recover` sólo admite READY medido. El proceso crea el publicador de comando
+de forma perezosa después de recibir un chunk válido y lo destruye ante STOP o
+fallo. Nunca arranca el ejecutor vendor. El auditor offline
+`20260904T085243_E6.0Y-OFFLINE` pasó sin acceder al robot. El primer punto
+físico sigue sin ejecutarse y necesita una confirmación actual propia.
+
+La primera etapa física HOME→READY se completó una sola vez en
+`20260904T085921_E6.0Y-READY`, con `SUCCEED/status=4`. La comprobación inicial
+rechazó por error la postura porque usaba coordenadas crudas de actuador: en
+esta unidad algunos signos no coinciden con los joints ROS del checkpoint. La
+muestra independiente `20260904T090051_E6.0V` confirmó por nombres los 14
+objetivos READY con error máximo `0,001842 rad` y velocidad cero; la muestra
+cruda confirmó actuadores sanos y delta posición–consigna ≤`0,001842 rad`.
+El gate ahora usa `/mc/whole_joint_states` para postura y mantiene
+`/mc/actuator_state` sólo para salud, velocidad cruda y consigna latente. La
+regresión offline `20260904T090403_E6.0Y-OFFLINE` pasó. No se repitió READY,
+no se arrancó inferencia y no apareció publicador de comando; los contenedores
+siguen `exited/exited`. Falta confirmar visualmente READY estable antes de
+autorizar por separado `--one-point`.
+
+El intento `20260904T090909_E6.0Y` arrancó sólo inferencia y completó dos
+preflights READY, pero no ejecutó el punto: Motion rechazó el grant con
+`grant_not_current` antes de importar ROS. El PC estaba 22 s adelantado y el
+`issued_at` basado en el PC aún era futuro para Motion. No se creó publicador,
+no se envió trigger ni hubo movimiento; el cleanup dejó ambos contenedores
+detenidos y `publishers:0`. El launcher obtiene ahora el epoch fresco de
+Motion justo antes del grant, registra el skew y aborta si supera 60 s. La
+regresión `20260904T091614_E6.0Y-OFFLINE` prueba grant válido, E-stop inválido,
+desfase inválido y los gates READY. La postura posterior sigue
+`MEASURED_READY=1` con error máximo `0,001842 rad` y velocidad cero. El intento
+no debe repetirse sin una autorización nueva.
+
 E6.0X `20260904T075519_E6.0X` registra la aceptación del propietario sólo para
 E6.0, celda vacía, task 0/P14 y un punto: delta objetivo `<=0,1 rad`, velocidad
 medida `<=0,15 rad/s`, aceleración medida `<=0,5 rad/s²`, muestreo de `10 ms`,
@@ -621,29 +663,23 @@ Los identificadores suministrados son:
 - `2`: recoger caja grande del nivel medio;
 - `3`: depositar caja grande en el nivel medio.
 
-## Condición pendiente para movimiento físico
+## Condición de ejecución para el primer movimiento físico
 
-Antes de conectar un ejecutor físico deben cumplirse todos estos puntos:
+Los gates de geometría, READY/recovery, transporte, monitor y límite provisional
+ya tienen evidencia. Esto no concede movimiento. Para la primera ejecución se
+aplica la siguiente secuencia estricta:
 
-1. Completar la auditoría del XML suministrado
-   `codes-S2/.../s2_vla_pick_large_teleop_ready.xml`, hash
-   `f4025124491eba995ec824db3e3be91875f781a4b4e98928654bde9a021d8323`,
-   instalando/identificando primero el task canónico, completando lifter,
-   límites, swept volume y recovery. El mapping local de cintura ya quedó
-   resuelto como `waist_yaw=0`. Aún no se autoriza
-   probarlo físicamente.
-2. La definición instalada de `clamp_s2_joints_trajectory` ya está resuelta y
-   preservada por hash; demostrar que pertenece al task S2 oficial y resolver
-   por qué su `back` no invierte toda la secuencia.
-3. Repetir shadow desde esa postura y obtener chunks aceptados sin saltos,
-   valores fuera de rango ni estado obsoleto.
-4. Implementar un ejecutor S2 independiente que sólo mande los 14 ejes de los
-   brazos. Cabeza, elevador y cintura permanecen bloqueados, como en el diseño
-   del ejecutor SDK suministrado.
-5. Añadir deadman, timeout, parada por pérdida de estado y límites conservadores
-   antes de habilitar la publicación.
-6. Realizar primero una prueba sin caja y a velocidad reducida, con aprobación
-   física explícita en ese momento.
+1. Reconfirmar celda vacía 1,5 m, clamps vacíos, ruedas bloqueadas, cargador
+   fuera, dos personas y cliente único.
+2. Ejecutar `--ready` desde HOME medido con su confirmación exacta; detenerse y
+   confirmar visualmente READY estable.
+3. Ejecutar `--one-point` sólo desde READY medido. El grant expira en dos
+   minutos y autoriza exclusivamente task 0/P14, punto fuente 0, brazos 14D,
+   `delta<=0,1 rad`, `|v|<=0,15 rad/s`, `|a|<=0,5 rad/s²`.
+4. Inspeccionar el resultado sin repetir ni recuperar automáticamente. Ante
+   contacto, oscilación o movimiento de H/L/W, accionar el E-stop.
+5. Sólo si el resultado permanece READY exacto, usar `--recover`; cualquier
+   postura distinta exige diagnóstico, no un recovery improvisado.
 
-Hasta completar estas condiciones, el VLA está operativo únicamente para
-inferencia y validación shadow; no está habilitado para mover el robot.
+`--one-chunk` y `--window` siguen bloqueados. E6.0Y no autoriza cajas, mesa,
+AprilTag, chasis, cintura, elevador ni cabeza.
