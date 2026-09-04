@@ -1380,6 +1380,10 @@ siguiente experimento debe ser shadow: conservar el primer punto normalizado,
 cuantificar el delta de cada brazo y determinar por qué task 0 no es continuo
 desde READY en la escena vacía.
 
+El operador confirmó finalmente HOME visual estable, brazos y cabeza sin
+contacto, clamps vacíos y ausencia de movimiento inesperado. No queda ninguna
+autorización física abierta.
+
 #### Experimento 6.0 — Un punto P14 sin caja
 
 **Escenario actual:** plataforma y B0 retiradas >1,5 m; READY S2 medido;

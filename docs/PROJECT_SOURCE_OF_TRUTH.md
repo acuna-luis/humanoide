@@ -33,7 +33,7 @@ nuevo el estado físico y lógico.
 
 | Elemento | Último estado documentado | Confianza |
 |---|---|---|
-| Postura | tras el canary rechazado se ejecutó el recovery E6.0 READY→HOME una sola vez: `SUCCEED/status=4`; los 20 ejes quedaron a ≤`0,002780 rad` de HOME, brazos ≤`0,000959 rad`, velocidad cero y delta posición–consigna ≤`0,002780 rad` | **HOME MEDIDO; CONFIRMACIÓN VISUAL POSTERIOR PENDIENTE** |
+| Postura | tras el canary rechazado se ejecutó el recovery E6.0 READY→HOME una sola vez: `SUCCEED/status=4`; los 20 ejes quedaron a ≤`0,002780 rad` de HOME, brazos ≤`0,000959 rad`, velocidad cero y delta posición–consigna ≤`0,002780 rad`. El operador confirmó HOME visual estable, brazos/cabeza sin contacto, clamps vacíos y ningún movimiento inesperado | **HOME MEDIDO Y VISUALMENTE CONFIRMADO; ESTADO VOLÁTIL** |
 | Modo robot | el reinicio completo supervisado rearmó Motion: `ACTUATORS_OPERATION_ENABLED=1`, action server presente y `ACTIONS=ready`; el task READY S2 permanece cargado con hash `c767f739…a9b2` | **OPERATIVO; REVALIDAR INMEDIATAMENTE ANTES DE OTRO GOAL** |
 | Efector | abrazaderas, `HW_TYPE=cruzr_s2_v1` confirmado por el check fresco | **VERIFICADO POR SOFTWARE; VACÍO DEBE RECONFIRMARSE ANTES DE MOVIMIENTO** |
 | Actuadores | muestra fresca posterior a READY→HOME: 20 ejes presentes, 14 de brazos, velocidad máxima `0`, sin fault y delta posición–consigna ≤`0,002780 rad` | **VERIFICADO; ESTADO VOLÁTIL** |
@@ -41,7 +41,7 @@ nuevo el estado físico y lógico.
 | Servicio PC/PICO | el STOP oficial tras `Ctrl+C` quedó confirmado; PC permaneció encendido durante el power cycle del robot | **STOP VERIFICADO; SIN CLIENTE FÍSICO** |
 | VLA | contenedores detenidos, `restart=no`, cero publicadores. En `20260904T091928_E6.0Y` el checkpoint generó tres chunks, pero el primer punto fue rechazado porque el delta de `L_shoulder_pitch_joint` superaba `0,1 rad`; cero frames y cero movimiento. Recovery posterior dejó HOME medido. El runtime valida ahora antes de construir el publicador | **CANARY REJECT_SAFE; ANALIZAR EN SHADOW ANTES DE OTRO PUNTO** |
 | Cargador | `CHARGER=0` y baterías `35,0/38,3 %` en el preflight inmediato del recovery | **VERIFICADO POR SOFTWARE; VIGILAR DESCARGA** |
-| Paros, ruedas y zona | antes del recovery el operador confirmó READY estable, sin contactos, clamps vacíos, zona 1,5 m, dos personas y mano en E-stop; software leyó `ESTOP_KEY=0`, `SERVO_ESTOP_KEY=0`. Falta inspección visual posterior de HOME | **PREFLIGHT VERIFICADO; INSPECCIÓN POST-RECOVERY PENDIENTE** |
+| Paros, ruedas y zona | antes del recovery el operador confirmó READY estable, sin contactos, clamps vacíos, zona 1,5 m, dos personas y mano en E-stop; software leyó `ESTOP_KEY=0`, `SERVO_ESTOP_KEY=0`. Después confirmó HOME visual estable y sin movimiento inesperado | **RECOVERY CERRADO; RECONFIRMAR TODO ANTES DE OTRO MOVIMIENTO** |
 | Mapa/localización | `test_route_01` se conservó; activación y localización son volátiles | **RECOMPROBAR** |
 
 La rama `main` estaba limpia y sincronizada con `origin/main` en el commit
@@ -874,9 +874,16 @@ cargador fuera, actuadores sanos y acciones libres; la tarea
 `s2_bio_vla/s2_vla_e6_0_exact_recovery` terminó `SUCCEED/status=4`. La medida
 final dio `MEASURED_HOME=1`, cuerpo máximo `0,002780 rad`, brazos
 `0,000959 rad`, velocidad cero y delta posición–consigna `0,002780 rad`. VLA
-permaneció `exited/exited` y `publishers:0`. Falta sólo la inspección visual
-post-recovery; no debe iniciarse otro canary desde HOME sin un nuevo ciclo
-HOME→READY y nueva autorización.
+permaneció `exited/exited` y `publishers:0`. La inspección visual posterior se
+registró a continuación; no debe iniciarse otro canary desde HOME sin un nuevo
+ciclo HOME→READY y nueva autorización.
+
+La inspección post-recovery quedó confirmada por el operador: HOME visual
+estable, brazos y cabeza sin contacto, clamps vacíos y sin movimiento
+inesperado. E6.0 queda cerrado físicamente en HOME. El siguiente trabajo es
+exclusivamente shadow/offline para conservar el punto normalizado y medir la
+discontinuidad de `L_shoulder_pitch_joint`; no hay autorización vigente para
+READY, checkpoint ni recovery adicionales.
 
 La evidencia VLA ya no depende de variables exportadas por un bloque anterior.
 `new_vla_evidence_run.sh` crea cada run de forma exclusiva y rechaza `/` y
@@ -1439,7 +1446,7 @@ actualizarse este archivo antes de cerrar la sesión.
 
 | Fecha | Hito | Resultado |
 |---|---|---|
-| 2026-09-04 | E6.0Y recovery READY→HOME | run `20260904T092716_E6.0Y-RECOVERY`: preflight/READY frescos; tarea exacta terminó `SUCCEED/status=4`. HOME medido en 20 ejes: cuerpo ≤`0,002780 rad`, brazos ≤`0,000959 rad`, velocidad 0 y delta ≤`0,002780 rad`. VLA `exited/exited`, `publishers:0`. Pendiente confirmación visual final |
+| 2026-09-04 | E6.0Y recovery READY→HOME | run `20260904T092716_E6.0Y-RECOVERY`: preflight/READY frescos; tarea exacta terminó `SUCCEED/status=4`. HOME medido en 20 ejes: cuerpo ≤`0,002780 rad`, brazos ≤`0,000959 rad`, velocidad 0 y delta ≤`0,002780 rad`. VLA `exited/exited`, `publishers:0`. Operador confirmó HOME visual estable, sin contactos, clamps vacíos y sin movimiento inesperado; ciclo físico cerrado |
 | 2026-09-04 | E6.0Y checkpoint rechazado sin movimiento | run `20260904T091928_E6.0Y`: grant ligado a Motion válido (`skew=23 s`), inferencia task 0 `SUCCEEDED`, 3 chunks; primer punto rechazado por `target_delta` del eje 2 >`0,1 rad`. Cero frames y cero movimiento; un publicador se construyó transitoriamente y fue destruido, final `exited/exited`, `publishers:0`. Runtime corregido para planificar antes de crear publicador; E6.0W `20260904T092245` y E6.0Y offline `20260904T092246` pasan. READY posterior ≤`0,001842 rad`, velocidad 0. Bloqueado nuevo punto hasta análisis shadow |
 | 2026-09-04 | E6.0Y primer intento de punto abortado antes de ROS | run `20260904T090909_E6.0Y`: inferencia lista y READY fresco, pero `grant_not_current` por PC 22 s adelantado a Motion. Rechazo anterior a import ROS, publicador y trigger: cero movimiento; cleanup `exited/exited`, `publishers:0`. Grant corregido para usar epoch Motion y rechazar `abs(skew)>60 s`; regresión `20260904T091614_E6.0Y-OFFLINE` aprobada. READY posterior sigue medido a ≤`0,001842 rad`, velocidad 0. Pendiente nueva autorización |
 | 2026-09-04 | E6.0Y HOME→READY físico | run `20260904T085921_E6.0Y-READY`: goal único `SUCCEED/status=4`; falso negativo inicial por mezclar coordenadas crudas de motor con joints ROS. E6.0V `20260904T090051_E6.0V` midió READY por nombre con error máximo `0,001842 rad`, velocidad 0 y delta crudo ≤`0,001842 rad`. Gate corregido y regresión `20260904T090403_E6.0Y-OFFLINE` aprobada. Sin reintento, inferencia ni publicador; VLA `exited/exited`, `publishers:0`. Pendiente confirmación visual antes del punto físico |

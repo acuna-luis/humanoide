@@ -504,8 +504,8 @@ El gate ahora usa `/mc/whole_joint_states` para postura y mantiene
 `/mc/actuator_state` sólo para salud, velocidad cruda y consigna latente. La
 regresión offline `20260904T090403_E6.0Y-OFFLINE` pasó. No se repitió READY,
 no se arrancó inferencia y no apareció publicador de comando; los contenedores
-siguen `exited/exited`. Falta confirmar visualmente READY estable antes de
-autorizar por separado `--one-point`.
+siguen `exited/exited`. En ese momento aún faltaba confirmar visualmente READY
+estable antes de autorizar por separado `--one-point`.
 
 El intento `20260904T090909_E6.0Y` arrancó sólo inferencia y completó dos
 preflights READY, pero no ejecutó el punto: Motion rechazó el grant con
@@ -540,9 +540,14 @@ Tras comprobar visualmente READY, el recovery autorizado
 `s2_bio_vla/s2_vla_e6_0_exact_recovery` y obtuvo `SUCCEED/status=4`. El gate
 posterior midió HOME en 20 ejes: cuerpo ≤`0,002780 rad`, brazos
 ≤`0,000959 rad`, velocidad cero y delta posición–consigna ≤`0,002780 rad`.
-No se arrancó inferencia; VLA terminó `exited/exited`, `publishers:0`. Falta
-confirmación visual final. El siguiente trabajo técnico es shadow/análisis de
-la discontinuidad del eje 2, no otro movimiento.
+No se arrancó inferencia; VLA terminó `exited/exited`, `publishers:0`. La
+confirmación visual final se registró a continuación. El siguiente trabajo
+técnico es shadow/análisis de la discontinuidad del eje 2, no otro movimiento.
+
+El operador confirmó después HOME visual estable, brazos y cabeza sin
+contacto, clamps vacíos y ningún movimiento inesperado. El ciclo E6.0 físico
+queda cerrado en HOME. No queda autorización de movimiento vigente; el paso
+siguiente es únicamente shadow/offline.
 
 E6.0X `20260904T075519_E6.0X` registra la aceptación del propietario sólo para
 E6.0, celda vacía, task 0/P14 y un punto: delta objetivo `<=0,1 rad`, velocidad
