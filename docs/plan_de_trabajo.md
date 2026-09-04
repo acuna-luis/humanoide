@@ -1606,9 +1606,11 @@ suelo, rango por anotación de ±4 píxeles `0,768191–0,780828 m`. Un soporte
 candidato conservador de `0,75 × 0,50 × 0,04 m` y el volumen exterior de la
 caja `0,60 × 0,40 × 0,22 m` produjeron cero candidatos OBB, incluidas las 16
 variantes de incertidumbre. Son geometría y pose **inferidas**, no medidas del
-proveedor ni confirmadas físicamente. `MESA_T1` no sirve para este frame: su
-superficie está `0,225403 m` más alta y su tablero de `1,80 × 0,80 m`, incluso
-colocado hipotéticamente a la altura candidata, genera 159 candidatos OBB.
+proveedor ni confirmadas físicamente. `MESA_T1` no queda calificada para la
+transición HOME→ENTRY de este frame: su superficie está `0,225403 m` más alta
+y su tablero de `1,80 × 0,80 m`, incluso colocado hipotéticamente a la altura
+candidata, genera 159 alertas OBB. Eso no prueba contacto real ni descarta la
+mesa para otros escenarios o para shadow estacionario.
 
 E6.1A no accedió al robot, red, ROS, contenedores ni publicadores y no ordenó
 movimiento. Su PASS cierra sólo el diseño offline (subgate al `100 %`) y deja

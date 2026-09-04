@@ -602,12 +602,14 @@ aceptados para movimiento E6.1.
 
 La reconstrucción desde el RGB congelado y la cámara calibrada sitúa la
 superficie `SUPPORTED_LOW` a `0,774597 m` del suelo, rango
-`0,768191–0,780828 m` con ±4 píxeles. El soporte candidato
+`0,768191–0,780828 m` con ±4 píxeles. El soporte de referencia
 `0,75 × 0,50 × 0,04 m` y el volumen exterior de caja
 `0,60 × 0,40 × 0,22 m` dieron cero candidatos OBB en 16 variantes. Esta pose
-es inferida y requiere confirmación física. La mesa T1 de
-`1,80 × 0,80 × 1,00 m` no sirve: difiere `0,225403 m` en altura y su tablero
-produce 159 candidatos OBB si se simula a la altura candidata.
+es inferida y requiere confirmación física; el tamaño de referencia no es un
+máximo impuesto al VLA. La mesa T1 de `1,80 × 0,80 × 1,00 m` no queda
+calificada para HOME→ENTRY de este frame: difiere `0,225403 m` en altura y su
+tablero produce 159 alertas OBB si se simula a la altura candidata. El modelo
+no demuestra contacto real ni descarta la mesa para otros escenarios o shadow.
 
 Se reproduce únicamente en local con:
 
