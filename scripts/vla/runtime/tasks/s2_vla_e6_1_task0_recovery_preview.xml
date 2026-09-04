@@ -1,0 +1,19 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <!-- OFFLINE PREVIEW ONLY: endpoint reverse of ENTRY; not registered. -->
+            <Parallel threshold="5">
+                <Action ID="MetaMove" type="arm" location="left" duration="23.59"
+                    joint_angles="0.0; -0.0008628641931856732; -0.00009587379924285257; -0.0009587379924285257; -0.00009587379924285257; 0.0; -0.0002876213977285577" />
+                <Action ID="MetaMove" type="arm" location="right" duration="23.59"
+                    joint_angles="-0.00009587379924285257; 0.000671116594699968; 0.0; 0.0007669903939428206; 0.0002876213977285577; 0.00009587379924285257; 0.0" />
+                <Action ID="MetaMove" type="head" location="single" duration="23.59"
+                    joint_angles="-0.002684466378799872; 0.0003834951969714103" />
+                <Action ID="MetaMove" type="lifter" location="single" duration="23.59"
+                    joint_angles="0.0; 0.00009587379924285257; 0.00009587379924285257" />
+                <Action ID="MetaMove" type="waist" location="single" duration="23.59"
+                    joint_angles="0.0" />
+            </Parallel>
+        </Sequence>
+    </BehaviorTree>
+</root>

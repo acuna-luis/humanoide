@@ -1,0 +1,28 @@
+{
+  "schema": "cruzr-s2-vla-supported-low-fixture-e6.1b-v1",
+  "scenario": "SUPPORTED_LOW",
+  "fixture_id": "UNMEASURED_EXAMPLE_DO_NOT_USE",
+  "measured_at": null,
+  "measurement_uncertainty_m": null,
+  "support": {
+    "surface_height_floor_m": null,
+    "width_m": null,
+    "depth_m": null,
+    "thickness_m": null,
+    "rigid": false,
+    "stable": false,
+    "locked": false
+  },
+  "box": {
+    "box_id": "B0",
+    "lwh_m": [0.603, 0.397, 0.217],
+    "empty": true,
+    "open_top": true,
+    "material_family": "rigid_plastic",
+    "color_family": "gray",
+    "supported_and_stable": false
+  },
+  "evidence_files": [],
+  "physical_fixture_frozen": false,
+  "movement_authorized": false
+}

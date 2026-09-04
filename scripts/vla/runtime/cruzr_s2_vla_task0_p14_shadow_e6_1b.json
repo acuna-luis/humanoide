@@ -1,0 +1,58 @@
+{
+  "profile": "cruzr_s2_task0_episode40_p14_shadow_e6_1b_v1",
+  "action_dim": 20,
+  "action_horizon": 10,
+  "point_dt_seconds": 0.08,
+  "point_dt_tolerance_seconds": 0.015,
+  "range_tolerance": 0.05,
+  "max_state_age_seconds": 1.0,
+  "joint_names": [
+    "L_elbow_roll_joint", "L_elbow_yaw_joint", "L_shoulder_pitch_joint",
+    "L_shoulder_roll_joint", "L_shoulder_yaw_joint", "L_wrist_pitch_joint",
+    "L_wrist_roll_joint", "R_elbow_roll_joint", "R_elbow_yaw_joint",
+    "R_shoulder_pitch_joint", "R_shoulder_roll_joint", "R_shoulder_yaw_joint",
+    "R_wrist_pitch_joint", "R_wrist_roll_joint", "head_pitch_joint",
+    "head_yaw_joint", "lifter_pitch_1_joint", "lifter_pitch_2_joint",
+    "lifter_pitch_3_joint", "waist_yaw_joint"
+  ],
+  "commanded_joint_names": [
+    "L_elbow_roll_joint", "L_elbow_yaw_joint", "L_shoulder_pitch_joint",
+    "L_shoulder_roll_joint", "L_shoulder_yaw_joint", "L_wrist_pitch_joint",
+    "L_wrist_roll_joint", "R_elbow_roll_joint", "R_elbow_yaw_joint",
+    "R_shoulder_pitch_joint", "R_shoulder_roll_joint", "R_shoulder_yaw_joint",
+    "R_wrist_pitch_joint", "R_wrist_roll_joint"
+  ],
+  "locked_joint_names": [
+    "head_pitch_joint", "head_yaw_joint", "lifter_pitch_1_joint",
+    "lifter_pitch_2_joint", "lifter_pitch_3_joint", "waist_yaw_joint"
+  ],
+  "lower_boundary": [
+    -2.240872859954834, -1.0334312915802002, -0.29629647731781006,
+    -1.0658930540084839, -2.307835578918457, -0.42883187532424927,
+    -0.9172317385673523, -2.307173252105713, -0.2767566740512848,
+    -1.0948976278305054, -1.1180776357650757, 0.9228867292404175,
+    -0.6241397261619568, -0.9604713916778564, -0.4332375228404999,
+    -0.0007673294749110937, -1.5034162998199463, -0.0015350442845374346,
+    -0.8933081030845642, -0.04950191080570221
+  ],
+  "upper_boundary": [
+    -0.298016220331192, 0.2853841185569763, 1.2644691467285156,
+    -0.21105554699897766, -0.8631081581115723, 0.6264722943305969,
+    0.3822796046733856, -0.7216251492500305, 1.0180418491363525,
+    0.2970516085624695, -0.30863156914711, 2.299319267272949,
+    0.43077200651168823, 0.21689896285533905, -0.43024539947509766,
+    0.000770328042563051, -1.5034162998199463, -0.0015350442845374346,
+    -0.8933081030845642, -0.04950191080570221
+  ],
+  "max_interpoint_speed": [
+    1.25, 1.25, 1.25, 1.25, 1.25, 1.25, 1.25,
+    1.25, 1.25, 1.25, 1.25, 1.25, 1.25, 1.25,
+    0.5, 0.5, 0.25, 0.25, 0.25, 0.35
+  ],
+  "max_first_point_delta": [
+    0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+    0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
+    0.01, 0.01, 0.01, 0.01, 0.01, 0.01
+  ],
+  "state_defaults": {}
+}
