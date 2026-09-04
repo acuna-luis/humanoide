@@ -549,18 +549,59 @@ contacto, clamps vacíos y ningún movimiento inesperado. El ciclo E6.0 físico
 queda cerrado en HOME. No queda autorización de movimiento vigente; el paso
 siguiente es únicamente shadow/offline.
 
+E6.0Z `20260904T094803_E6.0Z` resolvió ese análisis sin ROS, publicador ni
+movimiento. Las 20 acciones del checkpoint son posiciones absolutas
+(`absolute=true` en metadata), no deltas. En los 150 episodios task 0, la
+acción del frame inicial está a como máximo `0,003134013 rad` de su propio
+estado; un salto `>0,1 rad` no es el arranque normal demostrado. Los brazos
+del READY histórico estaban muy cerca de una entrada task 0, pero los 20 ejes
+no: el vecino más cercano queda a `0,834773183 rad`, dominado por
+`lifter_pitch_1_joint=0` en vivo frente a `-0,834773183 rad` en el dataset.
+Task 0 pide recoger una caja grande de la repisa baja y se ejecutó con
+`NO_BOX_READY`; una muestra visual de seis familias de entrada confirma que
+las demostraciones muestran un contenedor grande apoyado. No se puede asignar
+causalidad exclusiva a escena o elevador, pero ambos contratos estaban
+incumplidos. El target exacto histórico no quedó en el log anterior; la nueva
+instrumentación conserva estado, primer target y deltas completos.
+
+El contrato versionado `cruzr_s2_vla_task_entry_contract_e6_0z.json` y
+`check_vla_task_entry_state.py` exigen para calificar shadow: escenario propio
+de la tarea, los 20 ejes dentro del soporte observado y a `<=0,01 rad` de un
+mismo frame 0 del task. Después hacen falta cinco chunks frescos desde esa
+misma escena/entrada, cada uno con primer delta `<=0,1 rad`; el chunk que
+pudiera llegar a una ruta activa se validaría otra vez. No se acepta aumentar
+el límite, recortar/proyectar el target ni convertir una posición absoluta en
+delta. Este PASS nunca autoriza movimiento.
+
+Como cierre fail-closed, E6.0Y ya no contiene la ruta activa: `--ready` y
+`--one-point` abortan localmente antes de red y se eliminaron el trigger, el
+grant y el proceso publicador del launcher. Sólo quedan STOP y recovery
+READY→HOME. La regresión `20260904T100258_E6.0Y-OFFLINE` confirma el cierre
+con 10 checks estáticos y cero acceso al robot. El sucesor se implementará con otro contrato sólo después de
+resolver escena `SUPPORTED_LOW`, entrada 20D, transición/recovery y cinco
+shadow frescos. El cargador está conectado durante este trabajo offline, por
+lo que cualquier movimiento está adicionalmente bloqueado.
+
+El candidato inicial para ese diseño offline es `episode_000040`, por ser el
+frame task 0 más cercano a la entrada histórica: H/L/W
+`[-0,431336224, 0, -0,834773183, -0,000958738, 0,291264594, 0,024639565] rad`.
+Su primer target sólo cambia `0,000326395 rad`. La imagen muestra un
+contenedor plástico gris grande, abierto y vacío sobre una superficie blanca;
+no habilita sustituirlo sin validación por una caja de cartón. El episodio es
+un candidato de ingeniería para HOME→ENTRY→HOME, no un fixture congelado ni
+una autorización física.
+
 E6.0X `20260904T075519_E6.0X` registra la aceptación del propietario sólo para
 E6.0, celda vacía, task 0/P14 y un punto: delta objetivo `<=0,1 rad`, velocidad
 medida `<=0,15 rad/s`, aceleración medida `<=0,5 rad/s²`, muestreo de `10 ms`,
 H/L/W inmóviles. No es certificación del fabricante ni autorización de
 movimiento.
 
-El consolidado vigente `20260904T075648_E6.0-CHECK` deja el ejecutor en
+El consolidado histórico `20260904T075648_E6.0-CHECK` dejó el ejecutor en
 `PASS_CODE_OFFLINE_ACTIVATION_GATED`, la aceptación en `PASS` y cero gates
-estáticos. El preflight es `RUN_SPECIFIC_REQUIRED`: debe repetirse hoy con la
-celda vacía antes de crear el grant de una sola corrida. Hasta que ambas cosas
-ocurran, `--one-point` sigue cerrado, VLA debe permanecer detenido y
-`E6.0_PHYSICAL_AUTHORIZED=0`.
+estáticos. Su continuación de celda vacía fue ejecutada y queda superada por
+E6.0Z: no repetir ese preflight ni crear otro grant `NO_BOX`. VLA permanece
+detenido y `E6.0_PHYSICAL_AUTHORIZED=0`.
 
 La fase A del preflight de hoy es `20260904T075947_E6.0G`. Con los paros
 declarados accionados, comprobó sólo en lectura: principal `ESTOP_KEY=1`, señal
@@ -693,23 +734,28 @@ Los identificadores suministrados son:
 - `2`: recoger caja grande del nivel medio;
 - `3`: depositar caja grande en el nivel medio.
 
-## Condición de ejecución para el primer movimiento físico
+## Condición para diseñar el sucesor físico de E6.0
 
-Los gates de geometría, READY/recovery, transporte, monitor y límite provisional
-ya tienen evidencia. Esto no concede movimiento. Para la primera ejecución se
-aplica la siguiente secuencia estricta:
+E6.0Y/`NO_BOX_READY` está retirado y no puede volver a armarse. Su `--ready` y
+`--one-point` abortan antes de red. Antes de escribir un launcher físico nuevo
+deben existir juntos:
 
-1. Reconfirmar celda vacía 1,5 m, clamps vacíos, ruedas bloqueadas, cargador
-   fuera, dos personas y cliente único.
-2. Ejecutar `--ready` desde HOME medido con su confirmación exacta; detenerse y
-   confirmar visualmente READY estable.
-3. Ejecutar `--one-point` sólo desde READY medido. El grant expira en dos
-   minutos y autoriza exclusivamente task 0/P14, punto fuente 0, brazos 14D,
-   `delta<=0,1 rad`, `|v|<=0,15 rad/s`, `|a|<=0,5 rad/s²`.
-4. Inspeccionar el resultado sin repetir ni recuperar automáticamente. Ante
-   contacto, oscilación o movimiento de H/L/W, accionar el E-stop.
-5. Sólo si el resultado permanece READY exacto, usar `--recover`; cualquier
-   postura distinta exige diagnóstico, no un recovery improvisado.
+1. Escenario `SUPPORTED_LOW` coherente con task 0: contenedor grande vacío
+   apoyado y visible en la repisa/plataforma baja; no una celda vacía.
+2. Un único frame 0 task 0 elegido como referencia conjunta de los 20 ejes.
+   No se permite formar una postura mezclando rangos de episodios distintos.
+3. Transición HOME→ENTRY y recovery ENTRY→HOME deterministas, con barrido,
+   límites y estado final comprobados offline antes de cualquier movimiento.
+4. Medida fresca 20D dentro de los rangos del task y a `<=0,01 rad` del mismo
+   frame de referencia, evaluada por `check_vla_task_entry_state.py`.
+5. Cinco chunks shadow frescos de esa misma escena y entrada. Todos deben
+   conservar estado, target y delta por eje y cumplir primer delta P14
+   `<=0,1 rad`, sin clipping ni proyección.
+6. Revisión del chunk real nuevamente antes de construir el publicador, más
+   preflight y autorización física exclusivos de esa corrida.
 
-`--one-chunk` y `--window` siguen bloqueados. E6.0Y no autoriza cajas, mesa,
-AprilTag, chasis, cintura, elevador ni cabeza.
+La tolerancia `0,01 rad` es un gate conservador del proyecto, no un límite
+certificado. Pasar los puntos 1–5 sólo permite crear y revisar el diseño del
+sucesor; no concede movimiento. El cargador puede seguir conectado durante el
+trabajo offline/shadow, pero debe desconectarse y verificarse por software
+antes de cualquier transición física.

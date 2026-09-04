@@ -43,13 +43,15 @@ sha256sum "$SCRIPT_PATH" "$TEST" "$LAUNCHER" "$RUNTIME"/*.py "$RUNTIME"/*.json \
 cat > "$run_dir/actual_result.yaml" <<EOF
 experiment_id: E6.0Y-OFFLINE
 run_id: $(basename -- "$run_dir")
-status: PASS_ACTIVE_LAUNCHER_FAIL_CLOSED_OFFLINE
+status: PASS_NO_BOX_ACTIVE_PATH_REMOVED_OFFLINE
 robot_accessed: false
 ros_imported: false
 physical_publisher_created: false
 physical_movement_commanded: false
-active_path_default: disabled
-next_gate: RUN_SPECIFIC_READY_MOVEMENT_AUTHORIZATION
+active_path: removed
+ready_path: retired
+recovery_path: retained
+next_gate: TASK_MATCHED_20D_ENTRY_AND_FIVE_FRESH_SHADOW_CHUNKS
 EOF
 (
   cd "$run_dir"

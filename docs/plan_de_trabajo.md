@@ -1143,14 +1143,16 @@ las cuatro tareas. Se reproduce de forma autocontenida con:
 ./scripts/vla/run_vla_profile_selection_e5_2.sh --run
 ```
 
-No se evaluó éxito físico. E6.0 sigue bloqueado; el precheck siguiente separa
-los requisitos que sí aplican a un escenario sin caja.
+No se evaluó éxito físico. El posterior E6.0 sin caja quedó retirado porque no
+coincide con ninguna instrucción del checkpoint; el siguiente gate vigente es
+entrada y escena task-matched más cinco shadow frescos.
 
-### Serie 6 — Canary físico sin caja
+### Serie 6 — Del canary NO_BOX rechazado al canary task-matched
 
-Toda esta serie sigue `BLOQUEADO_FISICO`. E4.4 y las cotas clamp/fixture no
-aplican mientras plataforma y B0 estén retiradas, pero vuelven a ser
-obligatorias para E7+. E6.0A autoritativo `20260903T093145_E6.0A` confirmó el
+El tramo histórico NO_BOX está `RETIRED_FAIL_CLOSED`; el sucesor task-matched
+sigue `BLOQUEADO_FISICO`. E4.4 y las cotas clamp/fixture no aplicaron a la
+celda vacía histórica, pero son obligatorias para E6.1/E7+. E6.0A autoritativo
+`20260903T093145_E6.0A` confirmó el
 ready P14 contra el frame 0 del dataset, definió H/L/W como hold fresco y
 derivó recovery exacto de brazos `B→A→preposición`. E6.0B
 `20260903T094547_E6.0B` recorrió 401 estados por FK/OBB: cero solapes entre
@@ -1384,28 +1386,38 @@ El operador confirmó finalmente HOME visual estable, brazos y cabeza sin
 contacto, clamps vacíos y ausencia de movimiento inesperado. No queda ninguna
 autorización física abierta.
 
+E6.0Z `20260904T094803_E6.0Z` cerró el análisis de la discontinuidad. Las
+acciones son posiciones absolutas. Los 150 inicios task 0 tienen un delta
+acción−estado máximo de sólo `0,003134013 rad`; el READY histórico coincide en
+brazos, pero su entrada completa se separa `0,834773183 rad` del frame task 0
+más cercano por el elevador. También se usó `NO_BOX_READY` para una instrucción
+que exige una caja grande apoyada en la repisa baja. El antiguo log no permite
+recuperar el valor exacto del target rechazado, pero los runtimes ya registran
+estado, target y delta por eje. El gate nuevo rechaza explícitamente escena y
+20D, y el launcher antiguo ya no contiene una ruta de inferencia/publicación;
+la regresión `20260904T100258_E6.0Y-OFFLINE` lo confirma sin acceder al robot.
+
 #### Experimento 6.0 — Un punto P14 sin caja
 
-**Escenario actual:** plataforma y B0 retiradas >1,5 m; READY S2 medido;
-ruedas bloqueadas; cargador fuera; persona en paro; un cliente. Antes del punto
-falta confirmar visualmente que READY esté estable y sin contactos.
+**Estado final:** `RETIRED_FAIL_CLOSED`. E6.0 sirvió como prueba negativa del
+guard: el checkpoint produjo un target fuera del límite y se publicaron cero
+frames. No se reintenta porque `NO_BOX_READY` no es una entrada válida de task
+0 y los seis ejes H/L/W no coincidían con una entrada 20D de ese task.
 
 ```bash
-./scripts/vla/run_cruzr_vla_canary.sh --check \
-  --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY
-./scripts/vla/run_cruzr_vla_canary.sh --ready
-# Detenerse y confirmar READY visual estable.
-./scripts/vla/run_cruzr_vla_canary.sh --one-point \
-  --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY
-./scripts/vla/run_cruzr_vla_canary.sh --stop
-# --recover sólo si el gate vuelve a medir READY exacto.
-./scripts/vla/run_cruzr_vla_canary.sh --recover
+# Sólo auditoría local; no accede al robot.
+./scripts/vla/run_vla_canary_physical_e6_0y.sh --check
+
+# Ambos comandos deben rechazar localmente con exit 3.
+./scripts/vla/run_vla_canary_physical_e6_0y.sh --ready
+./scripts/vla/run_vla_canary_physical_e6_0y.sh --one-point
 ```
 
-**Estado de implementación:** runtime, proceso ROS y launcher por etapas están
-probados offline. La plantilla sigue cerrada y `--one-point` crea únicamente
-un grant efímero después de READY/preflight frescos y confirmación exacta. Los
-modos de más de un punto siguen bloqueados. La auditoría se reproduce con:
+`--stop` permanece disponible. `--recover` sólo existe para devolver a HOME un
+robot que ya esté medido en el READY histórico; no prepara otro canary. No
+aumentar `0,1 rad`, no recortar el target y no reinterpretarlo como delta.
+
+La auditoría histórica y las regresiones actuales se reproducen con:
 
 ```bash
 ./scripts/vla/audit_vla_canary_readiness_e6_0.sh --check
@@ -1446,34 +1458,60 @@ modos de más de un punto siguen bloqueados. La auditoría se reproduce con:
 ```
 
 Una auditoría PASS significa que los gates se evaluaron bien, no que exista
-autorización persistente. `--one-point` sólo puede activarse para una corrida;
-`--one-chunk` y `--window` fallan antes del robot. No se necesita preparar
-mesa, caja ni AprilTag para E6.0.
+autorización persistente. Los modos de uno o más puntos de checkpoint han sido
+eliminados de E6.0Y.
 
-**Primer montaje físico tras cerrar lo local:** retirar caja, mesa/plataforma y
-AprilTag a más de 1,5 m; dejar 1,5 m de radio y toda la envolvente de brazos
-libres; clamps vacíos y firmes; robot estable y visualmente en home; cargador
-desconectado y ruedas bloqueadas; dos personas (una en el paro y otra en PC);
-PICO, UI y teleoperación cerrados; VLA detenido y un solo cliente. Durante el
-montaje ambos paros permanecen accionados. La liberación de paros y cualquier
-ready/movimiento serán gates separados y todavía no están autorizados.
+#### Experimento 6.1 — Entrada task-matched y cinco shadow frescos
 
-**PASS:** sólo brazos, delta pequeño autorizado, velocidad/fuerza dentro de
-gate, STOP y velocidad cero. Repetir tres veces.
+**Estado:** `PENDIENTE, SIN MOVIMIENTO AUTORIZADO`. Éste sustituye al canary
+sin caja. Debe cerrarse en el orden siguiente:
 
-#### Experimento 6.1 — Un chunk y dos chunks P14
+1. Elegir task 0 y montar `SUPPORTED_LOW`: contenedor grande vacío apoyado en
+   una repisa/plataforma baja, visible como en los frames de entrenamiento. No
+   usar `NO_BOX`, una caja cerrada ni una instrucción distinta.
+2. Seleccionar un único frame 0 task 0 como referencia de los 20 ejes. Diseñar
+   y validar offline la transición HOME→ENTRY y ENTRY→HOME, incluidos elevador,
+   cabeza y cintura; no combinar por eje mínimos/máximos de episodios distintos.
+   El candidato inicial es `episode_000040`: es el vecino task 0 más próximo a
+   E6.0Y, su primer target difiere `0,000326395 rad` y su imagen muestra un
+   contenedor plástico gris grande, abierto y vacío sobre superficie blanca.
+   Debe validarse su geometría antes de congelarlo y no sustituirse directamente
+   por una caja de cartón.
+3. Con el robot aún inmóvil, comparar los 20 ejes medidos con ese mismo frame:
 
-Después de E6.0, ejecutar `--one-chunk`; STOP/revisión; luego `--window` limitado
-a dos chunks; STOP/revisión. **FAIL:** continuidad incorrecta, salto, oscilación
-o postura no clasificable.
+   ```bash
+   python3 scripts/vla/check_vla_task_entry_state.py \
+     --dataset-report RUN_E6_0Z/dataset-entry-states.json \
+     --contract scripts/vla/runtime/cruzr_s2_vla_task_entry_contract_e6_0z.json \
+     --task-id 0 --scenario SUPPORTED_LOW --state-json STATE_20D.json
+   ```
 
-#### Experimento 6.2 — Añadir H, W y L aisladamente
+   El PASS requiere todos los ejes dentro del soporte task 0 y distancia
+   Chebyshev `<=0,01 rad` a un mismo frame. Es tolerancia provisional de
+   proyecto y sólo permite shadow.
+4. Ejecutar cinco inferencias shadow frescas, desde la misma postura y escena.
+   Guardar por chunk estado, primer target, delta por eje, imágenes y hashes.
+   Los cinco deben tener primer delta P14 `<=0,1 rad`; no se permite clipping.
+5. Sólo entonces implementar un launcher sucesor separado. Éste volverá a
+   validar el chunk real antes de crear publicador y necesitará autorización
+   física nueva. Hasta entonces no existe comando de un punto permitido.
+
+El cargador puede permanecer conectado durante 2–4. Antes de cualquier
+transición física debe desconectarse y comprobarse `CHARGER=disconnected`.
+
+#### Experimento 6.2 — Un punto, un chunk y dos chunks P14 task-matched
+
+Sólo después del PASS completo de E6.1: un punto → STOP/revisión; un chunk →
+STOP/revisión; dos chunks → STOP/revisión. **FAIL:** continuidad incorrecta,
+salto, oscilación o postura no clasificable. Cada fase usa un grant distinto.
+
+#### Experimento 6.3 — Añadir H, W y L aisladamente
 
 Probar en sesiones separadas P16_AH, P15_AW y P17_AL; después combinaciones
 P17_AHW/P18_ALW/P19_AHL/P20. Cada perfil comienza de nuevo en un punto y exige
 tres repeticiones limpias. No se habilita un grupo porque el anterior funcionó.
 
-#### Experimento 6.3 — Timeout, cancel y STOP físico
+#### Experimento 6.4 — Timeout, cancel y STOP físico
 
 Ejecutar ventanas cortas primero terminadas por timeout y después por cancel.
 Medir latencia hasta velocidad cero. **PASS:** no se ejecuta ningún chunk tras
@@ -1856,14 +1894,18 @@ Resultados esperados que deben demostrarse, no suponerse:
 **Criterio de avance:** tabla 32×métricas completa y recomendación de perfil por
 task. Shadow debe seguir mostrando cero publicadores físicos.
 
-### 0.11 Gate VLA-7 — Canary físico sin caja
+### 0.11 Gate VLA-7 — Entrada y canary task-matched
 
-Este gate requiere una futura autorización explícita y un preflight físico
-nuevo. Se ejecuta en una sesión distinta; este documento no la concede.
+El canary `NO_BOX` se ejecutó como prueba negativa, no publicó frames y quedó
+retirado. Su sucesor requiere primero escena `SUPPORTED_LOW`, un frame inicial
+task 0 conjunto de 20 ejes y cinco chunks shadow frescos. Sólo después requiere
+una autorización explícita y un preflight físico nuevo; este documento no la
+concede.
 
 Orden de escalado por cada perfil aprobado:
 
-1. robot en postura `VLA-ready`, caja retirada y envolvente completa despejada;
+1. robot en postura de entrada 20D del frame elegido, contenedor grande vacío
+   apoyado en la repisa baja y envolvente libre de personas/obstáculos;
 2. ejecutar una única consigna aceptada y de delta muy pequeño mediante la
    primitiva segura;
 3. STOP, velocidad cero y revisión de logs;
@@ -1890,7 +1932,7 @@ prematuro, STOP tardío o postura final no clasificable.
 
 ### 0.12 Gate VLA-8 — Las cuatro tareas físicas del checkpoint
 
-Sólo después del canary sin caja:
+Sólo después del canary task-matched de un punto:
 
 1. usar una caja vacía cuya geometría y escena se hayan comparado con el
    dataset; una caja “parecida” no se considera automáticamente equivalente;
@@ -2070,7 +2112,7 @@ desconocida.
 
 | Estado | Caja | Abrazaderas | Robot | Uso |
 |---|---|---|---|---|
-| `NO_BOX_READY` | retirada de toda la envolvente | vacías | ready S2 validado, velocidad cero | canary sin caja |
+| `NO_BOX_READY` | retirada de toda la envolvente | vacías | ready S2 validado, velocidad cero | escenario histórico retirado: no coincide con tasks 0–3 |
 | `SUPPORTED_VENDOR_1M` | B0 apoyada en `S_VENDOR_1M` | vacías | ready S2/pose fixture validados | reproducción inicial SDK |
 | `SUPPORTED_LOW` | B0 apoyada en `S_TASK_LOW` ya resuelta | vacías | `VLA_READY_LOW`, velocidad cero | task 0 |
 | `HELD_LOW` | B0 suspendida y estable | sujetando B0 | postura de place baja validada | task 1 |
@@ -2164,7 +2206,7 @@ copiarse al terminal como si existieran:
 | `scripts/vla/derive_vla_fixture_pose.py` | `--ready-task`, `--urdf`, `--box-lwh`, `--platform-height`, `--reference-frames`, `--output` | VLA-4/geometría |
 | `scripts/vla/test_vla_executor_sink.py` + `run_vla_executor_sink_matrix_e5_0.sh` | fault suite por celda y matriz local `--check`/`--run` | VLA-5 offline completo; sólo libera E5.1 shadow |
 | `scripts/vla/run_vla_temporal_contract_e3_3.sh` | `--check`/`--run`; auditoría vendor + scheduler offline, sin ROS/red/publicador | VLA-3 parcial; semántica física pendiente |
-| `scripts/vla/audit_vla_canary_readiness_e6_0.sh` + `run_cruzr_vla_canary.sh` | auditor `--check/--run`; E6.0Y separa `--ready`, `--one-point`, `--recover`, con grant efímero task 0/P14/NO_BOX; `--one-chunk`/`--window` bloqueados | primer canary VLA-7; cada movimiento requiere autorización actual |
+| `scripts/vla/run_vla_canary_physical_e6_0y.sh` + `check_vla_task_entry_state.py` | E6.0Y: `--ready`/`--one-point` retirados antes de red, sólo `--stop`/recovery histórico; E6.0Z: gate offline `--dataset-report/--contract/--task-id/--scenario/--state-json` | retira el canary NO_BOX y sólo libera cinco shadow task-matched; nunca movimiento |
 | `scripts/vla/analyze_vla_campaign.py` + `run_vla_profile_selection_e5_2.sh` | análisis `--input/--select-minimal-profile/--output`; wrapper `--check/--run` | VLA-9 preliminar offline; P14 tasks 0–3, físico bloqueado |
 | `scripts/vla/train_cruzr_vla_candidate.sh` | `--base`, `--dataset-manifest`, `--data-config`, `--output` | VLA-10 |
 
@@ -2451,46 +2493,25 @@ vendor 0,72/6/9 s y single-flag frente a cinco flags declarados.
 - **Recuperación replay:** terminar el proceso local; no se inició cliente,
   contenedor ni publicador físico.
 
-#### `VLA-T07` — Canary físico sin caja (Gate VLA-7, bloqueado hoy)
+#### `VLA-T07` — Entrada task-matched antes de un canary (Gate VLA-7)
 
-- **Autorización:** nueva confirmación física el día de la prueba; el plan no
-  la concede.
-- **Escenario:** `NO_BOX_READY`, plataforma y B0 retiradas >1,5 m, envolvente
-  completamente vacía, base en marca calibrada, ruedas bloqueadas,
-  cargador desconectado, ambos paros liberados sólo tras preflight, persona en
-  el paro y un único cliente.
-- **PC preflight:** `run_ubtech_vla_shadow.sh --check`,
-  `cruzr_vla_ready_pose.sh --check --task TASK` y futuro
-  `run_cruzr_vla_canary.sh --check --task-id N --axis-profile PROFILE`.
-
-  Secuencia especificada para cuando ambas herramientas y la primitiva estén
-  revisadas; hoy los comandos marcados como futuros deben fallar por ausencia:
-
-  ```bash
-  ./scripts/vla/run_ubtech_vla_shadow.sh --check
-  test -n "$VLA_READY_TASK"  # salida canónica de E4.0
-  ./scripts/vla/cruzr_vla_ready_pose.sh --check --task "$VLA_READY_TASK"
-  ./scripts/vla/run_cruzr_vla_canary.sh --check \
-    --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY
-  ./scripts/vla/run_cruzr_vla_canary.sh --one-point \
-    --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY
-  ./scripts/vla/run_cruzr_vla_canary.sh --stop
-  ```
-- **Escalado:** una consigna/punto de delta pequeño → STOP/revisión; un chunk →
-  STOP; dos chunks → STOP; ventana corta por timeout; ventana corta por cancel.
-  Tres repeticiones limpias antes de añadir H, W o L.
-- **Mensaje:** nunca shell→`RobotCommand`; el canary toma un chunk ya aceptado,
-  aplica máscara/hold y usa la primitiva oficial todavía no demostrada.
-- **PASS:** movimiento sólo en grupos autorizados, velocidad/fuerza/latencia
-  dentro de contrato, STOP y cero velocidad demostrados, postura final
-  clasificable.
-- **FAIL inmediato:** cualquier contacto, oscilación, primer salto, grupo
-  bloqueado que se mueve, trip FT, imagen/estado viejo, STOP tardío o executor
-  ambiguo.
-- **Evidencia:** vídeo externo, logs sincronizados, estado/órdenes, fuerza,
-  latencia STOP y pose final.
-- **Recuperación:** STOP del executor; mantener postura. Recovery determinista
-  específico sólo tras clasificarla; no enviar home automáticamente.
+- **Estado:** `NO_BOX RETIRADO; PENDIENTE SHADOW`. La ejecución E6.0Y demostró
+  el rechazo del guard con cero frames. No es un ensayo que deba repetirse.
+- **Escenario siguiente:** task 0=`SUPPORTED_LOW`, con contenedor grande vacío
+  apoyado y visible como en el dataset. La altura/pose debe corresponder al
+  único frame 0 elegido; no se toman valores independientes de varias
+  demostraciones.
+- **PC:** generar el reporte de entradas E6.0Z, comprobar los 20 ejes con
+  `check_vla_task_entry_state.py` y después obtener cinco chunks shadow frescos.
+  Cualquier mismatch de escena, task o estado aborta antes de ROS/publicador.
+- **PASS de esta tarjeta:** entrada a `<=0,01 rad` de un frame task 0 y cinco
+  primeros targets P14 `<=0,1 rad`, todos registrados sin clipping. Este PASS
+  sólo permite diseñar un launcher sucesor; no autoriza movimiento.
+- **FAIL:** `NO_BOX`, caja/altura no correspondiente, combinación artificial
+  de ejes, un solo shadow, target no registrado o cualquier delta excedido.
+- **Escalado físico futuro:** launcher distinto y revisado; un punto → STOP;
+  un chunk → STOP; dos chunks → STOP. Cada etapa requiere preflight, grant y
+  autorización nuevos, además de recovery específico.
 
 #### `VLA-T08-0` — PICK bajo físico, caja vacía (task 0)
 
@@ -3232,8 +3253,9 @@ tras superar los gates de la guía de activación segura.
 2. Replay cinemático sin actuadores.
 3. Shadow junto a una ejecución determinista/teleoperada.
 4. Comprobar continuidad del primer chunk respecto al estado real.
-5. Canary físico sin caja, un brazo y horizonte corto.
-6. Caja vacía, fase aislada y STOP inmediato.
+5. Canary físico de un punto con contenedor grande vacío apoyado y escena
+   task-matched; STOP inmediato.
+6. Un chunk con el mismo contenedor vacío, fase aislada y STOP inmediato.
 7. Contenido ligero sólo después de igualar el baseline determinista.
 
 **Gate 13**

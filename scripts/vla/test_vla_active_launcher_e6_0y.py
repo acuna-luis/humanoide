@@ -128,16 +128,16 @@ CANONICAL_MANIPULATION_PREFLIGHT=passed-read-only
     launcher_source = args.launcher.read_text(encoding="utf-8")
     checks = {
         "vendor_executor_not_started": "vla_control_node.py" not in launcher_source,
-        "one_explicit_inference_trigger": launcher_source.count("ros2 action send_goal /gr00t/trigger_inference") == 1,
-        "run_specific_grant_hash": "--expected-activation-sha256" in launcher_source,
-        "lazy_command_publisher_guard": "publicador apareció antes del chunk" in launcher_source,
-        "ready_and_recovery_are_separate": "--ready)" in launcher_source and "--recover)" in launcher_source,
-        "cleanup_stops_containers": '"$SHADOW" --stop' in launcher_source,
+        "checkpoint_trigger_removed": "ros2 action send_goal /gr00t/trigger_inference" not in launcher_source,
+        "active_runtime_removed": "cruzr_s2_vla_ros_one_point_process.py" not in launcher_source,
+        "activation_grant_removed": "--expected-activation-sha256" not in launcher_source,
+        "ready_retired": "E6.0Y_READY_RETIRED=1" in launcher_source,
+        "one_point_retired": "E6.0Y_ONE_POINT_RETIRED=1" in launcher_source,
+        "recovery_only_motion_task": launcher_source.count('run_motion_task "$RECOVERY_TASK"') == 1,
+        "stop_remains_available": '"$SHADOW" --stop' in launcher_source,
         "hardware_estop_warning": "STOP software no" in launcher_source,
-        "motion_clock_bound_grant": "--reference-epoch \"$motion_epoch\"" in launcher_source,
-        "no_box_checkpoint_entry_retired": (
-            'E6.0Y_ONE_POINT_RETIRED=1' in launcher_source
-            and 'task-matched-20D-ready,task-matched-scene,shadow-entry-qualification'
+        "task_matched_successor_required": (
+            "task-matched-scene,task-matched-20D-entry,five-fresh-shadow-chunks"
             in launcher_source
         ),
     }
@@ -145,7 +145,9 @@ CANONICAL_MANIPULATION_PREFLIGHT=passed-read-only
     print("E6.0Y_OFFLINE_CASES=grant-valid,grant-estop-rejected,grant-clock-skew-rejected,ready-valid,ready-delta-rejected")
     print("E6.0Y_STATIC_CHECKS=" + str(len(checks)))
     print("E6.0Y_FAILED_EXPECTATIONS=0")
-    print("E6.0Y_ACTIVE_PATH_DEFAULT=disabled")
+    print("E6.0Y_ACTIVE_PATH=removed")
+    print("E6.0Y_READY_PATH=retired")
+    print("E6.0Y_RECOVERY_PATH=retained")
     print("E6.0Y_ROBOT_ACCESSED=0")
     return 0
 
