@@ -121,9 +121,13 @@
     "required_box_properties": {
       "empty": true,
       "open_top": true,
-      "material_family": "rigid_plastic",
+      "material_family": "rigid_plastic"
+    },
+    "required_recorded_box_properties": ["color_family"],
+    "reference_visual_properties": {
       "color_family": "gray"
     },
+    "recorded_visual_variation_rejects_shadow": false,
     "box_front_clearance_m": 0.05,
     "box_centered_laterally_required": true,
     "box_long_side_parallel_to_front_edge_required": true,
@@ -133,10 +137,13 @@
   },
   "available_table_observation": {
     "surface_width_depth_height_floor_m": [0.838, 0.84, 0.77],
+    "measured_thickness_m": 0.038,
     "dimensions_source": "owner_measurement_2026-09-04",
-    "thickness_physically_measured": false,
+    "thickness_physically_measured": true,
     "offline_screen_assumed_thickness_m": [0.005, 0.04],
     "support_and_box_obb_candidates": [20, 44],
+    "actual_dimensions_offline_screen_obb_candidates": 44,
+    "actual_dimensions_offline_screen_exact_robot_or_clamp_hits": 0,
     "obb_warning_for_home_entry_with_table_present": true,
     "qualified_for_home_entry_with_table_present": false,
     "eligible_for_stationary_shadow_after_measured_manifest": true,

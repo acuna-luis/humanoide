@@ -1,0 +1,15 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <!-- E6.1C OFFLINE PREVIEW: inverse locked-axis transition only. -->
+            <Parallel threshold="3">
+                <Action ID="MetaMove" type="head" location="single" duration="12.0"
+                    joint_angles="-0.433237523; 0.000287621398" />
+                <Action ID="MetaMove" type="lifter" location="single" duration="12.0"
+                    joint_angles="0.0; -0.0000958737992; 0.0" />
+                <Action ID="MetaMove" type="waist" location="single" duration="12.0"
+                    joint_angles="0.0000958737992" />
+            </Parallel>
+        </Sequence>
+    </BehaviorTree>
+</root>

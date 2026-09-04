@@ -229,7 +229,7 @@ demuestra reproducibilidad del contrato RGB+20D→10×20, no generalización ni
 publicadores y sin lectura o movimiento del robot.
 
 E6.1B añadió una campaña task-matched reproducible sin habilitar movimiento.
-El run offline `20260904T114452_E6.1B` fija
+El run offline `20260904T121621_E6.1B` fija
 `episode_000040/frame 0/task 0`, su orden exacto de 20 articulaciones y el
 perfil P14. En cada una de las cinco sesiones shadow futuras se guarda el RGB
 y el estado 20D sincronizados realmente entregados al checkpoint, junto con
@@ -242,7 +242,11 @@ no ejecuta ENTRY/recovery y un PASS sólo caracteriza inferencia shadow.
 
 La superficie de referencia `0,75 × 0,50 m` usada en la reconstrucción no es
 un máximo impuesto al VLA. La mesa disponible de `0,838 × 0,84 × 0,77 m` es
-candidata para shadow estacionario cuando se complete su manifiesto físico.
+candidata para shadow estacionario; su espesor medido es `0,038 m`, fue
+declarada inmovilizada y recibió B0 azul, rígida, vacía y abierta en la pose
+nominal. El color azul es una variación visual registrada: el task no exige
+gris. Dos fotos originales locales validan por SHA-256 y congelan el fixture
+`TABLE_77_B0_20260904` con incertidumbre manual conservadora `±0,005 m`.
 Las alertas OBB obtenidas al simular su tablero contra proxies rectangulares de
 clamps son reproducibles, pero no prueban contacto real ni justifican eliminar
 mesas mayores de las pruebas de generalización. Una transición física con la

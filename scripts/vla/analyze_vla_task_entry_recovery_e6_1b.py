@@ -95,6 +95,7 @@ def main() -> int:
     parser.add_argument("--recovery-xml", type=Path, required=True)
     parser.add_argument("--e6-1a-report", type=Path, required=True)
     parser.add_argument("--candidate", type=Path, required=True)
+    parser.add_argument("--fixture-manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
 
@@ -102,6 +103,7 @@ def main() -> int:
     profile = load_object(args.profile)
     source_report = load_object(args.e6_1a_report)
     candidate = load_object(args.candidate)
+    fixture = load_object(args.fixture_manifest)
     if contract.get("schema") != "cruzr-s2-vla-task0-entry-recovery-e6.1b-v1":
         raise ValueError("unexpected E6.1B contract")
     if source_report.get("schema") != "cruzr-s2-vla-task0-entry-path-e6.1a-v1":
@@ -112,6 +114,19 @@ def main() -> int:
         raise ValueError("E6.1A report hash changed")
     if sha256(args.candidate) != contract["sources"]["candidate_json_sha256"]:
         raise ValueError("candidate hash changed")
+    if fixture.get("schema") != "cruzr-s2-vla-supported-low-fixture-e6.1b-v1":
+        raise ValueError("unexpected fixture manifest")
+    if fixture.get("physical_fixture_frozen") is not True:
+        raise ValueError("physical fixture is not frozen")
+    if fixture.get("movement_authorized") is not False:
+        raise ValueError("fixture manifest unexpectedly authorizes movement")
+    fixture_evidence = fixture.get("evidence_files")
+    if not isinstance(fixture_evidence, list) or len(fixture_evidence) != 2:
+        raise ValueError("fixture requires exactly two evidence photos")
+    for item in fixture_evidence:
+        evidence_path = Path(str(item.get("path", ""))).resolve()
+        if not evidence_path.is_file() or sha256(evidence_path) != item.get("sha256"):
+            raise ValueError(f"fixture evidence changed: {evidence_path}")
 
     frozen = contract["candidate"]
     for key, source_key in (
@@ -172,7 +187,7 @@ def main() -> int:
     report = {
         "schema": "cruzr-s2-vla-task0-entry-recovery-audit-e6.1b-v1",
         "experiment_id": "E6.1B",
-        "status": "PASS_OFFLINE_IMPLEMENTATION_FIXTURE_AND_LIVE_SHADOW_PENDING",
+        "status": "PASS_OFFLINE_IMPLEMENTATION_FIXTURE_FROZEN_LIVE_SHADOW_PENDING",
         "mode": "local_offline_no_robot_no_network_no_ros_no_container_no_publisher",
         "candidate": {
             "episode": frozen["episode"],
@@ -208,7 +223,13 @@ def main() -> int:
             "height_range_m": contract["fixture_gate"][
                 "support_surface_height_floor_range_m"
             ],
-            "physical_fixture_frozen": False,
+            "fixture_id": fixture["fixture_id"],
+            "fixture_manifest_sha256": sha256(args.fixture_manifest),
+            "physical_fixture_frozen": True,
+            "evidence_photo_count": len(fixture_evidence),
+            "recorded_color_family": fixture["box"]["color_family"],
+            "recorded_color_is_shadow_variation": fixture["box"]["color_family"]
+            != contract["fixture_gate"]["reference_visual_properties"]["color_family"],
         },
         "available_table_observation": contract["available_table_observation"],
         "shadow_gate": contract["shadow_gate"],
@@ -220,7 +241,7 @@ def main() -> int:
         "persistent_container_started": False,
         "physical_publishers": 0,
         "physical_movement_commanded": False,
-        "next_gate": "FREEZE_MEASURED_FIXTURE_AND_REVIEW_SEPARATE_PHYSICAL_ENTRY_THEN_RUN_FIVE_SHADOW",
+        "next_gate": "REVIEW_SEPARATE_PHYSICAL_ENTRY_THEN_RUN_FIVE_SHADOW",
         "source_sha256": {
             path.name: sha256(path)
             for path in (
@@ -230,6 +251,7 @@ def main() -> int:
                 args.recovery_xml,
                 args.e6_1a_report,
                 args.candidate,
+                args.fixture_manifest,
             )
         },
     }
@@ -241,7 +263,7 @@ def main() -> int:
     print(f"E6.1B_CANDIDATE=episode_000040,frame:0,task:0")
     print(f"E6.1B_P14_FIRST_DELTA_RAD={maximum_first_delta:.9f}")
     print(f"E6.1B_ENTRY_RECOVERY_ENDPOINT_ERROR_RAD={max(entry_error, recovery_error):.12f}")
-    print("E6.1B_FIXTURE_FROZEN=0")
+    print("E6.1B_FIXTURE_FROZEN=1")
     print("E6.1B_FIVE_SHADOW_COMPLETED=0")
     print("E6.1B_PHYSICAL_AUTHORIZED=0")
     return 0

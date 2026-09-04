@@ -623,8 +623,8 @@ El wrapper no usa robot, red, ROS, contenedores ni publicadores. El run previo
 con el proxy clamp; el autoritativo excluye correctamente PGC y conserva el
 PASS.
 
-E6.1B queda implementado offline y auditado en
-`20260904T114452_E6.1B`. El contrato fija los 20 ejes de
+E6.1B queda implementado offline y revalidado en
+`20260904T121621_E6.1B`. El contrato fija los 20 ejes de
 `episode_000040/frame 0`; los XML ENTRY/recovery sólo son previews sin
 instalador ni modo `--run`. El checker exige fixture medido/fotografiado,
 estado fresco a `<=0,01 rad`, velocidad `<=0,01 rad/s` y los 20 ejes
@@ -635,10 +635,15 @@ STOP, contenedores detenidos y cero publicadores después de cada sesión. No
 despliega el perfil automáticamente y nunca ejecuta ENTRY/recovery.
 
 La mesa medida por el propietario (`0,838 × 0,84 m`, superficie a `0,77 m`)
-puede calificarse para **shadow estacionario** si se completan espesor,
-estabilidad, pose de B0, foto y hashes. No se declara inútil ni equivalente al
+puede calificarse para **shadow estacionario**. El espesor medido es `0,038 m`;
+se declaró inmovilizada y B0 azul quedó rígida, vacía, abierta y en la pose
+nominal. Las dos fotos originales locales validan por SHA-256 y el fixture
+`TABLE_77_B0_20260904` queda congelado con incertidumbre manual conservadora
+`±0,005 m`. El color es
+una variación registrada, no un requisito de la instrucción. No se declara
+inútil ni equivalente al
 soporte reconstruido. El OBB conservador marcó 20 candidatos usando 5 mm de
-espesor supuesto y 44 usando 40 mm; son avisos contra proxies de clamp, no
+espesor supuesto, 44 usando 40 mm y 44 con los 38 mm medidos; son avisos contra proxies de clamp, no
 contactos físicos demostrados. ENTRY/recovery con la mesa presente permanecen
 fail-closed hasta una comprobación más precisa o prueba incremental separada.
 No se usa AprilTag: no es una entrada de este checkpoint ni aparece en el

@@ -11,12 +11,12 @@
 ## Matriz ejecutiva de avance
 
 **Lectura en una mirada (2026-09-04):** avance ponderado del plan
-**`45,8 %`**; avance de las tareas físicas del checkpoint **`0/4 = 0 %`**;
+**`47,6 %`**; avance de las tareas físicas del checkpoint **`0/4 = 0 %`**;
 avance de la misión automatizada con VLA
 `PICK → TRANSPORT → TIP/POUR → PLACE`
-**`0/4 = 0 %`**. El gate activo es **E6.1** (`40 %`): E6.1A y el paquete
-offline E6.1B están al `100 %`; fixture/ENTRY vivos y las cinco inferencias
-siguen pendientes. **No existe autorización física abierta.** El robot
+**`0/4 = 0 %`**. El gate activo es **E6.1** (`50 %`): E6.1A, el paquete
+offline E6.1B y el fixture físico con dos fotos SHA-256 están cerrados; ENTRY
+viva y las cinco inferencias siguen pendientes. **No existe autorización física abierta.** El robot
 está cargando por confirmación del propietario: cualquier movimiento queda
 bloqueado hasta desconectar el cargador y obtener un preflight fresco con
 `CHARGER=disconnected`.
@@ -28,7 +28,7 @@ Los porcentajes no estiman probabilidad de éxito del robot:
 - **Peso global**: importancia cuantitativa dentro de todo este plan; la suma
   de los pesos de E1.0–E8.2 es `100 %`.
 - **Aporte global logrado**: `peso × cumplimiento / 100`, expresado en puntos
-  porcentuales (`pp`). La suma actual es `45,8 pp = 45,8 %`.
+  porcentuales (`pp`). La suma actual es `47,6 pp = 47,6 %`.
 - **Importancia**: impacto de dejar el caso sin resolver. `CRÍTICA` bloquea o
   protege movimiento físico; `ALTA` condiciona validez técnica o selección de
   modelo; `MEDIA` caracteriza o prepara el sistema.
@@ -39,15 +39,15 @@ Los porcentajes no estiman probabilidad de éxito del robot:
 
 | Serie | Alcance | Cumplimiento particular | Peso global | Aporte global logrado | Importancia | Estado/puerta actual |
 |---|---|---:|---:|---:|---|---|
-| 1 | Escenario y baseline | 90 % | 6 % | 5,4 pp | ALTA | 🟡 Falta completar evidencia física de B0 |
+| 1 | Escenario y baseline | 95 % | 6 % | 5,7 pp | ALTA | 🟡 B0 fotografiada/colocada; falta masa |
 | 2 | Primeras inferencias seguras | 100 % | 8 % | 8,0 pp | MEDIA | ✅ Cerrada como shadow/offline, no éxito físico |
 | 3 | Dataset, OOD y temporalidad | 85 % | 10 % | 8,5 pp | ALTA | 🟡 Métrica OOD y semántica vendor abiertas |
-| 4 | ENTRY/READY y fixture | 53 % | 16 % | 8,5 pp | CRÍTICA | 🟡 Fixture task-matched todavía no congelado físicamente |
+| 4 | ENTRY/READY y fixture | 59 % | 16 % | 9,4 pp | CRÍTICA | 🟡 Fixture congelado; ENTRY con mesa aún no calificada |
 | 5 | Perfiles 14–20 | 100 % | 10 % | 10,0 pp | ALTA | ✅ P14 es candidato offline preliminar |
-| 6 | Canary task-matched | 27 % | 20 % | 5,4 pp | CRÍTICA | 🔄 E6.1A/B offline PASS; faltan fixture/ENTRY frescos y 5 shadow |
+| 6 | Canary task-matched | 30 % | 20 % | 6,0 pp | CRÍTICA | 🔄 Fixture frozen; faltan ENTRY fresca y 5 shadow |
 | 7 | Tasks físicos 0–3 | 0 % | 20 % | 0,0 pp | CRÍTICA | ⛔ Bloqueada por E6.1–E6.4 |
 | 8 | Selección/evolución del checkpoint | 0 % | 10 % | 0,0 pp | ALTA | ⛔ Requiere evidencia física y/o datos propios |
-| **TOTAL** | **Objetivo completo** | **45,8 % ponderado** | **100 %** | **45,8 pp** | — | **Sin autorización física abierta** |
+| **TOTAL** | **Objetivo completo** | **47,6 % ponderado** | **100 %** | **47,6 pp** | — | **Sin autorización física abierta** |
 
 ### Detalle por experimento
 
@@ -56,7 +56,7 @@ Los porcentajes no estiman probabilidad de éxito del robot:
 | E1.0 | 100 % | 1,5 % | 1,5 pp | MEDIA | ✅ Mesa T1 dimensionada | Ninguno para progresión offline |
 | E1.1 | 100 % | 1,5 % | 1,5 pp | ALTA | ✅ Instalación deshabilitada verificada | Conservar hashes/baseline |
 | E1.2 | 100 % | 1,5 % | 1,5 pp | ALTA | ✅ Artefactos y dataset extraídos | Ninguno |
-| E1.3 | 60 % | 1,5 % | 0,9 pp | ALTA | 🟡 Dimensiones/pose nominal; faltan masa/fotos/colocación | Completar junto al fixture E6.1 |
+| E1.3 | 80 % | 1,5 % | 1,2 pp | ALTA | 🟡 Dimensiones, colocación y fotos cerradas; falta masa | Pesar B0 antes de manipulación física |
 | E2.0 | 100 % | 2 % | 2,0 pp | MEDIA | ✅ Shadow task 0 y rechazo seguro | Cerrado como smoke OOD |
 | E2.1 | 100 % | 2 % | 2,0 pp | MEDIA | ✅ Shadow task 2 y rechazo seguro | Cerrado como smoke OOD |
 | E2.2 | 100 % | 2 % | 2,0 pp | MEDIA | ✅ Replay offline tasks 1/3 | Cerrado; no demuestra PLACE físico |
@@ -69,14 +69,14 @@ Los porcentajes no estiman probabilidad de éxito del robot:
 | E4.1 | 70 % | 4 % | 2,8 pp | CRÍTICA | 🟡 Calibración métrica y colisiones parciales | Confirmar físicamente soporte E6.1 |
 | E4.2 | 60 % | 3 % | 1,8 pp | ALTA | 🟡 Grupos low/middle observados | Congelar cotas por task, no asumir escalar |
 | E4.3 | 60 % | 3 % | 1,8 pp | CRÍTICA | 🟡 READY↔HOME sin caja validado | Sustituir por ENTRY task 0 reproducible |
-| E4.4 | 0 % | 3 % | 0,0 pp | CRÍTICA | ⛔ Fixture task-matched no congelado | Montar/medir soporte bajo compatible |
+| E4.4 | 30 % | 3 % | 0,9 pp | CRÍTICA | 🔄 Fixture task-matched congelado | Resolver transición/colisión con mesa presente |
 | E5.0 | 100 % | 3 % | 3,0 pp | ALTA | ✅ 8 perfiles/16 celdas sink | Cerrado offline |
 | E5.1 | 100 % | 4 % | 4,0 pp | ALTA | ✅ 160 bundles replay | Cerrado offline |
 | E5.2 | 100 % | 3 % | 3,0 pp | ALTA | ✅ P14 preliminar para tasks 0–3 | Revalidar sobre ENTRY/escena vivas |
 | E6.0 | 100 % | 3 % | 3,0 pp | CRÍTICA | ✅ `RETIRED_FAIL_CLOSED`; cero frames publicados | No repetir ni aumentar `0,1 rad` |
-| E6.1 | 40 % | 6 % | 2,4 pp | CRÍTICA | 🔄 ENTRY/recovery y campaña shadow implementados, no ejecutados físicamente | Congelar fixture/ENTRY y obtener 5 shadow frescos |
+| E6.1 | 50 % | 6 % | 3,0 pp | CRÍTICA | 🔄 Fixture frozen; ENTRY/recovery y campaña implementados | Calificar ENTRY y obtener 5 shadow frescos |
 | ↳ E6.1A | 100 % | Incluido en E6.1 | — | CRÍTICA | ✅ Auditoría offline `20260904T103516_E6.1A` | Cerrado; no autoriza movimiento |
-| ↳ E6.1B | 100 % offline | Incluido en E6.1 | — | CRÍTICA | ✅ Paquete fail-closed `20260904T114452_E6.1B` | Ejecutar gates vivos por separado; no autoriza movimiento |
+| ↳ E6.1B | 100 % offline + fixture | Incluido en E6.1 | — | CRÍTICA | ✅ `20260904T121621_E6.1B`, fixture/fotos SHA-256 PASS | ENTRY y shadow separados; no autoriza movimiento |
 | E6.2 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | PASS completo de E6.1 + launcher revisado |
 | E6.3 | 0 % | 3 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | PASS E6.2 antes de añadir H/W/L |
 | E6.4 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | Ejecutor físico y STOP validados |
@@ -1617,7 +1617,7 @@ movimiento. Su PASS cierra sólo el diseño offline (subgate al `100 %`) y deja
 E6.1 global al `20 %` en ese punto histórico.
 
 **Resultado E6.1B offline 2026-09-04:** PASS del paquete fail-closed en
-`20260904T114452_E6.1B`, reproducible con:
+`20260904T121621_E6.1B`, reproducible con:
 
 ```bash
 ./scripts/vla/audit_vla_task_entry_recovery_e6_1b.sh --check
@@ -1629,8 +1629,8 @@ Se versionaron por separado previews ENTRY y recovery con los endpoints 20D
 exactos de `episode_000040/frame 0` y HOME histórico. No tienen interfaz de
 instalación/ejecución y no se afirma equivalencia entre la interpolación XML y
 la ley minimum-jerk auditada. El gate `check_vla_task0_entry_e6_1b.py` exige
-un manifiesto `SUPPORTED_LOW` con fotografía y hashes, B0 rígida gris, abierta
-y vacía, y una muestra nueva de los 20 ejes a `<=0,01 rad` del mismo frame y
+un manifiesto `SUPPORTED_LOW` con fotografía y hashes, B0 rígida, abierta y
+vacía, color registrado, y una muestra nueva de los 20 ejes a `<=0,01 rad` del mismo frame y
 velocidad máxima `<=0,01 rad/s`. Un PASS sólo habilita shadow.
 
 `run_vla_task0_shadow_e6_1b.sh --run` implementa cinco sesiones independientes
@@ -1642,16 +1642,32 @@ de inferencia guarda ahora el par sincronizado que recibió el checkpoint. El
 perfil remoto debe coincidir por SHA-256 y no se despliega automáticamente.
 
 La mesa disponible de `0,838 × 0,84 × 0,77 m` queda **admitida como candidata
-para shadow estacionario**, una vez medidos espesor/estabilidad y congelado el
-manifiesto. No está descartada. El barrido OBB reproducible marcó 20 candidatos
+para shadow estacionario**. El propietario midió espesor `0,038 m`, la declaró
+inmovilizada y colocó B0 azul, rígida, vacía y abierta según pose nominal. Las
+dos fotos originales quedaron guardadas localmente, con SHA-256 válidos, y el
+fixture `TABLE_77_B0_20260904` quedó congelado usando `±0,005 m` como
+incertidumbre conservadora de medición manual. El color azul se registra como variación visual y no
+se rechaza: la instrucción del task sólo especifica una caja grande. La mesa no
+está descartada. El barrido OBB reproducible marcó 20 candidatos
 con tablero supuesto de 5 mm y 44 con 40 mm, todos sobre proxies conservadores
-de clamps; esto es una alerta, no prueba de contacto real. Por ello ENTRY o
+de clamps; con el espesor real de 38 mm volvió a marcar 44 y cero contactos
+exactos. Esto es una alerta, no prueba de contacto real. Por ello ENTRY o
 recovery con esa mesa presente continúan sin calificar. El AprilTag no forma
 parte de esta prueba: el checkpoint consume una imagen RGB y el frame elegido
 no muestra tag.
 
-E6.1 global queda al `40 %`: E6.1A y la implementación offline E6.1B están
-cerrados; faltan el manifiesto físico, una ENTRY fresca y las cinco sesiones
+Las 44 alertas se concentran en las muestras `342–374/400`, correspondientes
+a `20,17–22,06 s` de la transición de `23,59 s`; el tramo `375–400` y la ENTRY
+final quedan sin solapamiento OBB. La siguiente prueba física propuesta separa
+los riesgos: HOME→ENTRY sólo con celda vacía; inmovilizar; colocar el fixture
+en marcas sin contacto; cinco shadow; inmovilizar y retirar el fixture; y sólo
+entonces recovery. La referencia de montaje es borde frontal de mesa a
+`x=0,7192 m`, `y=0,0025 m` desde `base_link`, aproximadamente `0,365 m` delante
+del extremo de la malla frontal del chasis. Son cotas reconstruidas, no una
+autorización ni una especificación UBTECH.
+
+E6.1 global queda al `50 %`: E6.1A, la implementación offline E6.1B y el
+fixture están cerrados; faltan una ENTRY fresca y las cinco sesiones
 shadow reales. Sigue sin existir autorización de movimiento.
 
 El cargador puede permanecer conectado durante 2–4. Antes de cualquier

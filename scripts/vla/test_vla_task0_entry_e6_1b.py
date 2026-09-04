@@ -99,6 +99,7 @@ def main() -> int:
                 "thickness_m": 0.04,
             }
         )
+        available_table_manifest["box"]["color_family"] = "blue"
         manifest_path.write_text(
             json.dumps(available_table_manifest), encoding="utf-8"
         )
@@ -109,6 +110,9 @@ def main() -> int:
         available_table_result = json.loads(accepted_available_table.stdout)
         assert available_table_result["fixture_qualified"] is True
         assert available_table_result["physical_execution_authorized"] is False
+        assert available_table_result["fixture"]["visual_domain_shifts"] == {
+            "color_family": {"reference": "gray", "observed": "blue"}
+        }
 
         manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 

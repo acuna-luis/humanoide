@@ -1,0 +1,52 @@
+{
+  "schema": "cruzr-s2-vla-supported-low-fixture-e6.1b-v1",
+  "scenario": "SUPPORTED_LOW",
+  "fixture_id": "TABLE_77_B0_20260904",
+  "measured_at": "2026-09-04T12:11:59+02:00",
+  "measurement_uncertainty_m": 0.005,
+  "measurement_uncertainty_basis": "conservative manual tape measurement allowance",
+  "support": {
+    "surface_height_floor_m": 0.77,
+    "width_m": 0.838,
+    "depth_m": 0.84,
+    "thickness_m": 0.038,
+    "rigid": true,
+    "stable": true,
+    "locked": true
+  },
+  "box": {
+    "box_id": "B0",
+    "lwh_m": [0.603, 0.397, 0.217],
+    "empty": true,
+    "open_top": true,
+    "material_family": "rigid_plastic",
+    "color_family": "blue",
+    "supported_and_stable": true,
+    "front_clearance_m": 0.05,
+    "centered_laterally": true,
+    "long_side_parallel_to_front_edge": true
+  },
+  "evidence_files": [
+    {
+      "kind": "fixture_front_photo",
+      "path": "/home/lacuna/Descargas/E6.1B-frontal.jpeg",
+      "sha256": "55982de26469c5a0bca1317a9af49371a359e7317396f9ca9dcc2001047bb819",
+      "size_bytes": 175967,
+      "pixels": [1200, 1600]
+    },
+    {
+      "kind": "fixture_lateral_photo",
+      "path": "/home/lacuna/Descargas/E6.1B-lateral.jpeg",
+      "sha256": "1fe82f100ffad7f8d85d965379494a3a2db431592e9d3e0d2767c4fdbaf99075",
+      "size_bytes": 203593,
+      "pixels": [1600, 1200]
+    }
+  ],
+  "photo_observation_limits": [
+    "photos corroborate scene identity but do not metrically prove the declared 0.05 m clearance",
+    "physical safety state remains volatile and must be rechecked before any motion"
+  ],
+  "physical_fixture_frozen": true,
+  "entry_recovery_with_fixture_authorized": false,
+  "movement_authorized": false
+}

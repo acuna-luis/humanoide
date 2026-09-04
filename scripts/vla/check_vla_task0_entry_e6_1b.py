@@ -113,6 +113,19 @@ def validate_fixture(
     for key, expected in required_box.items():
         if box.get(key) != expected:
             reasons.append(f"box_property_mismatch:{key}")
+    recorded_box: dict[str, Any] = {}
+    for key in fixture_gate.get("required_recorded_box_properties", []):
+        value = box.get(key)
+        if not isinstance(value, str) or not value.strip():
+            reasons.append(f"box_property_not_recorded:{key}")
+        else:
+            recorded_box[key] = value.strip()
+    reference_visual = fixture_gate.get("reference_visual_properties", {})
+    visual_domain_shifts = {
+        key: {"reference": expected, "observed": recorded_box.get(key)}
+        for key, expected in reference_visual.items()
+        if recorded_box.get(key) != expected
+    }
     if box.get("supported_and_stable") is not True:
         reasons.append("box_not_supported_and_stable")
     if abs(finite_number(box.get("front_clearance_m"), "box.front_clearance_m") - float(fixture_gate["box_front_clearance_m"])) > uncertainty:
@@ -153,6 +166,9 @@ def validate_fixture(
         "support_minimum_usable_width_depth_m": [minimum_width, minimum_depth],
         "support_surface_height_floor_m": support_height,
         "box_lwh_m": box_lwh,
+        "box_recorded_properties": recorded_box,
+        "reference_visual_properties": reference_visual,
+        "visual_domain_shifts": visual_domain_shifts,
         "evidence_files": evidence_results,
     }
 
