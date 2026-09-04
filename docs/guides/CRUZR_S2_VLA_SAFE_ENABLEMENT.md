@@ -591,6 +591,37 @@ no habilita sustituirlo sin validación por una caja de cartón. El episodio es
 un candidato de ingeniería para HOME→ENTRY→HOME, no un fixture congelado ni
 una autorización física.
 
+E6.1A auditó ese candidato completamente offline en el run autoritativo
+`20260904T103516_E6.1A`. La transición 20D minimum-jerk necesita `23,59 s` por
+sentido con los valores de diseño `0,15 rad/s` y `0,5 rad/s²`; su mayor
+recorrido es `1,887083978 rad` en `L_shoulder_yaw_joint`. En 401 muestras no
+hubo violaciones URDF, intersecciones exactas de los pares monitorizados ni
+intersecciones de los proxies documentales clamp. El PASS es muestreado, no
+certifica una trayectoria continua y esos valores dinámicos no están
+aceptados para movimiento E6.1.
+
+La reconstrucción desde el RGB congelado y la cámara calibrada sitúa la
+superficie `SUPPORTED_LOW` a `0,774597 m` del suelo, rango
+`0,768191–0,780828 m` con ±4 píxeles. El soporte candidato
+`0,75 × 0,50 × 0,04 m` y el volumen exterior de caja
+`0,60 × 0,40 × 0,22 m` dieron cero candidatos OBB en 16 variantes. Esta pose
+es inferida y requiere confirmación física. La mesa T1 de
+`1,80 × 0,80 × 1,00 m` no sirve: difiere `0,225403 m` en altura y su tablero
+produce 159 candidatos OBB si se simula a la altura candidata.
+
+Se reproduce únicamente en local con:
+
+```bash
+./scripts/vla/audit_vla_task_entry_path_e6_1a.sh --check
+./scripts/vla/audit_vla_task_entry_path_e6_1a.sh --run
+```
+
+El wrapper no usa robot, red, ROS, contenedores ni publicadores. El run previo
+`20260904T103323_E6.1A` queda superado: aún mezclaba el volumen PGC del URDF
+con el proxy clamp; el autoritativo excluye correctamente PGC y conserva el
+PASS. Sigue E6.1B: fijar soporte, entrada y recovery fail-closed antes de
+preflight o shadow fresco. No existe autorización física.
+
 E6.0X `20260904T075519_E6.0X` registra la aceptación del propietario sólo para
 E6.0, celda vacía, task 0/P14 y un punto: delta objetivo `<=0,1 rad`, velocidad
 medida `<=0,15 rad/s`, aceleración medida `<=0,5 rad/s²`, muestreo de `10 ms`,

@@ -39,7 +39,7 @@ nuevo el estado físico y lógico.
 | Actuadores | muestra fresca posterior a READY→HOME: 20 ejes presentes, 14 de brazos, velocidad máxima `0`, sin fault y delta posición–consigna ≤`0,002780 rad` | **VERIFICADO; ESTADO VOLÁTIL** |
 | Teleoperación PC | combinación oficial robot v0.2.0 + controller 4.7.0 + UI 4.1.0, overlay `clamp,0,0` y control bimanual. La sesión 10:25 terminó por protección FT, no por VR. Tras el reinicio el robot quedó en `AutoTaskMode`; no se ha recargado ni reanudado PICO | **BLOQUEADA HASTA NUEVO PREFLIGHT Y CAMBIO DE MODO AUTORIZADO** |
 | Servicio PC/PICO | el STOP oficial tras `Ctrl+C` quedó confirmado; PC permaneció encendido durante el power cycle del robot | **STOP VERIFICADO; SIN CLIENTE FÍSICO** |
-| VLA | contenedores persistentes detenidos, `restart=no`, cero publicadores. E6.0Z demostró que E6.0Y combinó task 0 con escena `NO_BOX` y una entrada 20D a `0,834773183 rad` del frame task 0 más cercano. `--ready` y `--one-point` quedaron retirados y su código activo eliminado; sólo STOP/recovery histórico permanecen | **E6.0 NO_BOX RETIRADO; SIGUIENTE: ENTRADA TASK-MATCHED + 5 SHADOW, SIN MOVIMIENTO AUTORIZADO** |
+| VLA | contenedores persistentes detenidos, `restart=no`, cero publicadores. E6.0 NO_BOX está retirado. E6.1A `20260904T103516_E6.1A` congeló y auditó offline `episode_000040/task 0`: HOME→ENTRY→HOME muestreado sin límites ni colisiones detectadas, soporte bajo inferido a `0,774597 m`; la mesa T1 de 1 m no sirve. No se accedió al robot y los límites dinámicos aún no están aceptados para E6.1 | **E6.1=20 %; E6.1A PASS OFFLINE; SIGUIENTE E6.1B FIXTURE/ENTRY FAIL-CLOSED, SIN MOVIMIENTO AUTORIZADO** |
 | Cargador | el último preflight móvil dio `CHARGER=0`; después el operador conectó físicamente el cargador durante E6.0Z | **CONECTADO POR CONFIRMACIÓN DEL OPERADOR; TODO MOVIMIENTO BLOQUEADO HASTA DESCONECTAR Y REVALIDAR** |
 | Paros, ruedas y zona | antes del recovery el operador confirmó READY estable, sin contactos, clamps vacíos, zona 1,5 m, dos personas y mano en E-stop; software leyó `ESTOP_KEY=0`, `SERVO_ESTOP_KEY=0`. Después confirmó HOME visual estable y sin movimiento inesperado | **RECOVERY CERRADO; RECONFIRMAR TODO ANTES DE OTRO MOVIMIENTO** |
 | Mapa/localización | `test_route_01` se conservó; activación y localización son volátiles | **RECOMPROBAR** |
@@ -937,6 +937,38 @@ vacío, apoyado sobre una superficie blanca; no demuestra equivalencia con una
 caja de cartón arbitraria. Esta selección permite diseñar y auditar
 HOME→ENTRY→HOME, pero no congela el fixture ni autoriza movimiento.
 
+E6.1A cerró esa auditoría offline en el run autoritativo
+`20260904T103516_E6.1A`. Congeló `episode_000040/frame 0/task 0` en un contrato
+versionado y generó HOME→ENTRY→HOME con minimum jerk (`23,59 s` por sentido,
+`10 ms`). El mayor recorrido es `1,887083978 rad` en
+`L_shoulder_yaw_joint`; con los valores de diseño `0,15 rad/s` y
+`0,5 rad/s²` obtuvo cero violaciones URDF en 401 muestras, cero intersecciones
+exactas de mallas monitorizadas y cero intersecciones del proxy documental de
+las abrazaderas. Esos límites no están certificados ni aceptados por el
+propietario para movimiento E6.1, y el muestreo no certifica una trayectoria
+continua.
+
+Usando el RGB congelado, la cámara calibrada y la anchura vendor de caja
+`0,60 m`, la reconstrucción infiere una superficie a `0,774597 m` del suelo,
+con rango `0,768191–0,780828 m` para ±4 píxeles. Un soporte candidato
+`0,75 × 0,50 × 0,04 m` y la caja exterior `0,60 × 0,40 × 0,22 m` no produjeron
+candidatos OBB en las 16 variantes. La pose sigue siendo una inferencia, no
+una medida del proveedor ni un fixture físico congelado. `MESA_T1` queda
+descartada para este frame: está `0,225403 m` más alta y su tablero
+`1,80 × 0,80 m`, colocado hipotéticamente a la altura candidata, produce 159
+candidatos OBB.
+
+El wrapper `audit_vla_task_entry_path_e6_1a.sh` comprobó estáticamente ausencia
+de ROS, red, contenedores, publicadores y comandos de movimiento; la ejecución
+confirmó esos cinco ceros y el manifiesto SHA-256. El run previo
+`20260904T103323_E6.1A` queda superado porque todavía incluía en el volumen
+barrido la geometría PGC incorrecta además del proxy clamp; el run autoritativo
+la excluye y conserva sólo el proxy documental, sin cambiar el PASS. El plan
+ponderado queda en `44,6 %`, las cuatro tareas físicas del checkpoint siguen
+en `0/4`, E6.1 queda al `20 %` y su subgate E6.1A al `100 %`. Sigue E6.1B:
+revisar/fijar el soporte bajo e implementar entrada/recovery fail-closed antes
+de preflight, cinco shadow frescos o cualquier movimiento.
+
 La evidencia VLA ya no depende de variables exportadas por un bloque anterior.
 `new_vla_evidence_run.sh` crea cada run de forma exclusiva y rechaza `/` y
 rutas existentes. E1.1/E1.2, los smoke E2.0/E2.1 y las repeticiones E2.3 tienen
@@ -1498,6 +1530,7 @@ actualizarse este archivo antes de cerrar la sesión.
 
 | Fecha | Hito | Resultado |
 |---|---|---|
+| 2026-09-04 | E6.1A transición task-matched offline y matriz de avance | run autoritativo `20260904T103516_E6.1A`: `episode_000040/frame 0/task 0`, primer delta `0,000326395 rad`; HOME→ENTRY→HOME minimum-jerk `23,59 s` por sentido. En 401 muestras: 0 límites URDF, 0 intersecciones exactas robot/proxy clamp y 0 candidatos OBB para soporte+caja en 16 variantes. Soporte inferido `0,774597 m`, no medido; candidato `0,75 × 0,50 m`. Mesa T1 rechazada para este frame (`+0,225403 m`, 159 candidatos OBB). Sin robot/red/ROS/contenedor/publicador/movimiento; físico no autorizado. E6.1=20 %, plan ponderado=44,6 %, tasks físicas=0/4. Sigue E6.1B |
 | 2026-09-04 | E6.0Z cierre del outlier de entrada | run `20260904T094803_E6.0Z`: metadata demuestra acciones absolutas; 500 entradas/4 tasks auditadas offline. Task 0 tiene 150 episodios y delta máximo frame-0 acción−estado `0,003134013 rad`. La entrada histórica E6.0Y estaba a `0,834773183 rad` del frame task 0 más próximo por `lifter_pitch_1_joint`, además de usar `NO_BOX` para una instrucción de pick con caja/repisa. Gate de tarea/escena/20D rechazó por tres causas; 3/3 tests. El valor exacto del target histórico no es recuperable del log anterior, pero la instrumentación futura ya conserva posiciones y deltas completos. `--ready`/`--one-point` E6.0Y retirados antes de red y código activo eliminado; regresión `20260904T100258_E6.0Y-OFFLINE`, sólo STOP/recovery histórico. Cargador conectado, cero ROS/publicador/movimiento durante E6.0Z |
 | 2026-09-04 | E6.0Y recovery READY→HOME | run `20260904T092716_E6.0Y-RECOVERY`: preflight/READY frescos; tarea exacta terminó `SUCCEED/status=4`. HOME medido en 20 ejes: cuerpo ≤`0,002780 rad`, brazos ≤`0,000959 rad`, velocidad 0 y delta ≤`0,002780 rad`. VLA `exited/exited`, `publishers:0`. Operador confirmó HOME visual estable, sin contactos, clamps vacíos y sin movimiento inesperado; ciclo físico cerrado |
 | 2026-09-04 | E6.0Y checkpoint rechazado sin movimiento | run `20260904T091928_E6.0Y`: grant ligado a Motion válido (`skew=23 s`), inferencia task 0 `SUCCEEDED`, 3 chunks; primer punto rechazado por `target_delta` del eje 2 >`0,1 rad`. Cero frames y cero movimiento; un publicador se construyó transitoriamente y fue destruido, final `exited/exited`, `publishers:0`. Runtime corregido para planificar antes de crear publicador; E6.0W `20260904T092245` y E6.0Y offline `20260904T092246` pasan. READY posterior ≤`0,001842 rad`, velocidad 0. Bloqueado nuevo punto hasta análisis shadow |

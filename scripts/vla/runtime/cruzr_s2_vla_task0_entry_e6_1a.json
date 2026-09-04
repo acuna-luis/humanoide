@@ -1,0 +1,86 @@
+{
+  "schema": "cruzr-s2-vla-task0-entry-e6.1a-v1",
+  "experiment_id": "E6.1A",
+  "task_id": 0,
+  "task_instruction": "Pick up the large box from the lowest level of shelf",
+  "scenario": "SUPPORTED_LOW",
+  "candidate": {
+    "episode": "episode_000040",
+    "frame": 0,
+    "selection": "nearest_task0_frame_zero_to_historical_e6_0y_20d_input",
+    "selection_scope": "offline_engineering_candidate_only",
+    "candidate_json_sha256": "8808f83c8ea226737f017e150211c3b9c93dd03079d5d6c77385e4f4adac4594",
+    "candidate_rgb_sha256": "15a3f020c68d0a7a44c77848c4a6f947cac2d0d8f1fc852d7f3986329edcb0f3",
+    "dataset_entry_report_sha256": "83028d5091a192847dde695ff8214c0fa2944de700c2e2bf686a5080eed57c36"
+  },
+  "joint_order": [
+    "L_elbow_roll_joint",
+    "L_elbow_yaw_joint",
+    "L_shoulder_pitch_joint",
+    "L_shoulder_roll_joint",
+    "L_shoulder_yaw_joint",
+    "L_wrist_pitch_joint",
+    "L_wrist_roll_joint",
+    "R_elbow_roll_joint",
+    "R_elbow_yaw_joint",
+    "R_shoulder_pitch_joint",
+    "R_shoulder_roll_joint",
+    "R_shoulder_yaw_joint",
+    "R_wrist_pitch_joint",
+    "R_wrist_roll_joint",
+    "head_pitch_joint",
+    "head_yaw_joint",
+    "lifter_pitch_1_joint",
+    "lifter_pitch_2_joint",
+    "lifter_pitch_3_joint",
+    "waist_yaw_joint"
+  ],
+  "scene_reconstruction": {
+    "method": "known_box_width_plus_two_back_rim_pixels_and_calibrated_head_camera",
+    "back_rim_pixels_uv": [
+      [220.0, 113.0],
+      [797.0, 129.0]
+    ],
+    "pixel_annotation": "offline_visual_edge_annotation_from_frozen_candidate_rgb",
+    "pixel_uncertainty_per_coordinate_px": 4.0,
+    "box_lwh_m": [0.6, 0.4, 0.22],
+    "box_geometry_source": "UBTECH_SDK_section_7.3.1",
+    "box_front_clearance_m": 0.05,
+    "base_floor_offset_source": "E4.1_live_base_and_platform_calibration",
+    "candidate_support_width_m": 0.75,
+    "candidate_support_depth_m": 0.5,
+    "candidate_support_thickness_m": 0.04,
+    "existing_table_width_m": 1.8,
+    "existing_table_depth_m": 0.8,
+    "existing_table_surface_height_floor_m": 1.0
+  },
+  "trajectory_design": {
+    "law": "quintic_minimum_jerk_10s3_minus_15s4_plus_6s5",
+    "sample_period_seconds": 0.01,
+    "minimum_duration_seconds": 1.0,
+    "maximum_velocity_rad_s_all_20_axes": 0.15,
+    "maximum_acceleration_rad_s2_all_20_axes": 0.5,
+    "geometry_sample_count_per_direction": 401,
+    "limits_origin": "offline_conservative_project_design_not_owner_accepted_for_e6_1",
+    "manufacturer_certified": false,
+    "owner_accepted_for_physical_e6_1": false
+  },
+  "source_hashes": {
+    "historical_measured_home_actuator_state": "9f35ec8af0eaa4b0d165fd227339c9952629525b3af4ec78f338590f601462b1",
+    "camera_info": "53d138b41b71c49f9117a65c8100adcd4ce38b136b2a7185eb961bd8978e7243",
+    "tf_static": "52c26bd64ce3ad65d28b06f537d37abc7cce786232292bad3d1269333b55c02d",
+    "e4_1_metric_fixture_summary": "1bf292a1b7bd0d45321efb27e58d3540a3b4abe929db651096326d090278aab3",
+    "sdk_urdf": "06083544f182b9336ad6f40040a5a79955c19897cb0b78d9f597888dce0c2fa0",
+    "sdk_urdf_zip": "7cb7f856223ce99a86d44349be475a2b5925d57ca694ee069a96c808802e297e",
+    "document_proxy_clamp_report": "132c1460fcf1552e375f42277b57dbf5a0c8cb8e20d4d9ade250ab669f4b90a3",
+    "observed_clamp_report": "8d95b987e5a800c65b1f6f2fe588483ade10455e100b77c19bc0dee6764194f3",
+    "task_entry_contract_e6_0z": "1753e7f29f11fe9b9fe3570976c3ae8a9afdc67e4bf1d1c3e2815a985cb1401e",
+    "dataset_info": "de9b4150459ef2d1401174f298b8eda31ba56f8fe2e4b216478add19202d2a4f"
+  },
+  "physical_execution_authorized": false,
+  "notes": [
+    "The candidate is frozen for reproducible offline analysis, not as a physical pose.",
+    "The reconstructed support height and pose are an inference with an explicit pixel uncertainty, not a supplier measurement.",
+    "Passing E6.1A cannot start VLA, create a publisher, move the robot, or approve the physical fixture."
+  ]
+}

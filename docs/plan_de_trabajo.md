@@ -8,6 +8,91 @@
 
 **Unidad:** Cruzr S2 `WAE001UBT60000669`, abrazaderas, `HW_TYPE=cruzr_s2_v1`
 
+## Matriz ejecutiva de avance
+
+**Lectura en una mirada (2026-09-04):** avance ponderado del plan
+**`44,6 %`**; avance de las tareas físicas del checkpoint **`0/4 = 0 %`**;
+avance de la misión automatizada con VLA
+`PICK → TRANSPORT → TIP/POUR → PLACE`
+**`0/4 = 0 %`**. El gate activo es **E6.1** (`20 %`), cuya auditoría offline
+E6.1A ya está al `100 %`. **No existe autorización física abierta.** El robot
+está cargando por confirmación del propietario: cualquier movimiento queda
+bloqueado hasta desconectar el cargador y obtener un preflight fresco con
+`CHARGER=disconnected`.
+
+Los porcentajes no estiman probabilidad de éxito del robot:
+
+- **Cumplimiento particular**: fracción de entregables y gates definidos para
+  esa serie o experimento que ya tiene evidencia válida.
+- **Peso global**: importancia cuantitativa dentro de todo este plan; la suma
+  de los pesos de E1.0–E8.2 es `100 %`.
+- **Aporte global logrado**: `peso × cumplimiento / 100`, expresado en puntos
+  porcentuales (`pp`). La suma actual es `44,6 pp = 44,6 %`.
+- **Importancia**: impacto de dejar el caso sin resolver. `CRÍTICA` bloquea o
+  protege movimiento físico; `ALTA` condiciona validez técnica o selección de
+  modelo; `MEDIA` caracteriza o prepara el sistema.
+- Un experimento retirado puede estar al `100 %` si cerró correctamente como
+  prueba negativa. Eso no significa que el checkpoint haya movido el robot.
+
+### Resumen por etapa
+
+| Serie | Alcance | Cumplimiento particular | Peso global | Aporte global logrado | Importancia | Estado/puerta actual |
+|---|---|---:|---:|---:|---|---|
+| 1 | Escenario y baseline | 90 % | 6 % | 5,4 pp | ALTA | 🟡 Falta completar evidencia física de B0 |
+| 2 | Primeras inferencias seguras | 100 % | 8 % | 8,0 pp | MEDIA | ✅ Cerrada como shadow/offline, no éxito físico |
+| 3 | Dataset, OOD y temporalidad | 85 % | 10 % | 8,5 pp | ALTA | 🟡 Métrica OOD y semántica vendor abiertas |
+| 4 | ENTRY/READY y fixture | 53 % | 16 % | 8,5 pp | CRÍTICA | 🟡 Fixture task-matched todavía no congelado físicamente |
+| 5 | Perfiles 14–20 | 100 % | 10 % | 10,0 pp | ALTA | ✅ P14 es candidato offline preliminar |
+| 6 | Canary task-matched | 21 % | 20 % | 4,2 pp | CRÍTICA | 🔄 E6.1A PASS; faltan fixture/ENTRY frescos y 5 shadow |
+| 7 | Tasks físicos 0–3 | 0 % | 20 % | 0,0 pp | CRÍTICA | ⛔ Bloqueada por E6.1–E6.4 |
+| 8 | Selección/evolución del checkpoint | 0 % | 10 % | 0,0 pp | ALTA | ⛔ Requiere evidencia física y/o datos propios |
+| **TOTAL** | **Objetivo completo** | **44,6 % ponderado** | **100 %** | **44,6 pp** | — | **Sin autorización física abierta** |
+
+### Detalle por experimento
+
+| ID | Cumplimiento particular | Peso global | Aporte global logrado | Importancia | Estado verificable | Próximo cierre requerido |
+|---|---:|---:|---:|---|---|---|
+| E1.0 | 100 % | 1,5 % | 1,5 pp | MEDIA | ✅ Mesa T1 dimensionada | Ninguno para progresión offline |
+| E1.1 | 100 % | 1,5 % | 1,5 pp | ALTA | ✅ Instalación deshabilitada verificada | Conservar hashes/baseline |
+| E1.2 | 100 % | 1,5 % | 1,5 pp | ALTA | ✅ Artefactos y dataset extraídos | Ninguno |
+| E1.3 | 60 % | 1,5 % | 0,9 pp | ALTA | 🟡 Dimensiones/pose nominal; faltan masa/fotos/colocación | Completar junto al fixture E6.1 |
+| E2.0 | 100 % | 2 % | 2,0 pp | MEDIA | ✅ Shadow task 0 y rechazo seguro | Cerrado como smoke OOD |
+| E2.1 | 100 % | 2 % | 2,0 pp | MEDIA | ✅ Shadow task 2 y rechazo seguro | Cerrado como smoke OOD |
+| E2.2 | 100 % | 2 % | 2,0 pp | MEDIA | ✅ Replay offline tasks 1/3 | Cerrado; no demuestra PLACE físico |
+| E2.3 | 100 % | 2 % | 2,0 pp | MEDIA | ✅ Piloto de repetibilidad adoptado | Ampliación 5× opcional |
+| E3.0 | 100 % | 2,5 % | 2,5 pp | ALTA | ✅ Campaña offline tasks 0–3 | Conservar límites/rechazos observados |
+| E3.1 | 60 % | 2,5 % | 1,5 pp | ALTA | 🟡 Proxy de imagen completo | Requiere RGB-D/pose para OOD métrico |
+| E3.2 | 100 % | 2,5 % | 2,5 pp | CRÍTICA | ✅ 32/32 fallos inválidos rechazados | Reusar en todo launcher sucesor |
+| E3.3 | 80 % | 2,5 % | 2,0 pp | CRÍTICA | 🟡 Scheduler local 22/22 | Resolver semántica temporal vendor viva |
+| E4.0 | 70 % | 3 % | 2,1 pp | CRÍTICA | 🟡 Pose/overlay READY reconstruidos | Integrar ENTRY task-matched, no reutilizar READY histórico |
+| E4.1 | 70 % | 4 % | 2,8 pp | CRÍTICA | 🟡 Calibración métrica y colisiones parciales | Confirmar físicamente soporte E6.1 |
+| E4.2 | 60 % | 3 % | 1,8 pp | ALTA | 🟡 Grupos low/middle observados | Congelar cotas por task, no asumir escalar |
+| E4.3 | 60 % | 3 % | 1,8 pp | CRÍTICA | 🟡 READY↔HOME sin caja validado | Sustituir por ENTRY task 0 reproducible |
+| E4.4 | 0 % | 3 % | 0,0 pp | CRÍTICA | ⛔ Fixture task-matched no congelado | Montar/medir soporte bajo compatible |
+| E5.0 | 100 % | 3 % | 3,0 pp | ALTA | ✅ 8 perfiles/16 celdas sink | Cerrado offline |
+| E5.1 | 100 % | 4 % | 4,0 pp | ALTA | ✅ 160 bundles replay | Cerrado offline |
+| E5.2 | 100 % | 3 % | 3,0 pp | ALTA | ✅ P14 preliminar para tasks 0–3 | Revalidar sobre ENTRY/escena vivas |
+| E6.0 | 100 % | 3 % | 3,0 pp | CRÍTICA | ✅ `RETIRED_FAIL_CLOSED`; cero frames publicados | No repetir ni aumentar `0,1 rad` |
+| E6.1 | 20 % | 6 % | 1,2 pp | CRÍTICA | 🔄 Entrada task-matched en construcción | Confirmar fixture/ENTRY y obtener 5 shadow frescos |
+| ↳ E6.1A | 100 % | Incluido en E6.1 | — | CRÍTICA | ✅ Auditoría offline `20260904T103516_E6.1A` | Pasar a E6.1B; no autoriza movimiento |
+| E6.2 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | PASS completo de E6.1 + launcher revisado |
+| E6.3 | 0 % | 3 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | PASS E6.2 antes de añadir H/W/L |
+| E6.4 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | Ejecutor físico y STOP validados |
+| E7.0 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ PICK low no probado físicamente | PASS E6.1–E6.4 y fixture congelado |
+| E7.1 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ PLACE low no probado físicamente | Estado `HELD_LOW` demostrado |
+| E7.2 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ PICK middle no probado físicamente | Cota/ENTRY middle congeladas |
+| E7.3 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ PLACE middle no probado físicamente | Estado `HELD_MIDDLE` demostrado |
+| E7.4 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ Repetibilidad física no iniciada | PASS individual tasks 0–3 |
+| E8.0 | 0 % | 3 % | 0,0 pp | ALTA | ⛔ Selección física de perfil pendiente | Resultados E5 + E7 |
+| E8.1 | 0 % | 4 % | 0,0 pp | ALTA | ⛔ C1 sin dataset/entrenamiento | Captura/curación conforme + baseline físico |
+| E8.2 | 0 % | 3 % | 0,0 pp | ALTA | ⛔ C2 sin contrato nuevo | Sólo si cambian sensores/acción/efector |
+
+La matriz se actualiza únicamente cuando existe evidencia versionada o una
+decisión explícita que cambia el gate. No se sube el porcentaje por ejecutar
+un comando fallido, preparar físicamente la celda o iniciar una prueba; sí se
+sube cuando el resultado esperado, el cierre seguro y sus hashes quedan
+demostrados.
+
 ## Manual secuencial del experimentador
 
 Ésta es la entrada operativa al plan. Los apartados posteriores explican el
@@ -1495,6 +1580,40 @@ sin caja. Debe cerrarse en el orden siguiente:
 5. Sólo entonces implementar un launcher sucesor separado. Éste volverá a
    validar el chunk real antes de crear publicador y necesitará autorización
    física nueva. Hasta entonces no existe comando de un punto permitido.
+
+**Resultado E6.1A offline 2026-09-04:** PASS en el run autoritativo
+`20260904T103516_E6.1A`, reproducible con:
+
+```bash
+./scripts/vla/audit_vla_task_entry_path_e6_1a.sh --check
+./scripts/vla/audit_vla_task_entry_path_e6_1a.sh --run
+```
+
+Se congeló `episode_000040/frame 0/task 0` sólo como candidato de ingeniería y
+se generó una trayectoria 20D minimum-jerk HOME→ENTRY→HOME de `23,59 s` por
+sentido. El desplazamiento mayor es `1,887083978 rad` en
+`L_shoulder_yaw_joint`; la salida respeta los límites de diseño offline
+`0,15 rad/s` y `0,5 rad/s²`, pero éstos **no han sido aceptados para movimiento
+E6.1**. En 401 muestras hubo cero violaciones URDF, cero intersecciones exactas
+entre mallas monitorizadas y cero intersecciones con los proxies documentales
+de las abrazaderas. El primer target del checkpoint está a
+`0,000326395 rad` de la entrada candidata.
+
+La imagen y cámara calibrada infieren una superficie baja a `0,774597 m` del
+suelo, rango por anotación de ±4 píxeles `0,768191–0,780828 m`. Un soporte
+candidato conservador de `0,75 × 0,50 × 0,04 m` y el volumen exterior de la
+caja `0,60 × 0,40 × 0,22 m` produjeron cero candidatos OBB, incluidas las 16
+variantes de incertidumbre. Son geometría y pose **inferidas**, no medidas del
+proveedor ni confirmadas físicamente. `MESA_T1` no sirve para este frame: su
+superficie está `0,225403 m` más alta y su tablero de `1,80 × 0,80 m`, incluso
+colocado hipotéticamente a la altura candidata, genera 159 candidatos OBB.
+
+E6.1A no accedió al robot, red, ROS, contenedores ni publicadores y no ordenó
+movimiento. Su PASS cierra sólo el diseño offline (subgate al `100 %`) y deja
+E6.1 global al `20 %`. El siguiente subgate es E6.1B: revisar/fijar la
+geometría física del soporte bajo e implementar una entrada/recovery separados
+y fail-closed; después se podrá pedir un preflight fresco y las cinco
+inferencias shadow del mismo escenario.
 
 El cargador puede permanecer conectado durante 2–4. Antes de cualquier
 transición física debe desconectarse y comprobarse `CHARGER=disconnected`.
