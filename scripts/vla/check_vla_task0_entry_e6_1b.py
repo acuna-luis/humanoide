@@ -55,6 +55,8 @@ def validate_fixture(
         reasons.append("fixture_scenario_mismatch")
     if manifest.get("movement_authorized") is not False:
         raise ValueError("fixture manifest must explicitly keep movement_authorized=false")
+    if manifest.get("entry_recovery_with_fixture_authorized") is not False:
+        raise ValueError("fixture manifest must keep entry_recovery_with_fixture_authorized=false")
     if manifest.get("physical_fixture_frozen") is not True:
         reasons.append("physical_fixture_not_frozen")
     measured_at = manifest.get("measured_at")
@@ -71,20 +73,17 @@ def validate_fixture(
     support = manifest.get("support")
     if not isinstance(support, dict):
         raise ValueError("support must be an object")
-    support_values = [
-        finite_number(support.get("width_m"), "support.width_m"),
-        finite_number(support.get("depth_m"), "support.depth_m"),
-        finite_number(support.get("thickness_m"), "support.thickness_m"),
-    ]
-    support_nominal = finite_vector(
-        fixture_gate["support_nominal_width_depth_thickness_m"], 3, "support nominal"
+    support_width = finite_number(support.get("width_m"), "support.width_m")
+    support_depth = finite_number(support.get("depth_m"), "support.depth_m")
+    support_thickness = finite_number(support.get("thickness_m"), "support.thickness_m")
+    support_values = [support_width, support_depth, support_thickness]
+    minimum_width, minimum_depth = finite_vector(
+        fixture_gate["support_minimum_usable_width_depth_m"], 2, "support minimum"
     )
-    support_deviation = [
-        abs(observed - expected)
-        for observed, expected in zip(support_values, support_nominal, strict=True)
-    ]
-    if any(deviation > uncertainty for deviation in support_deviation):
-        reasons.append("support_geometry_differs_from_audited_candidate")
+    if support_width < minimum_width or support_depth < minimum_depth:
+        reasons.append("support_usable_surface_too_small")
+    if support_thickness <= 0.0:
+        reasons.append("support_thickness_not_positive")
     if not all(support.get(flag) is True for flag in ("rigid", "stable", "locked")):
         reasons.append("support_not_rigid_stable_and_locked")
 
@@ -94,8 +93,8 @@ def validate_fixture(
     height_low, height_high = finite_vector(
         fixture_gate["support_surface_height_floor_range_m"], 2, "height range"
     )
-    if support_height - uncertainty < height_low or support_height + uncertainty > height_high:
-        reasons.append("support_height_uncertainty_outside_reconstructed_range")
+    if support_height < height_low or support_height > height_high:
+        reasons.append("support_height_outside_reconstructed_range")
 
     box = manifest.get("box")
     if not isinstance(box, dict):
@@ -116,6 +115,12 @@ def validate_fixture(
             reasons.append(f"box_property_mismatch:{key}")
     if box.get("supported_and_stable") is not True:
         reasons.append("box_not_supported_and_stable")
+    if abs(finite_number(box.get("front_clearance_m"), "box.front_clearance_m") - float(fixture_gate["box_front_clearance_m"])) > uncertainty:
+        reasons.append("box_front_clearance_mismatch")
+    if box.get("centered_laterally") is not True:
+        reasons.append("box_not_centered_laterally")
+    if box.get("long_side_parallel_to_front_edge") is not True:
+        reasons.append("box_orientation_mismatch")
 
     evidence = manifest.get("evidence_files")
     evidence_results: list[dict[str, Any]] = []
@@ -145,7 +150,7 @@ def validate_fixture(
         "measured_at": measured_at,
         "measurement_uncertainty_m": uncertainty,
         "support_width_depth_thickness_m": support_values,
-        "support_nominal_deviation_m": support_deviation,
+        "support_minimum_usable_width_depth_m": [minimum_width, minimum_depth],
         "support_surface_height_floor_m": support_height,
         "box_lwh_m": box_lwh,
         "evidence_files": evidence_results,
@@ -251,6 +256,7 @@ def main() -> int:
         "entry_state_qualified": args.state_json is not None and not state_reasons,
         "qualified_for_five_shadow": args.state_json is not None and not reasons,
         "physical_execution_authorized": False,
+        "entry_recovery_with_fixture_authorized": False,
         "rejection_reasons": reasons,
     }
     rendered = json.dumps(result, indent=2, sort_keys=True, allow_nan=False) + "\n"

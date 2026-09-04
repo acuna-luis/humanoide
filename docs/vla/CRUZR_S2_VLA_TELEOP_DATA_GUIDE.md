@@ -228,6 +228,28 @@ demuestra reproducibilidad del contrato RGB+20D→10×20, no generalización ni
 éxito físico de PLACE. Estado final: contenedores persistentes detenidos, cero
 publicadores y sin lectura o movimiento del robot.
 
+E6.1B añadió una campaña task-matched reproducible sin habilitar movimiento.
+El run offline `20260904T113252_E6.1B` fija
+`episode_000040/frame 0/task 0`, su orden exacto de 20 articulaciones y el
+perfil P14. En cada una de las cinco sesiones shadow futuras se guarda el RGB
+y el estado 20D sincronizados realmente entregados al checkpoint, junto con
+sus hashes; no basta conservar una captura parecida tomada antes o después.
+Antes de inferir, el gate exige los 20 nombres sin defaults, estado de menos de
+2 s, velocidad máxima `0,01 rad/s` y error máximo `0,01 rad` respecto del mismo
+frame. Después exige al menos un chunk aceptado, ningún rechazo, primer delta
+P14 `<=0,1 rad`, STOP, contenedores `exited` y cero publicadores. El orquestador
+no ejecuta ENTRY/recovery y un PASS sólo caracteriza inferencia shadow.
+
+La superficie de referencia `0,75 × 0,50 m` usada en la reconstrucción no es
+un máximo impuesto al VLA. La mesa disponible de `0,838 × 0,84 × 0,77 m` es
+candidata para shadow estacionario cuando se complete su manifiesto físico.
+Las alertas OBB obtenidas al simular su tablero contra proxies rectangulares de
+clamps son reproducibles, pero no prueban contacto real ni justifican eliminar
+mesas mayores de las pruebas de generalización. Una transición física con la
+mesa presente requiere una comprobación incremental separada. No se usa
+AprilTag en este checkpoint: su entrada es RGB+estado 20D y el frame congelado
+no contiene tag.
+
 E3.0, run `20260828T114346_E3.0`, extendió el mismo evaluador a tasks 0–3 con
 cinco episodios distintos por task y frames en fases 0/25/50/75/100 %. Fueron
 20 muestras y 36 inferencias; las cinco ejecuciones seed 0 por task dieron

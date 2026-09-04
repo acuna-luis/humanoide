@@ -18,6 +18,10 @@ readonly SCRIPT_DIR="$(dirname -- "$SCRIPT_PATH")"
 readonly ANALYZER="$SCRIPT_DIR/analyze_vla_task_entry_recovery_e6_1b.py"
 readonly CHECKER="$SCRIPT_DIR/check_vla_task0_entry_e6_1b.py"
 readonly TESTER="$SCRIPT_DIR/test_vla_task0_entry_e6_1b.py"
+readonly STATE_NORMALIZER="$SCRIPT_DIR/normalize_vla_joint_state_e6_1b.py"
+readonly SHADOW_SUMMARIZER="$SCRIPT_DIR/summarize_vla_task0_shadow_e6_1b.py"
+readonly SHADOW_TESTER="$SCRIPT_DIR/test_vla_task0_shadow_e6_1b.py"
+readonly SHADOW_RUNNER="$SCRIPT_DIR/run_vla_task0_shadow_e6_1b.sh"
 readonly CONTRACT="$SCRIPT_DIR/runtime/cruzr_s2_vla_task0_entry_recovery_e6_1b.json"
 readonly PROFILE="$SCRIPT_DIR/runtime/cruzr_s2_vla_task0_p14_shadow_e6_1b.json"
 readonly FIXTURE_EXAMPLE="$SCRIPT_DIR/runtime/cruzr_s2_vla_supported_low_fixture_e6_1b.example.json"
@@ -46,7 +50,8 @@ for tool in cp find jq python3 readlink sha256sum sort tee xargs; do
   }
 done
 sources=(
-  "$SCRIPT_PATH" "$ANALYZER" "$CHECKER" "$TESTER" "$CONTRACT" "$PROFILE"
+  "$SCRIPT_PATH" "$ANALYZER" "$CHECKER" "$TESTER" "$STATE_NORMALIZER"
+  "$SHADOW_SUMMARIZER" "$SHADOW_TESTER" "$SHADOW_RUNNER" "$CONTRACT" "$PROFILE"
   "$FIXTURE_EXAMPLE" "$ENTRY_XML" "$RECOVERY_XML" "$NEW_EVIDENCE"
   "$E61A_REPORT" "$CANDIDATE" "$DATASET_REPORT"
 )
@@ -70,6 +75,10 @@ jq -e '
   and .shadow_gate.independent_repetitions == 5
   and .shadow_gate.axis_profile == "P14_A"
   and .shadow_gate.maximum_p14_first_point_delta_rad == 0.1
+  and .available_table_observation.surface_width_depth_height_floor_m == [0.838, 0.84, 0.77]
+  and .available_table_observation.support_and_box_obb_candidates == [20, 44]
+  and .available_table_observation.qualified_for_home_entry_with_table_present == false
+  and .available_table_observation.eligible_for_stationary_shadow_after_measured_manifest == true
   and .trajectory_preview.install_or_run_interface_present == false
   and .physical_execution_authorized == false
   and .physical_publisher_implemented == false
@@ -86,10 +95,14 @@ jq -e '
 jq -e '
   .physical_fixture_frozen == false
   and .movement_authorized == false
-  and .support.surface_height_floor_m == null
+  and .entry_recovery_with_fixture_authorized == false
+  and .support.surface_height_floor_m == 0.77
+  and .support.width_m == 0.838
+  and .support.depth_m == 0.84
+  and .support.thickness_m == null
 ' "$FIXTURE_EXAMPLE" >/dev/null
 
-PYTHONDONTWRITEBYTECODE=1 python3 - "$ANALYZER" "$CHECKER" <<'PY'
+PYTHONDONTWRITEBYTECODE=1 python3 - "$ANALYZER" "$CHECKER" "$STATE_NORMALIZER" "$SHADOW_SUMMARIZER" <<'PY'
 import ast
 import pathlib
 import sys
@@ -114,7 +127,12 @@ for raw in sys.argv[1:]:
 print("E6.1B_STATIC_SAFETY_OK=ros:none,network:none,container:none,publisher:none,movement:none")
 PY
 
+grep -Fq 'E6.1B_MOVEMENT_PATH=absent' "$SHADOW_RUNNER"
+grep -Fq 'E6.1B_FIVE_SHADOW_CHECK_OK=offline-only' "$SHADOW_RUNNER"
+! grep -Eq '/mc/sdk/robot_command|send_goal|publish\(' "$SHADOW_RUNNER"
+
 PYTHONDONTWRITEBYTECODE=1 python3 "$TESTER"
+PYTHONDONTWRITEBYTECODE=1 python3 "$SHADOW_TESTER"
 analyzer_args=(
   --contract "$CONTRACT"
   --profile "$PROFILE"
@@ -160,7 +178,8 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-cp -- "$ANALYZER" "$CHECKER" "$TESTER" "$CONTRACT" "$PROFILE" \
+cp -- "$ANALYZER" "$CHECKER" "$TESTER" "$STATE_NORMALIZER" \
+  "$SHADOW_SUMMARIZER" "$SHADOW_TESTER" "$SHADOW_RUNNER" "$CONTRACT" "$PROFILE" \
   "$FIXTURE_EXAMPLE" "$ENTRY_XML" "$RECOVERY_XML" "$RUN_DIR/"
 printf '%s\n' "$E61A" "$E60Z" > "$RUN_DIR/source_runs.txt"
 sha256sum "${sources[@]}" > "$RUN_DIR/source_hashes.sha256"

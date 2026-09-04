@@ -169,7 +169,10 @@ CHUNK_COUNT="$(jq -r '.chunks' "$RUN_DIR/shadow_summary.json")"
   echo "ERROR: no se recibió ningún chunk con verdict" >&2
   exit 1
 }
-INPUT_EVIDENCE_COUNT="$(find "$RUN_DIR/exported/inputs" -maxdepth 1 -type f -name 'input-*.json' 2>/dev/null | wc -l)"
+INPUT_EVIDENCE_COUNT=0
+if [[ -d "$RUN_DIR/exported/inputs" ]]; then
+  INPUT_EVIDENCE_COUNT="$(find "$RUN_DIR/exported/inputs" -maxdepth 1 -type f -name 'input-*.json' | wc -l)"
+fi
 
 cat > "$RUN_DIR/actual_result.yaml" <<EOF
 experiment_id: $EXPERIMENT_ID

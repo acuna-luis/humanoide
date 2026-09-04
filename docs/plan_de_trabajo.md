@@ -11,11 +11,12 @@
 ## Matriz ejecutiva de avance
 
 **Lectura en una mirada (2026-09-04):** avance ponderado del plan
-**`44,6 %`**; avance de las tareas físicas del checkpoint **`0/4 = 0 %`**;
+**`45,8 %`**; avance de las tareas físicas del checkpoint **`0/4 = 0 %`**;
 avance de la misión automatizada con VLA
 `PICK → TRANSPORT → TIP/POUR → PLACE`
-**`0/4 = 0 %`**. El gate activo es **E6.1** (`20 %`), cuya auditoría offline
-E6.1A ya está al `100 %`. **No existe autorización física abierta.** El robot
+**`0/4 = 0 %`**. El gate activo es **E6.1** (`40 %`): E6.1A y el paquete
+offline E6.1B están al `100 %`; fixture/ENTRY vivos y las cinco inferencias
+siguen pendientes. **No existe autorización física abierta.** El robot
 está cargando por confirmación del propietario: cualquier movimiento queda
 bloqueado hasta desconectar el cargador y obtener un preflight fresco con
 `CHARGER=disconnected`.
@@ -27,7 +28,7 @@ Los porcentajes no estiman probabilidad de éxito del robot:
 - **Peso global**: importancia cuantitativa dentro de todo este plan; la suma
   de los pesos de E1.0–E8.2 es `100 %`.
 - **Aporte global logrado**: `peso × cumplimiento / 100`, expresado en puntos
-  porcentuales (`pp`). La suma actual es `44,6 pp = 44,6 %`.
+  porcentuales (`pp`). La suma actual es `45,8 pp = 45,8 %`.
 - **Importancia**: impacto de dejar el caso sin resolver. `CRÍTICA` bloquea o
   protege movimiento físico; `ALTA` condiciona validez técnica o selección de
   modelo; `MEDIA` caracteriza o prepara el sistema.
@@ -43,10 +44,10 @@ Los porcentajes no estiman probabilidad de éxito del robot:
 | 3 | Dataset, OOD y temporalidad | 85 % | 10 % | 8,5 pp | ALTA | 🟡 Métrica OOD y semántica vendor abiertas |
 | 4 | ENTRY/READY y fixture | 53 % | 16 % | 8,5 pp | CRÍTICA | 🟡 Fixture task-matched todavía no congelado físicamente |
 | 5 | Perfiles 14–20 | 100 % | 10 % | 10,0 pp | ALTA | ✅ P14 es candidato offline preliminar |
-| 6 | Canary task-matched | 21 % | 20 % | 4,2 pp | CRÍTICA | 🔄 E6.1A PASS; faltan fixture/ENTRY frescos y 5 shadow |
+| 6 | Canary task-matched | 27 % | 20 % | 5,4 pp | CRÍTICA | 🔄 E6.1A/B offline PASS; faltan fixture/ENTRY frescos y 5 shadow |
 | 7 | Tasks físicos 0–3 | 0 % | 20 % | 0,0 pp | CRÍTICA | ⛔ Bloqueada por E6.1–E6.4 |
 | 8 | Selección/evolución del checkpoint | 0 % | 10 % | 0,0 pp | ALTA | ⛔ Requiere evidencia física y/o datos propios |
-| **TOTAL** | **Objetivo completo** | **44,6 % ponderado** | **100 %** | **44,6 pp** | — | **Sin autorización física abierta** |
+| **TOTAL** | **Objetivo completo** | **45,8 % ponderado** | **100 %** | **45,8 pp** | — | **Sin autorización física abierta** |
 
 ### Detalle por experimento
 
@@ -73,8 +74,9 @@ Los porcentajes no estiman probabilidad de éxito del robot:
 | E5.1 | 100 % | 4 % | 4,0 pp | ALTA | ✅ 160 bundles replay | Cerrado offline |
 | E5.2 | 100 % | 3 % | 3,0 pp | ALTA | ✅ P14 preliminar para tasks 0–3 | Revalidar sobre ENTRY/escena vivas |
 | E6.0 | 100 % | 3 % | 3,0 pp | CRÍTICA | ✅ `RETIRED_FAIL_CLOSED`; cero frames publicados | No repetir ni aumentar `0,1 rad` |
-| E6.1 | 20 % | 6 % | 1,2 pp | CRÍTICA | 🔄 Entrada task-matched en construcción | Confirmar fixture/ENTRY y obtener 5 shadow frescos |
-| ↳ E6.1A | 100 % | Incluido en E6.1 | — | CRÍTICA | ✅ Auditoría offline `20260904T103516_E6.1A` | Pasar a E6.1B; no autoriza movimiento |
+| E6.1 | 40 % | 6 % | 2,4 pp | CRÍTICA | 🔄 ENTRY/recovery y campaña shadow implementados, no ejecutados físicamente | Congelar fixture/ENTRY y obtener 5 shadow frescos |
+| ↳ E6.1A | 100 % | Incluido en E6.1 | — | CRÍTICA | ✅ Auditoría offline `20260904T103516_E6.1A` | Cerrado; no autoriza movimiento |
+| ↳ E6.1B | 100 % offline | Incluido en E6.1 | — | CRÍTICA | ✅ Paquete fail-closed `20260904T113252_E6.1B` | Ejecutar gates vivos por separado; no autoriza movimiento |
 | E6.2 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | PASS completo de E6.1 + launcher revisado |
 | E6.3 | 0 % | 3 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | PASS E6.2 antes de añadir H/W/L |
 | E6.4 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | Ejecutor físico y STOP validados |
@@ -1610,10 +1612,45 @@ colocado hipotéticamente a la altura candidata, genera 159 candidatos OBB.
 
 E6.1A no accedió al robot, red, ROS, contenedores ni publicadores y no ordenó
 movimiento. Su PASS cierra sólo el diseño offline (subgate al `100 %`) y deja
-E6.1 global al `20 %`. El siguiente subgate es E6.1B: revisar/fijar la
-geometría física del soporte bajo e implementar una entrada/recovery separados
-y fail-closed; después se podrá pedir un preflight fresco y las cinco
-inferencias shadow del mismo escenario.
+E6.1 global al `20 %` en ese punto histórico.
+
+**Resultado E6.1B offline 2026-09-04:** PASS del paquete fail-closed en
+`20260904T113252_E6.1B`, reproducible con:
+
+```bash
+./scripts/vla/audit_vla_task_entry_recovery_e6_1b.sh --check
+./scripts/vla/audit_vla_task_entry_recovery_e6_1b.sh --run
+./scripts/vla/run_vla_task0_shadow_e6_1b.sh --check
+```
+
+Se versionaron por separado previews ENTRY y recovery con los endpoints 20D
+exactos de `episode_000040/frame 0` y HOME histórico. No tienen interfaz de
+instalación/ejecución y no se afirma equivalencia entre la interpolación XML y
+la ley minimum-jerk auditada. El gate `check_vla_task0_entry_e6_1b.py` exige
+un manifiesto `SUPPORTED_LOW` con fotografía y hashes, B0 rígida gris, abierta
+y vacía, y una muestra nueva de los 20 ejes a `<=0,01 rad` del mismo frame y
+velocidad máxima `<=0,01 rad/s`. Un PASS sólo habilita shadow.
+
+`run_vla_task0_shadow_e6_1b.sh --run` implementa cinco sesiones independientes
+task 0/P14, pero no mueve a ENTRY ni a recovery. Antes de cada sesión vuelve a
+leer `/mc/whole_joint_states`; después exige STOP, ambos contenedores
+`exited`, cero publicadores, al menos un chunk aceptado, ningún rechazo, primer
+delta P14 `<=0,1 rad` y evidencia exacta de imagen+estado con hashes. La ruta
+de inferencia guarda ahora el par sincronizado que recibió el checkpoint. El
+perfil remoto debe coincidir por SHA-256 y no se despliega automáticamente.
+
+La mesa disponible de `0,838 × 0,84 × 0,77 m` queda **admitida como candidata
+para shadow estacionario**, una vez medidos espesor/estabilidad y congelado el
+manifiesto. No está descartada. El barrido OBB reproducible marcó 20 candidatos
+con tablero supuesto de 5 mm y 44 con 40 mm, todos sobre proxies conservadores
+de clamps; esto es una alerta, no prueba de contacto real. Por ello ENTRY o
+recovery con esa mesa presente continúan sin calificar. El AprilTag no forma
+parte de esta prueba: el checkpoint consume una imagen RGB y el frame elegido
+no muestra tag.
+
+E6.1 global queda al `40 %`: E6.1A y la implementación offline E6.1B están
+cerrados; faltan el manifiesto físico, una ENTRY fresca y las cinco sesiones
+shadow reales. Sigue sin existir autorización de movimiento.
 
 El cargador puede permanecer conectado durante 2–4. Antes de cualquier
 transición física debe desconectarse y comprobarse `CHARGER=disconnected`.

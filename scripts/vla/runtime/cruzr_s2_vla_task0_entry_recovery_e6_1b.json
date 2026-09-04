@@ -113,7 +113,8 @@
     "install_or_run_interface_present": false
   },
   "fixture_gate": {
-    "support_nominal_width_depth_thickness_m": [0.75, 0.5, 0.04],
+    "support_minimum_usable_width_depth_m": [0.75, 0.5],
+    "collision_screened_reference_width_depth_thickness_m": [0.75, 0.5, 0.04],
     "support_surface_height_floor_range_m": [0.7681906572434728, 0.7808276433500133],
     "box_nominal_lwh_m": [0.6, 0.4, 0.22],
     "box_dimension_tolerance_m": 0.01,
@@ -123,9 +124,23 @@
       "material_family": "rigid_plastic",
       "color_family": "gray"
     },
+    "box_front_clearance_m": 0.05,
+    "box_centered_laterally_required": true,
+    "box_long_side_parallel_to_front_edge_required": true,
     "measured_manifest_required": true,
     "photo_hash_required": true,
     "passing_fixture_gate_authorizes_movement": false
+  },
+  "available_table_observation": {
+    "surface_width_depth_height_floor_m": [0.838, 0.84, 0.77],
+    "dimensions_source": "owner_measurement_2026-09-04",
+    "thickness_physically_measured": false,
+    "offline_screen_assumed_thickness_m": [0.005, 0.04],
+    "support_and_box_obb_candidates": [20, 44],
+    "obb_warning_for_home_entry_with_table_present": true,
+    "qualified_for_home_entry_with_table_present": false,
+    "eligible_for_stationary_shadow_after_measured_manifest": true,
+    "reason": "the deterministic OBB screen overlaps conservative clamp proxies; this is a warning, not proof of real contact"
   },
   "shadow_gate": {
     "independent_repetitions": 5,

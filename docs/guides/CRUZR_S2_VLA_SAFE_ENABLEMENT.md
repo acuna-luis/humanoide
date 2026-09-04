@@ -619,8 +619,28 @@ Se reproduce únicamente en local con:
 El wrapper no usa robot, red, ROS, contenedores ni publicadores. El run previo
 `20260904T103323_E6.1A` queda superado: aún mezclaba el volumen PGC del URDF
 con el proxy clamp; el autoritativo excluye correctamente PGC y conserva el
-PASS. Sigue E6.1B: fijar soporte, entrada y recovery fail-closed antes de
-preflight o shadow fresco. No existe autorización física.
+PASS.
+
+E6.1B queda implementado offline y auditado en
+`20260904T113252_E6.1B`. El contrato fija los 20 ejes de
+`episode_000040/frame 0`; los XML ENTRY/recovery sólo son previews sin
+instalador ni modo `--run`. El checker exige fixture medido/fotografiado,
+estado fresco a `<=0,01 rad`, velocidad `<=0,01 rad/s` y los 20 ejes
+presentes, sin defaults. El orquestador de cinco shadow vuelve a medir ENTRY
+antes de cada repetición, obliga a usar task 0/P14, conserva el RGB y estado
+exactos entregados al checkpoint, verifica primer delta `<=0,1 rad` y exige
+STOP, contenedores detenidos y cero publicadores después de cada sesión. No
+despliega el perfil automáticamente y nunca ejecuta ENTRY/recovery.
+
+La mesa medida por el propietario (`0,838 × 0,84 m`, superficie a `0,77 m`)
+puede calificarse para **shadow estacionario** si se completan espesor,
+estabilidad, pose de B0, foto y hashes. No se declara inútil ni equivalente al
+soporte reconstruido. El OBB conservador marcó 20 candidatos usando 5 mm de
+espesor supuesto y 44 usando 40 mm; son avisos contra proxies de clamp, no
+contactos físicos demostrados. ENTRY/recovery con la mesa presente permanecen
+fail-closed hasta una comprobación más precisa o prueba incremental separada.
+No se usa AprilTag: no es una entrada de este checkpoint ni aparece en el
+frame congelado. No existe autorización física.
 
 E6.0X `20260904T075519_E6.0X` registra la aceptación del propietario sólo para
 E6.0, celda vacía, task 0/P14 y un punto: delta objetivo `<=0,1 rad`, velocidad

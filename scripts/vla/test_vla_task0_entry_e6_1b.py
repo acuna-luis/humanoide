@@ -52,9 +52,13 @@ def main() -> int:
                 "material_family": "rigid_plastic",
                 "color_family": "gray",
                 "supported_and_stable": True,
+                "front_clearance_m": 0.05,
+                "centered_laterally": True,
+                "long_side_parallel_to_front_edge": True,
             },
             "evidence_files": [{"path": photo.name, "sha256": digest(photo)}],
             "physical_fixture_frozen": True,
+            "entry_recovery_with_fixture_authorized": False,
             "movement_authorized": False,
         }
         state = {
@@ -98,7 +102,7 @@ def main() -> int:
         manifest_path.write_text(json.dumps(bad_manifest), encoding="utf-8")
         rejected_fixture = subprocess.run(base, check=False, text=True, capture_output=True)
         assert rejected_fixture.returncode == 3, rejected_fixture.stderr
-        assert "support_height_uncertainty_outside_reconstructed_range" in json.loads(
+        assert "support_height_outside_reconstructed_range" in json.loads(
             rejected_fixture.stdout
         )["rejection_reasons"]
 

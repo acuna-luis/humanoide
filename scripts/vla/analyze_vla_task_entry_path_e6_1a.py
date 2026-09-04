@@ -74,6 +74,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--mesh-helper", type=Path, required=True)
     parser.add_argument("--geometry-helper", type=Path, required=True)
     parser.add_argument("--fixture-pose-helper", type=Path, required=True)
+    parser.add_argument("--support-width-m", type=float)
+    parser.add_argument("--support-depth-m", type=float)
+    parser.add_argument("--support-thickness-m", type=float)
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
 
@@ -364,6 +367,18 @@ def main() -> int:
     contract = json.loads(args.entry_contract.read_text(encoding="utf-8"))
     if contract.get("schema") != "cruzr-s2-vla-task0-entry-e6.1a-v1":
         raise SystemExit("ERROR: contrato E6.1A inesperado")
+    support_overrides = (
+        args.support_width_m,
+        args.support_depth_m,
+        args.support_thickness_m,
+    )
+    if any(value is not None for value in support_overrides):
+        if any(value is None or not math.isfinite(value) or value <= 0 for value in support_overrides):
+            raise SystemExit("ERROR: los tres overrides del soporte deben ser finitos y positivos")
+        scene = contract["scene_reconstruction"]
+        scene["candidate_support_width_m"] = args.support_width_m
+        scene["candidate_support_depth_m"] = args.support_depth_m
+        scene["candidate_support_thickness_m"] = args.support_thickness_m
     source_map = {
         "candidate_json_sha256": args.candidate,
         "candidate_rgb_sha256": args.candidate_rgb,

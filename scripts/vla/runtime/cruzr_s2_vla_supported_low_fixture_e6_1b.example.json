@@ -5,9 +5,9 @@
   "measured_at": null,
   "measurement_uncertainty_m": null,
   "support": {
-    "surface_height_floor_m": null,
-    "width_m": null,
-    "depth_m": null,
+    "surface_height_floor_m": 0.77,
+    "width_m": 0.838,
+    "depth_m": 0.84,
     "thickness_m": null,
     "rigid": false,
     "stable": false,
@@ -20,9 +20,13 @@
     "open_top": true,
     "material_family": "rigid_plastic",
     "color_family": "gray",
-    "supported_and_stable": false
+    "supported_and_stable": false,
+    "front_clearance_m": 0.05,
+    "centered_laterally": false,
+    "long_side_parallel_to_front_edge": false
   },
   "evidence_files": [],
   "physical_fixture_frozen": false,
+  "entry_recovery_with_fixture_authorized": false,
   "movement_authorized": false
 }

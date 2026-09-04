@@ -202,14 +202,15 @@ def main() -> int:
         "fixture_gate": {
             "measured_manifest_required": True,
             "photo_hash_required": True,
-            "candidate_support_width_depth_thickness_m": contract["fixture_gate"][
-                "support_nominal_width_depth_thickness_m"
+            "collision_screened_reference_width_depth_thickness_m": contract["fixture_gate"][
+                "collision_screened_reference_width_depth_thickness_m"
             ],
             "height_range_m": contract["fixture_gate"][
                 "support_surface_height_floor_range_m"
             ],
             "physical_fixture_frozen": False,
         },
+        "available_table_observation": contract["available_table_observation"],
         "shadow_gate": contract["shadow_gate"],
         "physical_flags": physical_flags,
         "physical_execution_authorized": False,
