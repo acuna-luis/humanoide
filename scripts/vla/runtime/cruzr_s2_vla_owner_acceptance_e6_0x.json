@@ -1,0 +1,20 @@
+{
+  "schema": "cruzr-s2-vla-owner-acceptance-e6.0x-v1",
+  "experiment_id": "E6.0X",
+  "accepted_by_role": "project_owner",
+  "accepted_at": "2026-09-04T07:54:31+02:00",
+  "acceptance_source": "explicit_confirmation_in_project_session",
+  "accepted_statement": "COMO PROPIETARIO ACEPTO PARA E6.0 NO_BOX DE UN SOLO PUNTO LOS LIMITES PROVISIONALES 0,1 RAD, 0,15 RAD/S Y 0,5 RAD/S2; ENTIENDO QUE NO SON LIMITES CERTIFICADOS POR UBTECH",
+  "scope": "E6.0_NO_BOX_READY_TASK_0_P14_A_ONE_SOURCE_POINT_ONLY",
+  "engineering_limits_sha256": "631683492fe25ef31cc2f9719d12874cce987f799a6b963ff79f8afe85754a92",
+  "maximum_target_delta_rad": 0.1,
+  "maximum_velocity_rad_s": 0.15,
+  "maximum_acceleration_rad_s2": 0.5,
+  "sample_period_seconds": 0.01,
+  "manufacturer_certified": false,
+  "owner_accepted": true,
+  "acceptance_is_movement_authorization": false,
+  "requires_run_specific_fresh_preflight": true,
+  "requires_run_specific_activation_grant": true,
+  "physical_execution_authorized": false
+}

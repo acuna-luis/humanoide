@@ -7,11 +7,13 @@ Uso disponible ahora:
   ./scripts/vla/run_cruzr_vla_canary.sh --check \
     --task-id 0 --axis-profile P14_A --scenario NO_BOX_READY
 
-Modos reservados, actualmente bloqueados:
+Modos físicos reservados, con runtime implementado pero activación bloqueada:
   --one-point | --one-chunk | --window | --stop
 
 El modo --check sólo audita evidencia local. No conecta al robot ni publica.
-Los modos activos permanecen cerrados hasta resolver todos los gates de E6.0.
+El proceso ROS de un punto existe y está probado offline, pero la plantilla
+versionada no puede activarlo. La aceptación E6.0X ya está registrada; los
+modos físicos permanecen cerrados hasta un preflight/grant fresco de la corrida.
 EOF
 }
 
@@ -52,7 +54,9 @@ test -x "$AUDITOR" || { echo "ERROR: auditor no ejecutable: $AUDITOR" >&2; exit 
 
 if [[ "$MODE" != "--check" ]]; then
   printf 'E6.0_PHYSICAL_AUTHORIZED=0\n' >&2
-  printf 'ERROR: %s no está implementado ni autorizado; no se conectó al robot y no se publicó movimiento.\n' "$MODE" >&2
+  printf 'CANARY_RUNTIME_PROCESS_IMPLEMENTED=1\n' >&2
+  printf 'CANARY_ACTIVE_LAUNCHER_ENABLED=0\n' >&2
+  printf 'ERROR: %s no está activado ni autorizado; falta grant/preflight fresco. No se conectó al robot ni se publicó movimiento.\n' "$MODE" >&2
   exit 3
 fi
 
@@ -61,5 +65,6 @@ fi
 [[ "$SCENARIO" == "NO_BOX_READY" ]] || { echo "ERROR: E6.0-CHECK sólo admite --scenario NO_BOX_READY" >&2; exit 2; }
 
 "$AUDITOR" --check
-printf 'CANARY_ACTIVE_MODES_IMPLEMENTED=0\n'
-printf 'CANARY_COMMAND_PATH=fail-closed-before-robot-access\n'
+printf 'CANARY_RUNTIME_PROCESS_IMPLEMENTED=1\n'
+printf 'CANARY_ACTIVE_LAUNCHER_ENABLED=0\n'
+printf 'CANARY_COMMAND_PATH=implemented-offline,fail-closed-before-robot-access\n'

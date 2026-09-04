@@ -447,6 +447,65 @@ El auditor local se regeneró como `20260903T140006_E6.0-CHECK`: recovery
 figura `PASS` y quedan exactamente dos gates `BLOCKED`, transporte/STOP físico
 y límite de aceleración. No se habilitó ningún modo activo.
 
+Al cierre de la jornada, E6.0R `20260903T142823_E6.0R` ya aporta el adaptador
+SDK P14 de un punto y STOP fail-closed, verificados offline en 51/51 casos.
+E6.0T autoritativo `20260903T143529_E6.0T` confirmó sólo en lectura que esta
+unidad consume `/mc/sdk/robot_command` (`RobotCommand`) y publica estado en
+`/mc/sdk/robot_state`; no existen los topics directos alternativos de brazos.
+No se creó ningún publicador y los dos contenedores VLA permanecieron
+detenidos. E6.0S `20260903T144344_E6.0S` verificó 2.028 trayectorias minimum-
+jerk con la envolvente provisional de proyecto `delta<=0,1 rad`,
+`|v|<=0,15 rad/s`, `|a|<=0,5 rad/s²`. Esta envolvente no es certificación del
+fabricante y aún no tiene aceptación del propietario.
+
+E6.0U `20260904T073609_E6.0U` completó el monitor de estado medido y pasó
+152 casos más 8 alteraciones de contrato. Comprueba READY y estacionariedad,
+los 14 ejes de brazo, los seis ejes H/L/W bloqueados, frescura, velocidad y
+aceleración; ante cualquier fallo solicita STOP una sola vez y queda
+enclavado. No es una validación dinámica del robot: fue una campaña in-memory.
+
+E6.0V `20260904T073852_E6.0V` resolvió la fuente viva sin publicar ni mover:
+`/mc/sdk/robot_state` estaba anunciado pero no entregó muestra en 3 s;
+`/mc/whole_joint_states` sí entregó 22 nombres, posiciones y velocidades y
+quedó seleccionado con QoS RELIABLE. Los dos consumidores de
+`/mc/sdk/robot_command` anuncian BEST_EFFORT y no había publicador de comando.
+
+E6.0W `20260904T074537_E6.0W` añadió el runtime y proceso ROS explícito de un
+punto: 24 casos funcionales y 3 gates de activación pasaron. La creación del
+publicador es perezosa, posterior a READY fresco y a un chunk válido; sólo se
+consume el punto 0, H/L/W se mantienen en su medida fresca y STOP destruye el
+publicador. La plantilla del repositorio permanece desactivada y rechaza
+`--run` antes de importar ROS.
+
+E6.0X `20260904T075519_E6.0X` registra la aceptación del propietario sólo para
+E6.0, celda vacía, task 0/P14 y un punto: delta objetivo `<=0,1 rad`, velocidad
+medida `<=0,15 rad/s`, aceleración medida `<=0,5 rad/s²`, muestreo de `10 ms`,
+H/L/W inmóviles. No es certificación del fabricante ni autorización de
+movimiento.
+
+El consolidado vigente `20260904T075648_E6.0-CHECK` deja el ejecutor en
+`PASS_CODE_OFFLINE_ACTIVATION_GATED`, la aceptación en `PASS` y cero gates
+estáticos. El preflight es `RUN_SPECIFIC_REQUIRED`: debe repetirse hoy con la
+celda vacía antes de crear el grant de una sola corrida. Hasta que ambas cosas
+ocurran, `--one-point` sigue cerrado, VLA debe permanecer detenido y
+`E6.0_PHYSICAL_AUTHORIZED=0`.
+
+La fase A del preflight de hoy es `20260904T075947_E6.0G`. Con los paros
+declarados accionados, comprobó sólo en lectura: principal `ESTOP_KEY=1`, señal
+servo/chasis `0`, cargador fuera, baterías `45,8/48,5 %`, READY S2 correcto,
+VLA detenido y cero publicadores. La señal `0` no corrobora el paro físico de
+chasis; se conserva la comprobación física del operador. Bajo E-stop no había
+estado articular ni action server, por lo que el siguiente gate es liberar
+ambos paros bajo supervisión y repetir `--expect-released`. No pulsar
+Power/KEY1/Start durante esa transición.
+
+Después de liberar físicamente ambos paros, software confirmó `0/0/0`, pero
+whole-state y el servidor de manipulación continuaron ausentes. El preflight
+liberado falló cerrado. El guard correcto, ejecutado en Vision y sólo en modo
+`--check`, obtuvo x86 3/3, cámaras 2/2 y seguridad `0 0 0`, pero
+`CONTROL_STATE=unknown`; no reinició ni movió. Se requiere el ciclo completo
+supervisado v0.2.0 antes de retomar E6.0. No usar Power/KEY1/Start aisladamente.
+
 ## Incompatibilidades corregidas en el overlay
 
 El paquete original no arrancaba tal como fue entregado:

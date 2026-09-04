@@ -74,6 +74,16 @@ without restarting a container or commanding the head.
 
 ## Status and logs
 
+These commands run **on the Vision computer**, not on the Ubuntu control PC.
+From the control PC, the read-only check is:
+
+```bash
+ssh walker@192.168.11.3 '/usr/local/sbin/cruzr-v020-boot-guard --check'
+```
+
+Running the repository copy directly on the PC will only inspect the PC's
+Docker instance and can misleadingly report `containers_not_ready`.
+
 ```bash
 sudo systemctl status cruzr-v020-boot-guard.service
 sudo journalctl -u cruzr-v020-boot-guard.service -b --no-pager

@@ -1,6 +1,8 @@
 # Plan de trabajo: recoger, transportar, vaciar y depositar una caja
 
-**Fecha:** 2026-09-03
+**Fecha inicial:** 2026-09-03
+
+**Última actualización:** 2026-09-04
 
 **Estado:** `PLANIFICADO`; este documento no autoriza movimiento físico
 
@@ -1289,6 +1291,47 @@ E6.0-CHECK `20260903T140006_E6.0-CHECK` consume ya E6.0Q y confirma por
 auditoría local esos dos únicos gates pendientes; los modos activos siguen
 cerrados antes de acceder al robot.
 
+Relevo del cierre: E6.0R `20260903T142823_E6.0R` pasó 51/51 pruebas offline
+del adaptador SDK y STOP; E6.0T autoritativo `20260903T143529_E6.0T` confirmó
+el topic `/mc/sdk/robot_command` y estado `/mc/sdk/robot_state`, con VLA
+detenido y cero publicadores; E6.0S `20260903T144344_E6.0S` pasó 2.028/2.028
+trayectorias en la envolvente provisional `0,1 rad / 0,15 rad/s /
+0,5 rad/s²`. El próximo bloque de trabajo no requiere escenario físico:
+monitor medido con pruebas simuladas, launcher explícito todavía bloqueado y
+regeneración de E6.0-CHECK. Después se pedirá una única decisión al propietario
+sobre esa envolvente para el canary sin caja. No se ejecutará el checkpoint
+físicamente antes de dicha decisión y de un preflight fresco.
+
+Ese bloque no físico quedó completado el 2026-09-04. E6.0U
+`20260904T073609_E6.0U` pasó 152 casos del monitor medido y 8 tamper; E6.0V
+`20260904T073852_E6.0V` seleccionó `/mc/whole_joint_states` con muestra
+22/22/22 y confirmó BEST_EFFORT en los consumidores del comando; E6.0W
+`20260904T074537_E6.0W` pasó 24 casos del runtime y 3 de activación. Su proceso
+ROS consume sólo el punto 0, bloquea H/L/W, interpola con minimum jerk, crea el
+publicador sólo después de READY+chunk válidos y lo destruye con STOP/fallo.
+La plantilla versionada está desactivada.
+
+E6.0X `20260904T075519_E6.0X` registra que el propietario aceptó el límite
+provisional `delta<=0,1 rad`, `|v|<=0,15 rad/s`, `|a|<=0,5 rad/s²`, sólo para
+E6.0 `NO_BOX_READY`, task 0/P14 y un punto. No autoriza movimiento.
+
+El consolidado `20260904T075648_E6.0-CHECK` deja cero gates estáticos. El
+preflight de otro día no vale: se repetirá inmediatamente antes de crear el
+grant exclusivo de la corrida. Hasta completar preflight y grant no existe
+autorización física.
+
+Fase A fresca `20260904T075947_E6.0G`: principal activo corroborado
+(`ESTOP_KEY=1`), señal servo/chasis `0`, cargador fuera, baterías 45,8/48,5 %,
+READY correcto, VLA detenido y cero publicadores. Sin estado/action server bajo
+E-stop y sin movimiento. Liberar ambos paros bajo supervisión y repetir
+`--expect-released` sin pulsar Power/KEY1/Start.
+
+Tras liberar ambos paros, las señales quedaron `0/0/0`, pero whole-state y el
+servidor de manipulación siguieron ausentes. El preflight falló cerrado. El
+guard ejecutado correctamente en Vision confirmó x86 3/3, cámaras 2/2 y
+seguridad 0/0/0, con `CONTROL_STATE=unknown`; no reinició ni movió. Antes de
+E6.0 hace falta un ciclo completo supervisado v0.2.0.
+
 #### Experimento 6.0 — Un punto P14 sin caja
 
 **Escenario futuro:** plataforma y B0 retiradas >1,5 m; ready S2 validado; ruedas
@@ -1302,8 +1345,9 @@ bloqueadas; cargador fuera; persona en paro; un cliente.
 ./scripts/vla/run_cruzr_vla_canary.sh --stop
 ```
 
-**Estado de implementación:** sólo `--check` está disponible y se reproduce
-también con:
+**Estado de implementación:** el runtime/proceso ROS de un punto existe y está
+probado offline, pero el launcher activo y la plantilla siguen cerrados. Sólo
+`--check` está disponible operativamente y se reproduce también con:
 
 ```bash
 ./scripts/vla/audit_vla_canary_readiness_e6_0.sh --check
@@ -1333,13 +1377,20 @@ también con:
 ./scripts/vla/audit_vla_document_proxy_clamp_e6_0j.sh --run
 ./scripts/vla/audit_vla_observed_clamp_envelope_e6_0k.sh --check
 ./scripts/vla/audit_vla_observed_clamp_envelope_e6_0k.sh --run
+./scripts/vla/audit_vla_sdk_transport_e6_0r.sh --check
+./scripts/vla/audit_vla_engineering_limits_e6_0s.sh --check
+./scripts/vla/audit_vla_sdk_graph_e6_0t.sh --check
+./scripts/vla/audit_vla_measured_state_monitor_e6_0u.sh --check
+./scripts/vla/audit_vla_live_state_source_e6_0v.sh --check
+./scripts/vla/audit_vla_one_point_runtime_e6_0w.sh --check
+./scripts/vla/audit_vla_owner_acceptance_e6_0x.sh --check
 ```
 
 El run de auditoría fue `PASS_READINESS_AUDIT_E6_0_PHYSICAL_BLOCKED`: una
-auditoría PASS significa que los bloqueos se detectaron bien, no que el
-movimiento esté habilitado. `--one-point`, `--one-chunk`, `--window` y
-`--stop` fallan antes de acceder a red/robot mientras no exista ejecutor. No
-se necesita preparar mesa, caja ni AprilTag para este precheck.
+auditoría PASS significa que los gates se evaluaron bien, no que el movimiento
+esté habilitado. `--one-point`, `--one-chunk`, `--window` y `--stop` fallan
+antes de acceder a red/robot porque la activación física sigue cerrada. No se
+necesita preparar mesa, caja ni AprilTag para este precheck.
 
 **Primer montaje físico tras cerrar lo local:** retirar caja, mesa/plataforma y
 AprilTag a más de 1,5 m; dejar 1,5 m de radio y toda la envolvente de brazos

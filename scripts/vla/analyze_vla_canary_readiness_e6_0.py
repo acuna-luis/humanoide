@@ -34,8 +34,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--e6-0n", type=pathlib.Path, required=True)
     parser.add_argument("--e6-0o", type=pathlib.Path, required=True)
     parser.add_argument("--e6-0q", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0r", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0s", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0t", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0u", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0v", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0w", type=pathlib.Path, required=True)
+    parser.add_argument("--e6-0x", type=pathlib.Path, required=True)
     parser.add_argument("--profile", type=pathlib.Path, required=True)
     parser.add_argument("--physical-executor", type=pathlib.Path, required=True)
+    parser.add_argument("--state-monitor", type=pathlib.Path, required=True)
+    parser.add_argument("--runtime-process", type=pathlib.Path, required=True)
+    parser.add_argument("--activation-template", type=pathlib.Path, required=True)
     parser.add_argument("--ready-script", type=pathlib.Path, required=True)
     parser.add_argument("--output", type=pathlib.Path)
     return parser.parse_args()
@@ -134,6 +144,13 @@ def main() -> int:
         "E6.0N": args.e6_0n.resolve(),
         "E6.0O": args.e6_0o.resolve(),
         "E6.0Q": args.e6_0q.resolve(),
+        "E6.0R": args.e6_0r.resolve(),
+        "E6.0S": args.e6_0s.resolve(),
+        "E6.0T": args.e6_0t.resolve(),
+        "E6.0U": args.e6_0u.resolve(),
+        "E6.0V": args.e6_0v.resolve(),
+        "E6.0W": args.e6_0w.resolve(),
+        "E6.0X": args.e6_0x.resolve(),
     }
     actual = {
         name: load_flat_yaml(path / "actual_result.yaml")
@@ -156,6 +173,19 @@ def main() -> int:
     )
     ready_recovery_bundle = load_json(
         runs["E6.0M"] / "ready-recovery-bundle.json"
+    )
+    sdk_transport = load_json(runs["E6.0R"] / "sdk-transport-audit.json")
+    engineering_limits = load_json(
+        runs["E6.0S"] / "engineering-limits-audit.json"
+    )
+    measured_monitor = load_json(
+        runs["E6.0U"] / "measured-state-monitor-audit.json"
+    )
+    one_point_runtime = load_json(
+        runs["E6.0W"] / "one-point-runtime-audit.json"
+    )
+    owner_acceptance = load_json(
+        runs["E6.0X"] / "cruzr_s2_vla_owner_acceptance_e6_0x.json"
     )
     profile = load_json(args.profile.resolve())
 
@@ -197,6 +227,79 @@ def main() -> int:
         and actual["E6.0Q"].get("vla_containers_stopped") is True
         and actual["E6.0Q"].get("physical_publishers") == 0
     )
+    live_sdk_graph_verified = (
+        actual["E6.0T"].get("sdk_command_publishers") == 0
+        and actual["E6.0T"].get("sdk_command_subscribers") == 2
+        and actual["E6.0T"].get("sdk_state_publishers") == 2
+        and actual["E6.0T"].get("physical_publishers_created") == 0
+    )
+    live_state_source_verified = (
+        actual["E6.0V"].get("sdk_command_publishers") == 0
+        and actual["E6.0V"].get("sdk_command_subscriber_reliability")
+        == "BEST_EFFORT"
+        and actual["E6.0V"].get("whole_state_publishers") == 1
+        and actual["E6.0V"].get("whole_state_reliability") == "RELIABLE"
+        and actual["E6.0V"].get("whole_state_name_count", 0) >= 20
+        and actual["E6.0V"].get("whole_state_position_count")
+        == actual["E6.0V"].get("whole_state_name_count")
+        and actual["E6.0V"].get("whole_state_velocity_count")
+        == actual["E6.0V"].get("whole_state_name_count")
+        and actual["E6.0V"].get("selected_state_topic")
+        == "/mc/whole_joint_states"
+        and actual["E6.0V"].get("physical_publishers_created") == 0
+    )
+    physical_runtime_implemented = (
+        sdk_transport.get("all_expectations_passed") is True
+        and sdk_transport.get("software_stop_implemented") is True
+        and sdk_transport.get("software_stop_is_hardware_estop") is False
+        and sdk_transport.get("ros_backend_code_present") is True
+        and measured_monitor.get("all_expectations_passed") is True
+        and measured_monitor.get("runtime_measured_acceleration_monitor_implemented")
+        is True
+        and one_point_runtime.get("all_expectations_passed") is True
+        and one_point_runtime.get("runtime_core_implemented") is True
+        and one_point_runtime.get("ros_process_implemented") is True
+        and one_point_runtime.get("static_checks", {}).get(
+            "ros_backend_only_command_publisher"
+        )
+        is True
+        and one_point_runtime.get("static_checks", {}).get(
+            "ros_backend_stop_destroys_publisher"
+        )
+        is True
+        and live_sdk_graph_verified
+        and live_state_source_verified
+    )
+    engineering_envelope_ready_for_owner_decision = (
+        engineering_limits.get("all_expectations_passed") is True
+        and engineering_limits.get("configured_maximum_target_delta_rad") == 0.1
+        and engineering_limits.get("configured_maximum_velocity_rad_s") == 0.15
+        and engineering_limits.get("configured_maximum_acceleration_rad_s2") == 0.5
+        and engineering_limits.get("configured_sample_period_seconds") == 0.01
+        and engineering_limits.get("manufacturer_certified") is False
+        and engineering_limits.get("owner_accepted") is False
+        and measured_monitor.get("runtime_measured_acceleration_monitor_implemented")
+        is True
+    )
+    owner_acceptance_verified = (
+        engineering_envelope_ready_for_owner_decision
+        and actual["E6.0X"].get("accepted_by_role") == "project_owner"
+        and actual["E6.0X"].get("scope")
+        == "E6.0_NO_BOX_READY_TASK_0_P14_A_ONE_SOURCE_POINT_ONLY"
+        and actual["E6.0X"].get("maximum_target_delta_rad") == 0.1
+        and actual["E6.0X"].get("maximum_velocity_rad_s") == 0.15
+        and actual["E6.0X"].get("maximum_acceleration_rad_s2") == 0.5
+        and actual["E6.0X"].get("sample_period_seconds") == 0.01
+        and actual["E6.0X"].get("manufacturer_certified") is False
+        and actual["E6.0X"].get("owner_accepted") is True
+        and actual["E6.0X"].get("acceptance_is_movement_authorization") is False
+        and actual["E6.0X"].get("physical_execution_authorized") is False
+        and owner_acceptance.get("owner_accepted") is True
+        and owner_acceptance.get("acceptance_is_movement_authorization") is False
+        and owner_acceptance.get("physical_execution_authorized") is False
+        and owner_acceptance.get("engineering_limits_sha256")
+        == sha256_file(runs["E6.0S"] / "cruzr_s2_vla_canary_engineering_limits_e6_0s.json")
+    )
 
     expected_statuses = {
         "E3.3": "PASS_LOCAL_TEMPORAL_FAIL_CLOSED_VENDOR_SEMANTICS_UNRESOLVED",
@@ -221,6 +324,13 @@ def main() -> int:
         "E6.0N": "PASS_RECOVERY_INSTALLED_AND_REGISTERED_ON_DISK_NOT_RELOADED",
         "E6.0O": "PASS_DEDICATED_TASK_MANAGER_RELOADED_UNDER_ESTOP",
         "E6.0Q": "PASS_DETERMINISTIC_READY_RECOVERY_PHYSICALLY_VALIDATED_NO_BOX",
+        "E6.0R": "PASS_SDK_TRANSPORT_IMPLEMENTED_OFFLINE_ACTIVE_LAUNCHER_BLOCKED",
+        "E6.0S": "PASS_PROJECT_ENGINEERING_ENVELOPE_OFFLINE_PENDING_OWNER_ACCEPTANCE",
+        "E6.0T": "PASS_LIVE_SDK_GRAPH_READ_ONLY_NO_PUBLISHER",
+        "E6.0U": "PASS_MEASURED_STATE_MONITOR_OFFLINE_ACTIVE_LAUNCHER_BLOCKED",
+        "E6.0V": "PASS_LIVE_STATE_SOURCE_READ_ONLY_SELECTED",
+        "E6.0W": "PASS_RUNTIME_CORE_AND_ROS_PROCESS_OFFLINE_PRODUCTION_ACTIVATION_BLOCKED",
+        "E6.0X": "PASS_OWNER_ACCEPTED_PROJECT_ENVELOPE_E6_0_NO_BOX_ONE_POINT_ONLY",
     }
     for name, expected in expected_statuses.items():
         if actual[name].get("status") != expected:
@@ -318,22 +428,41 @@ def main() -> int:
         ),
         gate(
             "physical_executor_implemented_and_reviewed",
-            "BLOCKED",
+            "PASS_CODE_OFFLINE_ACTIVATION_GATED"
+            if physical_runtime_implemented
+            else "BLOCKED",
             (
-                f"E6.0E passed {guard_campaign['message_case_count'] + guard_campaign['contract_tamper_case_count']}/"
-                f"{guard_campaign['message_case_count'] + guard_campaign['contract_tamper_case_count']} guard cases; "
-                f"E6.0L passed {one_point_core['case_count'] + one_point_core['contract_tamper_case_count']} "
-                "control-core cases and latches after one point with no replay. The compatibility file exists, "
-                "but explicitly has no physical command/STOP transport, so this gate remains blocked"
+                "E6.0R implements the reviewed SDK command transport and destructive software STOP; "
+                "E6.0U adds fail-closed measured velocity/acceleration/locked-axis monitoring; "
+                "E6.0T/V verify the live command endpoint, QoS and selected 22-axis state source; "
+                "E6.0W implements and tests the bounded one-point ROS process with lazy publisher creation. "
+                "Its checked-in activation remains disabled and no physical publisher was created"
+                if physical_runtime_implemented
+                else (
+                    f"The offline guard passed {guard_campaign['message_case_count'] + guard_campaign['contract_tamper_case_count']} "
+                    "cases, but transport, live endpoint/state-source or runtime evidence is incomplete"
+                )
             ),
         ),
         gate(
-            "certified_acceleration_limit",
-            "BLOCKED",
+            "project_engineering_envelope_owner_acceptance",
+            "PASS" if owner_acceptance_verified else (
+                "PENDING_REVIEW"
+                if engineering_envelope_ready_for_owner_decision
+                else "BLOCKED"
+            ),
             (
-                "E6.0D derives a fail-closed offline guard specification from speed*dt, "
-                "but maximum_acceleration_rad_s2 remains null and the source profile "
-                "limits are explicitly not certified"
+                "E6.0X records explicit project-owner acceptance of the E6.0S envelope "
+                "for task 0/P14, empty cell and one source point only. Acceptance is not "
+                "movement authorization; run-specific preflight and activation remain mandatory"
+                if owner_acceptance_verified
+                else (
+                    "E6.0S proves target delta <=0.1 rad, velocity <=0.15 rad/s and "
+                    "acceleration <=0.5 rad/s^2 at 10 ms; E6.0U enforces it from measured "
+                    "state. It is not manufacturer-certified and awaits explicit owner acceptance"
+                    if engineering_envelope_ready_for_owner_decision
+                    else "The project engineering envelope or measured-state enforcement is incomplete"
+                )
             ),
         ),
         gate(
@@ -348,13 +477,14 @@ def main() -> int:
         ),
         gate(
             "fresh_physical_preflight",
-            "PASS" if fresh_preflight_verified else "BLOCKED",
+            "RUN_SPECIFIC_REQUIRED",
             (
-                "Fresh E6.0G confirms both E-stops released, charger disconnected, "
-                "whole-joint state advertised, canonical manipulation preflight passed, "
-                "ROSA action server live, robot stationary, VLA stopped and zero publishers"
+                "E6.0G is historical proof that the physical preflight procedure works, "
+                "but it is not reused as today's authorization. Immediately before an "
+                "authorized run the launcher must recheck E-stops, charger, stationary "
+                "state, deterministic READY, VLA ownership and zero competing publishers"
                 if fresh_preflight_verified
-                else "Fresh released-state canonical manipulation preflight remains incomplete"
+                else "A run-specific released-state canonical manipulation preflight is required"
             ),
         ),
     ]
@@ -388,6 +518,12 @@ def main() -> int:
             "ready_script_exists": args.ready_script.is_file(),
             "physical_executor_path": str(args.physical_executor),
             "physical_executor_exists": args.physical_executor.is_file(),
+            "state_monitor_path": str(args.state_monitor),
+            "state_monitor_exists": args.state_monitor.is_file(),
+            "runtime_process_path": str(args.runtime_process),
+            "runtime_process_exists": args.runtime_process.is_file(),
+            "activation_template_path": str(args.activation_template),
+            "activation_template_sha256": sha256_file(args.activation_template),
             "offline_guard_contract_path": str(
                 runs["E6.0D"] / "offline-executor-guard-contract.json"
             ),
@@ -459,11 +595,43 @@ def main() -> int:
             ),
             "recovery_runtime_loaded_under_estop": recovery_runtime_loaded,
             "recovery_physically_validated": recovery_physically_validated,
+            "sdk_transport_reviewed": sdk_transport.get("all_expectations_passed"),
+            "sdk_software_stop_implemented": sdk_transport.get(
+                "software_stop_implemented"
+            ),
+            "live_sdk_graph_verified": live_sdk_graph_verified,
+            "measured_state_monitor_reviewed": measured_monitor.get(
+                "all_expectations_passed"
+            ),
+            "runtime_measured_acceleration_monitor_implemented": measured_monitor.get(
+                "runtime_measured_acceleration_monitor_implemented"
+            ),
+            "live_state_source_verified": live_state_source_verified,
+            "selected_state_topic": actual["E6.0V"].get("selected_state_topic"),
+            "one_point_runtime_reviewed": one_point_runtime.get(
+                "all_expectations_passed"
+            ),
+            "one_point_ros_process_implemented": one_point_runtime.get(
+                "ros_process_implemented"
+            ),
+            "active_launcher_enabled": one_point_runtime.get(
+                "active_launcher_enabled"
+            ),
+            "physical_runtime_implemented": physical_runtime_implemented,
+            "engineering_envelope_ready_for_owner_decision": engineering_envelope_ready_for_owner_decision,
+            "owner_acceptance_verified": owner_acceptance_verified,
+            "owner_acceptance_is_movement_authorization": owner_acceptance.get(
+                "acceptance_is_movement_authorization"
+            ),
+            "measured_physical_acceleration_validated": measured_monitor.get(
+                "measured_physical_acceleration_validated"
+            ),
         },
         "gates": gates,
         "blocking_gate_count": len(blocking),
         "blocking_gates": blocking,
-        "runtime_preflight_pending": not fresh_preflight_verified,
+        "runtime_preflight_pending": True,
+        "static_readiness_gates_closed": len(blocking) == 0,
         "e6_0_physical_authorized": False,
         "physical_publishers": 0,
         "robot_state_read": False,
@@ -472,8 +640,8 @@ def main() -> int:
         "next_safe_work": [
             "keep_vla_containers_stopped_and_physical_publishers_at_zero",
             "treat_the_owner_accepted_document_proxy_as_a_canary_only_assumption_not_certified_geometry",
-            "resolve the acceleration limit before any physical adapter",
-            "implement and review physical command and STOP transport before any checkpoint command",
+            "create_a_run_specific_activation_grant_only_after_a_fresh_physical_preflight",
+            "keep_the_empty_scene_static_while_waiting_for_the_single_checkpoint_chunk",
         ],
     }
     if args.output:

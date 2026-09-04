@@ -1,0 +1,63 @@
+{
+  "schema": "cruzr-s2-vla-measured-state-monitor-contract-e6.0u-v1",
+  "experiment_id": "E6.0U",
+  "task_id": 0,
+  "axis_profile": "P14_A",
+  "scenario": "NO_BOX_READY",
+  "allowed_state_sources": [
+    {
+      "topic": "/mc/sdk/robot_state",
+      "message_type": "mc_state_msgs/msg/RobotState",
+      "joint_state_field": "joint_states"
+    },
+    {
+      "topic": "/mc/whole_joint_states",
+      "message_type": "sensor_msgs/msg/JointState",
+      "joint_state_field": "."
+    }
+  ],
+  "source_selection_policy": "first_complete_fresh_sample_before_arm_then_latched_no_failover",
+  "commanded_joint_names": [
+    "L_elbow_roll_joint",
+    "L_elbow_yaw_joint",
+    "L_shoulder_pitch_joint",
+    "L_shoulder_roll_joint",
+    "L_shoulder_yaw_joint",
+    "L_wrist_pitch_joint",
+    "L_wrist_roll_joint",
+    "R_elbow_roll_joint",
+    "R_elbow_yaw_joint",
+    "R_shoulder_pitch_joint",
+    "R_shoulder_roll_joint",
+    "R_shoulder_yaw_joint",
+    "R_wrist_pitch_joint",
+    "R_wrist_roll_joint"
+  ],
+  "locked_joint_names": [
+    "head_pitch_joint",
+    "head_yaw_joint",
+    "lifter_pitch_1_joint",
+    "lifter_pitch_2_joint",
+    "lifter_pitch_3_joint",
+    "waist_yaw_joint"
+  ],
+  "ready_arm_positions": [
+    -1.383, -0.754, -0.296, -0.574, -1.888, -0.410, 0.204,
+    -1.383, 0.754, 0.296, -0.574, 1.888, 0.410, 0.204
+  ],
+  "ready_arm_tolerance_rad": 0.01,
+  "initial_stationary_velocity_rad_s": 0.01,
+  "maximum_state_age_seconds": 0.1,
+  "maximum_future_skew_seconds": 0.005,
+  "minimum_acceleration_interval_seconds": 0.008,
+  "maximum_acceleration_interval_seconds": 0.05,
+  "locked_maximum_position_drift_rad": 0.01,
+  "locked_maximum_velocity_rad_s": 0.01,
+  "velocity_field_required": true,
+  "acceleration_method": "finite_difference_of_named_reported_velocity_over_sample_monotonic_time",
+  "stop_policy": "synchronous_once_on_first_fault_or_explicit_stop_then_latched_no_resume",
+  "software_stop_is_hardware_estop_equivalent": false,
+  "physical_execution_default": false,
+  "active_launcher_implemented": false,
+  "physical_execution_authorized": false
+}

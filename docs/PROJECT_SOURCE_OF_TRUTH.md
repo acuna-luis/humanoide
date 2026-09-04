@@ -39,7 +39,7 @@ nuevo el estado físico y lógico.
 | Actuadores | muestra fresca posterior a E6.0Q: 20 ejes presentes, 14 de brazos, velocidad máxima `0`, sin fault y HOME medido | **VERIFICADO DESPUÉS DEL RECOVERY** |
 | Teleoperación PC | combinación oficial robot v0.2.0 + controller 4.7.0 + UI 4.1.0, overlay `clamp,0,0` y control bimanual. La sesión 10:25 terminó por protección FT, no por VR. Tras el reinicio el robot quedó en `AutoTaskMode`; no se ha recargado ni reanudado PICO | **BLOQUEADA HASTA NUEVO PREFLIGHT Y CAMBIO DE MODO AUTORIZADO** |
 | Servicio PC/PICO | el STOP oficial tras `Ctrl+C` quedó confirmado; PC permaneció encendido durante el power cycle del robot | **STOP VERIFICADO; SIN CLIENTE FÍSICO** |
-| VLA | contenedores detenidos, `restart=no`, sin mando físico. READY y recovery deterministas quedaron validados sin caja; el checkpoint no participó y siguen bloqueados el transporte/STOP físico y el límite de aceleración | **RECOVERY CERRADO; PUBLICACIÓN DEL CHECKPOINT AÚN BLOQUEADA** |
+| VLA | contenedores detenidos, `restart=no`, sin mando físico. READY/recovery, transporte SDK, STOP software, monitor medido, fuente de estado y proceso ROS de un punto están validados; el propietario aceptó la envolvente provisional sólo para E6.0 NO_BOX. Falta repetir el preflight físico y emitir un grant exclusivo de la corrida | **GATES ESTÁTICOS CERRADOS; PUBLICACIÓN DEL CHECKPOINT AÚN BLOQUEADA** |
 | Cargador | `CHARGER=0` y baterías `58,5/61,0 %` inmediatamente antes del recovery E6.0Q | **VERIFICADO POR SOFTWARE ANTES DEL ÚLTIMO MOVIMIENTO** |
 | Paros, ruedas y zona | antes de E6.0Q el operador confirmó clamps vacíos, READY estable, ausencia de contactos, zona despejada y persona junto al E-stop; software leyó ambos paros `0/0` y cargador fuera. Reconfirmar físicamente después del recovery | **ÚLTIMO PREFLIGHT APROBADO; NO ASUMIR QUE PERSISTE** |
 | Mapa/localización | `test_route_01` se conservó; activación y localización son volátiles | **RECOMPROBAR** |
@@ -726,6 +726,83 @@ el inventario vigente de bloqueos de tres a dos:
 `physical_executor_implemented_and_reviewed` y
 `certified_acceleration_limit`. Continúa con `E6.0_PHYSICAL_AUTHORIZED=0`.
 
+El trabajo de cierre E6.0R/S/T avanzó esos dos gates sin mover el robot.
+E6.0R `20260903T142823_E6.0R` implementó y probó offline el adaptador P14 de
+un punto para `/mc/sdk/robot_command`: 43 casos funcionales y 8 tamper pasaron,
+incluyendo STOP idempotente, purga, no replay y fallo de backend cerrado. El
+backend ROS existe sólo como componente inyectable, sin `main`, autoarranque ni
+launcher activo. E6.0T autoritativo `20260903T143529_E6.0T` verificó en vivo y
+sólo lectura que el transporte correcto es `mc_task_msgs/msg/RobotCommand` en
+`/mc/sdk/robot_command`, con dos suscriptores, y que
+`/mc/sdk/robot_state` tiene dos publicadores; los topics alternativos directos
+de brazos no existen. Ambos contenedores VLA estaban `exited` y había cero
+publicadores de comando. Los runs T `142955`, `143123` y `143255` se descartan
+por auditorías incompletas/corregidas y no accedieron a movimiento.
+
+E6.0S `20260903T144344_E6.0S` validó localmente una envolvente de ingeniería
+reemplazable para el canary sin caja: delta máximo `0,1 rad`, velocidad
+`0,15 rad/s`, aceleración `0,5 rad/s²`, muestreo `0,01 s` y transición
+minimum-jerk `0,5–2,0 s`. Pasaron 28 casos dirigidos y 2.000 aleatorios. No es
+un límite certificado por el fabricante ni está todavía aceptado por el
+propietario.
+
+E6.0U `20260904T073609_E6.0U` implementó el monitor fail-closed sobre estado
+medido: exige los 14 ejes de brazos y los seis ejes H/L/W bloqueados, estado y
+velocidad frescos, READY inicial, `|v_arm|<=0,15 rad/s`,
+`|a_arm|<=0,5 rad/s²`, deriva H/L/W `<=0,01 rad` y velocidad H/L/W
+`<=0,01 rad/s`. Pasaron 152 casos y 8 tamper. E6.0V
+`20260904T073852_E6.0V` seleccionó en vivo y sólo lectura
+`/mc/whole_joint_states`: entregó 22 nombres/posiciones/velocidades con QoS
+reliable; `/mc/sdk/robot_state` tenía dos publicadores pero no produjo payload
+en 3 s. También confirmó que los dos consumidores de
+`/mc/sdk/robot_command` usan BEST_EFFORT y que había cero publicadores.
+
+E6.0W `20260904T074537_E6.0W` implementó el coordinador y proceso ROS acotado
+de un punto. Pasaron 24 casos de runtime y 3 casos de activación. Sólo acepta
+el punto 0 de un chunk 10x20 de task 0/P14, mantiene H/L/W con el estado fresco,
+crea el publicador SDK de forma perezosa tras READY+chunk válidos y destruye el
+publicador al completar, fallar o recibir STOP. La plantilla versionada exige
+una escena vacía estática y conserva `owner_accepted=false`,
+`active_launcher_enabled=false` y `physical_execution_authorized=false`.
+
+E6.0X `20260904T075519_E6.0X` registra la aceptación explícita del propietario
+de esa envolvente únicamente para `NO_BOX_READY`, task 0, P14 y un solo punto.
+El registro referencia por SHA-256 los límites aceptados y deja expresamente
+`acceptance_is_movement_authorization=false` y
+`physical_execution_authorized=false`.
+
+El consolidado vigente `20260904T075648_E6.0-CHECK` consume E6.0R–X. El gate
+de ejecutor queda `PASS_CODE_OFFLINE_ACTIVATION_GATED`, la aceptación queda
+`PASS` y hay cero bloqueos estáticos. El preflight anterior se clasifica
+`RUN_SPECIFIC_REQUIRED` y no se reutiliza hoy. No se creó ningún publicador ni
+se movió el robot. El siguiente paso es montar la celda vacía, ejecutar un
+preflight físico fresco y, sólo si pasa, generar un grant exclusivo de esa
+corrida. Sigue `E6.0_PHYSICAL_AUTHORIZED=0`.
+
+El preflight fresco de fase A `20260904T075947_E6.0G`, realizado sólo en
+lectura con los paros declarados accionados, confirmó Motion/ROS en ejecución,
+`HW_TYPE=cruzr_s2_v1`, cargador fuera, baterías `45,8/48,5 %`, READY S2
+registrado con hash `c767f739…a9b2`, VLA `exited/exited` y cero publicadores.
+Software leyó `ESTOP_KEY=1` pero `SERVO_ESTOP_KEY=0`: el principal sí quedó
+corroborado; el paro físico de chasis no tiene corroboración positiva por esa
+señal. Como es normal bajo E-stop, no había whole-state ni action server y no
+se evaluó estacionariedad. No hubo movimiento ni autorización. Reanudación:
+liberar físicamente ambos paros bajo supervisión y repetir inmediatamente el
+preflight con `--expect-released`, sin pulsar Power/KEY1/Start.
+
+Tras la confirmación física de liberación, dos lecturas mostraron
+`ESTOP_KEY=0`, `SERVO_ESTOP_KEY=0` y cargador `0`, pero siguieron ausentes
+`/mc/whole_joint_states` y el servidor `/mc/manipulation/action`. El preflight
+canónico falló cerrado y no envió movimiento. Una primera invocación local de
+`cruzr_v020_boot_guard.sh --check` desde el PC produjo
+`containers_not_ready`; se descarta porque ese binario debe ejecutarse dentro
+de Vision. La invocación correcta de la copia instalada en `192.168.11.3`
+confirmó v0.2.0, 3/3 probes x86, 2/2 rondas de las seis cámaras y seguridad
+`0 0 0`, pero `CONTROL_STATE=unknown`; fue sólo lectura. Esto confirma el
+estado post-E-stop no rearmado. No pulsar Power/KEY1/Start aisladamente ni
+invocar StartMotion por ROS: hace falta el ciclo completo supervisado de
+apagado y arranque descrito para v0.2.0.
+
 La evidencia VLA ya no depende de variables exportadas por un bloque anterior.
 `new_vla_evidence_run.sh` crea cada run de forma exclusiva y rechaza `/` y
 rutas existentes. E1.1/E1.2, los smoke E2.0/E2.1 y las repeticiones E2.3 tienen
@@ -733,7 +810,7 @@ wrappers autocontenidos; E2.3 usa sesiones independientes y STOP entre runs.
 E2.2, E3.0, E3.1, E3.2, E3.3, E4.0, E4.1, E4.1C, E4.1D, E4.1E,
 E4.1F, E4.2, E5.0, E5.1, E5.2, E6.0A, E6.0B, E6.0C, E6.0D, E6.0E, E6.0F,
 E6.0G, E6.0H, E6.0I, E6.0J, E6.0K, E6.0L, E6.0M, E6.0N, E6.0O, E6.0P,
-E6.0Q y E6.0-CHECK
+E6.0Q, E6.0R, E6.0S, E6.0T, E6.0U, E6.0V, E6.0W, E6.0X y E6.0-CHECK
 disponen ahora de
 evaluador/sink y wrappers autocontenidos. Los ejemplos aún no implementados de
 VLA-T00…T08 inicializan su directorio
@@ -1287,6 +1364,10 @@ actualizarse este archivo antes de cerrar la sesión.
 
 | Fecha | Hito | Resultado |
 |---|---|---|
+| 2026-09-04 | Liberación de paros no rearma Motion | señales `0/0/0`, pero sin whole-state ni action server; preflight fail-closed, cero movimiento. Guard ejecutado correctamente en Vision: v0.2.0, x86 3/3, cámaras 2/2, `CONTROL_STATE=unknown`, `RECOVERY_ELIGIBLE=0`. El `containers_not_ready` previo se descarta por haberse ejecutado localmente en PC. Siguiente paso: ciclo completo supervisado; no Power/KEY1/Start aislados |
+| 2026-09-04 | E6.0 preflight fresco fase A | run `20260904T075947_E6.0G`: principal corroborado activo (`1`), servo/chasis no corroborado (`0`), cargador fuera, baterías 45,8/48,5 %, READY S2 correcto, VLA detenido y cero publicadores. Sin estado/action server bajo E-stop, sin movimiento. Pendiente liberar ambos paros y repetir `--expect-released` |
+| 2026-09-04 | E6.0U/V/W/X y consolidado | U `20260904T073609_E6.0U`: monitor medido, 160/160 casos. V `20260904T073852_E6.0V`: estado vivo `/mc/whole_joint_states`, 22/22/22, command QoS BEST_EFFORT y cero publicadores. W `20260904T074537_E6.0W`: runtime/proceso ROS de un punto, 27/27 casos, publicador perezoso y activación cerrada. X `20260904T075519_E6.0X`: propietario acepta `0,1 rad / 0,15 rad/s / 0,5 rad/s²` sólo para NO_BOX y no como autorización de movimiento. CHECK `20260904T075648_E6.0-CHECK`: cero gates estáticos; preflight/grant de corrida pendientes, sin movimiento ni autorización física |
+| 2026-09-03 | Cierre E6.0R/S/T | R `20260903T142823_E6.0R`: adaptador SDK/STOP offline, 51/51 casos. T autoritativo `20260903T143529_E6.0T`: `/mc/sdk/robot_command` es el transporte vivo correcto, cero publicadores, VLA detenido; runs T previos descartados. S `20260903T144344_E6.0S`: 2.028/2.028 trayectorias dentro de 0,1 rad, 0,15 rad/s y 0,5 rad/s². Falta monitor medido, launcher cerrado y aceptación del propietario; sin autorización física |
 | 2026-09-03 | E6.0-CHECK posterior a Q | run `20260903T140006_E6.0-CHECK`: consume la evidencia física de READY/recovery y marca ese gate PASS. Quedan 2 bloqueos: transporte/STOP físico y aceleración; `E6.0_PHYSICAL_AUTHORIZED=0` |
 | 2026-09-03 | E6.0Q READY/recovery físico sin caja | run `20260903T135236_E6.0Q`: READY S2 y segundo recovery `s2_vla_e6_0_exact_recovery` terminaron `SUCCEED/status=4`; HOME final medido en 20 ejes, velocidad cero. El primer recovery no movió y reveló YAML en la raíz de paquete errónea; el fatal reinició una vez el task manager. Se corrigieron ruta MetaMove y cintura 1D, XML `9e47b6ee…4fbcc`, backup `20260903T134947_E6.0Q`. VLA `exited/exited`, `publishers:0`. El auditor canary queda con 2 gates: transporte/STOP físico y aceleración |
 | 2026-09-03 | E6.0P primer ready físico, recovery y overlay cintura S2 | desde home medido, el ready vendor fue aceptado pero falló porque enviaba dos valores a la cintura S2 de un eje; el paralelo abortó cabeza/brazos y dejó sólo un avance parcial quieto. Sin fuerza/colisión/fault, una vuelta única `cruzr/home` terminó `SUCCEED/status=4` y home quedó medido. Se aplicó después sólo el overlay `joint_angles="0.0"`, hash `c767f739…a9b2`, con backup `20260903T133300_E6.0P`; sin reload, VLA, publicador ni movimiento. Reintento supervisado pendiente |

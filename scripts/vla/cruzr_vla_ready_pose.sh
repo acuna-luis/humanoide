@@ -12,8 +12,9 @@ Modos reservados, todavía bloqueados:
 
 --check y --dry-plan son exclusivamente locales: no conectan al robot, no
 instalan, no recargan, no usan ROS y no mueven. Los modos activos permanecen
-bloqueados hasta validar físicamente la recuperación y definir un límite de
-aceleración aprobado para el canary.
+bloqueados en este wrapper. READY/recovery ya fueron validados físicamente en
+E6.0Q y el sobre fue aceptado en E6.0X; el canary requiere todavía
+preflight/grant fresco de la corrida.
 EOF
 }
 
@@ -60,7 +61,7 @@ if [[ "$MODE" == --dry-plan ]]; then
   cat <<'EOF'
 E6.0_READY_PLAN=measured-home -> vendor staging -> waypoint A -> ready B
 E6.0_RECOVERY_PLAN=ready B -> waypoint A -> vendor staging -> numeric home
-E6.0_ACTIVE_MODES=blocked-pending-supervised-physical-validation
+E6.0_ACTIVE_MODES=blocked-pending-run-specific-preflight-and-grant
 EOF
 fi
 printf 'E6.0_READY_RECOVERY_PHYSICAL_AUTHORIZED=0\n'
