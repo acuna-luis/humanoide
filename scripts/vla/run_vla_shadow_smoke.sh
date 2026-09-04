@@ -4,7 +4,7 @@ set -Eeuo pipefail
 usage() {
   cat <<'EOF'
 Uso: ./scripts/vla/run_vla_shadow_smoke.sh --task-id 0|2
-       [--experiment-id ID] [--output-dir DIR]
+       [--experiment-id ID] [--output-dir DIR] [--shadow-profile NAME.json]
 
 Ejecuta un único smoke test VLA en shadow y crea evidencia autocontenida.
 Task 0 corresponde a E2.0 y task 2 a E2.1. No publica RobotCommand ni mueve
@@ -19,6 +19,7 @@ EVIDENCE_SCRIPT="$SCRIPT_DIR/new_vla_evidence_run.sh"
 TASK_ID=""
 EXPERIMENT_ID=""
 RUN_DIR=""
+SHADOW_PROFILE="cruzr_s2_vla_profile.json"
 
 while (($#)); do
   case "$1" in
@@ -35,6 +36,11 @@ while (($#)); do
     --experiment-id)
       (($# >= 2)) || { echo "ERROR: --experiment-id requiere ID" >&2; exit 2; }
       EXPERIMENT_ID="$2"
+      shift 2
+      ;;
+    --shadow-profile)
+      (($# >= 2)) || { echo "ERROR: --shadow-profile requiere NAME.json" >&2; exit 2; }
+      SHADOW_PROFILE="$2"
       shift 2
       ;;
     -h|--help)
@@ -60,6 +66,11 @@ case "$TASK_ID" in
     ;;
   *) echo "ERROR: --task-id debe ser 0 o 2" >&2; exit 2 ;;
 esac
+[[ "$SHADOW_PROFILE" =~ ^[A-Za-z0-9._-]+[.]json$ ]] || {
+  echo "ERROR: --shadow-profile debe ser un basename JSON seguro" >&2
+  exit 2
+}
+test -s "$SCRIPT_DIR/runtime/$SHADOW_PROFILE"
 
 for tool in find grep jq sha256sum tee wc; do
   command -v "$tool" >/dev/null || {
@@ -97,12 +108,12 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-"$SHADOW_SCRIPT" --check \
+"$SHADOW_SCRIPT" --check --profile "$SHADOW_PROFILE" \
   2>&1 | tee "$RUN_DIR/01_check.log"
 cleanup_required=1
-"$SHADOW_SCRIPT" --start-shadow --shadow-duration 180 \
+"$SHADOW_SCRIPT" --start-shadow --shadow-duration 180 --profile "$SHADOW_PROFILE" \
   2>&1 | tee "$RUN_DIR/02_start_shadow.log"
-"$SHADOW_SCRIPT" --start-inference \
+"$SHADOW_SCRIPT" --start-inference --profile "$SHADOW_PROFILE" \
   2>&1 | tee "$RUN_DIR/03_start_inference.log"
 "$SHADOW_SCRIPT" --trigger --task-id "$TASK_ID" --inference-duration 8 \
   2>&1 | tee "$RUN_DIR/04_task${TASK_ID}.log"
@@ -158,6 +169,7 @@ CHUNK_COUNT="$(jq -r '.chunks' "$RUN_DIR/shadow_summary.json")"
   echo "ERROR: no se recibió ningún chunk con verdict" >&2
   exit 1
 }
+INPUT_EVIDENCE_COUNT="$(find "$RUN_DIR/exported/inputs" -maxdepth 1 -type f -name 'input-*.json' 2>/dev/null | wc -l)"
 
 cat > "$RUN_DIR/actual_result.yaml" <<EOF
 experiment_id: $EXPERIMENT_ID
@@ -167,6 +179,7 @@ start_time: $START_TIME
 end_time: $(date --iso-8601=seconds)
 status: PASS_SHADOW_SAFETY_ONLY
 scenario_id: LIVE_CURRENT_SCENE_OOD_SHADOW
+shadow_profile: $SHADOW_PROFILE
 task_id: $TASK_ID
 task_text: $TASK_TEXT
 task_outcome: SHADOW_VERDICT_ONLY_NOT_PHYSICAL_TASK_SUCCESS
@@ -177,6 +190,7 @@ actual_observations:
   chunks: $CHUNK_COUNT
   accepted: $(jq -r '.accepted' "$RUN_DIR/shadow_summary.json")
   rejected: $(jq -r '.rejected' "$RUN_DIR/shadow_summary.json")
+  input_evidence_count: $INPUT_EVIDENCE_COUNT
   reasons: $(jq -c '.reasons' "$RUN_DIR/shadow_summary.json")
   inference_container: exited
   control_container: exited
@@ -194,6 +208,7 @@ files:
   - exported/shadow-process.log
   - exported/inference-process.log
   - exported/status_after_export.log
+  - exported/inputs/
   - shadow_summary.json
   - evidence.sha256
 failure_reason: null

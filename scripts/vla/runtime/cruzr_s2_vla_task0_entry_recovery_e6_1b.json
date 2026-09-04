@@ -139,7 +139,7 @@
   },
   "sources": {
     "e6_1a_run": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260904T103516_E6.1A",
-    "e6_1a_report_sha256": "a4d4be29b8eabbe40e80793aee5ed28463a248c05425895d1308fb31f47928b6",
+    "e6_1a_report_sha256": "f4501cfc7fdf931e0143b422359429911f2f1242a5a8bd01f41c48557a51087e",
     "candidate_json_sha256": "8808f83c8ea226737f017e150211c3b9c93dd03079d5d6c77385e4f4adac4594"
   },
   "physical_execution_authorized": false,
