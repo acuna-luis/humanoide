@@ -11,9 +11,9 @@ Uso:
   ./scripts/vla/run_vla_canary_physical_e6_0y.sh --stop
 
 E6.0Y separa cada movimiento. --ready mueve de HOME a READY. --one-point
-arranca sólo el adaptador de inferencia y el ejecutor acotado del proyecto,
-consume el punto 0 de un único chunk task 0 y destruye el publicador al
-terminar o fallar. --recover sólo acepta READY medido y vuelve a HOME.
+queda retirado: el checkpoint task 0 no puede acondicionarse con una escena
+NO_BOX ni con H/L/W distintos de su entrada de entrenamiento. --recover sólo
+acepta READY medido y vuelve a HOME.
 
 Cada modo de movimiento exige preflight fresco y confirmación exacta propia.
 No se arranca el ejecutor físico entregado por UBTECH. El STOP software no
@@ -57,6 +57,7 @@ readonly RECOVERY_TASK="s2_bio_vla/s2_vla_e6_0_exact_recovery"
 readonly READY_CONFIRMATION="AUTORIZO READY E6.0 SIN CAJA: HOME MEDIDO, CLAMPS VACIOS, ZONA 1.5 M VACIA, DOS PERSONAS Y MANO EN E-STOP"
 readonly POINT_CONFIRMATION="AUTORIZO E6.0 UN PUNTO VLA SIN CAJA: READY MEDIDO, CLAMPS VACIOS, ZONA 1.5 M VACIA, DOS PERSONAS Y MANO EN E-STOP"
 readonly RECOVERY_CONFIRMATION="AUTORIZO RECOVERY E6.0 A HOME: READY MEDIDO, CLAMPS VACIOS, ZONA 1.5 M VACIA, DOS PERSONAS Y MANO EN E-STOP"
+readonly ONE_POINT_BLOCK_REASON="E6.0 NO_BOX retirado: task 0 exige caja/estante y un estado 20D compatible; no se aumentará el límite de 0.1 rad"
 
 CRUZR_SSH_PASSWORD="${CRUZR_SSH_PASSWORD:-$DEFAULT_PASSWORD}"
 export CRUZR_SSH_PASSWORD
@@ -227,6 +228,12 @@ case "$MODE" in
     printf 'E6.0Y_STOPPED=containers-exited,publishers-0\n'
     exit 0
     ;;
+  --one-point)
+    printf 'E6.0Y_ONE_POINT_RETIRED=1\n' >&2
+    printf 'ERROR: %s\n' "$ONE_POINT_BLOCK_REASON" >&2
+    printf 'NEXT_GATE=task-matched-20D-ready,task-matched-scene,shadow-entry-qualification\n' >&2
+    exit 3
+    ;;
 esac
 
 nc -z -w3 "$MOTION_HOST" 22 || { printf 'ERROR: Motion no responde.\n' >&2; exit 1; }
@@ -293,6 +300,8 @@ EOF
     printf 'E6.0Y_RECOVERY_EVIDENCE_OK=%s\n' "$run_dir"
     ;;
   --one-point)
+    # Unreachable by design. Kept as historical implementation evidence until
+    # the task-matched successor has a separate contract and launcher.
     preflight_before="$(released_preflight)"
     ready_before="$(capture_ready)"
     grep -Fq 'MEASURED_READY=1' <<<"$ready_before" || {

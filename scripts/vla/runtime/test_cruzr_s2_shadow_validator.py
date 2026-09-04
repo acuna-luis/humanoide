@@ -48,6 +48,20 @@ class ShadowValidatorTests(unittest.TestCase):
             state_positions=state,
         )
         self.assertTrue(result.accepted, result.reasons)
+        self.assertEqual(
+            result.metrics["first_point_positions"],
+            dict(zip(self.profile["joint_names"], state)),
+        )
+        self.assertTrue(
+            all(
+                value == 0.0
+                for value in result.metrics["first_point_signed_delta"].values()
+            )
+        )
+        self.assertEqual(
+            result.metrics["maximum_commanded_first_point_delta"]["absolute_delta"],
+            0.0,
+        )
 
     def test_wrong_dimension_is_rejected(self):
         points, state = self.valid_points()

@@ -25,6 +25,7 @@ class RuntimeDecision:
     reasons: list[str] = field(default_factory=list)
     frames_published: int = 0
     physical_execution_authorized: bool = False
+    diagnostics: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -34,6 +35,7 @@ class RuntimeDecision:
             "reasons": list(self.reasons),
             "frames_published": self.frames_published,
             "physical_execution_authorized": self.physical_execution_authorized,
+            "diagnostics": dict(self.diagnostics),
         }
 
 
@@ -178,12 +180,15 @@ class OnePointCanaryRuntime:
         elif self.backend is not None:
             self.backend.stop()
 
-    def _fault(self, reason: str) -> RuntimeDecision:
+    def _fault(
+        self, reason: str, diagnostics: Mapping[str, Any] | None = None
+    ) -> RuntimeDecision:
         monitor_decision = self.monitor.fault(reason)
         self.state = "FAULTED"
         return RuntimeDecision(
             "fault", False, self.state,
             [reason, *monitor_decision.reasons], self.frames_published,
+            diagnostics={} if diagnostics is None else dict(diagnostics),
         )
 
     def _ordered_state(self, sample: Mapping[str, Any]) -> list[float]:
@@ -327,6 +332,29 @@ class OnePointCanaryRuntime:
         # discarded and replaced with the fresh measured hold before the
         # transport-neutral intent is constructed.
         point[14:] = self.latest_positions[14:]
+        signed_arm_delta = [
+            target - measured
+            for measured, target in zip(self.latest_arm_positions, point[:14])
+        ]
+        maximum_delta_index = max(
+            range(14), key=lambda index: abs(signed_arm_delta[index])
+        )
+        chunk_diagnostics = {
+            "checkpoint_action_semantics": "absolute_joint_position",
+            "measured_arm_positions": list(self.latest_arm_positions),
+            "source_first_point_arm_positions": list(point[:14]),
+            "source_first_point_signed_arm_delta": signed_arm_delta,
+            "maximum_source_first_point_delta": {
+                "joint_index": maximum_delta_index,
+                "joint": self.profile["joint_names"][maximum_delta_index],
+                "signed_delta": signed_arm_delta[maximum_delta_index],
+                "absolute_delta": abs(signed_arm_delta[maximum_delta_index]),
+                "limit": float(
+                    self.limits["maximum_target_delta_rad"][maximum_delta_index]
+                ),
+            },
+            "locked_axes_replaced_with_measured_hold": True,
+        }
         intent = {
             "schema": self.transport_contract["input_intent_schema"],
             "task_id": 0,
@@ -348,7 +376,9 @@ class OnePointCanaryRuntime:
                 self.latest_arm_positions, point[:14], self.limits
             )
         except ValueError as exc:
-            return self._fault(f"transport:preflight:{exc}")
+            return self._fault(
+                f"transport:preflight:{exc}", diagnostics=chunk_diagnostics
+            )
         try:
             self.backend = self.backend_factory()
             self.adapter = self.transport_type.OnePointSdkTransportAdapter(
@@ -372,6 +402,7 @@ class OnePointCanaryRuntime:
         return RuntimeDecision(
             "chunk", True, self.state, frames_published=self.frames_published,
             physical_execution_authorized=True,
+            diagnostics=chunk_diagnostics,
         )
 
     def tick(self, *, now_seconds: Any) -> RuntimeDecision:

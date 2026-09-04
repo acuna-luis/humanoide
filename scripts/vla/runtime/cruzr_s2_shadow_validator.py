@@ -194,8 +194,29 @@ def validate_chunk_data(
             state = _finite_vector(state_positions, dim, "robot_state", reasons)
             if len(state) == dim:
                 delta_limits = [float(value) for value in profile["max_first_point_delta"]]
-                deltas = [abs(position_rows[0][i] - state[i]) for i in range(dim)]
+                signed_deltas = [position_rows[0][i] - state[i] for i in range(dim)]
+                deltas = [abs(value) for value in signed_deltas]
+                metrics["state_positions"] = dict(zip(profile["joint_names"], state))
+                metrics["first_point_positions"] = dict(
+                    zip(profile["joint_names"], position_rows[0])
+                )
+                metrics["first_point_signed_delta"] = dict(
+                    zip(profile["joint_names"], signed_deltas)
+                )
                 metrics["first_point_delta"] = dict(zip(profile["joint_names"], deltas))
+                commanded_indices = [
+                    index
+                    for index, name in enumerate(profile["joint_names"])
+                    if name in commanded_names
+                ]
+                maximum_index = max(commanded_indices, key=lambda index: deltas[index])
+                metrics["maximum_commanded_first_point_delta"] = {
+                    "joint_index": maximum_index,
+                    "joint": profile["joint_names"][maximum_index],
+                    "signed_delta": signed_deltas[maximum_index],
+                    "absolute_delta": deltas[maximum_index],
+                    "limit": delta_limits[maximum_index],
+                }
                 violations = [
                     {
                         "joint": profile["joint_names"][i],

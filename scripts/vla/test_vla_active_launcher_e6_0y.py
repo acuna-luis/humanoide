@@ -135,6 +135,11 @@ CANONICAL_MANIPULATION_PREFLIGHT=passed-read-only
         "cleanup_stops_containers": '"$SHADOW" --stop' in launcher_source,
         "hardware_estop_warning": "STOP software no" in launcher_source,
         "motion_clock_bound_grant": "--reference-epoch \"$motion_epoch\"" in launcher_source,
+        "no_box_checkpoint_entry_retired": (
+            'E6.0Y_ONE_POINT_RETIRED=1' in launcher_source
+            and 'task-matched-20D-ready,task-matched-scene,shadow-entry-qualification'
+            in launcher_source
+        ),
     }
     assert all(checks.values()), checks
     print("E6.0Y_OFFLINE_CASES=grant-valid,grant-estop-rejected,grant-clock-skew-rejected,ready-valid,ready-delta-rejected")

@@ -1,0 +1,44 @@
+{
+  "schema": "cruzr-s2-vla-task-entry-contract-e6.0z-v1",
+  "checkpoint_metadata_sha256": "46287335b211cd24a12991481e0f1121e74b4dd3c49b9a25d6fc62ce7de9a572",
+  "dataset_info_sha256": "de9b4150459ef2d1401174f298b8eda31ba56f8fe2e4b216478add19202d2a4f",
+  "dataset_tasks_sha256": "3ece0364756980e406921fddfcdac1c3ab3c1009621bf0244087a83bbc7b1a2d",
+  "action_semantics": "absolute_joint_position_rad",
+  "entry_state": {
+    "dimensions": 20,
+    "distance": "chebyshev_rad_to_one_same-task_dataset_frame_zero",
+    "maximum_distance_rad": 0.01,
+    "maximum_distance_is_manufacturer_certified": false,
+    "require_all_axes_inside_same_task_observed_bounds": true
+  },
+  "shadow_qualification": {
+    "minimum_fresh_chunks_same_scene_and_state": 5,
+    "maximum_first_point_command_delta_rad": 0.1,
+    "reject_clipping_or_projection": true,
+    "actual_active_chunk_must_be_revalidated": true
+  },
+  "tasks": {
+    "0": {
+      "instruction": "Pick up the large box from the lowest level of shelf",
+      "required_scenario": "SUPPORTED_LOW"
+    },
+    "1": {
+      "instruction": "Place the large box on the lowest level of shelf",
+      "required_scenario": "HELD_LOW"
+    },
+    "2": {
+      "instruction": "Pick up the large box from the middle level of shelf",
+      "required_scenario": "SUPPORTED_MIDDLE"
+    },
+    "3": {
+      "instruction": "Place the large box on the middle level of shelf",
+      "required_scenario": "HELD_MIDDLE"
+    }
+  },
+  "physical_execution_authorized": false,
+  "notes": [
+    "The 0.01 rad entry tolerance is a conservative project gate, not a UBTECH certified limit.",
+    "Passing this contract only qualifies an input for fresh shadow inference; it never authorizes robot motion.",
+    "A checkpoint target is never reinterpreted as a delta and is never clipped to pass the command limit."
+  ]
+}

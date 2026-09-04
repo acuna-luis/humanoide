@@ -210,6 +210,16 @@ def main() -> int:
             and len(factory.backend.frames) == runtime.frames_published
             and len(factory.backend.frames) >= 2
             and factory.backend.stop_count == 1
+            and chunk_decision.diagnostics["checkpoint_action_semantics"]
+            == "absolute_joint_position"
+            and chunk_decision.diagnostics[
+                "maximum_source_first_point_delta"
+            ]["joint"] == "L_elbow_roll_joint"
+            and abs(
+                chunk_decision.diagnostics[
+                    "maximum_source_first_point_delta"
+                ]["signed_delta"] - 0.05
+            ) < 1e-12
         ),
         "frames_published": runtime.frames_published,
         "backend_stop_count": 0 if factory.backend is None else factory.backend.stop_count,
