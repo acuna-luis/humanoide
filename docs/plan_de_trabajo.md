@@ -76,7 +76,7 @@ Los porcentajes no estiman probabilidad de éxito del robot:
 | E6.0 | 100 % | 3 % | 3,0 pp | CRÍTICA | ✅ `RETIRED_FAIL_CLOSED`; cero frames publicados | No repetir ni aumentar `0,1 rad` |
 | E6.1 | 40 % | 6 % | 2,4 pp | CRÍTICA | 🔄 ENTRY/recovery y campaña shadow implementados, no ejecutados físicamente | Congelar fixture/ENTRY y obtener 5 shadow frescos |
 | ↳ E6.1A | 100 % | Incluido en E6.1 | — | CRÍTICA | ✅ Auditoría offline `20260904T103516_E6.1A` | Cerrado; no autoriza movimiento |
-| ↳ E6.1B | 100 % offline | Incluido en E6.1 | — | CRÍTICA | ✅ Paquete fail-closed `20260904T113252_E6.1B` | Ejecutar gates vivos por separado; no autoriza movimiento |
+| ↳ E6.1B | 100 % offline | Incluido en E6.1 | — | CRÍTICA | ✅ Paquete fail-closed `20260904T114452_E6.1B` | Ejecutar gates vivos por separado; no autoriza movimiento |
 | E6.2 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | PASS completo de E6.1 + launcher revisado |
 | E6.3 | 0 % | 3 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | PASS E6.2 antes de añadir H/W/L |
 | E6.4 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | Ejecutor físico y STOP validados |
@@ -1617,7 +1617,7 @@ movimiento. Su PASS cierra sólo el diseño offline (subgate al `100 %`) y deja
 E6.1 global al `20 %` en ese punto histórico.
 
 **Resultado E6.1B offline 2026-09-04:** PASS del paquete fail-closed en
-`20260904T113252_E6.1B`, reproducible con:
+`20260904T114452_E6.1B`, reproducible con:
 
 ```bash
 ./scripts/vla/audit_vla_task_entry_recovery_e6_1b.sh --check

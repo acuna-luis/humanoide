@@ -624,7 +624,7 @@ con el proxy clamp; el autoritativo excluye correctamente PGC y conserva el
 PASS.
 
 E6.1B queda implementado offline y auditado en
-`20260904T113252_E6.1B`. El contrato fija los 20 ejes de
+`20260904T114452_E6.1B`. El contrato fija los 20 ejes de
 `episode_000040/frame 0`; los XML ENTRY/recovery sólo son previews sin
 instalador ni modo `--run`. El checker exige fixture medido/fotografiado,
 estado fresco a `<=0,01 rad`, velocidad `<=0,01 rad/s` y los 20 ejes

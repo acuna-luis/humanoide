@@ -229,7 +229,7 @@ demuestra reproducibilidad del contrato RGB+20D→10×20, no generalización ni
 publicadores y sin lectura o movimiento del robot.
 
 E6.1B añadió una campaña task-matched reproducible sin habilitar movimiento.
-El run offline `20260904T113252_E6.1B` fija
+El run offline `20260904T114452_E6.1B` fija
 `episode_000040/frame 0/task 0`, su orden exacto de 20 articulaciones y el
 perfil P14. En cada una de las cinco sesiones shadow futuras se guarda el RGB
 y el estado 20D sincronizados realmente entregados al checkpoint, junto con

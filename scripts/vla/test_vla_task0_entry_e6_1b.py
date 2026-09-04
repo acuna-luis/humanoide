@@ -85,6 +85,33 @@ def main() -> int:
         assert accepted.returncode == 0, accepted.stderr
         assert json.loads(accepted.stdout)["qualified_for_five_shadow"] is True
 
+        # The owner's larger 83.8 x 84 cm, 77 cm-high table is deliberately
+        # accepted by the fixture gate once its still-unmeasured thickness and
+        # the remaining physical facts are frozen.  The 75 x 50 cm reference
+        # is a minimum usable surface, not an exact-size scene lock.
+        available_table_manifest = json.loads(json.dumps(manifest))
+        available_table_manifest["fixture_id"] = "AVAILABLE_TABLE_TEST_ONLY"
+        available_table_manifest["support"].update(
+            {
+                "surface_height_floor_m": 0.77,
+                "width_m": 0.838,
+                "depth_m": 0.84,
+                "thickness_m": 0.04,
+            }
+        )
+        manifest_path.write_text(
+            json.dumps(available_table_manifest), encoding="utf-8"
+        )
+        accepted_available_table = subprocess.run(
+            base, check=False, text=True, capture_output=True
+        )
+        assert accepted_available_table.returncode == 0, accepted_available_table.stderr
+        available_table_result = json.loads(accepted_available_table.stdout)
+        assert available_table_result["fixture_qualified"] is True
+        assert available_table_result["physical_execution_authorized"] is False
+
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
         bad_state = dict(state)
         bad_state["positions"] = list(state["positions"])
         bad_state["positions"][0] += 0.011
@@ -115,7 +142,7 @@ def main() -> int:
             rejected_hash.stdout
         )["rejection_reasons"]
 
-    print("E6.1B_ENTRY_GATE_CASES=4")
+    print("E6.1B_ENTRY_GATE_CASES=5")
     print("E6.1B_ENTRY_GATE_FAILED_EXPECTATIONS=0")
     print("E6.1B_ENTRY_GATE_ROS_IMPORTED=0")
     print("E6.1B_ENTRY_GATE_ROBOT_ACCESSED=0")
