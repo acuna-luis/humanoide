@@ -1360,6 +1360,26 @@ detenidos y cero publicadores. Una captura posterior mantiene
 `MEASURED_READY=1`, error máximo `0,001842 rad` y velocidad cero. No se repite
 READY; el punto requiere una autorización nueva de esta corrida.
 
+El segundo intento `20260904T091928_E6.0Y` sí ejecutó inferencia task 0 y
+generó tres chunks. El primer punto fue `REJECT_SAFE` porque el objetivo del
+eje 2 superaba el delta provisional `0,1 rad`; no se publicó ningún frame y el
+robot no se movió. El backend llegó a crear transitoriamente el publicador,
+que fue destruido al rechazar, con estado final `publishers:0`. Se corrigió el
+runtime para planificar y validar antes de crear el publicador; E6.0W
+`20260904T092245_E6.0W` y E6.0Y `20260904T092246_E6.0Y-OFFLINE` pasan. El
+robot continúa en READY medido, error máximo `0,001842 rad`, velocidad cero.
+Antes de otro canary se debe capturar/analizar el punto de checkpoint en
+shadow y explicar la discontinuidad; queda prohibido subir el límite o repetir
+automáticamente.
+
+El recovery posterior `20260904T092716_E6.0Y-RECOVERY` terminó
+`SUCCEED/status=4` y midió HOME en los 20 ejes: cuerpo ≤`0,002780 rad`, brazos
+≤`0,000959 rad`, velocidad cero. VLA quedó detenido y con cero publicadores.
+Con esto se cierra el ciclo físico E6.0 sin caja. Antes de volver a mover, el
+siguiente experimento debe ser shadow: conservar el primer punto normalizado,
+cuantificar el delta de cada brazo y determinar por qué task 0 no es continuo
+desde READY en la escena vacía.
+
 #### Experimento 6.0 — Un punto P14 sin caja
 
 **Escenario actual:** plataforma y B0 retiradas >1,5 m; READY S2 medido;

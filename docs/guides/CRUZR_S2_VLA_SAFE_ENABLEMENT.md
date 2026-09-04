@@ -519,6 +519,31 @@ desfase inválido y los gates READY. La postura posterior sigue
 `MEASURED_READY=1` con error máximo `0,001842 rad` y velocidad cero. El intento
 no debe repetirse sin una autorización nueva.
 
+El nuevo intento `20260904T091928_E6.0Y` superó el gate temporal
+(`GRANT_CLOCK_SOURCE=motion-host-epoch`, skew 23 s), y task 0 produjo tres
+chunks. El primer punto se rechazó antes de emitir comandos porque el eje 2
+superaba el delta máximo aceptado de `0,1 rad`:
+`transport:arm:target_delta:2`. Se publicaron cero frames y no hubo movimiento.
+El backend ROS sí llegó a construirse brevemente antes de que el planificador
+rechazara el punto; STOP lo destruyó y el estado final fue `publishers:0`,
+`exited/exited`. El runtime se corrigió para ejecutar
+`plan_minimum_jerk(...)` y validar delta/velocidad/aceleración antes de crear el
+backend, y para no imprimir 500 estados iguales por segundo. E6.0R y las
+regresiones E6.0W `20260904T092245_E6.0W` y E6.0Y
+`20260904T092246_E6.0Y-OFFLINE` pasan. El robot siguió en READY medido a
+`0,001842 rad`, velocidad cero. El siguiente trabajo es analizar en shadow el
+primer punto respecto del estado fresco; no aumentar `0,1 rad`, no repetir y
+no recuperar automáticamente.
+
+Tras comprobar visualmente READY, el recovery autorizado
+`20260904T092716_E6.0Y-RECOVERY` llamó una sola vez a
+`s2_bio_vla/s2_vla_e6_0_exact_recovery` y obtuvo `SUCCEED/status=4`. El gate
+posterior midió HOME en 20 ejes: cuerpo ≤`0,002780 rad`, brazos
+≤`0,000959 rad`, velocidad cero y delta posición–consigna ≤`0,002780 rad`.
+No se arrancó inferencia; VLA terminó `exited/exited`, `publishers:0`. Falta
+confirmación visual final. El siguiente trabajo técnico es shadow/análisis de
+la discontinuidad del eje 2, no otro movimiento.
+
 E6.0X `20260904T075519_E6.0X` registra la aceptación del propietario sólo para
 E6.0, celda vacía, task 0/P14 y un punto: delta objetivo `<=0,1 rad`, velocidad
 medida `<=0,15 rad/s`, aceleración medida `<=0,5 rad/s²`, muestreo de `10 ms`,
