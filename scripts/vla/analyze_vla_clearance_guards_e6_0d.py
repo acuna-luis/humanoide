@@ -257,6 +257,29 @@ def segment_segment_distances_batch(
     ])
 
 
+def segment_crosses_triangle_batch(start, end, triangles):
+    """Non-coplanar segment/face intersections; coplanar handled by distances.
+
+    Plane-side interpolation avoids treating a small nonzero determinant as
+    parallel. Degenerate faces are left to point/edge distance primitives.
+    """
+    normal = np.cross(triangles[:, 1]-triangles[:, 0],
+                      triangles[:, 2]-triangles[:, 0])
+    n2 = np.einsum('ij,ij->i', normal, normal)
+    d0 = np.einsum('ij,ij->i', start-triangles[:, 0], normal)
+    d1 = np.einsum('ij,ij->i', end-triangles[:, 0], normal)
+    denominator = d0-d1
+    valid = (n2 > 0) & (denominator != 0) & (((d0 <= 0) & (d1 >= 0)) | ((d1 <= 0) & (d0 >= 0)))
+    fraction = np.divide(d0, denominator, out=np.zeros_like(d0), where=valid)
+    hit = start+fraction[:, None]*(end-start)
+    inside = np.ones(len(start), dtype=bool)
+    for i, j in ((0, 1), (1, 2), (2, 0)):
+        side = np.einsum('ij,ij->i',
+                         np.cross(triangles[:, j]-triangles[:, i], hit-triangles[:, i]), normal)
+        inside &= side >= -1e-12*n2
+    return valid & inside
+
+
 def triangle_distances_batch(first: np.ndarray, second: np.ndarray) -> np.ndarray:
     """Exact distances for matching triangle rows, including edge crossings."""
     distances = [
@@ -275,7 +298,12 @@ def triangle_distances_batch(first: np.ndarray, second: np.ndarray) -> np.ndarra
         for a, b in edges
         for c, d in edges
     )
-    return np.minimum.reduce(distances)
+    result = np.minimum.reduce(distances)
+    crossed = np.zeros(len(first), dtype=bool)
+    for a, b in edges:
+        crossed |= segment_crosses_triangle_batch(first[:, a], first[:, b], second)
+        crossed |= segment_crosses_triangle_batch(second[:, a], second[:, b], first)
+    return np.where(crossed, 0.0, result)
 
 
 def triangle_distance(first: np.ndarray, second: np.ndarray) -> float:
@@ -301,6 +329,8 @@ def distance_self_test() -> int:
             np.asarray([[0.25, 0.25, 0.5], [0.35, 0.25, 0.5], [0.25, 0.35, 0.5]]),
             0.5,
         ),
+        ("interior_edge_face_crossing_no_vertex_on_plane",
+         np.asarray([[0.2, 0.2, -1.0], [0.2, 0.2, 1.0], [0.4, 0.2, 1.0]]), 0.0),
     ]
     for name, candidate, expected in cases:
         observed = triangle_distance(base, candidate)
@@ -327,7 +357,20 @@ def randomized_distance_reference_test(count: int = 300) -> int:
             for a, b in edges
             for c, d in edges
         )
-        reference.append(min(distances))
+        # Scalar feature distances alone omit edge/face crossings. Independently
+        # solve segment = triangle barycentric coordinates for that case.
+        crossing = False
+        for source, target in ((first, second), (second, first)):
+            for a, b in edges:
+                matrix = np.column_stack((source[b]-source[a],
+                                          -(target[1]-target[0]), -(target[2]-target[0])))
+                try:
+                    t, u, v = np.linalg.solve(matrix, target[0]-source[a])
+                except np.linalg.LinAlgError:
+                    continue
+                if 0 <= t <= 1 and u >= 0 and v >= 0 and u+v <= 1:
+                    crossing = True
+        reference.append(0.0 if crossing else min(distances))
     maximum_error = float(np.max(np.abs(observed - np.asarray(reference))))
     if maximum_error >= 1e-9:
         raise ValueError(f"vector/scalar triangle distance mismatch: {maximum_error}")

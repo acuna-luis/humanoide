@@ -1,5 +1,20 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09, corrección crítica del cálculo entre triángulos:** se omitían cruces
+arista–interior de cara; contraejemplo daba distancia 1 cuando era 0. Corregido
+en analyze_vla_clearance_guards_e6_0d.py, cinco casos y 300 referencias pasan.
+Históricos que dependen de esa distancia requieren regeneración antes de uso;
+no se revalidan automáticamente. Tres testigos STL iniciales nuevos hombro–torso
+dan 11,215/11,213/20,196 mm entre superficies, no recorrido/contención/margen real.
+Ver SALIDA_MUNECA_FIJA. Cero robot o aprobación física.
+
+**07-09, salida fija ampliada offline:** 231 pares brazo–cuerpo/otro brazo por
+lado, 242 muestras salida/vuelta. AABB inconclusa en tres pares hombro–torso,
+testigo inicial cero sintético; otros pares separados en muestras. Falta geometría
+propia shoulder_pitch, abrazaderas/entorno/barrido/frenado no cubiertos. Tres tests
+pasan. No aprobación ni robot. Detalle SALIDA_MUNECA_FIJA, evidencia externa
+20260907_fixed_wrist_arm_body.json.
+
 **07-09, salida muñeca fija offline:** registradas diagonales reportadas L174/R178 mm,
 no holgura mínima. En tramo sintético de hombro, 121 muestras/lado, relación
 wrist_pitch→sensor constante a precisión numérica; distancia origen sensor–AABB

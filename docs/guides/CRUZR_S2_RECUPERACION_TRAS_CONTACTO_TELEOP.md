@@ -1,5 +1,16 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09, cálculo STL corregido:** rutina de distancia entre triángulos omitía
+algunos cruces arista–cara. Históricos dependientes no utilizables como prueba
+de separación sin regenerar. Nuevos tres testigos iniciales hombro–torso
+separados en superficies STL, sin recorrido completo ni tolerancias físicas.
+Detalle y tests en SALIDA_MUNECA_FIJA; ninguna autorización de movimiento.
+
+**07-09, ampliación de candidato:** filtro AABB de salida/vuelta encuentra
+tres pares hombro–torso inconclusos, no contacto físico demostrado. Geometría
+shoulder_pitch incompleta y entorno/frenado sin evaluar. No usar como autorización
+de movimiento. Informe SALIDA_MUNECA_FIJA, tres tests nuevos correctos.
+
 **07-09, candidato de muñeca fija:** invariancia relativa sensor/muñeca
 comprobada numéricamente en salida sintética de hombro, no holgura inicial
 ni seguridad física. Diagonales L174/R178 mm no son separación mínima.
