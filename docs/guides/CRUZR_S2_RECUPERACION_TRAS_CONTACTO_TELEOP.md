@@ -1,5 +1,11 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09, refinamiento HOME↔READY:** intersecciones modeladas cabeza–torso al
+girar; variante offline conserva cabeza fija, no equivale a READY completo ni
+ordena llevarla a cero. Seis uniones de brazos ya intersectan en cero sintético;
+no se declaran contacto permitido ni se resuelven con rodeos. Informe
+VALIDACION_HOME_READY_HOME y full_home_ready_mesh_witnesses_v2; sin movimiento.
+
 **07-09, retorno completo hipotético revisado:** auditor HOME↔READY incluye A,
 staging y cabeza, no sólo hombros. 1.836 estados/828 pares; 48 avisos AABB no
 resueltos. Reversión de puntos del recovery verificada, no reversión física ni

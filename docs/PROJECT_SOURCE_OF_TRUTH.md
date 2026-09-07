@@ -1,5 +1,13 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09, testigos STL y variante offline:** 48 testigos refinados: 36 separados
+en ese punto y 12 ceros (seis PGC histórico, seis uniones de brazos en cero).
+Barrido cabeza–torso: 26/27 intersecciones por hipótesis pitch/yaw, cero separa
+sólo 0,200 mm modelados. No contacto físico demostrado. Variante brazos READY
+con cabeza fija generada en informe, NO READY completo, no ejecutable/aprobada.
+Tres tests nuevos; sin robot/despliegue. Ver VALIDACION_HOME_READY_HOME y
+evidencia full_home_ready_mesh_witnesses_v2.
+
 **07-09, geometría HOME↔READY ampliada (offline):** 1.836 estados hipotéticos,
 828 pares, 48 solapamientos AABB inconclusos (incluida cabeza–torso); no choques
 demostrados ni aprobación. Tres calendarios de brazos y dos órdenes hipotéticos

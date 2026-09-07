@@ -1,5 +1,43 @@
 # Prioridad: HOME→READY y READY→HOME, VLA fuera de alcance
 
+## 07-09: refinamiento y variante de cabeza fija — INFERENCIA condicionada
+
+refine_home_ready_witnesses.py verifica hashes del barrido anterior antes de
+reconstruir cada testigo. Refinados los 48 pares AABB contra superficies STL:
+36 distancias positivas en SU testigo y 12 intersecciones numéricas. No son
+mínimos de toda la ruta. Seis ceros pertenecen a la pinza PGC histórica, no a
+las abrazaderas instaladas; los otros seis corresponden a uniones adyacentes
+bilaterales shoulder_pitch–shoulder_roll, elbow_yaw–wrist_pitch y
+wrist_pitch–wrist_roll, ya presentes en cero sintético. No se excluye ninguno
+como contacto permitido ni se atribuyen esos ceros a colisiones físicas.
+
+Barrido adicional cabeza–torso: 27 ángulos por cada hipótesis (pitch/yaw),
+0→−0,65 rad. En cero, separación superficial 0,199710 mm; las otras 26 muestras
+por eje intersectan numéricamente, incluida −0,025 rad. Hallazgo del modelo,
+no diagnóstico del robot: pueden intervenir superficies de montaje/modelado.
+No es margen físico aceptado, ni justifica ignorar el cuello como adyacencia.
+
+Se genera dentro del informe una variante explícita
+SYNTHETIC_ARMS_READY_HEAD_HOLD_NOT_FULL_READY: siete waypoints con cabeza
+pitch/yaw cero constante y los puntos de brazos originales en ida/vuelta.
+No equivale a READY completo (cambia orientación de cámara), no tiene tiempos,
+no es ejecutable ni ha sido desplegada. Evita recorrer el giro de cabeza que
+mostró intersecciones, pero conserva la separación inicial insuficientemente
+caracterizada y TODOS los pendientes de brazos/útiles/escena. No se afirma
+que esta variante esté validada globalmente ni se ordena llevar cabeza a cero.
+
+Evidencia externa: 20260907_full_home_ready_mesh_witnesses_v2.json; incluye
+estados completos de testigos, triángulos, pruebas del kernel y candidato.
+Tres tests nuevos pasan (reconstrucción, rechazo de calendario desconocido,
+reversibilidad/cabeza fija/no autorización del candidato). Sin cambios de XML,
+YAML operativo, límites, exclusiones de colisión, robot o PC de control.
+
+Punto de reanudación: no resolver solapamientos iniciales de montaje mediante
+rodeos ficticios. Antes de aprobar una ruta se necesita correspondencia de
+mallas/útil físico y cobertura del barrido/seguimiento/parada. La autorización
+para modificar ruta permite variantes offline, no convertir incertidumbres
+en garantías. No se necesitan más fotos genéricas de abrazaderas.
+
 ## 07-09: revisión geométrica independiente de la velocidad — OBSERVADO offline
 
 Se amplió el diagnóstico al recorrido sintético HOME→staging→A→READY→A→staging→HOME.
