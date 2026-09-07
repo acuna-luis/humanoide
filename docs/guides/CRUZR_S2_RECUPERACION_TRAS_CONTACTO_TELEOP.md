@@ -1,5 +1,11 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09, retorno completo hipotético revisado:** auditor HOME↔READY incluye A,
+staging y cabeza, no sólo hombros. 1.836 estados/828 pares; 48 avisos AABB no
+resueltos. Reversión de puntos del recovery verificada, no reversión física ni
+cancelación de órdenes. Ver VALIDACION_HOME_READY_HOME y evidencia
+full_home_ready_screen_v2. Útiles reales, escena y barrido continuo pendientes.
+
 **07-09, HOME↔READY priorizado:** cierre local recovery 0,6 rad en1,5 s exige
 >=0,40 rad/s bajo duración literal; no compatible con provisional0,15. No usar
 la temporización quíntica offline como si estuviera instalada. Ver

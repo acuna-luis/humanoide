@@ -1,5 +1,12 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09, geometría HOME↔READY ampliada (offline):** 1.836 estados hipotéticos,
+828 pares, 48 solapamientos AABB inconclusos (incluida cabeza–torso); no choques
+demostrados ni aprobación. Tres calendarios de brazos y dos órdenes hipotéticos
+de cabeza; cintura/resto cero sintético. URDF PGC no representa abrazaderas reales.
+Evidencia full_home_ready_screen_v2; detalle VALIDACION_HOME_READY_HOME. Tres tests
+pasan; sin robot. Velocidad sigue siendo requisito independiente pendiente.
+
 **07-09, prioridad HOME↔READY sin VLA:** XML locales de apertura/cierre piden
 0,6 rad/1,5 s: pico necesario >=0,40 rad/s, incompatible con provisional0,15
 si duration es tiempo real. No equivalencia con candidato lento ni reescalado
