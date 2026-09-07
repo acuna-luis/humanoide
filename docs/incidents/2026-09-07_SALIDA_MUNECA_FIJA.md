@@ -1,5 +1,53 @@
 # Salida con muñeca fija: contraste offline
 
+## Cota entre muestras para los tres pares refinados
+
+`audit_shoulder_between_samples.py` comprueba hashes de geometría/kernel y
+que cada link sea descendiente del único hombro rotado y torso no lo sea.
+Calcula R como radio máximo de vértices respecto al pivote (cota por exceso
+del radio al eje). Para paso máximo h=0,01 rad, todo punto de un triángulo
+se desplaza como máximo R·h/2 desde la muestra más cercana. La distancia
+entre superficies es Lipschitz respecto a ese desplazamiento.
+
+Con d(theta)>=min(d_muestras)-R·h/2 se obtienen:
+
+| Par contra torso | Reserva entre muestras | Cota inferior condicional |
+|---|---:|---:|
+| L_shoulder_roll | 0,594 mm | 10,621 mm |
+| R_shoulder_roll | 0,594 mm | 10,620 mm |
+| R_shoulder_yaw | 1,695 mm | 18,501 mm |
+
+Es una cota del intervalo continuo PARA ESTAS SUPERFICIES RÍGIDAS y este
+único giro, suponiendo correctas las distancias numéricas. No incluye error
+numérico certificado, contención de sólidos, discrepancia de montaje/mesh,
+resto del robot, abrazaderas, escena ni frenado. No equivale a holgura física
+certificada ni validación continua del robot completo. La vuelta ideal tiene
+el mismo conjunto de estados, no se demuestra equivalencia con el controlador.
+
+Tres tests pasan (cota conocida, rejilla irregular, rechazo de entradas);
+evidencia externa `20260907_shoulder_between_samples.json` con hashes.
+Sin robot, red, movimiento ni cambios de seguridad.
+
+## Extensión STL a 61 posturas por par
+
+Ejecutado `audit_fixed_wrist_shoulder_witness.py --samples 61`: 183 cálculos
+de distancia entre superficies, tres pares hombro–torso, shoulder_roll 0…-0,6
+rad en pasos de 0,01 rad. Otro brazo y resto de articulaciones a cero sintético.
+Las tres distancias mínimas permanecen en el inicio (ángulo 0):
+L_roll 11,214783 mm, R_roll 11,213466 mm y R_yaw 20,195897 mm.
+No se encontró distancia cero en las muestras. La vuelta ideal referencia
+las mismas muestras en orden inverso, no repite ni verifica el controlador real.
+
+Evidencia externa `20260907_fixed_wrist_shoulder_path_61.json`: cada postura,
+distancia, triángulos, estadísticas BVH y hashes; archivo nuevo sin sobrescribir
+testigos iniciales. Cinco casos y 300 referencias del kernel pasaron al inicio;
+py_compile y git diff --check correctos.
+
+Este resultado refina sólo los tres avisos AABB y no cubre intervalos entre
+muestras, contención de sólidos, brazos consigo mismos, útil real, geometría
+faltante, escena, seguimiento, parada ni márgenes físicos. No habilita el
+movimiento. Sin conexión al robot ni cambios remotos.
+
 ## Refinamiento STL de los tres testigos iniciales
 
 Durante revisión se encontró defecto en triangle_distances_batch de

@@ -1,5 +1,18 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09, intervalo entre muestras acotado condicionalmente:** tres pares
+STL hombro–torso con fórmula min(d)-R*h/2, cotas 10,621/10,620/18,501 mm.
+Sólo superficies rígidas, giro único, distancias numéricas asumidas correctas;
+no error físico/contención/escena/frenado ni validación global. Tres tests,
+evidencia 20260907_shoulder_between_samples.json. SALIDA_MUNECA_FIJA detalla
+hipótesis. Sin robot o autorización física.
+
+**07-09, barrido STL extendido:** tres pares hombro–torso, 61 posturas/par,
+183 cálculos con kernel corregido. Mínimos iniciales 11,215/11,213/20,196 mm;
+ninguna muestra a cero. Vuelta ideal usa mismas muestras invertidas, no runtime.
+Sin continuidad/contención/escena/frenado ni aprobación física. Evidencia externa
+20260907_fixed_wrist_shoulder_path_61.json y SALIDA_MUNECA_FIJA. Sin robot.
+
 **07-09, corrección crítica del cálculo entre triángulos:** se omitían cruces
 arista–interior de cara; contraejemplo daba distancia 1 cuando era 0. Corregido
 en analyze_vla_clearance_guards_e6_0d.py, cinco casos y 300 referencias pasan.

@@ -1,5 +1,14 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09, cota inter-muestras parcial:** tres pares hombro–torso tienen cotas
+positivas bajo modelo rígido/distancia numérica. No interpretar como validación
+continua del conjunto ni margen físico/parada. Ver SALIDA_MUNECA_FIJA.
+
+**07-09, extensión del refinamiento STL:** 61 posturas en cada uno de tres
+pares hombro–torso, mínimos positivos iniciales; vuelta ideal equivalente en
+posturas, no ejecución física verificada. No aprobar recuperación con este
+filtro parcial. Evidencia y límites en SALIDA_MUNECA_FIJA.
+
 **07-09, cálculo STL corregido:** rutina de distancia entre triángulos omitía
 algunos cruces arista–cara. Históricos dependientes no utilizables como prueba
 de separación sin regenerar. Nuevos tres testigos iniciales hombro–torso
