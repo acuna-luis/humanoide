@@ -1,5 +1,10 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09, pares internos:** diagnóstico con shoulder_pitch visual provisional,
+56 pares, 24 solapamientos AABB sin retirar adyacencias. No contacto permitido
+inferido. 42 relaciones rígidas y 14 variables en salida de hombro; pendiente
+contraste físico/geométrico. Ver SALIDA_MUNECA_FIJA. Sin comandos al robot.
+
 **07-09, bloque cruzado parcial:** 459 pares con cota AABB positiva y tres
 refinados STL positivos, sólo bajo hipótesis del modelo. No cubre herramienta,
 propios brazos, escena ni parada. No autoriza recuperación física. Detalle

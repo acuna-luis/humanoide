@@ -1,5 +1,26 @@
 # Salida con muñeca fija: contraste offline
 
+## Cobertura interna y mallas visuales de hombro
+
+Localizadas en el SDK las mallas visuales L/R_shoulder_pitch_link.STL,
+1462 triángulos cada una. El URDF no las declara como collision. El nuevo
+audit_arm_internal_geometry.py las usa únicamente como sustituto provisional
+para diagnóstico, sin modificar SDK, URDF operativo ni geometría remota.
+No afirmar que un mesh visual encierra con certeza la pieza física.
+
+Se evaluaron 56 pares internos (28 por brazo), 121 posturas. Por estructura
+cinemática, 42 comparten movimiento rígido aguas abajo de shoulder_roll;
+14 incluyen shoulder_pitch, estacionario respecto al torso en este candidato,
+y por tanto no conservan esa relación. Se registran 24 pares con solapamiento
+AABB; ninguno se elimina por ser adyacente. Las AABB mundiales pueden variar
+con el giro aunque la separación real entre piezas rígidas sea constante.
+
+Pendiente: distinguir las uniones previstas y superficies realmente separadas
+en estos pares con evidencia, no declarar contacto permitido por adyacencia.
+Los 14 pares nuevos con visual provisional requieren además validar esa
+representación. Evidencia externa 20260907_arm_internal_geometry.json, hashes
+y clasificación por par. Sin robot/red/movimiento, aprobación física falsa.
+
 ## Cierre condicional del bloque de pares cruzados
 
 `audit_fixed_wrist_cross_pair_bounds.py` verifica hashes del generador y

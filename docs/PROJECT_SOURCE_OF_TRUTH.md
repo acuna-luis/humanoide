@@ -1,5 +1,11 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09, cobertura interna ampliada:** mallas visuales shoulder_pitch halladas
+en SDK (1462 triángulos/lado), sólo sustituto provisional offline, no collision
+vendor validada. 56 pares internos: 42 rígidos comunes y 14 con relación variable;
+24 solapamientos AABB sin excluir adyacencias. Detalle SALIDA_MUNECA_FIJA,
+evidencia 20260907_arm_internal_geometry.json. No robot ni aprobación física.
+
 **07-09, pares cruzados acotados:** 459/462 pares brazo–cuerpo/otro brazo con
 cota positiva entre muestras; tres restantes coinciden con refinamientos STL
 positivos previos. Bloque parcial condicional, no porcentaje de seguridad global.
