@@ -1,5 +1,84 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09 ~09:44 UTC, autoarranque del guard contenido:** con autorización expresa,
+Vision guard pasa a disabled sin --now/stop/restart. Archivos y marcas de última
+ejecución intactos; copias antes/después y manifiesto verificados. Se retiró sólo
+el enlace de arranque, reversible bajo nueva revisión. No cubre HOME interno
+ni ejecución manual del guard, no habilita movimiento o rearme. Ver diagnóstico
+de arranque; no confundir con las consultas previas que no cambiaron el robot.
+
+**07-09 09:38 UTC, lectura conectada:** guard Vision enabled/active-exited y copia
+instalada sin bloqueo del repositorio, ahora contrastado con archivos remotos.
+No ejecutado ni cambiado. Deshabilitar sólo autoarranque queda propuesto pendiente
+de aprobación; no resuelve HOME interno ni habilita rearme. VLA control/inference
+detenidos según inventario; no implica estado físico seguro. Evidencia y alcance
+en diagnóstico de arranque sólo lectura. Cero ROS/movimiento/recargas.
+
+**07-09, muñeca refinada con STL:** en dos testigos, distancia centro supuesto
+a superficie ~40,6 mm frente a radio mínimo 139,4 mm: la esfera sigue alcanzando
+muñeca. No es evidencia de contacto de la herramienta real ni motivo para
+excluir el par. No se aprueba retorno/HOME con esa aproximación. Hace falta
+acotar montaje y comportamiento, no incrementar márgenes. Ver cierre de bloqueos
+de aprobación; sin conexión al robot, desbloqueo ni comandos.
+
+**07-09, recorrido sintético histórico muestreado:** cuatro envolventes y tres
+órdenes de brazos; 6.030 muestras en resolución mayor. Separación condicional
+respecto a cuerpo/brazo contrario/otra abrazadera, pero solapamiento con propio
+brazo; no se elimina ese par para producir PASS. No reproduce HOME interno ni
+su postura inicial/tiempos/ley Motion. Falta geometría propia shoulder_pitch y
+resto de coberturas descritas en el informe de barrido pesimista. Suite v5 pasa;
+sin modificación ni autorización de movimiento o rearme.
+
+**07-09, cotas pesimistas sólo en sensibilidad offline:** para postura URDF
+cero, cuatro radios hipotéticos 139,411–204,411 mm quedan separados de 26 AABB
+de cuerpo. Mínimo del caso mayor: 15,550 mm, no distancia física observada.
+No incluye brazos/entorno/recorrido ni demuestra tolerancias reales. No usar
+este resultado para rearmar o enviar HOME; no cambió el robot. Informe externo
+`20260907_clamp_pessimistic_screen.json`, tres tests nuevos correctos.
+
+**07-09, cota sin resolver el giro (sólo estudio):** radio nominal 119,411 mm
+alrededor del origen descriptivo cubre la caja para toda rotación si las
+referencias son ortonormales y la contención reportada es válida. Centro en
+sensor y errores siguen sin registrar; no es un radio de seguridad. Una esfera
+que intersecta torso es inconclusa, no evidencia de colisión del útil. Tres
+tests nuevos/suite v4 pasan, sin cálculos sobre trayectorias ni cambios físicos.
+
+**07-09, envolvente nominal recibida:** operador indica T=130 mm, sin salientes
+fuera de otros márgenes. Modelo propio nominal 82×100×130 mm, profundidad
+−35/+95 respecto al eje descriptivo. No volver a pedir T o un CAD inexistente.
+Ocho tests del generador pasan; no incluye incertidumbre validada ni montaje
+registrado, y no protege el HOME interno. No libera paros ni habilita movimiento.
+
+**07-09, integridad del auditor y siguiente dato:** límites calculados sólo
+se incluyen para lados con evidencia validada; rechazo de overflow y prueba
+contra uso del modelo parcial como contrato. Suite v3 local ampliada, sin
+modificar protección instalada. Ficha de cotas del soporte en
+`docs/incidents/2026-09-07_COTAS_PENDIENTES_SOPORTE.md`: T desde almohadillas,
+contención y salientes; aún pendientes. No medir con acceso inseguro ni
+rearmar/mover para identificar geometría. HOME interno sigue sin interceptar.
+
+**07-09, alternativa al plano de fabricante:** un modelo propio de volúmenes
+envolventes puede sustituir al CAD inexistente de la abrazadera, siempre que
+contención, montaje e incertidumbre estén verificados. El generador local
+`build_clamp_simplified_model.py` sólo representa la placa y una reserva lateral
+condicionada para las patitas; soporte completo y R/t siguen pendientes.
+Cuatro tests pasan, sin aprobación física. No pedir nuevas fotos genéricas ni
+liberar el E-stop para resolver el registro. El HOME interno continúa sin
+interceptar; este modelo no modifica esa situación.
+
+**07-09, cierre de la vía de tornillos sin referencia adicional:** los diez
+centros CAD usados son invariantes bajo reflexión lateral; las dos hipótesis
+2D restantes no son dos configuraciones físicas demostradas. No resolver el
+empate mediante movimiento ni otra repetición de foto. Falta referencia de
+cara/normal/plano físico y soporte completo, no más tests de esos mismos
+puntos. Seis tests pasan, informe exterior v2; sin desbloquear ni mover.
+
+**07-09, correspondencias exteriores candidatas:** cuatro fijaciones exteriores
+de las fotos permiten destacar dos de las seis hipótesis del patrón central,
+sin calificar ninguna como transformación física. Análisis sólo 2D: alturas
+de cabezas, identidad y perspectiva no resueltas. No cambia bloqueo de HOME,
+rearme ni movimiento; cero órdenes/despliegues. Evidencia en contraste de fotos.
+
 **07-09, fotos suficientes para documentar, no para cualificar:** se retira
 la solicitud genérica de otra vista/conector no identificado. La auditoría
 `audit_clamp_sensor_asymmetry.py` demuestra asimetría de la malla completa,

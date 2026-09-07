@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1100" viewBox="0 0 1400 1100">
+ <defs>
+  <marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 Z" fill="#b33d17"/></marker>
+ </defs>
+ <style>
+ text{font-family:DejaVu Sans,sans-serif;fill:#152e42;font-size:21px}
+ .title{font-size:32px;font-weight:bold}.section{font-size:25px;font-weight:bold}
+ .small{font-size:18px}.dim{stroke:#b33d17;stroke-width:3;marker-start:url(#arrow);marker-end:url(#arrow)}
+ .ref{stroke:#53768a;stroke-width:2;stroke-dasharray:7 6}.leader{stroke:#53768a;stroke-width:2;fill:none}
+ </style>
+ <rect width="1400" height="1100" fill="#fff"/>
+ <text x="45" y="50" class="title">Qué medir del soporte negro — ambos brazos</text>
+ <text x="45" y="84">Esquema orientativo, NO a escala. No representa una geometría validada.</text>
+ <line x1="45" x2="1355" y1="108" y2="108" stroke="#d4dfe6"/>
+
+ <text x="45" y="149" class="section">1. T: profundidad TOTAL, vista de lado</text>
+ <!-- Sensor is contextual only. Black support is deliberately schematic. -->
+ <rect x="186" y="223" width="175" height="135" rx="28" fill="#dce3e8" stroke="#70818c" stroke-width="2"/>
+ <path d="M274 183 V223" class="leader"/>
+ <text x="179" y="201">Sensor plateado</text>
+ <path d="M153 368 H429 L493 315 V454 H467 L406 391 H153 Z" fill="#34424b"/>
+ <rect x="143" y="371" width="13" height="16" fill="#17252e"/>
+ <rect x="493" y="276" width="81" height="233" rx="3" fill="#b8ddef" stroke="#267aa6" stroke-width="2"/>
+ <rect x="574" y="288" width="17" height="85" rx="4" fill="#296a91"/>
+ <rect x="574" y="412" width="17" height="85" rx="4" fill="#296a91"/>
+ <path d="M372 389 L330 440 H183" class="leader"/>
+ <text x="64" y="466">Soporte + riostras + tornillos</text>
+ <path d="M591 324 H651 V270" class="leader"/>
+ <text x="513" y="232">Cara exterior de</text><text x="513" y="258">las almohadillas</text>
+ <line x1="143" x2="143" y1="350" y2="600" class="ref"/>
+ <line x1="591" x2="591" y1="282" y2="600" class="ref"/>
+ <line x1="143" x2="591" y1="556" y2="556" class="dim"/>
+ <text x="320" y="541" class="section">T = ? mm</text>
+ <text x="60" y="628">Extremo más trasero</text><text x="60" y="655">del soporte, incluidos tornillos</text>
+ <text x="420" y="628">Hasta la cara de</text><text x="420" y="655">las almohadillas</text>
+ <text x="45" y="699">Medir perpendicular a esa cara, en la dirección de A.</text>
+ <text x="45" y="730">T NO es F = 36 mm. No medir en diagonal.</text>
+
+ <line x1="720" x2="720" y1="135" y2="750" stroke="#d4dfe6"/>
+ <text x="755" y="149" class="section">2. ¿Sobresale algo? Vista de frente</text>
+ <text x="755" y="183" class="small">Comparar soporte y tornillos con el contorno azul/naranja.</text>
+ <rect x="975" y="295" width="175" height="250" fill="#b8ddef" stroke="#267aa6" stroke-width="2"/>
+ <rect x="1150" y="295" width="30" height="250" fill="#fff0d7" stroke="#c68821" stroke-dasharray="5 5"/>
+ <path d="M1150 364 H1172 Q1180 364 1180 373 Q1180 382 1172 382 H1150 Z M1150 465 H1172 Q1180 465 1180 474 Q1180 483 1172 483 H1150 Z" fill="#d68b27"/>
+ <text x="1003" y="409">Placa</text><text x="995" y="438">70 × 100</text>
+ <line x1="1063" x2="1063" y1="290" y2="242" class="dim"/>
+ <text x="1005" y="222">Arriba: ?</text>
+ <line x1="1063" x2="1063" y1="550" y2="600" class="dim"/>
+ <text x="1000" y="635">Abajo: ?</text>
+ <line x1="970" x2="920" y1="420" y2="420" class="dim"/>
+ <text x="755" y="382" class="small">Lado sin patitas:</text><text x="857" y="410">?</text>
+ <line x1="1185" x2="1235" y1="420" y2="420" class="dim"/>
+ <text x="1210" y="368" class="small">Más allá de</text><text x="1210" y="392" class="small">las patitas: ?</text>
+ <text x="755" y="686">Sin saliente: responder 0 mm.</text>
+ <text x="755" y="716">Con saliente: medir sólo cuánto sobresale.</text>
+ <text x="755" y="746" class="small">Franja naranja: reserva del modelo, no una pieza física.</text>
+
+ <rect x="45" y="783" width="1310" height="220" rx="10" fill="#edf4f8"/>
+ <text x="65" y="820" class="section">Qué responder — todo en mm</text>
+ <text x="65" y="858">Izquierdo: T=__; arriba=__; abajo=__; sin patitas=__; más allá de patitas=__.</text>
+ <text x="65" y="892">Derecho:   T=__; arriba=__; abajo=__; sin patitas=__; más allá de patitas=__.</text>
+ <text x="65" y="927">¿Algo sobresale por delante de las almohadillas? No / Sí: lado y __ mm.</text>
+ <text x="65" y="961">¿Las patitas quedan dentro de la altura de placa y de T? Sí / No / No se puede comprobar.</text>
+ <text x="65" y="990" class="small">Indica si usaste regla o calibre y su graduación. Si no se puede medir, responde «pendiente».</text>
+ <text x="45" y="1046">No mover ni rearmar para medir. Sólo con acceso seguro bajo el procedimiento de inmovilización.</text>
+ <text x="45" y="1080" class="small">Las cotas no aprueban HOME: siguen pendientes registro al sensor, incertidumbre y validación de recorridos.</text>
+</svg>

@@ -2,6 +2,189 @@
 
 ## Resultado
 
+### Cota de orientación para evitar elegir por apariencia
+
+`audit_clamp_orientation_bound.py` calcula la esfera centrada en el origen
+descriptivo, no en el centro de la caja: radio `sqrt(47²+55²+95²)=119,411 mm`.
+La norma es invariante bajo rotación. Esta es una alternativa condicional al
+registro del ángulo para un filtro preliminar, **no un registro físico**.
+Requiere demostrar la correspondencia del origen (intersección del eje del
+sensor con el plano de referencia de B/C) al frame sixforce y las referencias
+ortogonales. Los campos de centro L/R, errores y radio seguro son nulos.
+
+Si se acotan error de centro y error geométrico, sus radios pueden sumarse al
+nominal por desigualdad triangular; aquí no se asignó ninguno. Volumen dinámico
+de parada sigue aparte. Una intersección de la esfera es inconclusa: no
+descartar un escenario real por ese solapamiento conservador. Ninguna ruta
+se evaluó con esta esfera, ni se exportó objeto ROS.
+
+Tres tests verifican fórmula, esquinas rotadas e inválidos; la prueba no valida
+metrología. Suite completa v4 correcta, evidencias externas
+`20260907_clamp_orientation_bound.json` y
+`20260907_requalification_regressions_v4.json`. El bloqueo concreto restante
+de esta alternativa es el **centro y sus errores**, no exigir de nuevo A–F/T ni
+un CAD de abrazadera inexistente. No se ha resuelto ese centro con las fotos.
+
+### T y contención nominal cerrados por declaración del operador
+
+El 07-09 se recibe «T=130, no sobresale nada fuera de los otros márgenes».
+El contrato conserva esa cita, fuente y alcance bilateral basado en la igualdad
+de piezas previamente declarada. Se genera envolvente nominal 82×100×130 mm,
+profundidad `95−130=−35` hasta +95 mm. No es el espesor F=36 de la placa.
+Evidencia externa `20260907_clamp_nominal_T130/`, ocho tests del generador
+correctos. No se exige ya medir soporte para este cierre nominal, ni CAD de
+fabricante. No se ha establecido incertidumbre ni R/t y no se aprobó trayectoria.
+
+### Continuación: integridad y medida práctica
+
+Se corrigió el auditor local para no presentar límites de un lado cuando su
+evidencia falta o no coincide con el hash, y para rechazar resultados no finitos
+por desbordamiento numérico. No se detectó un movimiento asociado a este detalle:
+el resultado global ya permanecía bloqueado. Test nuevo rechaza el esquema del
+modelo parcial como entrada de montaje. Modelo y asimetría se incorporan a la
+suite fija, evidencia externa `20260907_requalification_regressions_v3.json`.
+
+La [ficha de cotas pendientes](2026-09-07_COTAS_PENDIENTES_SOPORTE.md) sustituye
+una petición genérica de más vistas por T (profundidad total desde almohadillas)
+y comprobaciones de contención con bordes existentes. Datos todavía pendientes;
+no se eligieron valores, márgenes ni transformación y no se tocó el robot.
+
+### Modelo propio: no se exige CAD de fabricante inexistente
+
+**CORRECCIÓN, 07-09:** el plano del fabricante no es un prerrequisito exclusivo.
+Una representación propia con envolventes verificadas es una alternativa.
+Las seis nuevas vistas del brazo izquierdo recibidas en chat muestran placa,
+sensor, soporte inferior y riostras; no se dispone de rutas originales para
+hashearlas. No se reclama una transformación métrica a partir de esas vistas.
+
+**VERIFICADO offline:** `scripts/build_clamp_simplified_model.py` consume el
+contrato existente y genera `model.json` y `plate_projections.svg`. Evidencia:
+`/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260907_clamp_simplified_model/`.
+El JSON incluye el SHA-256 del contrato. PNG auxiliar obtenido con Inkscape e
+inspeccionado visualmente. Cuatro tests en `test_clamp_simplified_model.py` pasan.
+
+| Componente | Representación | Límite de evidencia |
+|---|---|---|
+| Placa y almohadillas | Caja 70×100×36 mm; u −35/+35, v −55/+45, profundidad 59/95 mm | Cotas nominales del operador; incertidumbre pendiente |
+| Dos patitas | Reserva de todo el borde u +35/+47 mm | Condicionada a que ambas estén dentro de altura y profundidad de la placa |
+| Soporte, riostras, tornillería | Componente explícito sin límites numéricos | No se omite silenciosamente ni se supone contenido en 0–59 mm |
+| Montaje L/R | Sin transformación ROS | Igualdad de piezas no implica iguales transformaciones |
+
+**PENDIENTE concreto:** extremos mínimos/máximos del soporte y tornillería
+respecto a las mismas referencias, contención de las patitas, incertidumbre y
+registro de coordenadas al sensor. Una foto adicional sin escala/referencia no
+cierra automáticamente estos datos. No repetir A–F ni pedir otra ronda de
+ángulos genéricos. Estas coordenadas son descriptivas, no un sistema ROS ni
+una terna dextrógira físicamente registrada.
+
+El resultado es `PARTIAL_MODEL_NOT_REGISTERED`, no una nueva comprobación de
+colisión. El generador termina con código 0 por creación de artefactos, nunca
+como gate de autorización. No exporta geometría ROS. No se ha ejecutado barrido
+ni modificado contrato de montaje, bloqueos, robot o servicios. Quedan además
+pendientes equivalencia de interpolación, margen de parada y HOME de arranque.
+
+### Cierre de observabilidad de los diez puntos
+
+**VERIFICADO, sólo para los puntos seleccionados:** el auditor exterior v2
+comprueba reflexión `(x,y)→(x,−y)` y obtiene residuo de vecino más próximo
+**0 mm** en los conjuntos central, exterior y combinado, en L y R. Por eso
+los puntos adicionales distinguen la orientación del eje largo, pero no
+eliminan el empate entre dos sentidos de correspondencia. No afirmar que
+toda la malla tenga esta simetría: el test sólo usa los centros seleccionados.
+No confundir reflexión 2D con una rotación 3D físicamente válida.
+
+La expresión previa «dos orientaciones candidatas» debe entenderse como
+**dos correspondencias 2D**, no evidencia de dos montajes mecánicos posibles.
+El ensayo no ha resuelto signo de normal/cara visible. Repetirlo, redondear
+distinto o volver a fotografiar la misma cara sin una referencia adicional
+no justifica elegir una solución ni completar la transformación métrica.
+
+La unión fija URDF `wrist_roll→sixforce` se reinspeccionó: ambos lados tienen
+`xyz=0 0.07712 0`, `rpy=-1.5708 1.5708 0`. Esto relaciona frames **del CAD**,
+pero no identifica por sí solo cuál cara real del sensor o plano del soporte
+se ve en la fotografía; no es una verificación independiente del montaje.
+
+Evidencia nueva, preservando v1:
+`/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260907_clamp_outer_correspondence_v2.json`.
+Seis tests pasan; el nuevo test distingue un rectángulo simétrico de un
+conjunto con un punto asimétrico y rechaza entradas inválidas. Cero red,
+conexiones, comandos, despliegues o cambios de límites.
+
+**Bloqueo concreto:** para continuar hacia una cualificación física se
+necesita identificar independientemente cara, plano y orientación de unión
+sensor–soporte, además de acotar el soporte completo y su incertidumbre.
+Vías posibles: plano de montaje referenciado al frame del sensor, o registro
+metrológico de la unión realizado por personal competente con aislamiento
+verificado. No se ha obtenido ninguno aquí. No solicitar más fotos genéricas,
+repetir medidas A–F ni considerar solucionado este bloqueo mediante otra
+suite offline. Una inspección de daños de carcasa tampoco proporciona ese
+registro geométrico. HOME interno exige además su propia protección/validación.
+
+### Continuación: fijaciones exteriores, sin nuevas fotos
+
+**VERIFICADO CAD / OBSERVADO en fotos / INFERENCIA de correspondencia:**
+`scripts/render_clamp_sensor_cad.py` generó cuatro SVG ortográficos desde el
+STL original (L/R, vistas desde ±Z). Dos previews PNG L se rasterizaron con
+Inkscape y se inspeccionaron. No son dibujos generativos ni fotos editadas.
+El algoritmo de pintado por profundidad media sólo ilustra: no certifica
+visibilidad, superficies externas ni geometría de colisión.
+
+Las vistas muestran base alargada, contorno central lobulado, fijaciones
+exteriores y una abertura rectangular. **No equiparar esa abertura con las
+dos ventanas del soporte negro**, que es otra pieza. Tampoco asignar las
+marcas verdes a ejes CAD. Los originales L/R ya registrados se abrieron de
+nuevo; no hubo manipulación del robot para obtener otras vistas.
+
+El análisis de triángulos z=4 mm extrae cuatro contornos de ~3,3 mm centrados
+en (±28,±17,5) mm. Se anotaron manualmente cuatro cabezas exteriores visibles
+en el soporte negro, separadas del patrón central, en
+`config/clamp_outer_photo_landmarks.json`, con los mismos lienzos y hashes
+originales que `config/clamp_photo_landmarks.json`.
+
+`scripts/audit_clamp_outer_correspondence.py` mantiene el ajuste basado sólo
+en seis puntos centrales, proyecta los cuatro candidatos exteriores y ensaya
+las 24 asignaciones a las cuatro observaciones. No reajusta el modelo usando
+los exteriores. La identidad física de dichos tornillos con los contornos
+CAD continúa siendo hipótesis, no hecho demostrado.
+
+| Lado | Dos hipótesis destacadas: RMS exterior | Otras cuatro con buen RMS central |
+|---|---:|---:|
+| L | 10,205 píxeles originales | 141,902–142,967 px |
+| R | 21,170 píxeles originales | 155,547–156,085 px |
+
+El RMS central de estas seis sigue ~0,852 px L/~1,022 px R. Las restantes seis
+del conjunto de doce ya tenían mal ajuste central (~47–49 px) y no se
+rehabilitan por su residuo exterior. No se fijó un umbral de aceptación; las
+dos destacadas siguen indistinguibles bajo este contraste rectangular y los
+sentidos de recorrido 2D no equivalen a matrices R físicamente válidas.
+
+**Límite importante:** la homografía se extrapola como si todos los puntos
+fueran coplanares; CAD central y contornos exteriores están en distintas cotas
+y las cabezas fotografiadas añaden alturas desconocidas. El residuo no es
+una precisión métrica ni una prueba de montaje. No demuestra por sí solo
+cara visible, signo de normal, offset, orientación de herramienta o soporte
+completo. No eliminar incertidumbres de `clamp_mount_requalification.json`.
+
+Evidencia externa (salidas exclusivas nuevas):
+
+- `20260907_sensor_cad_views/manifest.json`: hash ZIP y cuatro SVG;
+  los PNG son previews auxiliares no incluidos en ese manifiesto.
+- `20260907_clamp_outer_correspondence.json`: puntos, hashes, doce hipótesis,
+  predicciones y asignaciones exteriores; estado
+  `OUTER_FEATURE_SCREEN_ONLY_NOT_REGISTERED`.
+
+Cinco tests de homografía pasan, incluidos proyección de puntos no usados
+en ajuste y rechazo de probes inválidos; esto prueba cálculo, no hardware.
+Sin red, ROS, movimiento, despliegue, commit ni push. El robot no se consultó.
+Rollback de esta extensión: revisar/revertir sólo sus scripts, anotaciones y
+documentación; no cambia las rutas bloqueadas ni exige rollback remoto.
+
+**Reanudación:** resolver cara/normal y correspondencia del plano de fijación
+con las referencias CAD visibles, conservando las dos hipótesis y el efecto
+de distintas alturas. No pedir otra foto genérica ni ejecutar HOME para
+distinguirlas. Si las fuentes no permiten cerrar esta identidad, hace falta
+plano de montaje o registro metrológico cualificado, no elegir por intuición.
+
 ### Revisión vigente: no se solicita otra fotografía genérica
 
 El operador ha aportado repetidamente la vista inferior solicitada y una

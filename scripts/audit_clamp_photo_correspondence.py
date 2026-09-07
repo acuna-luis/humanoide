@@ -15,7 +15,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def fit_homography(source, target):
+def fit_homography(source, target, probe_source=None):
     source, target = np.asarray(source, dtype=float), np.asarray(target, dtype=float)
     if source.shape != target.shape or source.ndim != 2 or source.shape[1] != 2 or len(source) < 4:
         raise ValueError('invalid_point_shapes')
@@ -42,8 +42,18 @@ def fit_homography(source, target):
         raise ValueError('projection_at_infinity')
     predicted = projected[:,:2]/projected[:,2,None]*ts+tc
     errors = np.linalg.norm(predicted-target, axis=1)
-    # No transform is exported: only fit residuals for hypothesis comparison.
-    return dict(rms_fit_px=float(np.sqrt(np.mean(errors**2))), max_fit_px=float(max(errors)))
+    # No transform is exported. Optional projections are 2D candidate features,
+    # not a calibrated 3D pose or an assertion that physical features match.
+    result = dict(rms_fit_px=float(np.sqrt(np.mean(errors**2))), max_fit_px=float(max(errors)))
+    if probe_source is not None:
+        probes = np.asarray(probe_source, dtype=float)
+        if probes.ndim != 2 or probes.shape[1] != 2 or not len(probes) or not np.isfinite(probes).all():
+            raise ValueError('invalid_probe_points')
+        projected = np.column_stack([(probes-sc)/ss, np.ones(len(probes))]) @ h.T
+        if np.any(np.abs(projected[:,2]) < 1e-10):
+            raise ValueError('probe_projection_at_infinity')
+        result['probe_prediction_px'] = (projected[:,:2]/projected[:,2,None]*ts+tc).tolist()
+    return result
 
 
 def hypotheses(cad, pixels):

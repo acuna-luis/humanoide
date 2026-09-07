@@ -32,6 +32,11 @@
     "plate_with_pads_thickness_m": 0.036,
     "thickness_components_operator_report_m": [0.034, 0.002],
     "same_dimensions_both_clamps_confirmed": true,
+    "total_tool_depth_from_pad_face_m": 0.130,
+    "support_contained_in_reported_other_margins": true,
+    "total_tool_envelope_report_source": "operator_chat_2026-09-07",
+    "total_tool_envelope_report_verbatim": "T=130, no sobresale nada fuera de los otros márgenes",
+    "total_tool_envelope_bilateral_scope": "applied_using_prior_operator_report_of_identical_clamps;not_independent_bilateral_metrology",
     "measurement_uncertainty_m": null,
     "note": "Operator clarified B/C=45/55 from actual mounting interface; plate midheight would give 50/50. Interface is 5 mm above midheight. This does not establish ROS frame axes. Tab projection is lateral, not added to A. Historical 105 mm was approximate and is not the current plate height."
   },

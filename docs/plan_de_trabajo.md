@@ -21,6 +21,46 @@
 
 #### Reanudación tras la ejecución offline autónoma
 
+**Contención autorizada ~09:44 UTC:** autoarranque del guard de Vision
+deshabilitado y verificado, sin parar/reiniciar servicios. Cierre parcial
+del frente de arranque; HOME interno de Control Center sigue pendiente.
+Archivos intactos y copias trazables en diagnóstico de arranque. No se incrementa
+habilitación física por este cambio de configuración.
+
+**Refinamiento STL posterior a v5:** dos testigos útil–muñeca siguen solapando
+la esfera incluso contra malla exacta del brazo (~40,6 mm del centro supuesto,
+radio mínimo 139,4). No prueba contacto del útil real. Se documenta el límite
+del método y los pendientes indispensables en
+[cierre de bloqueos](incidents/2026-09-07_CIERRE_BLOQUEOS_APROBACION.md).
+No se aprueba físicamente ni se repiten pruebas por mera acumulación.
+
+**Actualización v5 — recorrido con cotas ampliadas:** 6.030 muestras del candidato
+histórico, tres órdenes de brazos, cuatro radios. Separación condicional frente
+a cuerpo, brazo contrario y otra abrazadera; solapamiento con propio brazo
+(muñeca) sigue inconcluso. No se aprobó recorrido ni HOME; no se elevaron
+porcentajes físicos. Suite ampliada correcta. Ver
+[barrido pesimista](incidents/2026-09-07_BARRIDO_PESIMISTA_RECORRIDO.md).
+
+**Sensibilidad posterior a v4:** cuatro envolventes ampliadas (errores elegidos
+para exploración, no medidos) no intersectan las AABB de cuerpo probadas en
+postura URDF cero. No incluye brazos/entorno/recorridos ni autoriza HOME.
+Ver [cotas pesimistas](incidents/2026-09-07_SENSIBILIDAD_COTAS_PESIMISTAS.md).
+Movimiento físico sigue bloqueado; no se aumenta su porcentaje por este cálculo.
+
+**Actualización v4:** T=130 y contención nominal declarados; envolvente propia
+82×100×130 mm construida sin exigir CAD de fabricante. Cota esférica condicional
+de radio 119,411 mm evita elegir un giro para el filtro preliminar, pero requiere
+centro registrado, referencias y errores acotados. No hay separación ni recorrido
+calculados. Suite v4 correcta; sin incremento de porcentaje físico. Las cifras
+de pruebas de versiones anteriores que siguen abajo son históricas.
+
+| Cierre geométrico actual | Importancia | Estado |
+|---|---|---|
+| Envolvente nominal del conjunto | ALTA | Recibida del operador y calculada: 82×100×130 mm |
+| Posición del origen en el sensor y errores | CRÍTICA | Pendiente, sin valores por defecto |
+| Orientación exacta | ALTA | No resuelta; esfera evita elegirla sólo para filtro condicional |
+| Recorridos y HOME interno | CRÍTICA | No recalificados; movimiento bloqueado |
+
 **Actualización v2:** bloqueos ampliados a instalación recovery E6.0N, recarga
 E6.0O y apply/restore READY E6.0P. Suite correcta con 18 variantes de lanzamiento
 y siete checks de sintaxis (resto de casos igual). Manual SDK no identifica

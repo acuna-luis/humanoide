@@ -45,8 +45,11 @@ def mount_bounds(mount, side):
         raise ValueError('incomplete_tool_geometry')
     points = [[t[i]+sum(r[i][k]*p[k] for k in range(3)) for i in range(3)]
               for p in itertools.product(*zip(*b))]
-    return [[min(p[i] for p in points)-margin for i in range(3)],
-            [max(p[i] for p in points)+margin for i in range(3)]]
+    result = [[min(p[i] for p in points)-margin for i in range(3)],
+              [max(p[i] for p in points)+margin for i in range(3)]]
+    if not all(vector(row, 3) for row in points + result):
+        raise ValueError('transformed_bounds_nonfinite')
+    return result
 
 
 def reported_front_profile(d):
@@ -111,7 +114,7 @@ def evaluate(contract):
     for side in ('L', 'R'):
         mount = contract.get('mounts', {}).get(side, {})
         try:
-            bounds[side] = mount_bounds(mount, side)
+            candidate_bounds = mount_bounds(mount, side)
             entries = mount.get('measurement_evidence')
             if not isinstance(entries, list) or not entries:
                 raise ValueError('measurement_evidence_missing')
@@ -121,6 +124,8 @@ def evaluate(contract):
                     path = ROOT / path
                 if hashlib.sha256(path.read_bytes()).hexdigest() != entry['sha256']:
                     raise ValueError('measurement_evidence_hash_mismatch')
+            # Do not expose a usable-looking bound before evidence validation.
+            bounds[side] = candidate_bounds
         except (ValueError, TypeError, KeyError, OSError) as exc:
             errors.append(f'{side}:{exc}')
     return dict(
@@ -130,6 +135,7 @@ def evaluate(contract):
         plate_volume=reported_plate_volume(contract.get('reported_dimensions', {})),
         reported_dimensions_are_not_a_measured_mount_transform=True,
         mount_errors=errors, transformed_bounds_in_parent_frame_m=bounds,
+        bilateral_mount_inputs_complete=not errors,
         physical_authorized=False, robot_connections=0, movement_commands=0,
         pending=['measured_mounts' if errors else 'independent_mount_review',
                  'runtime_interpolation_equivalence', 'continuous_sweep_and_stopping_margin',

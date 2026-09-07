@@ -139,6 +139,28 @@ class RequalificationTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     mount_bounds(mount, 'L')
 
+    def test_unverified_evidence_does_not_export_side_bounds(self):
+        contract = json.loads((ROOT/'config/clamp_mount_requalification.json').read_text())
+        contract['mounts']['L'] = self.mount()
+        report = evaluate(contract)
+        self.assertNotIn('L', report['transformed_bounds_in_parent_frame_m'])
+        self.assertFalse(report['bilateral_mount_inputs_complete'])
+        with tempfile.TemporaryDirectory(prefix='clamp-evidence-test-') as directory:
+            path = Path(directory)/'evidence.txt'
+            path.write_text('synthetic evidence, not metrology')
+            contract['mounts']['L']['measurement_evidence'] = [
+                {'path': str(path), 'sha256': 'wrong'}]
+            report = evaluate(contract)
+            self.assertNotIn('L', report['transformed_bounds_in_parent_frame_m'])
+            self.assertFalse(report['physical_authorized'])
+
+    def test_transform_overflow_is_rejected(self):
+        mount = self.mount()
+        mount['translation_m'] = [1e308, 1e308, 1e308]
+        mount['local_bounds_m'] = [[0, 0, 0], [1e308, 1e308, 1e308]]
+        with self.assertRaisesRegex(ValueError, 'nonfinite'):
+            mount_bounds(mount, 'L')
+
 
 if __name__ == '__main__':
     unittest.main()

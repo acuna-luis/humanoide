@@ -1,5 +1,121 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09 ~09:44 UTC, cambio remoto autorizado:** deshabilitado únicamente
+autoarranque de `cruzr-v020-boot-guard.service` en Vision mediante systemctl
+disable (sin --now). Verificado UnitFileState=disabled; active/exited y marcas
+de ejecución sin cambio. Sólo retirado enlace multi-user.target.wants; script
+y unidad intactos, hashes coincidentes. Copia previa 093815Z y posterior
+094421Z_BOOT-READONLY, manifiesto verificado. No stop/restart/mask, Control Center,
+ROS, paros ni movimiento. Reversible por reenable con revisión/autorización;
+NO bloquea HOME interno ni arranque manual del guard. Detalle en diagnóstico
+de arranque y guía especializada. Este cambio sucede después de la captura
+anterior y sustituye el estado «propuesto/pendiente autorización» de abajo.
+
+**07-09 09:38 UTC, diagnóstico conectado sólo lectura:** Motion/Vision accesibles
+por Wi-Fi; inventario de contenedores y copia del guard de Vision preservados en
+`20260907T093815Z_BOOT-READONLY/`. Guard enabled, active/exited, último código 0;
+copia instalada `6c3cbe48…` carece del bloqueo --run del repositorio (única diferencia).
+VLA control/inference Exited; no arrancados. Cero llamadas ROS, docker exec,
+restart, configuración remota o movimiento. Postura/paros/cargador no verificados.
+Se propone deshabilitar sólo autoarranque del guard, pendiente autorización
+específica; NO contiene HOME interno. Detalle en
+`docs/incidents/2026-09-07_DIAGNOSTICO_ARRANQUE_SOLO_LECTURA.md`.
+
+**07-09, refinamiento STL no elimina bloqueo propio brazo:** dos testigos L/R
+del barrido de 201 muestras/segmento, staging→A fracción 0,685. Distancias del
+centro supuesto a malla wrist_pitch: 40,639/40,652 mm; ambas dentro de esfera
+mínima 139,411 mm. No demuestra colisión real de abrazadera; muestra que la
+aproximación esférica no permite aprobar esta zona, incluso refinando el brazo.
+Kernel: 4 casos + 300 referencias aleatorias correctos; fuente/hash/triángulo
+en `20260907_clamp_wrist_mesh_witness.json`. No reescaneo completo STL ni nueva
+aprobación. Cierre y dependencias en
+`docs/incidents/2026-09-07_CIERRE_BLOQUEOS_APROBACION.md`. Sin cambios físicos.
+
+**07-09, recorrido ampliado offline:** candidato histórico brazos cero sintético
+→ staging → A → READY B y vuelta, resto de joints a cero explícito. Tres órdenes
+(sincronizado, L antes R, R antes L), 3.030 y 6.030 muestras. Cuatro radios:
+sin solapamiento muestreado esfera–cuerpo/brazo contrario/otra esfera; sí con
+propio brazo (wrist_pitch), resultado global inconcluso. Radio 204,411 mm:
+cuerpo mínimo R 15,550 mm, L 23,757; entre esferas 250,166 mm. No trayectoria
+real, no barrido continuo ni protección de HOME. Shoulder_pitch sin geometría
+propia en URDF, cobertura pendiente explícita. Cuatro tests nuevos y suite v5
+correctos; detalle `docs/incidents/2026-09-07_BARRIDO_PESIMISTA_RECORRIDO.md`.
+Sin red ni modificación de robot, límites, paros o perfil operativo.
+
+**07-09, sensibilidad con cotas ampliadas solicitada por operador:** análisis
+local nuevo `audit_clamp_pessimistic_screen.py` usa postura URDF cero explícita
+(NO estado medido ni HOME validado), esfera nominal 119,411 mm y errores de
+centro hipotéticos 10/25/50/75 mm más reserva geométrica hipotética 10 mm.
+Cuatro radios 139,411–204,411 mm no se solapan con las AABB de los 26 links
+de cuerpo evaluados; peor separación para el mayor radio: R 15,550 mm y
+L 23,757 mm, frente a `lifter_pitch_2_link`. No se ensayaron brazos entre sí,
+útil-brazo, entorno ni recorridos. Hipótesis no verificadas, perfil operativo
+no seleccionado, autorización física falsa. Tres tests nuevos pasan, evidencia
+externa `20260907_clamp_pessimistic_screen.json`. Sin conexiones/despliegues.
+
+**07-09, alternativa condicional independiente del giro:** sobre la envolvente
+nominal T=130 se calcula radio respecto al origen descriptivo de 119,411 mm
+(`hypot(47,55,95)`). La invariancia de norma evita seleccionar orientación
+para esta cota esférica, pero NO identifica el centro físico en sixforce_link
+ni valida ortogonalidad/referencias, incertidumbre o recorrido. Intersección
+de esfera no prueba contacto real. Script `audit_clamp_orientation_bound.py`,
+tres tests nuevos y suite v4 correcta (`20260907_requalification_regressions_v4.json`).
+Informe externo `20260907_clamp_orientation_bound.json`, centros y radio seguro
+nulos, sin trayectoria evaluada, red ni movimiento. No se reemplaza el contrato
+de montaje por esta cota ni se habilita HOME.
+
+**07-09, T=130 mm y contención recibidos (OBSERVADO, declaración del operador):**
+«T=130, no sobresale nada fuera de los otros márgenes». Incorporado al contrato
+como cotas reportadas, sin completar R/t ni margen. Envolvente nominal propia
+82×100×130 mm: u −35/+47, v −55/+45, profundidad −35/+95 mm. Alcance bilateral
+basado en igualdad previamente declarada, no metrología independiente L/R.
+Generador actualizado, ocho tests correctos; JSON y SVG/PNG inspeccionado en
+`20260907_clamp_nominal_T130/` (raíz externa de evidencias). Estado
+`NOMINAL_TOOL_ENVELOPE_UNREGISTERED`. Ya no falta T ni contención nominal del
+soporte; siguen incertidumbre, registro al sensor y recorridos/arranque.
+Sin cambios remotos ni autorización física.
+
+**07-09, continuación offline del soporte:** auditor de montaje no expone
+límites de un lado si falla su evidencia y rechaza desbordamientos no finitos.
+Test explícito impide interpretar el modelo parcial como contrato de montaje.
+Suite ampliada con modelo/asimetría, informe externo
+`20260907_requalification_regressions_v3.json`. Nueva ficha
+`docs/incidents/2026-09-07_COTAS_PENDIENTES_SOPORTE.md`: profundidad total T
+desde almohadillas al extremo trasero, más comprobaciones de contención respecto
+a bordes ya medidos. No exige CAD ni otra ronda de fotos genéricas; T y
+contención aún no recibidos. Sin cambios en robot, contrato, paros o despliegues.
+
+**07-09, modelo propio sin exigir CAD inexistente:** se corrige el requisito:
+no es obligatorio disponer del CAD de fabricante de la abrazadera. Se generó
+un modelo descriptivo parcial reproducible con las cotas del operador mediante
+`scripts/build_clamp_simplified_model.py`: placa 70×100×36 mm, reserva lateral
+de 12 mm, profundidad 59–95 mm. Soporte/riostras/tornillería quedan explícitamente
+sin límites medidos; no se inventa su envolvente ni R/t. Cuatro tests correctos,
+SVG/PNG inspeccionado y JSON en la raíz externa de evidencias,
+`20260907_clamp_simplified_model/`. Estado `PARTIAL_MODEL_NOT_REGISTERED`.
+Últimas seis vistas L recibidas sólo en chat documentan el conjunto; no se les
+atribuye hash local. No se requieren más fotos genéricas. Pendientes: límites
+del soporte, contención de patitas en altura/profundidad, incertidumbre y registro
+al sensor; después recorridos/arranque. Sin red, robot, desbloqueo ni despliegue.
+
+**07-09, límite del registro fotográfico identificado:** los conjuntos CAD
+central, exterior y combinado conservan exactamente sus centros al reflejar
+Y (residuo 0 mm en ambos lados). Esto explica el empate de correspondencias
+2D, no demuestra dos montajes físicos. Informe exterior v2 y seis tests
+correctos. No repetir esta fotografía ni elegir por RMS. Sigue pendiente
+identificar cara/normal/plano físico con referencia independiente y acotar el
+soporte completo; HOME/rearme continúan bloqueados. No hubo red ni movimiento.
+
+**07-09, contraste exterior con fotos existentes:** render ortográfico de ambas
+caras del STL y extracción de cuatro contornos exteriores CAD z=4 mm,
+centros (±28,±17,5) mm. Extrapolación 2D desde seis puntos centrales a cuatro
+cabezas exteriores: dos hipótesis destacan entre las seis de buen ajuste
+central (L ~10,2 px frente a ~142; R ~21,2 frente a ~156). No hay umbral de
+aceptación ni montaje 3D validado; identidad/planos/oclusiones siguen pendientes.
+Evidencias externas `20260907_sensor_cad_views/` y
+`20260907_clamp_outer_correspondence.json`; cinco tests de proyección pasan.
+Cero robot/red/movimiento. No se piden nuevas fotos; ver contraste fotográfico.
+
 **07-09, corrección de solicitud fotográfica y asimetría CAD:** no pedir más
 vistas inferiores ni buscar un conector cuya visibilidad no está demostrada.
 Las fotos recibidas documentan el montaje; el pendiente es técnico. Auditoría

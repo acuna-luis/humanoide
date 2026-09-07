@@ -1,0 +1,9 @@
+{
+  "schema": "clamp-outer-photo-landmarks-v1",
+  "status": "MANUAL_APPROXIMATE_CANDIDATE_FEATURES_NOT_METROLOGY",
+  "description": "Four visible outer screw centers on black support around central silver piece. Their identity as CAD sensor mounting holes remains a hypothesis. Same source photos and annotation canvases as clamp_photo_landmarks.json.",
+  "sides": {
+    "L": {"centers_on_annotation_canvas_px": [[437,669],[645,669],[650,990],[445,998]]},
+    "R": {"centers_on_annotation_canvas_px": [[526,427],[770,417],[775,825],[539,835]]}
+  }
+}

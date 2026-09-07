@@ -1,5 +1,30 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+## Authorized containment — 2026-09-07 ~09:44 UTC
+
+Vision guard automatic startup is now **disabled**, explicitly authorized by
+the operator. Only `systemctl disable cruzr-v020-boot-guard.service` was run,
+without --now, stop, restart or mask. The multi-user.target.wants symlink was
+removed; installed unit and script hashes are unchanged. Subsequent read-only
+snapshot confirms UnitFileState=disabled and unchanged execution timestamps
+(active/exited oneshot). Backups before/after: 20260907T093815Z_BOOT-READONLY and
+20260907T094421Z_BOOT-READONLY, external evidence root; latter manifest verified.
+
+This does NOT inhibit Control Center's internal HOME or manual guard execution.
+Do not release E-stop or reboot as validation. Re-enabling the unit is a possible
+rollback but requires review and fresh authorization; it was not performed.
+Older enabled/status statements below are historical, superseded here.
+
+## Live read-only verification — 2026-09-07 09:38 UTC
+
+Vision service remains enabled, active/exited (oneshot completed). Installed
+script SHA-256 `6c3cbe48bb7cd177b8e2a446118c3f78ed1dea5083c0839714ce93ff5b89287b`.
+It lacks the repository incident-block branch for --run; no deployment was done.
+Copies and metadata preserved in `20260907T093815Z_BOOT-READONLY/` outside Git.
+No guard execution, ROS calls or service restart was performed. Disabling only
+automatic startup is proposed pending specific approval; it would not block
+vendor Control Center HOME. See the read-only boot diagnostic incident note.
+
 > **07-09 — contención local implementada:** [estado de recalificación](../incidents/2026-09-07_REQUALIFICACION_CLAMPS.md).
 > Doce variantes de lanzamiento rechazadas en tests sin conexión; no cubre
 > HOME interno del arranque, UI/PICO ni el guard instalado en Vision.
