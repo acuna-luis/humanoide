@@ -12,9 +12,9 @@ Modos reservados, todavía bloqueados:
 
 --check y --dry-plan son exclusivamente locales: no conectan al robot, no
 instalan, no recargan, no usan ROS y no mueven. Los modos activos permanecen
-bloqueados en este wrapper. READY/recovery ya fueron validados físicamente en
-E6.0Q y el sobre fue aceptado en E6.0X; el canary requiere todavía
-preflight/grant fresco de la corrida.
+bloqueados en este wrapper. Las validaciones históricas E6.0Q/E6.0X no
+autorizan nuevas ejecuciones tras el incidente y la recalificación de las
+abrazaderas. HOME→READY y READY→HOME requieren validación independiente.
 EOF
 }
 

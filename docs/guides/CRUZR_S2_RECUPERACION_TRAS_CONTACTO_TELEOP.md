@@ -1,5 +1,10 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09, HOME↔READY priorizado:** cierre local recovery 0,6 rad en1,5 s exige
+>=0,40 rad/s bajo duración literal; no compatible con provisional0,15. No usar
+la temporización quíntica offline como si estuviera instalada. Ver
+VALIDACION_HOME_READY_HOME. Sin movimiento ni modificación de tiempos operativos.
+
 **07-09, STOP software no es parada mecánica:** trazado backend ROS VLA destruye
 publisher y vacía cola, sin orden adicional hold/torque-off. No usar como
 evidencia de distancia de parada ni los límites de aceleración provisional

@@ -1,5 +1,11 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09, prioridad HOME↔READY sin VLA:** XML locales de apertura/cierre piden
+0,6 rad/1,5 s: pico necesario >=0,40 rad/s, incompatible con provisional0,15
+si duration es tiempo real. No equivalencia con candidato lento ni reescalado
+vendor demostrados. Ayuda obsoleta corregida, sin cambio de tareas/despliegue.
+Auditor y evidencia ready_home_timing_audit; detalle VALIDACION_HOME_READY_HOME.
+
 **07-09, 24 avisos internos refinados:** 264 cálculos STL, 18 mínimos positivos
 y seis ceros en uniones adyacentes (no choques físicos demostrados ni contacto
 permitido). STOP VLA trazado hasta backend: vacía cola/destruye publisher, no
