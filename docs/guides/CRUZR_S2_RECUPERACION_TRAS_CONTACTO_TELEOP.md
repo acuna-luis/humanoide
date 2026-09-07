@@ -1,5 +1,10 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09, premisa declarada:** operador pide asumir READY sin choques reales.
+Se distingue de validación medida; no valida HOME↔READY. Mallas en HOME numérico
+ilustradas sin movimiento; no representan abrazaderas exactas ni escena.
+Ver VALIDACION_HOME_READY_HOME. No se cambian tareas ni exclusiones de colisión.
+
 **07-09, READY preservado:** auditor de destino detecta intersección modelada
 cabeza–torso en READY, verificada mediante cálculo independiente. No inferir
 choque físico ni resolverlo con rodeo: el extremo no cambia. Cabeza fija queda

@@ -1,5 +1,27 @@
 # Prioridad: HOME→READY y READY→HOME, VLA fuera de alcance
 
+## 07-09: premisa del operador y visualización del modelo
+
+El operador solicita asumir READY válido sin choques reales. Se adopta como
+PREMISA APORTADA POR EL OPERADOR para el análisis; no como nueva medición ni
+validación independiente. Bajo esa premisa, la intersección cabeza–torso del
+modelo es una discrepancia a investigar, no una prueba de choque físico en READY.
+No autoriza a recortar mallas, excluir contactos, alterar READY ni aprobar el
+recorrido intermedio, seguimiento o frenado. Se conservan pruebas contradictorias
+del modelo para localizar su causa, sin borrar la evidencia.
+
+render_home_audit_model.py representa triángulos reales del URDF/SDK en todos
+los ejes cero explícito (HOME sintético, no captura actual), con hombros visuales
+provisionales en naranja y pinza PGC histórica en violeta, NO abrazaderas reales.
+Detalle de muñeca muestra las esferas nominal/hipotética ampliada de 119,4/204,4 mm
+con centro supuesto sixforce: no son la forma de la abrazadera ni margen validado.
+Sin entorno. Render y manifiesto externos en 20260907_home_mesh_visual.
+PNG/SVG generados y PNG inspeccionado: leyenda y tres vistas legibles. Sintaxis
+y diff correctos. Dependencia gráfica instalada sólo en venv temporal aislado
+/tmp/cruzr-mesh-render-BrNiYd, sin alterar Python del sistema ni servicios del
+robot/PC de control. Para reproducir se necesita matplotlib además de dependencias
+de los auditores. Se conservan mallas completas, sin decimación ni edición del SDK.
+
 ## 07-09: READY final inalterable — condición necesaria del destino
 
 Por petición explícita del propietario, la variante de cabeza fija anterior

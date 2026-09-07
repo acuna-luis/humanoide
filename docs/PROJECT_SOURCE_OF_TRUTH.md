@@ -1,5 +1,11 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09, READY válido como premisa del operador:** se acepta expresamente para
+análisis que READY no presenta choques reales; no es verificación independiente
+ni aprobación de tránsito. Aviso cabeza–torso pasa a discrepancia de modelo bajo
+esa premisa, sin modificar mallas/pares/READY. Render HOME sintético con colores
+de procedencia y esferas hipotéticas: home_mesh_visual. Ver VALIDACION_HOME_READY_HOME.
+
 **07-09, READY final inalterable por operador:** descartada variante cabeza fija
 para solicitud vigente. Nuevo auditor offline preserva objetivos y evalúa READY
 completo: cabeza–torso intersecta en ambas hipótesis de orden, confirmado con
