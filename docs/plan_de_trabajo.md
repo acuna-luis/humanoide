@@ -19,6 +19,32 @@
 
 ### Gate prioritario de incidente — 07-09
 
+#### Reanudación tras la ejecución offline autónoma
+
+**Actualización v2:** bloqueos ampliados a instalación recovery E6.0N, recarga
+E6.0O y apply/restore READY E6.0P. Suite correcta con 18 variantes de lanzamiento
+y siete checks de sintaxis (resto de casos igual). Manual SDK no identifica
+el soporte pasivo actual. Para resolver la orientación se necesita una referencia
+física no simétrica sensor–muñeca–soporte; ver
+[dato mínimo y condiciones de observación](incidents/2026-09-07_CONTRASTE_FOTOS_CLAMPS.md).
+No repetir cotas/fotos ya recibidas ni mover/desmontar el robot para obtenerla.
+
+| Frente | Resultado actual | Siguiente requisito real |
+|---|---|---|
+| Evidencias/fotos/medidas | Registradas con procedencia; no repetirlas | Identificar referencia física no simétrica respecto al CAD |
+| Trayectoria de arranque | Órdenes y desfases reconstruidos en ambos HOME | Geometría registrada, postura completa, ley Motion y volumen recorrido |
+| Clasificador HOME y endpoint20D | Corregidos valores por defecto/tipos inválidos; tests correctos | No son validadores de colisiones ni sustituyen un estado vivo |
+| Scripts locales E6.1C | Lanzamiento, instalación y recarga bloqueados; PASS antiguo retirado | Recalificación antes de diseñar sucesor |
+| Regresión offline | 19 unittest + 36 casos endpoint + 4 checks de sintaxis + self-test correctos | Repetible con `run_contact_requalification_offline.py` |
+| HOME interno y guard instalado | Sin modificación; no interceptados por bloqueos locales | Resolver por mecanismo documentado/verificado antes de rearme físico |
+| Movimiento/VLA físico | **BLOQUEADO** | No convertir tests de software ni aceptación de límites en aprobación geométrica |
+
+Informe [recalificación](incidents/2026-09-07_REQUALIFICACION_CLAMPS.md) y
+[temporización HOME](incidents/2026-09-07_HOME_TEMPORIZACION.md).
+No es necesario pedir confirmación del operador para repetir la suite offline.
+Sí es necesario resolver las dependencias reales antes de cualquier movimiento;
+este plan no indica liberar E-stop, arrancar ni llevar a HOME para obtenerlas.
+
 La [auditoría](incidents/2026-09-07_AUDITORIA_CONTACTOS_HOME.md) corrige la
 explicación previa: hubo HOME interno en ambos arranques del 04-09. La geometría
 de las clamps no quedó cualificada por medir sólo su tamaño. Los porcentajes

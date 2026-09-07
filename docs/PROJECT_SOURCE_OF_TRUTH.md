@@ -1,5 +1,34 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09, ampliación autónoma y límite de evidencia:** E6.0N instalación,
+E6.0O recarga y E6.0P apply/restore con bloqueo local directo; suite v2 correcta
+(18 variantes bloqueadas, siete syntax checks). Evidencia externa
+`20260907_requalification_regressions_v2.json`. Manual SDK revisado: figura
+de ejes corresponde a manos articuladas; offsets de sensores no son del clamp.
+Siguiente dato físico: referencia no simétrica identificable del sensor
+respecto a muñeca/soporte, sin mover ni desmontar el robot. No repetir A–F.
+Detalles y límites en contraste de fotos/recalificación. Cero cambios remotos.
+
+**07-09, suite offline y entradas incompletas:** HOME ya no sustituye datos
+ausentes por ceros ni cmd_pos por posición; endpoint20D rechaza tipos/límites
+inválidos y nombres duplicados. E6.1C instalación/recarga con bloqueo directo
+antes de conexión (14 variantes verificadas). Suite
+`scripts/run_contact_requalification_offline.py`: 19 unittest, 36 casos de
+endpoint, cuatro syntax checks y self-test de recovery correctos; evidencia
+externa `20260907_requalification_regressions.json`. Estado
+`OFFLINE_REGRESSIONS_OK_PHYSICAL_BLOCKED`, no validación de movimiento.
+Sin despliegues, recargas ni comandos al robot. Pendientes físicos/geométricos
+en el informe de recalificación y matriz prioritaria del plan.
+
+**07-09, HOME reconstruido a nivel de órdenes:** ambos arranques del 04-09
+escalonan `Now move` elevador/L/R/cintura/cabeza, con dispersión 0,805274 y
+0,806148 s, aunque todas las duraciones son 6 s y objetivos cero. Primer
+HOME muestra avisos de rango L:2, R:2 y head:2 antes de FT; no son posiciones
+medidas. No se reconstruyó la trayectoria cartesiana ni tiempo de parada.
+Herramienta offline `scripts/audit_home_group_timing.py`; evidencia externa
+`20260907_home_group_timing.json`; detalle
+`docs/incidents/2026-09-07_HOME_TEMPORIZACION.md`. Sin red ni movimiento.
+
 **07-09, cierre de aprobación documental obsoleta:** E6.1C podía regenerar
 un PASS de geometría con el proxy E6.0J sin montaje real registrado. Se retiran
 las entradas públicas del wrapper offline (--check/--run) y analizador directo:

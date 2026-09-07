@@ -19,6 +19,70 @@ de cronología e inspección ya contestados por el operador.
 
 ## Cambios locales VERIFICADOS
 
+### Ampliación autónoma: rutas heredadas N/O/P
+
+Bloqueo local explícito añadido antes de conexión en:
+
+- E6.0N `--install-on-disk` (tarea recovery histórica).
+- E6.0O `--reload` (recarga de esa tarea).
+- E6.0P `--apply-live` y `--restore-vendor` (overlay READY).
+
+Restaurar el fichero vendor tampoco debe tomarse como recuperación segura
+sin revisar qué hará la tarea al cargarse. No se modificó ningún fichero
+instalado en el robot: estos cambios sólo impiden nuevas operaciones desde
+esas entradas del repositorio. Los modos de lectura no son autorizaciones
+de movimiento.
+
+Suite repetida con evidencia nueva, sin sobrescribir v1:
+`/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260907_requalification_regressions_v2.json`.
+19 unittest, 36 casos endpoint, **siete** checks de sintaxis y self-test recovery
+correctos; **18 variantes** de lanzamiento rechazadas antes de comandos externos.
+Estado `OFFLINE_REGRESSIONS_OK_PHYSICAL_BLOCKED`. No cubre UI/PICO/SDK,
+HOME interno, guard ya instalado ni cualquier ruta no enumerada.
+
+### Ejecución autónoma offline: cierre de validadores y recarga
+
+**07-09, VERIFICADO:** `cruzr_home_posture_gate.py` usaba valores por defecto
+para posición/velocidad/error y sustituía `cmd_pos` ausente por la posición.
+Una muestra incompleta podía parecer HOME. Ahora requiere los campos,
+tipos numéricos JSON finitos, enteros válidos para ID/status/error y tolerancia
+válida incluso en llamada directa. No convierte booleanos/cadenas en números.
+La salida distingue clasificación de postura de autorización física. No
+verifica antigüedad de la muestra: corresponde al llamador; tampoco colisiones.
+
+El gate de endpoint E6.1C exige 20 nombres únicos, valores finitos no booleanos,
+límites positivos finitos y timestamp numérico válido. Se mantienen separados
+el alcance de distancia/velocidad y la comprobación opcional de antigüedad;
+`qualified` no significa geometría, salud de actuadores o movimiento autorizado.
+Pasan 36 casos (cinco previos y 31 adicionales). No se añaden ni amplían
+límites mecánicos del robot.
+
+`install_vla_ready_entry_tasks_e6_1c.sh --install-on-disk` y
+`reload_vla_ready_entry_tasks_e6_1c.sh --reload` incorporan bloqueo directo
+antes de conexión. El segundo no dependía del analizador geométrico retirado.
+Ahora se prueban **14 variantes de lanzamiento** contra dobles de comandos
+externos. Esto no sustituye ni modifica tareas ya instaladas en Motion.
+
+Regresión conjunta reproducible:
+
+```bash
+python3 scripts/run_contact_requalification_offline.py \
+  --output /ruta/a/un/informe_nuevo.json
+```
+
+La ruta de salida debe tener directorio existente y no existir como archivo.
+Ejecución realizada:
+`/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260907_requalification_regressions.json`.
+Resultado **OFFLINE_REGRESSIONS_OK_PHYSICAL_BLOCKED**. Contiene salidas, códigos
+y hashes de fuentes: 19 tests unittest, 36 casos de endpoint, cuatro checks
+de sintaxis shell y self-test de recuperación (11 escenarios). No contar estos
+números como porcentaje de habilitación física. No se enviaron órdenes al
+robot ni se ejecutaron checks vivos, instalaciones o recargas.
+
+Los cambios son locales; rollback futuro mediante revisión puntual, sin
+restaurar valores por defecto ni quitar bloqueos para ensayar. No se ha
+hecho commit/push como parte de esta intervención.
+
 ### Cierre adicional: no regenerar PASS E6.1C con el proxy antiguo
 
 **VERIFICADO 07-09:** el analizador E6.1C aún conservaba una salida

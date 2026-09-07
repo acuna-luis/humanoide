@@ -25,10 +25,18 @@ def object_from(path: Path) -> dict[str, Any]:
 def vector(value: Any, length: int, label: str) -> list[float]:
     if not isinstance(value, list) or len(value) != length:
         raise ValueError(f"{label}: expected {length} values")
+    if any(type(item) not in (int,float) for item in value):
+        raise ValueError(f"{label}: numeric JSON values required")
     result = [float(item) for item in value]
     if not all(math.isfinite(item) for item in result):
         raise ValueError(f"{label}: non-finite value")
     return result
+
+
+def finite_number(value: Any, label: str, positive: bool = False) -> float:
+    if type(value) not in (int,float) or not math.isfinite(value) or (positive and value <= 0):
+        raise ValueError(f"{label}: invalid finite numeric value")
+    return float(value)
 
 
 def main() -> int:
@@ -47,6 +55,10 @@ def main() -> int:
     if contract.get("physical_execution_authorized") is not False:
         raise ValueError("contract unexpectedly authorizes movement")
     order = contract["joint_order"]
+    if (not isinstance(order,list) or len(order) != 20
+            or any(not isinstance(name,str) or not name for name in order)
+            or len(set(order)) != 20):
+        raise ValueError("contract requires 20 unique joint names")
     if state.get("names") != order:
         raise ValueError("state joint order is not exact")
     positions = vector(state.get("positions"), 20, "state.positions")
@@ -61,21 +73,24 @@ def main() -> int:
     maximum_index = max(range(20), key=deltas.__getitem__)
     maximum_velocity = max(abs(value) for value in velocities)
     gate = contract["state_gate"]
+    maximum_distance = finite_number(gate['maximum_chebyshev_distance_rad'], 'distance_limit', True)
+    velocity_limit = finite_number(gate['maximum_absolute_velocity_rad_s'], 'velocity_limit', True)
+    maximum_age = finite_number(gate['maximum_state_age_seconds'], 'age_limit', True)
     reasons = []
-    if deltas[maximum_index] > float(gate["maximum_chebyshev_distance_rad"]):
+    if deltas[maximum_index] > maximum_distance:
         reasons.append(f"state_not_{args.expect}")
-    if maximum_velocity > float(gate["maximum_absolute_velocity_rad_s"]):
+    if maximum_velocity > velocity_limit:
         reasons.append("state_not_stationary")
-    observed_at = float(state.get("observed_at_unix"))
-    if not math.isfinite(observed_at):
-        raise ValueError("observed_at_unix is not finite")
+    observed_at = finite_number(state.get("observed_at_unix"), 'observed_at_unix', True)
     age = time.time() - observed_at
-    if args.require_fresh and (age < -1.0 or age > float(gate["maximum_state_age_seconds"])):
+    if args.require_fresh and (age < -1.0 or age > maximum_age):
         reasons.append("state_not_fresh")
     result = {
         "schema": "cruzr-s2-vla-ready-entry-state-gate-e6.1c-v1",
         "expected_endpoint": args.expect,
         "qualified": not reasons,
+        "qualification_scope": "endpoint_distance_and_velocity_only_not_collision_or_actuator_health",
+        "freshness_checked": args.require_fresh,
         "maximum_chebyshev_distance_rad": deltas[maximum_index],
         "maximum_distance_joint": order[maximum_index],
         "maximum_absolute_velocity_rad_s": maximum_velocity,

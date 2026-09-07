@@ -88,6 +88,12 @@ class RequalificationTests(unittest.TestCase):
 
     def test_motion_entrypoints_denied_before_network(self):
         cases = [
+            ('scripts/vla/install_vla_recovery_task_e6_0n.sh', ['--install-on-disk']),
+            ('scripts/vla/reload_vla_recovery_task_e6_0o.sh', ['--reload']),
+            ('scripts/vla/patch_vla_ready_s2_waist_e6_0p.sh', ['--apply-live']),
+            ('scripts/vla/patch_vla_ready_s2_waist_e6_0p.sh', ['--restore-vendor']),
+            ('scripts/vla/install_vla_ready_entry_tasks_e6_1c.sh', ['--install-on-disk']),
+            ('scripts/vla/reload_vla_ready_entry_tasks_e6_1c.sh', ['--reload']),
             ('scripts/cruzr_recover_to_home.sh', ['--run', '--yes', '--fast']),
             ('scripts/vla/run_vla_ready_entry_transition_e6_1c.sh', ['--entry']),
             ('scripts/vla/run_vla_ready_entry_transition_e6_1c.sh', ['--recover-ready']),

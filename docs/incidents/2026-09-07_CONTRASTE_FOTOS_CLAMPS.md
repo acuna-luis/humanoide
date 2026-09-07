@@ -2,6 +2,34 @@
 
 ## Resultado
 
+### Referencias del manual SDK revisadas
+
+Se leyó el DOCX local `SDK/Cruzr S2 优必选SDK二次开发文档【对外】6.24.docx`
+(SHA-256 `649a46dd4edd80d2ae738c285d1e563ef4e71aaac8f827793584a1f5783d3d86`).
+La sección 1.3 declara los ejes con articulaciones a cero. Se inspeccionó
+directamente su figura `word/media/image7.png`, SHA-256
+`5d559910e0a9771a43ee8c39f1251ab04f200cbdc52a061f5a2d434a631997ad`:
+muestra manos articuladas, no el soporte pasivo actual. No resuelve la
+correspondencia del montaje negro de las fotos.
+
+La tabla de parámetros de sensores incluye filas L_sixforce_link y
+R_sixforce_link con ceros. **No son el offset de las abrazaderas**: no trasladar
+esos ceros al contrato de montaje. La sección de pinzas PGC también describe
+otro efector. No se modificó el SDK ni ejecutó ningún ejemplo del documento.
+
+**Siguiente dato físico mínimo:** imagen que identifique una referencia no
+simétrica del sensor (por ejemplo, conector/salida de cable o marca de orientación)
+y su relación con la parte fija de la muñeca y el soporte. Las cotas A–F,
+las patitas hacia dentro y las vistas del patrón central ya están registradas.
+No repetirlas ni mover articulaciones para conseguir otra vista. Sólo obtener
+la imagen si la referencia es visible desde fuera de la envolvente, sin tocar
+ni desmontar nada; si está oculta, registrar esa limitación. Un conector visible
+será una referencia candidata que deberá contrastarse, no aprobación automática.
+
+Esta dependencia no se resuelve ejecutando más veces el ajuste simétrico ni
+eligiendo la solución con unas millonésimas menos de residuo. Quedan además
+el soporte completo, incertidumbre y validación de recorridos/arranque.
+
 ### Ajuste numérico de las dos fotografías (offline)
 
 **Búsqueda de referencia no simétrica:** en los contornos z=0 ya extraídos

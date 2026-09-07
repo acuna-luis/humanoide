@@ -1,5 +1,25 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09, rutas heredadas:** instalación E6.0N, recarga E6.0O y apply/restore
+de READY E6.0P bloqueadas localmente antes de conexión. Suite v2: 18 variantes
+rechazadas, sin cambios en tareas instaladas ni protección del HOME interno.
+No usar un restore-vendor o un reinicio como ensayo de recuperación.
+
+**07-09, entradas estrictas y suite local:** gate HOME exige posición,
+velocidad, cmd_pos, status y error, sin valores por defecto. Clasificar HOME
+no demuestra frescura, geometría ni salud más allá de los campos inspeccionados.
+E6.1C instalación/recarga bloqueadas antes de conexión. La suite
+`scripts/run_contact_requalification_offline.py` terminó
+`OFFLINE_REGRESSIONS_OK_PHYSICAL_BLOCKED`; 14 variantes de lanzamiento rechazadas.
+No se modificaron las tareas instaladas ni el HOME interno.
+
+**07-09, desfases HOME verificados en logs:** órdenes de grupos escalonadas
+~0,2 s; dispersión total ~0,805–0,806 s en ambos arranques del 04-09.
+Primer HOME: consignas avisadas fuera de rango en ambos brazos y cabeza
+antes de FT. No ampliar límites ni asumir que una interpolación sincronizada
+reproduce Motion. Véase [temporización](../incidents/2026-09-07_HOME_TEMPORIZACION.md).
+Esto no prueba la causa única, trayectoria física ni ausencia de contacto.
+
 **07-09, E6.1C offline retirado como vía de aprobación:** wrapper --check/--run
 y analizador directo devuelven bloqueo/salida 78. No regeneran PASS basados
 en el proxy antiguo. Informes previos preservados, no rehabilitados. Este

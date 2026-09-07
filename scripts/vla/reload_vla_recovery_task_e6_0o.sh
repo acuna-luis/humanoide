@@ -50,6 +50,10 @@ while (($#)); do
   esac
 done
 
+if [[ "$MODE" == reload ]]; then
+  bash "$SCRIPT_DIR/../lib/cruzr_contact_motion_lock.sh" "E6.0O:reload" || exit $?
+fi
+
 for tool in awk date grep nc readlink setsid sha256sum sort ssh tee timeout xargs; do
   command -v "$tool" >/dev/null || { printf 'ERROR: falta %s\n' "$tool" >&2; exit 1; }
 done

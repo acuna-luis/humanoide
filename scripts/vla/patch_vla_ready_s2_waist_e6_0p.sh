@@ -54,6 +54,10 @@ while (($#)); do
   esac
 done
 
+if [[ "$MODE" == apply-live || "$MODE" == restore-vendor ]]; then
+  bash "$SCRIPT_DIR/../lib/cruzr_contact_motion_lock.sh" "E6.0P:$MODE" || exit $?
+fi
+
 for tool in awk cp date find grep nc python3 readlink scp setsid sha256sum sort ssh tee xargs; do
   command -v "$tool" >/dev/null || { printf 'ERROR: falta %s\n' "$tool" >&2; exit 1; }
 done

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Classify a fresh Cruzr S2 actuator snapshot for return-to-home.
+"""Classify a complete Cruzr S2 actuator snapshot; not motion authorization.
 
 The script is deliberately read-only.  It consumes the JSON emitted by
 ``rosa topic echo --once --no-daemon /mc/actuator_state`` and never imports a
-ROS client or publishes anything.
+ROS client or publishes anything. Freshness must be established by the caller;
+this classifier does not verify timestamps or collision clearance.
 """
 
 from __future__ import annotations
@@ -28,17 +29,28 @@ BODY_ACTUATOR_ALIASES = (
 ARM_IDS = (*range(4001, 4008), *range(5001, 5008))
 
 
-def numeric(item: dict[str, Any], key: str, default: float = 0.0) -> float:
-    try:
-        value = float(item.get(key, default))
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{key} no es numérico") from exc
+def numeric(item: dict[str, Any], key: str) -> float:
+    if type(item.get(key)) not in (int, float):
+        raise ValueError(f"{key} ausente o no numérico")
+    value = float(item[key])
     if not math.isfinite(value):
         raise ValueError(f"{key} no es finito")
     return value
 
 
+def integer(item: dict[str, Any], key: str) -> int:
+    value = item.get(key)
+    if type(value) is not int or value < 0:
+        raise ValueError(f"{key} ausente o entero inválido")
+    return value
+
+
 def classify(message: dict[str, Any], home_tolerance: float) -> list[str]:
+    if (type(home_tolerance) not in (int, float) or not math.isfinite(home_tolerance)
+            or not 0 < home_tolerance <= 0.05):
+        raise ValueError("tolerancia HOME inválida")
+    if not isinstance(message, dict):
+        raise ValueError("muestra raíz inválida")
     items = message.get("act_item")
     if not isinstance(items, list):
         raise ValueError("falta act_item")
@@ -47,10 +59,9 @@ def classify(message: dict[str, Any], home_tolerance: float) -> list[str]:
     for item in items:
         if not isinstance(item, dict):
             raise ValueError("act_item contiene un elemento no válido")
-        try:
-            actuator_id = int(item.get("id", 0))
-        except (TypeError, ValueError) as exc:
-            raise ValueError("id de actuador no válido") from exc
+        actuator_id = integer(item, "id")
+        if actuator_id == 0:
+            raise ValueError("id de actuador no válido")
         if actuator_id in by_id:
             raise ValueError(f"actuador duplicado: {actuator_id}")
         by_id[actuator_id] = item
@@ -80,11 +91,11 @@ def classify(message: dict[str, Any], home_tolerance: float) -> list[str]:
 
     for _logical_name, actuator_id, item in selected:
         name = str(item.get("name", "unknown"))
-        error_code = int(item.get("error_code", 0))
-        status = int(item.get("status", 0))
+        error_code = integer(item, "error_code")
+        status = integer(item, "status")
         position = numeric(item, "position")
         velocity = numeric(item, "velocity")
-        command_position = numeric(item, "cmd_pos", position)
+        command_position = numeric(item, "cmd_pos")
         command_delta = command_position - position
 
         maximum_position = max(maximum_position, abs(position))
@@ -122,6 +133,8 @@ def classify(message: dict[str, Any], home_tolerance: float) -> list[str]:
         f"BODY_MAX_ABS_VELOCITY={maximum_velocity:.6f}",
         f"BODY_MAX_ABS_COMMAND_DELTA={maximum_command_delta:.6f}",
         f"MEASURED_HOME={'1' if near_home else '0'}",
+        "POSTURE_CLASSIFICATION_ONLY=1",
+        "PHYSICAL_AUTHORIZED=0",
     ]
 
 

@@ -49,6 +49,9 @@ while (($#)); do
     *) printf 'ERROR: argumento desconocido: %s\n' "$1" >&2; usage >&2; exit 2 ;;
   esac
 done
+if [[ "$MODE" == reload ]]; then
+  bash "$SCRIPT_DIR/../lib/cruzr_contact_motion_lock.sh" "E6.1C:reload" || exit $?
+fi
 for tool in awk cp date find grep nc readlink setsid sha256sum sort ssh tee timeout xargs; do
   command -v "$tool" >/dev/null || { printf 'ERROR: falta %s\n' "$tool" >&2; exit 1; }
 done

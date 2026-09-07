@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import copy
 from pathlib import Path
 import subprocess
 import sys
@@ -66,7 +67,40 @@ def main() -> int:
         assert rejected_age.returncode == 3, rejected_age.stderr
         assert "state_not_fresh" in json.loads(rejected_age.stdout)["rejection_reasons"]
 
-    print("E6.1C_STATE_GATE_CASES=5")
+        cases = 5
+        for field in ('positions', 'velocities'):
+            for invalid in (True, None, '0', float('nan'), float('inf')):
+                bad = state_at(contract['entry_target_20d_rad'])
+                bad[field][0] = invalid
+                state_path.write_text(json.dumps(bad))
+                result = run(checker,contract_path,state_path,'entry')
+                assert result.returncode == 2, (field,invalid,result.stdout,result.stderr)
+                cases += 1
+        for invalid in (True, None, '0', float('nan'), float('inf')):
+            bad = state_at(contract['entry_target_20d_rad'])
+            bad['observed_at_unix'] = invalid
+            state_path.write_text(json.dumps(bad))
+            assert run(checker,contract_path,state_path,'entry').returncode == 2
+            cases += 1
+        altered_contract = Path(raw)/'contract.json'
+        state_path.write_text(json.dumps(state_at(contract['entry_target_20d_rad'])))
+        for key in ('maximum_chebyshev_distance_rad','maximum_absolute_velocity_rad_s','maximum_state_age_seconds'):
+            for invalid in (True, 0, -1, float('nan'), float('inf')):
+                altered = copy.deepcopy(contract)
+                altered['state_gate'][key] = invalid
+                altered_contract.write_text(json.dumps(altered))
+                assert run(checker,altered_contract,state_path,'entry').returncode == 2
+                cases += 1
+        altered = copy.deepcopy(contract)
+        altered['joint_order'][1] = altered['joint_order'][0]
+        altered_contract.write_text(json.dumps(altered))
+        bad = state_at(contract['entry_target_20d_rad'])
+        bad['names'] = altered['joint_order']
+        state_path.write_text(json.dumps(bad))
+        assert run(checker,altered_contract,state_path,'entry').returncode == 2
+        cases += 1
+
+    print(f"E6.1C_STATE_GATE_CASES={cases}")
     print("E6.1C_STATE_GATE_FAILED_EXPECTATIONS=0")
     print("E6.1C_STATE_GATE_NETWORK_CALLS=0")
     print("E6.1C_STATE_GATE_PHYSICAL_PUBLISHERS=0")

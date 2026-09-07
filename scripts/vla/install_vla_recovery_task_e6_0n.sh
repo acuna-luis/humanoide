@@ -52,6 +52,10 @@ while (($#)); do
   esac
 done
 
+if [[ "$MODE" == install-on-disk ]]; then
+  bash "$SCRIPT_DIR/../lib/cruzr_contact_motion_lock.sh" "E6.0N:install-on-disk" || exit $?
+fi
+
 for tool in awk cp date find grep nc readlink scp setsid sha256sum sort ssh tee xargs; do
   command -v "$tool" >/dev/null || { printf 'ERROR: falta %s\n' "$tool" >&2; exit 1; }
 done
