@@ -1,5 +1,12 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09, pares cruzados acotados:** 459/462 pares brazo–cuerpo/otro brazo con
+cota positiva entre muestras; tres restantes coinciden con refinamientos STL
+positivos previos. Bloque parcial condicional, no porcentaje de seguridad global.
+Siguen útil, propios brazos, geometría faltante, escena, seguimiento y parada.
+Seis tests base pasan; evidencia 20260907_fixed_wrist_cross_pair_bounds.json.
+Sin robot; SALIDA_MUNECA_FIJA lista cobertura y pendientes.
+
 **07-09, intervalo entre muestras acotado condicionalmente:** tres pares
 STL hombro–torso con fórmula min(d)-R*h/2, cotas 10,621/10,620/18,501 mm.
 Sólo superficies rígidas, giro único, distancias numéricas asumidas correctas;

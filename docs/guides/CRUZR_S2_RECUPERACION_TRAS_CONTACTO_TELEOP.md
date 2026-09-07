@@ -1,5 +1,10 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09, bloque cruzado parcial:** 459 pares con cota AABB positiva y tres
+refinados STL positivos, sólo bajo hipótesis del modelo. No cubre herramienta,
+propios brazos, escena ni parada. No autoriza recuperación física. Detalle
+en SALIDA_MUNECA_FIJA; no convertir recuento de pares en porcentaje de seguridad.
+
 **07-09, cota inter-muestras parcial:** tres pares hombro–torso tienen cotas
 positivas bajo modelo rígido/distancia numérica. No interpretar como validación
 continua del conjunto ni margen físico/parada. Ver SALIDA_MUNECA_FIJA.

@@ -1,5 +1,37 @@
 # Salida con muñeca fija: contraste offline
 
+## Cierre condicional del bloque de pares cruzados
+
+`audit_fixed_wrist_cross_pair_bounds.py` verifica hashes del generador y
+geometría del informe AABB, su contrato de 121 posturas por dirección, y
+descendencia de cada link respecto al hombro rotado. Para cada par aplica
+min(d_AABB)-R·0,005/2; R es radio máximo de las esquinas de la caja local
+respecto al pivote, envolviendo todos los puntos de la geometría representada.
+La distancia AABB en cada muestra es una cota inferior de la separación de
+las superficies incluidas; se resta el desplazamiento máximo entre muestras.
+
+459 de 462 pares dan cota positiva. Los tres restantes son exactamente
+L_roll–torso, R_roll–torso y R_yaw–torso, refinados en el apartado STL con
+cotas positivas condicionales. Así, los pares cruzados representados quedan
+separados bajo las hipótesis rígidas/numéricas, NO el robot físico completo.
+No se obtiene porcentaje global de seguridad a partir de este recuento.
+
+Evidencia externa `20260907_fixed_wrist_cross_pair_bounds.json`; fuentes y
+resultados por par preservados. Se repiten seis tests de las primitivas AABB
+y cota inter-muestras, correctos. Sin conexión ni movimiento.
+
+### Pendientes que este resultado no cierra
+
+- Abrazaderas y montaje real, incluido soporte/patitas frente a robot.
+- Pares internos de cada brazo y geometría propia shoulder_pitch ausente.
+- Postura/escena reales, correspondencia del modelo y error acotado.
+- Seguimiento de ejes retenidos, distancia de parada y energía/carga.
+- Inicio/rearme y retorno real, distintos del conjunto ideal de posturas.
+
+No repetir el barrido de los mismos 462 pares sin cambiar hipótesis; priorizar
+estas lagunas de cobertura. Las diagonales L174/R178 no son cotas inferiores
+de separación global y no deben consumirse como margen de frenado.
+
 ## Cota entre muestras para los tres pares refinados
 
 `audit_shoulder_between_samples.py` comprueba hashes de geometría/kernel y
