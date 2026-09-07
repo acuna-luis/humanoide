@@ -1,5 +1,44 @@
 # Salida con muñeca fija: contraste offline
 
+## Refinamiento de los 24 avisos internos y auditoría de STOP
+
+Ejecutado audit_arm_internal_geometry.py --refine-mesh. Veinte pares de
+geometría relativa constante se evalúan en cero; cuatro pares variables
+shoulder_pitch–roll/yaw se muestrean en 61 posturas cada uno. Total 264
+cálculos entre mallas. De los 24 avisos AABB, 18 dan mínimo positivo y seis
+dan cero (dentro de epsilon 1e-8 m): bilateral pitch–roll de hombro,
+elbow_yaw–wrist_pitch y wrist_pitch–wrist_roll. Son pares adyacentes, pero
+no se ha demostrado una geometría de contacto permitido ni se han excluido.
+No describirlos como seis choques físicos. Algunos otros mínimos son muy
+pequeños (wrist_roll–sixforce ~0,00013 mm), no margen físico utilizable.
+No test de contención ni incertidumbre de malla/fijación.
+
+Evidencia externa 20260907_arm_internal_geometry_mesh.json con cada muestra,
+IDs de triángulos y hashes. Cinco casos y 300 contrastes del kernel pasan.
+
+Revisión de código, sin ejecución: OnePointRuntime.stop → monitor.stop →
+_stop_transport → adapter.stop → RosSdkRobotCommandBackend.stop. El adaptador
+vacía la trayectoria pendiente y el backend destruye el publicador. Su propia
+documentación lo define como STOP de despacho, no E-stop/torque-off/parada
+segura certificada. No envía orden adicional de hold. Por tanto, no prueba
+cancelación de una consigna ya aceptada ni distancia de frenado del robot.
+No se modifica esta semántica ni se inventa una orden de parada.
+
+El intervalo histórico de 0,414 s entre alerta FT y log de halt no es tiempo
+mecánico de parada. Los límites provisionales de aceleración de trayectoria
+tampoco son una deceleración de emergencia garantizada; no calcular con ellos
+un margen de frenado para aprobar la ruta.
+
+### Estado de cierre honesto
+
+Se avanzó la geometría disponible y se identificó el alcance de STOP software.
+No es posible cerrar todos los gates con estos datos: falta demostrar holgura
+y montaje reales, interpretar uniones del mesh, correspondencia de geometría,
+escena actual y respuesta mecánica de parada/control. Nuevas simulaciones del
+mismo modelo no sustituyen esas pruebas. No hay habilitación física ni VLA.
+No se solicita medir entre piezas energizadas. No hubo conexión al robot,
+publicadores creados, movimiento ni cambio remoto.
+
 ## Cobertura interna y mallas visuales de hombro
 
 Localizadas en el SDK las mallas visuales L/R_shoulder_pitch_link.STL,

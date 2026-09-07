@@ -1,5 +1,11 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09, STOP software no es parada mecánica:** trazado backend ROS VLA destruye
+publisher y vacía cola, sin orden adicional hold/torque-off. No usar como
+evidencia de distancia de parada ni los límites de aceleración provisional
+como frenado garantizado. Refinamiento interno deja seis ceros en uniones
+adyacentes, no descartados. SALIDA_MUNECA_FIJA documenta alcance. Sin movimiento.
+
 **07-09, pares internos:** diagnóstico con shoulder_pitch visual provisional,
 56 pares, 24 solapamientos AABB sin retirar adyacencias. No contacto permitido
 inferido. 42 relaciones rígidas y 14 variables en salida de hombro; pendiente

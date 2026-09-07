@@ -1,5 +1,12 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09, 24 avisos internos refinados:** 264 cálculos STL, 18 mínimos positivos
+y seis ceros en uniones adyacentes (no choques físicos demostrados ni contacto
+permitido). STOP VLA trazado hasta backend: vacía cola/destruye publisher, no
+demuestra parada mecánica ni cancela necesariamente consigna aceptada. 0,414 s
+histórico FT→halt no es tiempo de frenado. Evidencia arm_internal_geometry_mesh,
+detalle SALIDA_MUNECA_FIJA. Gates físicos no cerrables con esos datos; sin robot.
+
 **07-09, cobertura interna ampliada:** mallas visuales shoulder_pitch halladas
 en SDK (1462 triángulos/lado), sólo sustituto provisional offline, no collision
 vendor validada. 56 pares internos: 42 rígidos comunes y 14 con relación variable;
