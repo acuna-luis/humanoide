@@ -1,5 +1,44 @@
 # Diagnóstico conectado de arranque — 07-09-2026
 
+## Continuación: configuración de Control Center (sólo lectura)
+
+**VERIFICADO, 07-09:** el comando del contenedor
+`walker-system.control_center-1` carga `config/base.conf` y `config/cc.conf`
+mediante `rosa run control_center control_center`. Se leyó su configuración
+instalada en `/opt/walker/control_center/share/control_center/config/` mediante
+`docker exec` exclusivamente con find, grep, wc, sed y sha256sum. No se lanzó
+el ejecutable ROS, una consulta ROS, un rearme ni un cambio de configuración.
+
+| Archivo | Bytes | SHA-256 |
+|---|---:|---|
+| cc.conf | 725 | be8c98118ddc7ab40d235ac03e82f8614b77623453d197d31863d58f6d34b63f |
+| base.conf | 1892 | ddbb0e7a8767d1466272fbcef66b4fa03dccd1a9f4ff3035ba7651dcb2dd5c2f |
+
+Lectura completa de ambos archivos: no contienen una opción para omitir HOME
+o configurar StartMotion. cc.conf configura rutas, HMI, producto y OTA;
+base.conf configura infraestructura, registros y trazas. El inventario acotado
+del directorio persistente `/etc/walker/control_center` encontró fault.db y
+last_work_mode; no se alteraron ni se interpretó last_work_mode como estado
+físico. No se inspeccionaron credenciales, historiales ni bases de datos.
+
+**PENDIENTE:** esto no prueba que no exista otra interfaz del proveedor; no
+autoriza inventar un parámetro skip_home, modificar la máquina de estados o
+marcar readiness artificialmente. No se ha encontrado una opción soportada en
+los dos archivos examinados. La búsqueda de StartMotion/LimbMotion/HOME y
+estados relacionados en `control_center.20260907-132513.78.log` no devolvió
+coincidencias; ese resultado negativo no demuestra ausencia de movimientos.
+La cadena causal histórica del 04-09 conserva la evidencia de la auditoría.
+
+Nueva lectura systemd: UnitFileState=disabled, ActiveState=active,
+SubState=exited. Sin cambios remotos durante esta continuación. El estado
+físico y los paros no se verificaron. HOME interno sigue sin estar contenido;
+no procede usar liberación de E-stop o reinicio como ensayo de esta conclusión.
+
+Punto de reanudación: identificar una interfaz documentada de arranque sin
+movimiento o validar la ruta interna real desde una postura medida. El barrido
+sintético anterior no sustituye esa validación, ni resuelve la geometría del
+útil frente a su propia muñeca.
+
 ## Actualización posterior: cambio autorizado y verificado
 
 El operador autorizó expresamente deshabilitar sólo el arranque automático del

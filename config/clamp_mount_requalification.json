@@ -40,6 +40,23 @@
     "measurement_uncertainty_m": null,
     "note": "Operator clarified B/C=45/55 from actual mounting interface; plate midheight would give 50/50. Interface is 5 mm above midheight. This does not establish ROS frame axes. Tab projection is lateral, not added to A. Historical 105 mm was approximate and is not the current plate height."
   },
+  "reported_static_tab_to_body_measurements": {
+    "source": "operator_chat_2026-09-07_photos_13.10",
+    "left_m": 0.174,
+    "right_m": 0.178,
+    "method": "diagonal_from_protruding_tab_to_body_point_operator_identified_as_nearest",
+    "minimum_surface_clearance_verified": false,
+    "uncertainty_m": null,
+    "synchronized_joint_state": null,
+    "model_endpoint_coordinates": null,
+    "photo_order_sides": ["L", "L", "L", "R"],
+    "photo_sha256": [
+      "0153fa1b2d13dad788107af62c5c1671eeb7b477a4bb17ef85335c99bf3e48a8",
+      "6003d8a84e4fb5ac9036289a7b7dc8589a5f8e6fb8fa76534bf3748963f598b6",
+      "44183f28f50d6f07d5c8b77f03699de6c3ca25a2880fa33101dc21d3534938a9",
+      "d0d52d2ae8c11869f60446dcc981e78b5addecf91dfde1a6eb3b3cfad9b01fbe"
+    ]
+  },
   "mounts": {
     "L": {
       "parent_frame": "L_sixforce_link",

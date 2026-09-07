@@ -1,5 +1,73 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09, candidato de muñeca fija:** invariancia relativa sensor/muñeca
+comprobada numéricamente en salida sintética de hombro, no holgura inicial
+ni seguridad física. Diagonales L174/R178 mm no son separación mínima.
+Ver `docs/incidents/2026-09-07_SALIDA_MUNECA_FIJA.md` antes de continuar.
+
+**07-09, precisión del bloqueo geométrico:** no está limitado a staging↔A;
+los 30 tramos revisados tienen testigos de solapamiento conservador bilateral
+con propio brazo. No interpretar las separaciones negativas como penetración
+real. Aumentar radios o serializar no habilita la ruta. Ver auditoría por tramo
+en BARRIDO_PESIMISTA_RECORRIDO; sin movimiento ni cambios de protecciones.
+
+**07-09, desarrollo offline:** salida histórica temporizada y límites de posición
+evaluados, no autorización de salida/retorno. El solapamiento útil–wrist_pitch
+permanece inconcluso. Emparejador temporal implementado sin recolector vivo;
+no usarlo como monitor de seguridad. Diez tests locales pasan entre ambos módulos.
+
+**07-09 ~12:54 Madrid:** imagen estéreo disponible por suscripción pasiva,
+pero par concurrente imagen/joints separado 1,288 s; no sincronización validada
+ni protección de movimiento. Véase TELEMETRIA_ESTACIONARIA en incidents.
+
+**07-09 ~12:49 Madrid:** lectura puntual de joints y FT disponible; brazos
+próximos a cero, velocidades reportadas cero. No demuestra ausencia de contacto,
+tara FT ni vigilancia preventiva. No se enviaron movimientos ni cambios de modo.
+Alcance y pendientes: `docs/incidents/2026-09-07_TELEMETRIA_ESTACIONARIA.md`.
+
+**07-09 ~12:33 Madrid:** operador reporta HOME sin problemas tras rearme.
+Log muestra éxito pero 184 avisos de cabeza fuera de rango; sin alarmas FT
+explícitas en ventana consultada retrospectivamente. No fue ensayo monitorizado
+antes del contacto ni aprobación de recuperación general. No ampliar límites.
+Evidencia y alcance en `docs/incidents/2026-09-07_HOME_OBSERVADO_1233.md`.
+
+**07-09, peor caso geométrico:** la esfera nominal 119,411 mm ya invade la malla
+de muñeca en el testigo conservado (centro hipotético a 40,639 mm). No demuestra
+contacto real; sí impide aprobar mediante esa envolvente. Reservas mayores no
+lo resuelven. No excluir la muñeca ni elegir giro favorable para obtener PASS.
+
+**07-09, referencia de útil pendiente:** revisión de fotos y cotas no permite
+reducir el registro a otra longitud. Hace falta identificar físicamente origen,
+ejes y cara de fijación del sensor sixforce_link (croquis de referencia o
+registro cualificado). No exigir repetir A–F/T ni más fotos genéricas; no
+desmontar/mover para resolverlo. No hay nueva aprobación de recuperación.
+
+**07-09, alcance adicional offline:** candidato histórico pasa límites de
+posición URDF para 14 ejes; continuidad monotónica garantiza que no sale del
+intervalo de sus extremos. No equivale a límites activos ni comprobación de
+colisiones. Generador exige --urdf y conserva JSON no ejecutable. V2 externa;
+geometría de útil/muñeca y HOME interno siguen pendientes.
+
+**07-09, candidato temporal local:** generador build_home_offline_candidate.py
+calcula tiempos para retorno histórico P14, no una recuperación autorizada.
+35,389 s totales con curva quíntica y límites provisionales; no trasladar sus
+duraciones a MetaMove suponiendo la misma interpolación. No valida colisiones,
+postura actual, estado de otros ejes ni arranque. JSON no ejecutable, sin ROS.
+
+**07-09, interfaz de planificación examinada:** ArmTask no expone un plan
+articular previo; GetMnpActionList sólo catálogo. PickPlanner/WalkPlanner son
+interfaces de punto/pose, no retorno articular. No usar MetaMove/ArmTask como
+consulta sin ejecución ni confiar en un yaml_args dry-run no documentado.
+Planificación desacoplada aún no demostrada; informe RUTA_HOME_ALTERNATIVAS.
+
+**07-09, alternativa HOME estudiada sin ejecutar:** existe tarea instalada
+move_dual_arms_home_ompl con planificación solicitada para 14 ejes. No es un
+reemplazo aprobado: no demostrados plan-only, geometría activa, recorrido ni
+intercepción del HOME interno. No reutilizar variantes genéricas cintura/base
+con dimensiones distintas. No llamar MetaMove para obtener un plan de prueba.
+Hallazgos, hashes y dependencias en
+`docs/incidents/2026-09-07_RUTA_HOME_ALTERNATIVAS.md`. Sin cambios en robot.
+
 **07-09 ~09:44 UTC, autoarranque del guard contenido:** con autorización expresa,
 Vision guard pasa a disabled sin --now/stop/restart. Archivos y marcas de última
 ejecución intactos; copias antes/después y manifiesto verificados. Se retiró sólo

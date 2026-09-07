@@ -20,6 +20,7 @@ TESTS = [
     'scripts/test_clamp_pessimistic_screen.py',
     'scripts/test_clamp_pessimistic_path.py',
     'scripts/test_home_group_timing.py',
+    'scripts/test_home_offline_candidate.py',
     'scripts/test_home_posture_gate.py',
     'scripts/vla/test_vla_ready_entry_state_e6_1c.py',
 ]
@@ -46,6 +47,7 @@ INPUTS = TESTS + SHELLS + [
     'scripts/audit_clamp_pessimistic_path.py',
     'scripts/vla/analyze_vla_fixture_collision_e4_1c.py',
     'scripts/audit_home_group_timing.py',
+    'scripts/build_home_offline_candidate.py',
     'scripts/vla/check_vla_ready_entry_state_e6_1c.py',
     'scripts/vla/analyze_vla_ready_entry_transition_e6_1c.py',
     'scripts/vla/runtime/cruzr_s2_vla_ready_entry_transition_e6_1c.json',

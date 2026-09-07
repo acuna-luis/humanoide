@@ -1,5 +1,104 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09, salida muñeca fija offline:** registradas diagonales reportadas L174/R178 mm,
+no holgura mínima. En tramo sintético de hombro, 121 muestras/lado, relación
+wrist_pitch→sensor constante a precisión numérica; distancia origen sensor–AABB
+cuerpo aumenta 228→518 mm L, 220→518 mm R. No comparable directamente con
+patita física, no barrido completo ni aprobación. Evidencia y pendientes en
+`docs/incidents/2026-09-07_SALIDA_MUNECA_FIJA.md`. Sin conexión/movimiento.
+
+**07-09, auditoría de peor caso por tramo:** los 30 segmentos existentes
+del barrido de 201 muestras tienen algún solapamiento esfera–propio brazo
+bilateral incluso con radio mínimo ampliado. No sólo staging→A. Serializar
+brazos o aumentar margen no lo elimina; no prueba contacto físico. Cotas de
+error siguen sin verificación física. Alternativa de conservar geometría
+relativa de muñeca identificada sólo como hipótesis analítica, no ruta aprobada.
+Detalle en BARRIDO_PESIMISTA_RECORRIDO. Sólo archivos locales, sin robot.
+
+**07-09, avance offline salida/medición:** generador admite salida histórica
+cero→staging→A→READY, total 35,389 s y posición URDF aprobada; siete tests.
+No ruta nueva de observación ni colisiones aprobadas: temporizar no elimina
+solapamiento propio brazo. Emparejador temporal nuevo, tres tests, rechaza
+desfase 1,288 s, sellos cero y falta de referencia de reloj. Recolector continuo
+pendiente. Sin red/movimiento/despliegue. Véanse BARRIDO_PESIMISTA_RECORRIDO
+y TELEMETRIA_ESTACIONARIA en docs/incidents.
+
+**07-09 ~12:54 Madrid, cámara pasiva localizada:** stereo/color/info retenido
+960×576 con sello cero; stereo/color/raw entrega Image2m bgr8 con sello real.
+Dos consultas concurrentes imagen/joints difieren 1,288 s: no sincronizadas.
+Sin arranque de cámara, modos ni movimiento; píxeles no guardados/inspeccionados.
+Pendiente buffer por sello y referencia de reloj. Detalle en TELEMETRIA_ESTACIONARIA.
+
+**07-09 ~12:49 Madrid, diagnóstico estacionario:** muestras actuales joints
+con brazos |q| <= 0,000958738 rad y velocidades reportadas cero; FT de ambas
+muñecas disponible con sello, sin tara/compensación/umbrales verificados.
+Última transición CC observada JoystickMode; PC backend activo, UI inactiva,
+cero clientes WebSocket no demuestra STOP. Cámara sincronizada pendiente.
+Sólo lectura, sin comandos. Detalle `docs/incidents/2026-09-07_TELEMETRIA_ESTACIONARIA.md`.
+
+**07-09 ~12:33 Madrid, HOME realizado por rearme del operador:** reporte
+«se fue a home sin problemas». Log Motion registra cruzr/home 18:33:35–42
+(host +08:00), éxito de cinco grupos/BTree y sin alarmas FT explícitas en
+ventana revisada; 184 avisos de consigna de cabeza fuera de rango. Lectura
+retrospectiva iniciada después del movimiento, no vigilancia preventiva.
+Sin órdenes del agente. No aprueba otras rutas ni demuestra ausencia de daño.
+Detalle `docs/incidents/2026-09-07_HOME_OBSERVADO_1233.md`.
+
+**07-09, peor caso solicitado sin soporte:** contraste de evidencias existentes:
+radio nominal independiente de orientación 119,411 mm frente a distancia de
+muñeca izquierda 40,639 mm en testigo histórico; solapamiento incluso sin
+reservas, no contacto físico demostrado. Ampliar cotas no permite aprobar.
+Debe restringirse incertidumbre de montaje con evidencia, no escoger hipótesis
+favorable. Análisis en RUTA_HOME_ALTERNATIVAS; sin robot ni aprobación física.
+
+**07-09, referencias físicas revisadas:** fotos/cotas existentes no justifican
+una única cota nueva que cierre el registro. Falta asociar origen/ejes y cara
+del sixforce_link a referencias físicas; no repetir medidas generales o fotos.
+Se precisa croquis de referencia del sensor o registro cualificado, no CAD
+completo del útil. Alcance en RUTA_HOME_ALTERNATIVAS. Contrato sin modificar,
+ningún nuevo permiso físico ni conexión al robot.
+
+**07-09, candidato offline contrastado con URDF:** límites de posición válidos
+para los 14 ejes y extremos de las tres etapas; monotonicidad de smoothstep
+extiende ese resultado al segmento continuo (sólo posición, no colisiones).
+Generador exige --urdf, rechaza límites ausentes/inválidos y devuelve 3 ante
+rechazo. Seis tests pasan. Evidencia 20260907_home_offline_candidate_v2.json,
+hash URDF incluido. No son límites activos Motion verificados. Sigue sin
+aprobación física ni resolución del útil frente a la muñeca.
+
+**07-09, temporización offline implementada:** build_home_offline_candidate.py
+genera retorno histórico P14 READY→A→staging→cero de brazos con smoothstep
+quíntico, reposo en cada etapa. Límites provisionales 0,15 rad/s y 0,5 rad/s²
+acotados analíticamente para esa curva; duraciones 4,645/23,245/7,500 s,
+total 35,389 s. Cinco tests pasan. No búsqueda de ruta ni validación de
+colisiones; resto de ejes no especificado (no cero implícito), no estado real,
+no exportación ejecutable, no equivalencia con Motion. Evidencia externa
+20260907_home_offline_timing_candidate.json. Sin conexión al robot en este paso.
+
+**07-09, plan-only no demostrado:** inspección de ArmTask, GetMnpActionList,
+PickPlanner/WalkPlanner y headers SDK no encuentra exportación previa de
+trayectoria articular HOME. ArmTask ofrece ejecución/estado, no usarlo como
+dry-run ni lanzar/cancelar para probar. Búsqueda ampliada de interfaces bajo
+/opt/walker; alcance y hashes en informe RUTA_HOME_ALTERNATIVAS. Sin llamadas
+ROS, SDK ejecutado ni cambios remotos. Ruta física sigue pendiente.
+
+**07-09, investigación de ruta HOME:** releídos HOME y open_arm, hashes sin
+cambio respecto a auditoría. Localizada alternativa instalada
+move_dual_arms_home_ompl (14 objetivos, OMPL solicitado), no ejecutada.
+Variantes genéricas cintura/base no reutilizables sin adaptación dimensional.
+No demostrada API plan-only, geometría activa ni integración previa al HOME
+interno. Ruta NO aprobada; sin modificaciones remotas ni ROS. Detalle y hashes:
+`docs/incidents/2026-09-07_RUTA_HOME_ALTERNATIVAS.md`.
+
+**07-09, continuación Control Center sólo lectura:** comando de arranque y
+lectura completa de config/cc.conf (725 bytes) y base.conf (1892 bytes)
+verificados; no contienen opción para omitir HOME/StartMotion. No demuestra
+ausencia de otra interfaz vendor. No se modificó CC ni se ejecutó ROS/rearme.
+Guard nuevamente disabled, active/exited. HOME interno y validación geométrica
+siguen pendientes; no hay aprobación física. Hashes, alcance y resultado
+negativo de búsqueda en log en
+`docs/incidents/2026-09-07_DIAGNOSTICO_ARRANQUE_SOLO_LECTURA.md`.
+
 **07-09 ~09:44 UTC, cambio remoto autorizado:** deshabilitado únicamente
 autoarranque de `cruzr-v020-boot-guard.service` en Vision mediante systemctl
 disable (sin --now). Verificado UnitFileState=disabled; active/exited y marcas

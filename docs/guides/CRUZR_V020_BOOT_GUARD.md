@@ -1,5 +1,14 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+## Control Center configuration review — 2026-09-07
+
+Read-only inspection confirmed its startup loads base.conf and cc.conf. Neither
+installed file contains a HOME/StartMotion suppression option. This is limited
+to those files, not proof that no vendor interface exists. No configuration,
+ROS call or restart was performed. Guard remains disabled, active/exited;
+internal HOME is still not contained. Hashes and scope are recorded in
+`docs/incidents/2026-09-07_DIAGNOSTICO_ARRANQUE_SOLO_LECTURA.md`.
+
 ## Authorized containment — 2026-09-07 ~09:44 UTC
 
 Vision guard automatic startup is now **disabled**, explicitly authorized by

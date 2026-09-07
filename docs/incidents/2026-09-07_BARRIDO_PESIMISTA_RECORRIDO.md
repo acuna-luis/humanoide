@@ -1,5 +1,56 @@
 # Recorrido histórico con envolventes ampliadas — 07-09-2026
 
+## Auditoría por tramo del peor caso solicitado
+
+Se revisaron los 30 segmentos del informe existente de 201 muestras, sin
+repetir el barrido ni enviar comandos. Con el menor radio ampliado
+139,411 mm, todos presentan algún solapamiento de envolvente con propio brazo
+en ambos lados. No es únicamente staging→A: en orden síncrono, mínimos de
+separación izquierda/derecha (mm):
+
+| Tramo | Izquierda | Derecha |
+|---|---:|---:|
+| Cero sintético→staging | -137,575 | -137,575 |
+| staging→A | -139,411 | -139,411 |
+| A→READY | -110,386 | -110,387 |
+
+Los retornos presentan los mismos mínimos a la precisión indicada. Órdenes
+L→R y R→L tampoco eliminan el aviso. Estos valores son separación esfera–AABB,
+NO penetración física ni daño predicho. No afirman solapamiento en cada instante.
+Radios mayores no pueden eliminar una intersección ya presente.
+
+Conclusión: no hay tramo completo aprobable con este filtro; no se ha probado
+que ninguna ruta alternativa exista. El radio y sus errores siguen siendo
+hipótesis de sensibilidad, no un peor caso físico certificado. Para usar
+robustez hay que justificar que el conjunto de incertidumbre contiene el
+montaje real y comprobar separación para ese conjunto.
+
+Alternativa analítica pendiente: un movimiento exclusivamente aguas arriba
+de la muñeca, manteniendo sus articulaciones relativas fijas, conserva en el
+modelo rígido la distancia interna útil–muñeca. Esto podría evitar necesitar
+reconstruir esa distancia durante ese movimiento, PERO requiere acreditar
+holgura inicial, fijación/rigidez, seguimiento de ejes retenidos y barrido
+completo frente al resto del robot/entorno. No basta una foto ni ignorar el
+par de colisión. No se ha seleccionado ni autorizado tal movimiento.
+
+## Continuación: temporización de salida
+
+Se añadió `--direction outbound` a `build_home_offline_candidate.py`.
+Evalúa cero sintético → staging → A → READY B, con tiempos
+7,500008 / 23,244523 / 4,644505 s (total 35,389035 s), límites provisionales
+0,15 rad/s y 0,5 rad/s² y comprobación de posiciones URDF aprobada.
+Evidencia externa `20260907_outbound_timing_candidate.json`; siete tests del
+generador pasan. No se cambia la ruta histórica ni se llama postura de
+observación a READY B. No hay movimiento, conexión ni estado inicial actual.
+
+La curva smoothstep monótona recorre el mismo segmento articular que la
+interpolación lineal entre sus extremos; cambia su temporización. Por tanto,
+no elimina los solapamientos geométricos del barrido previo. No se repitió
+ese barrido ni se afirma validar todos los puntos continuos. Salida y retorno
+siguen inconclusos en útil–propio brazo, especialmente wrist_pitch durante
+staging↔A, y por las restantes lagunas de cobertura indicadas abajo.
+Una ruta nueva de observación no queda resuelta con este resultado.
+
 ## Resultado
 
 **No se autoriza movimiento.** Se ha muestreado el candidato histórico de
