@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**RELEVO 07-09 → 08-09:** operador pide guardar para mañana. Punto exacto en
+[`docs/incidents/2026-09-07_RELEVO_HOME_READY.md`](incidents/2026-09-07_RELEVO_HOME_READY.md).
+Reconocidos P1/P2/P3 en foto izquierda; contraste CAD aún no ejecutado, patrón
+simétrico previamente ambiguo. Figura generada sólo orientativa, original para
+cálculos. Último estado reportado: energizado, ambos paros liberados, estable
+sin contacto; NO consta apagado/aislamiento ni estado seguro de fin de jornada.
+Sin órdenes ni monitor nocturno. READY intacto y aceptado como premisa, rutas no
+validadas. Reanudar offline sin repetir cotas/fotos genéricas.
+
 **07-09, perfil de trabajo sin PGC:** retiradas seis geometrías históricas
 sólo offline. Abrazaderas nominales 82×100×130 registradas descriptivamente,
 sin transformación inventada; cobertura mundial del útil sigue incompleta.

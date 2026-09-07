@@ -1,5 +1,10 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**Relevo 07-09:** ver [punto de reanudación](../incidents/2026-09-07_RELEVO_HOME_READY.md).
+Último reporte físico energizado/paros liberados/estable sin contacto; no se
+confirmó aislamiento o apagado. No tratar guardado de conversación como parada.
+P1/P2/P3 reconocidos visualmente; montaje CAD aún pendiente. No monitor activo.
+
 **07-09, modelo offline corregido:** PGC/dedos históricos retirados, muñecas y
 sensores conservados. Abrazaderas nominales incluidas como datos descriptivos
 sin montaje inferido; aún no colisionadores mundiales. Barrido sólo robot
