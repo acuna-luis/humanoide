@@ -1,5 +1,13 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09, perfil de trabajo sin PGC:** retiradas seis geometrías históricas
+sólo offline. Abrazaderas nominales 82×100×130 registradas descriptivamente,
+sin transformación inventada; cobertura mundial del útil sigue incompleta.
+Barrido por defecto corregido: 1.836 estados/561 pares de robot/34 avisos AABB;
+menos pares NO implica mayor seguridad. Render separado y seis tests pasan.
+Ver VALIDACION_HOME_READY_HOME, home_ready_clamps_profile y
+home_clamps_unregistered_visual. READY y robot sin modificar.
+
 **07-09, READY válido como premisa del operador:** se acepta expresamente para
 análisis que READY no presenta choques reales; no es verificación independiente
 ni aprobación de tránsito. Aviso cabeza–torso pasa a discrepancia de modelo bajo

@@ -1,5 +1,10 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09, modelo offline corregido:** PGC/dedos históricos retirados, muñecas y
+sensores conservados. Abrazaderas nominales incluidas como datos descriptivos
+sin montaje inferido; aún no colisionadores mundiales. Barrido sólo robot
+561 pares/34 avisos, no aprobación. VALIDACION_HOME_READY_HOME documenta detalle.
+
 **07-09, premisa declarada:** operador pide asumir READY sin choques reales.
 Se distingue de validación medida; no valida HOME↔READY. Mallas en HOME numérico
 ilustradas sin movimiento; no representan abrazaderas exactas ni escena.

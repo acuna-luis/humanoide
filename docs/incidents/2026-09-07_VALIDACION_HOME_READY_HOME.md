@@ -1,5 +1,34 @@
 # Prioridad: HOME→READY y READY→HOME, VLA fuera de alcance
 
+## 07-09: perfil offline corregido sin PGC
+
+clamp_work_model.py retira exactamente las seis geometrías históricas
+L/R_pgc_base, finger1 y finger2, con sus articulaciones, conservando muñecas y
+sensores sixforce. No modifica URDF/SDK originales ni el robot. Incorpora por
+lado la envolvente nominal descriptiva de abrazadera 82×100×130 mm, placa
+70×100×36 y reserva lateral 12 mm, a partir del contrato existente.
+
+Las transformaciones y tolerancias continúan null; no se aplica identidad por
+defecto. Las abrazaderas NO están aún incluidas en los cálculos mundiales de
+distancia. collision_coverage_complete y physical_authorized permanecen false.
+Si el contrato incorpora una transformación, el cargador exige una implementación
+validada explícita en vez de aceptarla silenciosamente.
+
+El barrido audit_home_ready_full_screen usa ahora este perfil por defecto;
+--tool-profile historical-pgc queda exclusivamente para comparación histórica.
+Nuevo resultado: 1.836 estados, 561 pares de robot, 34 solapamientos AABB
+inconclusos. La reducción desde 828/48 NO es mejora de seguridad: se retiraron
+objetos incorrectos y falta incorporar útiles reales al barrido. READY no cambió.
+Evidencia: 20260907_home_ready_clamps_profile.json, con cotas, perfil y hashes.
+Los informes anteriores permanecen históricos; sus hashes no se revalidan
+automáticamente tras cambios de código.
+
+Render actualizado en 20260907_home_clamps_unregistered_visual: robot sin PGC
+y abrazadera nominal SEPARADA, sin inventar colocación. PNG inspeccionado y
+leyendas legibles. Tres tests de perfil pasan (seis retiradas exactas, cotas/
+nulls, árbol resoluble), más tres tests existentes del barrido. Sin despliegue,
+movimiento ni modificación de READY. Premisa del operador sobre READY mantenida.
+
 ## 07-09: premisa del operador y visualización del modelo
 
 El operador solicita asumir READY válido sin choques reales. Se adopta como

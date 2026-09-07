@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from audit_clamp_pessimistic_screen import URDF, ARCHIVE, fk
+import clamp_work_model
 
 
 def main():
@@ -20,7 +21,7 @@ def main():
     parser.add_argument('--output-dir', type=Path, required=True)
     args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=False)
-    joints, _, triangles = fk.load_robot(URDF, ARCHIVE)
+    joints, _, triangles, profile = clamp_work_model.load()
     root = ET.parse(URDF).getroot()
     with zipfile.ZipFile(ARCHIVE) as archive:
         members = {n.split('cruzr_s2_description/', 1)[-1]: n for n in archive.namelist() if not n.endswith('/')}
@@ -44,13 +45,13 @@ def main():
     allpoints = np.concatenate([x.reshape(-1,3) for x in world.values()])
     low, high = allpoints.min(0), allpoints.max(0)
     fig = plt.figure(figsize=(16,9), facecolor='#f6f8fb')
-    fig.suptitle('HOME NUMÉRICO · MALLAS UTILIZADAS EN LA AUDITORÍA', fontsize=20, fontweight='bold', y=.96)
+    fig.suptitle('MODELO CORREGIDO · SIN PINZAS PGC', fontsize=20, fontweight='bold', y=.96)
     axes = [fig.add_subplot(1,3,i+1, projection='3d') for i in range(3)]
     light = np.array([.5,-.3,.8]); light /= np.linalg.norm(light)
     for index, ax in enumerate(axes):
         ax.set_facecolor('#f6f8fb')
         for n, tri in world.items():
-            if index == 2 and not (n.startswith('L_') and any(k in n for k in ('elbow','wrist','sixforce','pgc','finger'))):
+            if index == 2:
                 continue
             normals = np.cross(tri[:,1]-tri[:,0], tri[:,2]-tri[:,0])
             norm = np.linalg.norm(normals, axis=1)
@@ -69,35 +70,41 @@ def main():
             ax.set_box_aspect((.96,.96,span[2]+.06))
             ax.view_init(elev=12,azim=25 if index == 0 else 115)
         else:
-            center = poses['L_sixforce_link'][:3,3]
-            u,v = np.meshgrid(np.linspace(0,2*np.pi,25),np.linspace(0,np.pi,17))
-            for radius,color in ((.119411,'#d57613'),(.204411,'#c33446')):
-                ax.plot_wireframe(center[0]+radius*np.cos(u)*np.sin(v),
-                    center[1]+radius*np.sin(u)*np.sin(v),center[2]+radius*np.cos(v),
-                    color=color,linewidth=.55,alpha=.6)
-            ax.scatter(*center,color='black',s=20)
-            ax.set_xlim(center[0]-.24,center[0]+.24)
-            ax.set_ylim(center[1]-.24,center[1]+.24)
-            ax.set_zlim(center[2]-.24,center[2]+.32)
-            ax.set_box_aspect((.48,.48,.56))
-            ax.view_init(elev=15,azim=30)
+            tool = profile['tools']['L']
+            for bounds,color,alpha in [(tool['descriptive_envelope']['bounds_m'],'#789fa0',.12),
+                (tool['descriptive_primitives'][0]['bounds_m'],'#408f95',.9),
+                (tool['descriptive_primitives'][1]['bounds_m'],'#e9a23b',.65)]:
+                lo,hi = np.asarray(bounds)*1000
+                # Display axes u, depth, v: descriptive coordinates, NOT ROS.
+                lo,hi = lo[[0,2,1]],hi[[0,2,1]]
+                vertices = np.array([[lo[0],lo[1],lo[2]],[hi[0],lo[1],lo[2]],
+                    [hi[0],hi[1],lo[2]],[lo[0],hi[1],lo[2]],
+                    [lo[0],lo[1],hi[2]],[hi[0],lo[1],hi[2]],
+                    [hi[0],hi[1],hi[2]],[lo[0],hi[1],hi[2]]])
+                faces = [[vertices[i] for i in face] for face in
+                         [(0,1,2,3),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)]]
+                ax.add_collection3d(Poly3DCollection(faces,facecolors=color,edgecolors=color,alpha=alpha,linewidths=1))
+            ax.set_xlim(-60,70); ax.set_ylim(-55,115); ax.set_zlim(-75,65)
+            ax.set_box_aspect((130,170,140))
+            ax.view_init(elev=22,azim=-55)
         ax.set_axis_off()
     axes[0].set_title('Vista 3D frontal oblicua', fontsize=13)
     axes[1].set_title('Vista 3D lateral oblicua', fontsize=13)
-    axes[2].set_title('Muñeca izquierda + hipótesis esféricas', fontsize=13)
+    axes[2].set_title('Abrazadera: modelo nominal SEPARADO', fontsize=13)
     fig.legend(handles=[Patch(color=colors[k],label=l) for k,l in
         [('body','Cuerpo: collision URDF'),('arm','Brazos: collision URDF'),('head','Cabeza: collision URDF'),
-         ('fallback','Hombro: malla visual provisional'),('gripper','Pinza PGC histórica, NO abrazadera real')]],
+         ('fallback','Hombro: malla visual provisional')]],
         loc='lower center',bbox_to_anchor=(.5,.105),ncol=3,frameon=False,fontsize=10)
-    fig.text(.69,.25,'Naranja: radio nominal 119,4 mm\nRojo: radio hipotético ampliado 204,4 mm\nCentro supuesto: origen sixforce del URDF',fontsize=10,color='#414c59')
-    fig.text(.05,.055,'Todos los ejes = 0 (postura sintética, no captura actual). No se ha reconstruido una malla exacta de las abrazaderas.\nLas esferas son hipótesis de sensibilidad, NO piezas físicas ni cotas de seguridad verificadas. Sin mesas, vallas ni entorno.',fontsize=11,color='#374453')
+    fig.text(.69,.25,'Envolvente total: 82 × 100 × 130 mm\nPlaca: 70 × 100 × 36 mm; patitas: +12 mm\nTransparente: soporte según contención reportada\nPosición y orientación sobre sensor: PENDIENTES',fontsize=10,color='#414c59')
+    fig.text(.05,.055,'Izquierda/centro: robot en cero sintético, SIN útiles montados en el modelo; no es la configuración física completa.\nDerecha: volumen descriptivo según cotas reportadas, no CAD exacto. No se ha supuesto su transformación al sensor.',fontsize=11,color='#374453')
     fig.subplots_adjust(left=.015,right=.99,bottom=.22,top=.86,wspace=.04)
     fig.savefig(args.output_dir/'home_mallas.png',dpi=160,facecolor=fig.get_facecolor())
     fig.savefig(args.output_dir/'home_mallas.svg',facecolor=fig.get_facecolor())
     plt.close(fig)
     manifest = dict(state=q, rendered_links={n:dict(triangles=len(t),category=category(n)) for n,t in triangles.items()},
-        source_sha256={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in (URDF,ARCHIVE,Path(__file__))},
-        note='Exact mesh triangles rendered; sphere radii rounded for illustration; not physical validation',
+        tool_profile=profile,
+        source_sha256={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in (URDF,ARCHIVE,Path(__file__),Path(clamp_work_model.__file__),clamp_work_model.CONTRACT)},
+        note='Robot mesh triangles rendered; tool shown separately in descriptive coordinates; not physical validation',
         robot_connections=0,movement_commands=0)
     (args.output_dir/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print(args.output_dir/'home_mallas.png')
