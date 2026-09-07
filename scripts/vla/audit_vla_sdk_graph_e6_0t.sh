@@ -142,7 +142,7 @@ topic_record() {
   local type info publishers subscribers
   type="$(timeout 8 ros2 topic type "$topic")"
   [[ "$type" == "$expected" ]]
-  info="$(timeout 8 ros2 topic info "$topic")"
+  info="$(timeout 8 ros2 topic info "$topic" --no-daemon)"
   publishers="$(grep -E "^Publisher count:" <<<"$info" | cut -d: -f2 | tr -d " ")"
   subscribers="$(grep -E "^Subscription count:" <<<"$info" | cut -d: -f2 | tr -d " ")"
   printf "%s_TYPE=%s\\n" "$label" "$type"

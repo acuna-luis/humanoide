@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Audit the reduced READY <-> task-0 ENTRY transition entirely offline.
+"""Retired READY <-> ENTRY qualification using unregistered clamp proxies.
+
+The public entrypoint emits a blocked report and exits 78. Historical sampled
+analysis is retained below for forensics, not invoked or physically qualified.
 
 E6.1C deliberately keeps the fourteen arm joints at the previously observed
 vendor READY state.  Only head, lifter and waist move.  The program samples
@@ -32,7 +35,10 @@ EXPECTED_NEAR_PAIRS = {
 }
 WRONG_EFFECTOR_TOKENS = ("pgc", "finger")
 GROUPS = {
-    ("head", "single"): ("head_pitch_joint", "head_yaw_joint"),
+    # Verified live on Cruzr S2 2026-09-04: vendor "-0.0; -0.65"
+    # produces named ROS head_pitch=-0.651, head_yaw~=0.  MetaMove therefore
+    # serializes the head group as yaw; pitch.
+    ("head", "single"): ("head_yaw_joint", "head_pitch_joint"),
     ("lifter", "single"): (
         "lifter_pitch_1_joint",
         "lifter_pitch_2_joint",
@@ -167,6 +173,31 @@ def obb_for_fixture(report: dict[str, Any], width: float, depth: float, thicknes
 
 
 def main() -> int:
+    args = parse_args()
+    report = {
+        "schema": "cruzr-s2-vla-ready-entry-transition-audit-e6.1c-v1",
+        "experiment_id": "E6.1C",
+        "status": "BLOCKED_RETIRED_UNREGISTERED_CLAMP_GEOMETRY",
+        "reason": "Historical documentary proxy has no demonstrated bilateral physical mount transform.",
+        "gates": {"offline_geometry_and_limits_pass": False,
+                  "physical_execution_authorized": False},
+        "historical_analysis_executed": False,
+        "robot_accessed": False,
+        "network_calls": 0,
+        "physical_movement_commanded": False,
+        "physical_execution_authorized": False,
+        "next_gate": "REQUALIFY_REAL_CLAMPS_FULL_SWEEP_RUNTIME_AND_BOOT_HOME",
+    }
+    rendered = json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    if args.output:
+        # Preserve old evidence: neither create directories nor overwrite files.
+        with args.output.open("x", encoding="utf-8") as output:
+            output.write(rendered)
+    print(rendered, end="")
+    return 78
+
+
+def _historical_analysis_not_an_entrypoint() -> int:
     args = parse_args()
     sources = [
         args.contract,

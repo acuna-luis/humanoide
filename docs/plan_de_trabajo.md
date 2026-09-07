@@ -1,8 +1,15 @@
 # Plan de trabajo: recoger, transportar, vaciar y depositar una caja
 
+> **07-09 — contención local implementada:** [estado de recalificación](incidents/2026-09-07_REQUALIFICACION_CLAMPS.md).
+> Doce variantes de lanzamiento rechazadas en tests sin conexión; no cubre
+> HOME interno del arranque, UI/PICO ni el guard instalado en Vision.
+> E-stop mantenido; no liberar ni reiniciar para probar. Inspección reportada:
+> daño sólo en carcasa; clamps restauradas. Geometría bilateral y barrido
+> pendientes; E6.0K retirado para nuevos PASS. No hubo despliegue ni movimiento.
+
 **Fecha inicial:** 2026-09-03
 
-**Última actualización:** 2026-09-04
+**Última actualización:** 2026-09-07
 
 **Estado:** `PLANIFICADO`; este documento no autoriza movimiento físico
 
@@ -10,13 +17,50 @@
 
 ## Matriz ejecutiva de avance
 
+### Gate prioritario de incidente — 07-09
+
+La [auditoría](incidents/2026-09-07_AUDITORIA_CONTACTOS_HOME.md) corrige la
+explicación previa: hubo HOME interno en ambos arranques del 04-09. La geometría
+de las clamps no quedó cualificada por medir sólo su tamaño. Los porcentajes
+inferiores son históricos y **no expresan habilitación física actual**; no se
+recalculan arbitrariamente mientras se redefine la recalificación.
+
+| Cierre previo a continuar | Importancia | Estado |
+|---|---|---|
+| Logs originales y cronología | CRÍTICA | Realizado: 129 logs, hashes, 2.995 entradas |
+| Inspección de perforación/rayado/grieta | CRÍTICA | Pendiente; no clasificar como cosmético |
+| Montaje bilateral y transformación de herramientas | CRÍTICA | Pendiente; gates geométricos derivados suspendidos |
+| Cobertura de HOME interno, rearmado y runners | CRÍTICA | Pendiente; no hay enclavamiento técnico central desplegado |
+| Trayectoria y ejecutor recalificados | CRÍTICA | Pendiente; conservar evidencia histórica, repetir gates afectados |
+| Nuevas pruebas físicas VLA | ALTA | Suspendidas hasta cerrar A1–A6 de la auditoría |
+
+No se emitió movimiento ni se modificó el robot en esta auditoría.
+
 **Lectura en una mirada (2026-09-04):** avance ponderado del plan
-**`47,6 %`**; avance de las tareas físicas del checkpoint **`0/4 = 0 %`**;
+**`49,1 %`**; avance de las tareas físicas del checkpoint **`0/4 = 0 %`**;
 avance de la misión automatizada con VLA
 `PICK → TRANSPORT → TIP/POUR → PLACE`
-**`0/4 = 0 %`**. El gate activo es **E6.1** (`50 %`): E6.1A, el paquete
-offline E6.1B y el fixture físico con dos fotos SHA-256 están cerrados; ENTRY
-viva y las cinco inferencias siguen pendientes. **No existe autorización física abierta.** El robot
+**`0/4 = 0 %`**. El gate activo es **E6.1** (`65 %`): E6.1A, E6.1B, el
+fixture físico y la transición reducida E6.1C están cerrados offline. E6.1C
+conserva los 14 ejes de brazo en READY y mueve sólo cabeza/elevador/cintura;
+HOME→READY ya se ejecutó físicamente una vez con resultado `SUCCEED`; esto es
+posicionamiento y no cuenta todavía como ejecución física de task 0. Faltan
+ENTRY viva y cinco shadow. READY quedó medido y
+visualmente confirmado; los límites provisionales E6.1C fueron aceptados en
+`20260904T131403_E6.1C-ACCEPTANCE`. Una autorización específica de ENTRY se
+recibió, pero el runner abortó antes del goal: Motion quedó en
+`WaitStartMotion`, sin action server ni joint-state. No hubo movimiento,
+checkpoint ni publicador. El ciclo posterior falló en `StartMotion` desde
+READY con contacto clamp izquierda–torso y EtherCAT `SAFEOP ERROR`. Un segundo
+ciclo recuperó HOME medido sin goals adicionales del PC; la auditoría del
+07-09 demuestra que el arranque sí ejecutó internamente `cruzr/home`. El propietario confirmó después que las
+abrazaderas estaban invertidas deliberadamente para mejorar la manipulación de
+cajas, cambio geométrico que no estaba modelado. Antes de continuar toca
+verificar y documentar el montaje de fábrica de ambas clamps y sustituir
+HOME→READY por una transición escalonada con holgura demostrada. La orientación
+invertida no se admite en movimiento automático sin perfil de herramienta,
+modelo de colisión y validación independientes.
+**No existe autorización física abierta.** El robot
 está cargando por confirmación del propietario: cualquier movimiento queda
 bloqueado hasta desconectar el cargador y obtener un preflight fresco con
 `CHARGER=disconnected`.
@@ -28,7 +72,7 @@ Los porcentajes no estiman probabilidad de éxito del robot:
 - **Peso global**: importancia cuantitativa dentro de todo este plan; la suma
   de los pesos de E1.0–E8.2 es `100 %`.
 - **Aporte global logrado**: `peso × cumplimiento / 100`, expresado en puntos
-  porcentuales (`pp`). La suma actual es `47,6 pp = 47,6 %`.
+  porcentuales (`pp`). La suma actual es `48,5 pp = 48,5 %`.
 - **Importancia**: impacto de dejar el caso sin resolver. `CRÍTICA` bloquea o
   protege movimiento físico; `ALTA` condiciona validez técnica o selección de
   modelo; `MEDIA` caracteriza o prepara el sistema.
@@ -42,12 +86,12 @@ Los porcentajes no estiman probabilidad de éxito del robot:
 | 1 | Escenario y baseline | 95 % | 6 % | 5,7 pp | ALTA | 🟡 B0 fotografiada/colocada; falta masa |
 | 2 | Primeras inferencias seguras | 100 % | 8 % | 8,0 pp | MEDIA | ✅ Cerrada como shadow/offline, no éxito físico |
 | 3 | Dataset, OOD y temporalidad | 85 % | 10 % | 8,5 pp | ALTA | 🟡 Métrica OOD y semántica vendor abiertas |
-| 4 | ENTRY/READY y fixture | 59 % | 16 % | 9,4 pp | CRÍTICA | 🟡 Fixture congelado; ENTRY con mesa aún no calificada |
+| 4 | ENTRY/READY y fixture | 63 % | 16 % | 10,0 pp | CRÍTICA | 🟡 Transición READY↔ENTRY instalada; falta ejecución |
 | 5 | Perfiles 14–20 | 100 % | 10 % | 10,0 pp | ALTA | ✅ P14 es candidato offline preliminar |
-| 6 | Canary task-matched | 30 % | 20 % | 6,0 pp | CRÍTICA | 🔄 Fixture frozen; faltan ENTRY fresca y 5 shadow |
+| 6 | Canary task-matched | 36 % | 20 % | 7,2 pp | CRÍTICA | 🔄 READY/deploy cerrados; faltan ENTRY fresca y 5 shadow |
 | 7 | Tasks físicos 0–3 | 0 % | 20 % | 0,0 pp | CRÍTICA | ⛔ Bloqueada por E6.1–E6.4 |
 | 8 | Selección/evolución del checkpoint | 0 % | 10 % | 0,0 pp | ALTA | ⛔ Requiere evidencia física y/o datos propios |
-| **TOTAL** | **Objetivo completo** | **47,6 % ponderado** | **100 %** | **47,6 pp** | — | **Sin autorización física abierta** |
+| **TOTAL** | **Objetivo completo** | **49,1 % ponderado** | **100 %** | **49,1 pp** | — | **HOME→READY bloqueado por contacto clamp–torso** |
 
 ### Detalle por experimento
 
@@ -69,14 +113,15 @@ Los porcentajes no estiman probabilidad de éxito del robot:
 | E4.1 | 70 % | 4 % | 2,8 pp | CRÍTICA | 🟡 Calibración métrica y colisiones parciales | Confirmar físicamente soporte E6.1 |
 | E4.2 | 60 % | 3 % | 1,8 pp | ALTA | 🟡 Grupos low/middle observados | Congelar cotas por task, no asumir escalar |
 | E4.3 | 60 % | 3 % | 1,8 pp | CRÍTICA | 🟡 READY↔HOME sin caja validado | Sustituir por ENTRY task 0 reproducible |
-| E4.4 | 30 % | 3 % | 0,9 pp | CRÍTICA | 🔄 Fixture task-matched congelado | Resolver transición/colisión con mesa presente |
+| E4.4 | 50 % | 3 % | 1,5 pp | CRÍTICA | 🔄 Transición auditada, instalada y cargada | Ejecutar ENTRY y validar escena viva |
 | E5.0 | 100 % | 3 % | 3,0 pp | ALTA | ✅ 8 perfiles/16 celdas sink | Cerrado offline |
 | E5.1 | 100 % | 4 % | 4,0 pp | ALTA | ✅ 160 bundles replay | Cerrado offline |
 | E5.2 | 100 % | 3 % | 3,0 pp | ALTA | ✅ P14 preliminar para tasks 0–3 | Revalidar sobre ENTRY/escena vivas |
 | E6.0 | 100 % | 3 % | 3,0 pp | CRÍTICA | ✅ `RETIRED_FAIL_CLOSED`; cero frames publicados | No repetir ni aumentar `0,1 rad` |
-| E6.1 | 50 % | 6 % | 3,0 pp | CRÍTICA | 🔄 Fixture frozen; ENTRY/recovery y campaña implementados | Calificar ENTRY y obtener 5 shadow frescos |
+| E6.1 | 65 % | 6 % | 3,9 pp | CRÍTICA | ⛔ READY produjo contacto al rearmar; HOME recuperado | Verificar clamps y rediseñar HOME→READY antes de ENTRY |
 | ↳ E6.1A | 100 % | Incluido en E6.1 | — | CRÍTICA | ✅ Auditoría offline `20260904T103516_E6.1A` | Cerrado; no autoriza movimiento |
 | ↳ E6.1B | 100 % offline + fixture | Incluido en E6.1 | — | CRÍTICA | ✅ `20260904T121621_E6.1B`, fixture/fotos SHA-256 PASS | ENTRY y shadow separados; no autoriza movimiento |
+| ↳ E6.1C | 100 % diseño/deploy, 0 % ejecución | Incluido en E6.1 | — | CRÍTICA | ⛔ ENTRY nunca enviada; `StartMotion` desde READY causó contacto/SAFEOP | Congelar; orientación/holgura clamp y transición escalonada |
 | E6.2 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | PASS completo de E6.1 + launcher revisado |
 | E6.3 | 0 % | 3 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | PASS E6.2 antes de añadir H/W/L |
 | E6.4 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | Ejecutor físico y STOP validados |
@@ -1666,9 +1711,40 @@ entonces recovery. La referencia de montaje es borde frontal de mesa a
 del extremo de la malla frontal del chasis. Son cotas reconstruidas, no una
 autorización ni una especificación UBTECH.
 
-E6.1 global queda al `50 %`: E6.1A, la implementación offline E6.1B y el
-fixture están cerrados; faltan una ENTRY fresca y las cinco sesiones
-shadow reales. Sigue sin existir autorización de movimiento.
+**Resultado E6.1C offline 2026-09-04:** el run autoritativo corregido
+`20260904T130901_E6.1C` elimina el movimiento de brazos de la transición nueva.
+El READY vendor observado está a sólo `0,000959 rad` del frame congelado en
+los 14 ejes de brazo. El preview de 12 s conserva esos ejes y mueve sólo
+cabeza, elevador y cintura hasta la ENTRY de `episode_000040/frame 0`; la
+inversa vuelve al READY observado antes del recovery READY→HOME ya validado.
+El máximo es `0,130433310 rad/s` y `0,033469203 rad/s²`. En 401 muestras hubo
+cero límites, contactos exactos robot/proxy, solapamientos entre clamps y
+candidatos OBB contra la mesa/caja reconstruidas. El gate READY/ENTRY requiere
+los 20 ejes frescos, error `<=0,01 rad` y velocidad `<=0,01 rad/s`.
+
+El HOME→READY vendor se ejecutó una vez en `20260904T130344_E6.1C-READY` y
+terminó `SUCCEED/status=4`. La medida inmediata mostró brazos inmóviles y
+reveló que `MetaMove head` usa el orden runtime `yaw;pitch`; los previews se
+corrigieron antes de instalar o ejecutar ENTRY. READY fue confirmado
+visualmente estable y la aceptación `20260904T131403_E6.1C-ACCEPTANCE` cubre
+sólo los límites provisionales, no una ejecución ni el publicador.
+
+Este PASS no autoriza ENTRY: los XML siguen siendo previews sin instalar,
+el interpolador runtime `MetaMove` no está demostrado equivalente a la ley
+minimum-jerk y falta aceptación específica de los límites para E6.1C. La
+aceptación E6.0 fue para otro alcance y no se hereda.
+
+**Preflight vivo 2026-09-04:** `20260904T125740_E6.0G` verificó ambos paros
+liberados, cargador desconectado, baterías `94,6/94,5 %`, Motion/action listo,
+VLA detenido y cero publicadores. No hubo movimiento. Para iniciar la primera
+prueba física, retire temporalmente mesa y B0 de la envolvente de `1,5 m`: el
+HOME→READY vendor mueve ambos brazos en `1,5 s` y no está calificado con el
+fixture presente. El fixture se devuelve a sus marcas sólo con el robot ya
+medido en ENTRY e inmovilizado.
+
+E6.1 global queda al `65 %`: E6.1A, E6.1B, el fixture y el diseño/deploy
+E6.1C están cerrados; faltan una ENTRY fresca y las cinco
+sesiones shadow reales. Sigue sin existir autorización de movimiento.
 
 El cargador puede permanecer conectado durante 2–4. Antes de cualquier
 transición física debe desconectarse y comprobarse `CHARGER=disconnected`.

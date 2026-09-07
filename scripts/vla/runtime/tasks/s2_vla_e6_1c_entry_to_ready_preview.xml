@@ -4,11 +4,11 @@
             <!-- E6.1C OFFLINE PREVIEW: inverse locked-axis transition only. -->
             <Parallel threshold="3">
                 <Action ID="MetaMove" type="head" location="single" duration="12.0"
-                    joint_angles="-0.433237523; 0.000287621398" />
+                    joint_angles="0.00019174759848570515; -0.6510789706582119" />
                 <Action ID="MetaMove" type="lifter" location="single" duration="12.0"
-                    joint_angles="0.0; -0.0000958737992; 0.0" />
+                    joint_angles="0.0; 0.0; -0.00009587379924285257" />
                 <Action ID="MetaMove" type="waist" location="single" duration="12.0"
-                    joint_angles="0.0000958737992" />
+                    joint_angles="0.0" />
             </Parallel>
         </Sequence>
     </BehaviorTree>

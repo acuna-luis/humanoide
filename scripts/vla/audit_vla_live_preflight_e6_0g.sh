@@ -123,7 +123,7 @@ printf 'BATTERY_1=%s\nBATTERY_2=%s\n' "${socs[0]}" "${socs[1]}"
 topic_list="$(docker exec "$ros_container" bash -lc '
   source /opt/ros/humble/setup.bash
   export ROS2CLI_DISABLE_DAEMON=1
-  timeout 8 ros2 topic list
+  timeout 8 ros2 topic list --no-daemon
 ')"
 if grep -Fxq '/mc/whole_joint_states' <<<"$topic_list"; then
   printf 'WHOLE_JOINT_STATES=advertised\n'

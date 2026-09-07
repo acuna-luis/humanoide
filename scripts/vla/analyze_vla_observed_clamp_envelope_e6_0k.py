@@ -25,6 +25,12 @@ def main() -> int:
     parser.add_argument("--document-proxy-report", type=Path, required=True)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    # Retired after contact audit: centering an observed box inside a proxy is
+    # not a measured bilateral mount transform. Historical evidence is retained.
+    raise SystemExit(
+        "E6.0K_RETIRED_UNMEASURED_MOUNT_TRANSFORM: no new containment PASS; "
+        "use bilateral measured geometry and requalify the full trajectory"
+    )
     for path in (args.observed_contract, args.document_proxy_report):
         if not path.is_file():
             raise SystemExit(f"ERROR: falta fuente: {path}")

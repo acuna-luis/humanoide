@@ -10,6 +10,9 @@ Uso:
 Audita offline la transición reducida READY <-> ENTRY de E6.1C. Conserva los
 14 ejes de brazo en READY y mueve sólo cabeza, elevador y cintura. No conecta
 al robot/red, no usa ROS/contenedores, no instala tareas y no mueve.
+
+RETIRADO tras auditoría de contacto: --check y --run rechazan con salida 78.
+El proxy documental no demuestra el montaje real. No genera nuevos PASS.
 EOF
 }
 
@@ -28,11 +31,10 @@ readonly FK_HELPER="$SCRIPT_DIR/analyze_vla_fixture_collision_e4_1c.py"
 readonly PATH_HELPER="$SCRIPT_DIR/analyze_vla_self_collision_e6_0b.py"
 readonly MESH_HELPER="$SCRIPT_DIR/analyze_vla_near_pair_mesh_e6_0c.py"
 readonly GEOMETRY_HELPER="$SCRIPT_DIR/analyze_vla_document_proxy_clamp_e6_0j.py"
-readonly E60Z="/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260904T094803_E6.0Z"
 readonly E61A="/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260904T103516_E6.1A"
 readonly E41C="/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260903T093408_E4.1C"
 readonly E60J="/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260903T120626_E6.0J"
-readonly READY_SOURCE="$E60Z/failed-canary-input-state.json"
+readonly READY_SOURCE="$SCRIPT_DIR/runtime/cruzr_s2_vla_ready_reference_e6_1c.json"
 readonly E61A_REPORT="$E61A/task0-entry-path-report.json"
 readonly SDK_URDF="$E41C/artifacts/vendor_cruzr_s2_v1.urdf"
 readonly SDK_URDF_ZIP="$REPO_ROOT/Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/URDF/cruzr_s2_description.zip"
@@ -47,6 +49,11 @@ while (($#)); do
   esac
 done
 
+# Do not regenerate a qualification from the historical proxy, even offline.
+printf 'E6.1C_STATUS=BLOCKED_RETIRED_UNREGISTERED_CLAMP_GEOMETRY\n' >&2
+printf 'E6.1C_ROBOT_ACCESSED=0; PHYSICAL_AUTHORIZED=0; HISTORICAL_ANALYSIS_EXECUTED=0\n' >&2
+exit 78
+
 for tool in cp find jq python3 readlink sha256sum sort tee xargs; do
   command -v "$tool" >/dev/null || { printf 'ERROR: falta herramienta: %s\n' "$tool" >&2; exit 1; }
 done
@@ -60,7 +67,7 @@ sources=(
 for source in "${sources[@]}"; do
   test -s "$source" || { printf 'ERROR: falta fuente E6.1C: %s\n' "$source" >&2; exit 1; }
 done
-for evidence in "$E60Z" "$E61A" "$E41C" "$E60J"; do
+for evidence in "$E61A" "$E41C" "$E60J"; do
   test -s "$evidence/evidence.sha256"
   (cd "$evidence" && sha256sum -c evidence.sha256 >/dev/null)
 done

@@ -124,11 +124,11 @@ set -u
 export ROS2CLI_DISABLE_DAEMON=1
 
 printf "===SDK_COMMAND_INFO===\n"
-timeout 8 ros2 topic info -v /mc/sdk/robot_command
+timeout 8 ros2 topic info -v /mc/sdk/robot_command --no-daemon
 printf "===SDK_STATE_INFO===\n"
-timeout 8 ros2 topic info -v /mc/sdk/robot_state
+timeout 8 ros2 topic info -v /mc/sdk/robot_state --no-daemon
 printf "===WHOLE_STATE_INFO===\n"
-timeout 8 ros2 topic info -v /mc/whole_joint_states
+timeout 8 ros2 topic info -v /mc/whole_joint_states --no-daemon
 printf "===SDK_STATE_SAMPLE===\n"
 set +e
 timeout 3 ros2 topic echo --once --no-daemon /mc/sdk/robot_state mc_state_msgs/msg/RobotState --full-length

@@ -1,5 +1,35 @@
 # Integración segura del VLA suministrado para Cruzr S2
 
+> **07-09 — E6.1C offline retirado:** el wrapper (--check/--run) y analizador
+> directo devuelven salida 78, `BLOCKED_RETIRED_UNREGISTERED_CLAMP_GEOMETRY`.
+> No generan nuevos PASS con el proxy antiguo. Los informes históricos se
+> preservan pero no habilitan pruebas actuales. No protege HOME interno.
+
+> **07-09 — contención local implementada:** [estado de recalificación](../incidents/2026-09-07_REQUALIFICACION_CLAMPS.md).
+> Doce variantes de lanzamiento rechazadas en tests sin conexión; no cubre
+> HOME interno del arranque, UI/PICO ni el guard instalado en Vision.
+> E-stop mantenido; no liberar ni reiniciar para probar. Inspección reportada:
+> daño sólo en carcasa; clamps restauradas. Geometría bilateral y barrido
+> pendientes; E6.0K retirado para nuevos PASS. No hubo despliegue ni movimiento.
+
+## Restricción prioritaria del 07-09-2026
+
+La [auditoría de contactos/HOME](../incidents/2026-09-07_AUDITORIA_CONTACTOS_HOME.md)
+demuestra HOME automático dentro de StartMotion y fuerza excesiva en el
+incidente del 04-09. No fue una orden E6.1C ni evidencia de movimiento del
+checkpoint. E6.0Y anterior sí ejecutó inferencia, pero transmitió cero frames.
+
+Los PASS de E6.0K y barridos derivados **no cualifican la geometría instalada**:
+se heredó el centro del proxy en vez de medir la transformación de ambas
+clamps. Se conservan resultados offline/históricos, pero su uso como gate físico
+queda suspendido hasta recalificación de montaje, trayectoria y arranque.
+También deben inspeccionarse los daños antes de reanudar.
+
+No existe todavía enclavamiento central de incidente: los runners E6.1C y la
+ruta `--recover` de E6.0Y conservan ramas físicas. Una frase de confirmación no
+cierra ese riesgo. No ejecutarlas para probar el incidente. Véanse A1–A7 del
+informe; esta auditoría no cambió el runtime ni reinició servicios.
+
 Para preparar el PICO 4 Ultra Enterprise, diseñar sesiones, capturar episodios
 y decidir entre continuar este checkpoint o crear un nuevo perfil, consulte
 [Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA](../vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md).
@@ -648,6 +678,68 @@ contactos físicos demostrados. ENTRY/recovery con la mesa presente permanecen
 fail-closed hasta una comprobación más precisa o prueba incremental separada.
 No se usa AprilTag: no es una entrada de este checkpoint ni aparece en el
 frame congelado. No existe autorización física.
+
+E6.1C reduce el movimiento de entrada usando el READY vendor ya observado. El
+run offline autoritativo corregido `20260904T130901_E6.1C` demuestra que los 14 ejes de
+brazo del READY están a `0,000959 rad` como máximo del frame congelado y por
+ello no deben volver a comandarse. El preview de 12 s sólo ajusta cabeza,
+elevador y cintura; el cambio dominante es `0,834773183 rad` en
+`lifter_pitch_1_joint`. Bajo la ley minimum-jerk auditada alcanza como máximo
+`0,130433310 rad/s` y `0,033469203 rad/s²`. En 401 muestras hubo cero límites
+URDF, cero contactos exactos robot/proxy clamp, cero solapamientos entre clamps
+y cero candidatos OBB contra la mesa/caja reconstruidas. La inversa vuelve al
+READY observado antes de reutilizar el recovery READY→HOME ya validado.
+
+Este PASS es todavía de diseño: los XML son previews, no están instalados ni
+registrados, y no se ha demostrado que el interpolador runtime de `MetaMove`
+sea idéntico al minimum-jerk muestreado. Los límites `0,15 rad/s` y
+`0,5 rad/s²` no son certificación UBTECH y la aceptación previa E6.0 no se
+extiende automáticamente a E6.1C. No existe launcher ni autorización física
+hasta una aceptación explícita y una instalación/recarga separadas bajo
+E-stop.
+
+El único HOME→READY físico `20260904T130344_E6.1C-READY` terminó
+`SUCCEED/status=4` con brazos inmóviles en la medida posterior. El resultado
+probó el orden runtime `MetaMove head=yaw;pitch`; el preview anterior tenía el
+orden documental invertido, pero nunca fue instalado ni ejecutado. El gate
+falló antes de ENTRY, se corrigieron ambos previews y la auditoría offline
+volvió a dar cero límites/contactos/candidatos. READY fue confirmado
+visualmente estable; ninguna ENTRY está autorizada todavía.
+
+La aceptación local `20260904T131403_E6.1C-ACCEPTANCE` fija el alcance
+cabeza/elevador/cintura, `0,15 rad/s` y `0,5 rad/s²`, sin certificación UBTECH
+y sin autorizar ENTRY/publicador. Existen ahora instalador atómico, recarga
+bajo E-stop y runner READY↔ENTRY con gates 20D; ninguno se ha aplicado aún al
+robot.
+
+Deploy realizado bajo E-stop: `20260904T132339_E6.1C-INSTALL` instaló los dos
+XML y task list con backup/rollback; `20260904T132423_E6.1C-RELOAD` reinició
+sólo el task manager. Hashes/runtime exactos, `ESTOP_KEY=1`, cargador fuera,
+VLA detenido, cero publicadores, tareas invocadas y movimiento. ENTRY sigue
+requiriendo liberación supervisada, READY fresco y autorización de corrida.
+
+Intento posterior: el propietario autorizó READY→ENTRY, pero el runner se
+detuvo antes de crear el goal porque el preflight canónico no estaba
+disponible. La comprobación de sólo lectura confirmó
+`CONTROL_STATE=WaitStartMotion`, `/mc/manipulation/action` con cero servidores
+y ausencia de `/mc/whole_joint_states`. No hubo movimiento, inferencia ni
+publicador. En esta unidad el siguiente gate es el ciclo completo supervisado
+de v0.2.0; después deben repetirse READY 20D y la autorización específica.
+
+Ese ciclo reveló un gate nuevo: al liberar el E-stop desde READY, el self-check
+pasó pero `StartMotion` terminó `reason:19 Limb motion failed`; la clamp
+izquierda quedó contra el torso, 4003/4004 fallaron y EtherCAT pasó a
+`SAFEOP ERROR`. ENTRY, checkpoint y publicador nunca arrancaron. Un segundo
+ciclo desde brazos libres recuperó `JoystickMode` y HOME 20D sin goals. El
+propietario confirmó después que las abrazaderas se habían invertido
+deliberadamente para mejorar la manipulación de cajas. Esa geometría distinta
+no estaba representada en URDF/CAD/mesh ni en un perfil de herramienta, por lo
+que es el factor contribuyente principal al contacto; la causa inmediata
+observada sigue siendo el `StartMotion` interno desde READY. HOME→READY queda
+bloqueado hasta demostrar orientación de fábrica y holgura bilateral con la
+envolvente real. La configuración invertida queda prohibida para movimiento
+automático mientras no exista modelo de colisión, perfil y procedimiento
+específicos validados.
 
 E6.0X `20260904T075519_E6.0X` registra la aceptación del propietario sólo para
 E6.0, celda vacía, task 0/P14 y un punto: delta objetivo `<=0,1 rad`, velocidad

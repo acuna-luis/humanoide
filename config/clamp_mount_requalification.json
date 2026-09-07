@@ -1,0 +1,62 @@
+{
+  "schema": "cruzr-clamp-requalification-v1",
+  "unit": "WAE001UBT60000669",
+  "operator_report": {
+    "date": "2026-09-07",
+    "damage": "carcasa_only_no_internal_damage_observed",
+    "puncture_event_madrid": "2026-09-04T13:58:00+02:00",
+    "bilateral_scratches_event": "second_boot_home_approximately_14:20_Madrid",
+    "both_clamps_restored_to_factory_orientation": true,
+    "independent_metrology_or_inspection_certificate": false,
+    "underside_photos_chat_order": ["L", "R"],
+    "underside_photos_local_paths": ["/home/lacuna/Imágenes/1.jpeg", "/home/lacuna/Imágenes/2.jpeg"],
+    "underside_photos_sha256": ["30052b8cbab874a4aabb133b2e5ae888fe4840c7eec58a5c5359f59a17a9e377", "a584276dd7088b856b636629802160076544d5b15829b9f3a915341685c222c3"],
+    "underside_photos_cad_registration_verified": false
+  },
+  "reported_dimensions": {
+    "source": "operator_chat_2026-09-07",
+    "applies_to_sides": ["L", "R"],
+    "axis_to_pad_face_m": 0.095,
+    "upper_edge_from_mount_plane_reported_m": 0.045,
+    "lower_edge_from_mount_plane_reported_m": 0.055,
+    "plate_height_directly_remeasured_m": 0.100,
+    "tab_projection_from_plate_edge_m": 0.012,
+    "tabs_per_clamp": 2,
+    "upper_lower_reference_confirmed_after_diagram_correction": true,
+    "mount_plane_above_plate_midheight_m": 0.005,
+    "plate_width_m": 0.070,
+    "plate_lateral_position_relative_to_sensor_axis_m": 0.0,
+    "tabs_on_same_lateral_edge": true,
+    "tabs_direction_operator_report": "toward_robot_interior_on_both_clamps_in_current_pose",
+    "tabs_direction_is_pose_dependent_not_ROS_axis": true,
+    "plate_with_pads_thickness_m": 0.036,
+    "thickness_components_operator_report_m": [0.034, 0.002],
+    "same_dimensions_both_clamps_confirmed": true,
+    "measurement_uncertainty_m": null,
+    "note": "Operator clarified B/C=45/55 from actual mounting interface; plate midheight would give 50/50. Interface is 5 mm above midheight. This does not establish ROS frame axes. Tab projection is lateral, not added to A. Historical 105 mm was approximate and is not the current plate height."
+  },
+  "mounts": {
+    "L": {
+      "parent_frame": "L_sixforce_link",
+      "translation_m": null,
+      "rotation_matrix": null,
+      "local_bounds_m": null,
+      "uncertainty_m": null,
+      "includes_tabs_fasteners_and_support": null,
+      "measurement_evidence": []
+    },
+    "R": {
+      "parent_frame": "R_sixforce_link",
+      "translation_m": null,
+      "rotation_matrix": null,
+      "local_bounds_m": null,
+      "uncertainty_m": null,
+      "includes_tabs_fasteners_and_support": null,
+      "measurement_evidence": []
+    }
+  },
+  "runtime_interpolator_equivalence_verified": false,
+  "continuous_swept_volume_with_uncertainty_verified": false,
+  "boot_home_interception_verified": false,
+  "physical_authorized": false
+}

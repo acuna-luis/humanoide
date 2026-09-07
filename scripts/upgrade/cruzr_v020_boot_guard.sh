@@ -43,6 +43,13 @@ case "$MODE" in
     ;;
 esac
 
+if [[ "$MODE" == --run ]]; then
+  # Standalone deployment must fail closed too; do not depend on a repo helper.
+  printf 'CONTACT_INCIDENT_LOCK=2026-09-04; BOOT_GUARD_RUN_DISABLED=1\n' >&2
+  printf 'No restart or head goal. Repository revision; installed copy must be checked separately.\n' >&2
+  exit 78
+fi
+
 log() {
   printf 'CRUZR_BOOT_GUARD %s\n' "$*"
 }

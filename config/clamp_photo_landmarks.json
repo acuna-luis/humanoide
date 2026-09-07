@@ -1,0 +1,21 @@
+{
+  "schema": "clamp-photo-landmarks-v1",
+  "status": "MANUAL_APPROXIMATE_IMAGE_POINTS_NOT_METROLOGY",
+  "description": "Six visible central screw head centers, manually localized in displayed images. Pixel coordinates are approximate; no lens calibration, dimensional certification or proven CAD feature identity.",
+  "sides": {
+    "L": {
+      "path": "/home/lacuna/Imágenes/1.jpeg",
+      "sha256": "30052b8cbab874a4aabb133b2e5ae888fe4840c7eec58a5c5359f59a17a9e377",
+      "original_size_px": [1536, 2048],
+      "annotation_canvas_size_px": [1368, 1824],
+      "centers_on_annotation_canvas_px": [[517,746],[576,746],[643,856],[617,904],[484,909],[453,859]]
+    },
+    "R": {
+      "path": "/home/lacuna/Imágenes/2.jpeg",
+      "sha256": "a584276dd7088b856b636629802160076544d5b15829b9f3a915341685c222c3",
+      "original_size_px": [1152, 2048],
+      "annotation_canvas_size_px": [1152, 2048],
+      "centers_on_annotation_canvas_px": [[603,534],[674,531],[750,668],[718,725],[573,730],[538,675]]
+    }
+  }
+}

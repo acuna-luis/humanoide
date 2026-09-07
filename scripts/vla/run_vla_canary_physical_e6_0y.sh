@@ -69,6 +69,10 @@ while (($#)); do
 done
 [[ -n "$MODE" ]] || { printf 'ERROR: falta modo\n' >&2; usage >&2; exit 2; }
 
+if [[ "$MODE" == --recover ]]; then
+  bash "$SCRIPT_DIR/../lib/cruzr_contact_motion_lock.sh" "E6.0Y:recover" || exit $?
+fi
+
 for tool in awk find grep nc python3 readlink setsid sha256sum sort ssh tee timeout xargs; do
   command -v "$tool" >/dev/null || { printf 'ERROR: falta %s\n' "$tool" >&2; exit 1; }
 done
@@ -159,7 +163,7 @@ publisher_count() {
   run_ssh "$MOTION_HOST" "docker exec walker-ros.ros2-1 bash -lc '
     source /opt/ros/humble/setup.bash
     export ROS2CLI_DISABLE_DAEMON=1
-    output=\$(timeout 8 ros2 topic info /mc/sdk/robot_command 2>&1) || true
+    output=\$(timeout 8 ros2 topic info /mc/sdk/robot_command --no-daemon 2>&1) || true
     awk '\''/Publisher count:/ {print \$3; found=1} END {if (!found) print 0}'\'' <<<\"\$output\"
   '"
 }

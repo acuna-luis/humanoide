@@ -137,6 +137,10 @@ done
 ((FORCE_HELD_HOME == 0)) || \
   die "--force-held-home fue retirado: desde una postura PICO cruzada produjo sobreesfuerzo y faults."
 
+if [[ "$MODE" == run ]]; then
+  bash "$SCRIPT_DIR/lib/cruzr_contact_motion_lock.sh" "recover-to-home" || exit $?
+fi
+
 require_local_tools() {
   local command_name
   for command_name in ssh setsid nc flock readlink grep python3; do

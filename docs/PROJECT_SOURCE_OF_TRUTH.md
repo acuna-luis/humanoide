@@ -1,6 +1,66 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
-**Última actualización:** 4 de septiembre de 2026
+**07-09, cierre de aprobación documental obsoleta:** E6.1C podía regenerar
+un PASS de geometría con el proxy E6.0J sin montaje real registrado. Se retiran
+las entradas públicas del wrapper offline (--check/--run) y analizador directo:
+`BLOCKED_RETIRED_UNREGISTERED_CLAMP_GEOMETRY`, salida 78; ningún helper/fuente
+de trayectoria ejecutado. Informes históricos preservados, salida nueva sin
+sobrescritura. Siete tests de recalificación y tres de fotografía correctos.
+Sin cambio remoto ni movimiento; HOME interno sigue sin interceptar.
+Detalle: `docs/incidents/2026-09-07_REQUALIFICACION_CLAMPS.md`.
+
+**07-09, ajuste fotográfico offline:** doce correspondencias por lado evaluadas
+en originales 1/2; seis dan RMS prácticamente idénticos (L~0,852 px,
+R~1,022 px). Compatible con patrón CAD, pero sin orientación absoluta ni R/t
+demostrados. No son tolerancias de seguridad. Script
+`scripts/audit_clamp_photo_correspondence.py`, puntos manuales en
+`config/clamp_photo_landmarks.json`, evidencia externa
+`20260907_clamp_photo_correspondence.json`. Sin red/movimiento ni cambios de
+bloqueo; detalle en `docs/incidents/2026-09-07_CONTRASTE_FOTOS_CLAMPS.md`.
+
+**07-09, referencia CAD de sensor:** inspección offline reproducible añade
+`scripts/audit_clamp_sensor_reference.py`. Superficie z=0 candidata en ambos
+STL, sin correspondencia física de fijación demostrada. Vistas inferiores
+recibidas en chat: primera L, segunda R; originales `/home/lacuna/Imágenes/1.jpeg`
+y `2.jpeg` inspeccionados y SHA-256 registrados en el contrato y contraste.
+Se confirman visualmente patitas del lado del torso en estas vistas, no ejes ROS.
+Seis contornos CAD de ~4,2 mm presentan simetría de
+120°: su número no identifica por sí solo el montaje ni los tornillos visibles.
+No repetir cotas de placa. Evidencia: `20260907_clamp_sensor_bolt_pattern.json`
+en la raíz externa de evidencias; detalle en el contraste de fotos.
+Resultado `CAD_REFERENCE_CANDIDATE_ONLY`; cero red y movimiento.
+
+**07-09, espesor bilateral confirmado:** F=36 mm (34+2); placa+almohadillas
+70×100×36 mm, profundidad descriptiva desde eje 59…95 mm. Prisma con patillas
+82×100×36 mm sigue candidato sujeto a inclusión en profundidad. Cinco tests
+offline pasan; soporte, transformación y barrido pendientes, sin movimiento.
+
+**07-09, contorno frontal actualizado:** placa 70 mm centrada; con patillas
+82 mm. Operador confirma ambas patillas hacia interior en postura actual.
+Envolvente frontal local −35/+47 mm y −55/+45 mm, no ejes ROS ni volumen
+completo. Cuatro tests offline aprobados; montaje/recorridos siguen bloqueados.
+
+**07-09, medidas manuales actualizadas:** ambos clamps A=95, B=45, C=55 mm
+reportados; altura total remedida directamente=100 mm; dos patillas por
+clamp, proyección lateral=12 mm. Registro separado de la transformación
+geométrica en `config/clamp_mount_requalification.json`: referencia B/C
+aclarada por operador (unión real, centro daría 50/50). No repetir A/B/C;
+faltan ancho/posición lateral y correspondencia al frame; sin PASS de barrido.
+
+**07-09, contraste fotográfico offline:** seis fotos del montaje corregido
+recibidas y hash-identificadas. URDF: unión muñeca→sensor de 77,12 mm y
+sensor→PGC de traslación cero; ninguna es una transformación demostrada del
+clamp pasivo. [Referencias y cotas pendientes](incidents/2026-09-07_CONTRASTE_FOTOS_CLAMPS.md).
+Sin movimiento, conexión al robot ni modificación del bloqueo.
+
+> **07-09 — contención local implementada:** [estado de recalificación](incidents/2026-09-07_REQUALIFICACION_CLAMPS.md).
+> Doce variantes de lanzamiento rechazadas en tests sin conexión; no cubre
+> HOME interno del arranque, UI/PICO ni el guard instalado en Vision.
+> E-stop mantenido; no liberar ni reiniciar para probar. Inspección reportada:
+> daño sólo en carcasa; clamps restauradas. Geometría bilateral y barrido
+> pendientes; E6.0K retirado para nuevos PASS. No hubo despliegue ni movimiento.
+
+**Última actualización:** 7 de septiembre de 2026
 **Unidad:** Cruzr S2, SN `WAE001UBT60000669`  
 **Propósito:** relevo técnico y operativo entre sesiones, personas y agentes
 
@@ -29,19 +89,41 @@ nuevo el estado físico y lógico.
 
 ## 2. Relevo vigente
 
+### Alerta prioritaria 07-09: auditoría de daños, movimientos suspendidos
+
+Prevalece la [auditoría de contactos y HOME](incidents/2026-09-07_AUDITORIA_CONTACTOS_HOME.md)
+sobre las conclusiones preliminares del 04-09. **VERIFICADO:** StartMotion
+ejecutó internamente `cruzr/home` a las 19:58:01 y 20:20:14 (+08) del 04-09.
+El primer HOME registró FT izquierdo hasta −317,787 y abortó; el segundo
+terminó. «Sin goals del PC» no significó «sin trayectoria HOME». El montaje
+invertido está reportado, pero no demuestra por sí solo la causa de cada daño.
+
+**PENDIENTE/CRÍTICO:** inspección material, montaje bilateral/transformación real,
+trayectorias y cobertura de arranque/rearme. E6.0K asumía la posición de la
+envolvente dentro del proxy; sus resultados y los gates derivados no cualifican
+el montaje real. No reanudar movimiento usando esos PASS históricos.
+La restricción es operativa/documental: **no existe aún un bloqueo técnico
+central desplegado** que cubra Control Center y todos los runners.
+
+Auditoría: 129 logs preservados, 137 artefactos hash-verificados, cronología
+offline de 2.995 entradas. Sólo lecturas SSH/configuración; ningún ROS, goal,
+rearme, reinicio o cambio remoto. El HOME/preflight de la tabla siguiente es
+**histórico**, no estado actual: los logs muestran otro apagado el 04-09 a
+20:53 (+08). Punto de reanudación: acciones A1–A5 del informe, sin ensayo físico.
+
 ### 2.1 Último estado conocido
 
 | Elemento | Último estado documentado | Confianza |
 |---|---|---|
-| Postura | tras el canary rechazado se ejecutó el recovery E6.0 READY→HOME una sola vez: `SUCCEED/status=4`; los 20 ejes quedaron a ≤`0,002780 rad` de HOME, brazos ≤`0,000959 rad`, velocidad cero y delta posición–consigna ≤`0,002780 rad`. El operador confirmó HOME visual estable, brazos/cabeza sin contacto, clamps vacíos y ningún movimiento inesperado | **HOME MEDIDO Y VISUALMENTE CONFIRMADO; ESTADO VOLÁTIL** |
-| Modo robot | el reinicio completo supervisado rearmó Motion: `ACTUATORS_OPERATION_ENABLED=1`, action server presente y `ACTIONS=ready`; el task READY S2 permanece cargado con hash `c767f739…a9b2` | **OPERATIVO; REVALIDAR INMEDIATAMENTE ANTES DE OTRO GOAL** |
+| Postura | tras el incidente READY/StartMotion se completó un segundo ciclo supervisado. El robot quedó en `home` medido: 20 ejes, brazos ≤`0,000479 rad`, cuerpo ≤`0,002397 rad`, velocidad `0` y deltas posición–consigna ≤`0,002397 rad`. El operador confirmó ambos brazos estables y sin contacto | **HOME MEDIDO Y VISUALMENTE CONFIRMADO; ESTADO VOLÁTIL** |
+| Modo robot | Control Center terminó en `JoystickMode`; `/mc/manipulation/action` tiene `1` servidor, `/mc/whole_joint_states` está anunciado y el preflight canónico aprobó | **OPERATIVO; NO REPETIR HOME→READY HASTA CERRAR ORIENTACIÓN/HOLGURA DE CLAMPS** |
 | Efector | abrazaderas, `HW_TYPE=cruzr_s2_v1` confirmado por el check fresco | **VERIFICADO POR SOFTWARE; VACÍO DEBE RECONFIRMARSE ANTES DE MOVIMIENTO** |
-| Actuadores | muestra fresca posterior a READY→HOME: 20 ejes presentes, 14 de brazos, velocidad máxima `0`, sin fault y delta posición–consigna ≤`0,002780 rad` | **VERIFICADO; ESTADO VOLÁTIL** |
+| Actuadores | muestra fresca posterior al segundo arranque: 20 ejes presentes, 14 de brazos, velocidad máxima `0`, sin fault, `Operation Enabled` y delta posición–consigna ≤`0,002397 rad` | **VERIFICADO; ESTADO VOLÁTIL** |
 | Teleoperación PC | combinación oficial robot v0.2.0 + controller 4.7.0 + UI 4.1.0, overlay `clamp,0,0` y control bimanual. La sesión 10:25 terminó por protección FT, no por VR. Tras el reinicio el robot quedó en `AutoTaskMode`; no se ha recargado ni reanudado PICO | **BLOQUEADA HASTA NUEVO PREFLIGHT Y CAMBIO DE MODO AUTORIZADO** |
 | Servicio PC/PICO | el STOP oficial tras `Ctrl+C` quedó confirmado; PC permaneció encendido durante el power cycle del robot | **STOP VERIFICADO; SIN CLIENTE FÍSICO** |
-| VLA | contenedores persistentes detenidos, `restart=no`, cero publicadores. E6.0 NO_BOX está retirado. E6.1A congeló `episode_000040/task 0`; E6.1B implementó offline ENTRY/recovery no ejecutables, gate exacto 20D y cinco shadow. Fixture `TABLE_77_B0_20260904` congelado: mesa `0,838 × 0,84 × 0,77 m`, espesor `0,038 m`, inmovilizada, B0 azul rígida/vacía/abierta y dos fotos locales con hashes válidos. El color se registra como variación, no como requisito del task. El OBB exacto da 44 alertas y cero contactos exactos: bloquea HOME→ENTRY, pero no descarta shadow. | **E6.1=50 %; FIXTURE FROZEN; ENTRY Y 5 SHADOW PENDIENTES; SIN MOVIMIENTO AUTORIZADO** |
-| Cargador | el último preflight móvil dio `CHARGER=0`; después el operador conectó físicamente el cargador durante E6.0Z | **CONECTADO POR CONFIRMACIÓN DEL OPERADOR; TODO MOVIMIENTO BLOQUEADO HASTA DESCONECTAR Y REVALIDAR** |
-| Paros, ruedas y zona | antes del recovery el operador confirmó READY estable, sin contactos, clamps vacíos, zona 1,5 m, dos personas y mano en E-stop; software leyó `ESTOP_KEY=0`, `SERVO_ESTOP_KEY=0`. Después confirmó HOME visual estable y sin movimiento inesperado | **RECOVERY CERRADO; RECONFIRMAR TODO ANTES DE OTRO MOVIMIENTO** |
+| VLA | contenedores persistentes detenidos, `restart=no`, cero publicadores. ENTRY/checkpoint/publicador nunca arrancaron. Al rearmar desde READY, el self-check pasó pero `StartMotion` falló `reason:19 Limb motion failed`; la clamp izquierda estaba en contacto con el torso, 4003/4004 registraron `0x1003/0x2006` y EtherCAT cayó a `SAFEOP ERROR`. La geometría/CAD clamp real no existe en el modelo proveedor. El segundo ciclo recuperó HOME y salud completa. | **BLOQUEAR HOME→READY: VERIFICAR ORIENTACIÓN FÍSICA Y DISEÑAR TRANSICIÓN CON HOLGURA ANTES DE VLA** |
+| Cargador | preflight inmediatamente anterior a HOME→READY leyó `CHARGER=0`; acción y medida READY terminaron después | **DESCONECTADO EN EL ÚLTIMO PREFLIGHT; ESTADO VOLÁTIL** |
+| Paros, ruedas y zona | tras el segundo arranque el propietario liberó el E-stop, confirmó robot estable y brazos sin contacto; preflight leyó `ESTOPS=0,0`, cargador desconectado y dos baterías >84 % | **LIBERADOS EN ÚLTIMA MUESTRA; REVALIDAR ANTES DE CUALQUIER MOVIMIENTO** |
 | Mapa/localización | `test_route_01` se conservó; activación y localización son volátiles | **RECOMPROBAR** |
 
 La rama `main` estaba limpia y sincronizada con `origin/main` en el commit
@@ -1006,10 +1088,25 @@ frontal de la mesa es `base=(0,7192, 0,0025, 0,6446) m`, equivalente a unos
 `0,365 m` desde el extremo frontal de la malla base; debe materializarse con
 marcas y validarse antes de shadow.
 
-El plan ponderado queda en `47,6 %`, las cuatro tareas físicas del checkpoint
-siguen en `0/4` y E6.1 queda al `50 %`: E6.1A, el paquete offline E6.1B y el
-fixture están cerrados; faltan ENTRY fresca y las cinco sesiones shadow.
-No hubo acceso al robot ni movimiento en E6.1B.
+E6.1C quedó reemitido offline en `20260904T130901_E6.1C` después del primer
+HOME→READY físico. El READY vendor vivo está a `0,001055 rad` del frame
+congelado en los 14 ejes de brazo;
+por tanto el nuevo preview no vuelve a comandarlos. Sólo cabeza, elevador y
+cintura recorren READY↔ENTRY durante 12 s. El barrido de 401 muestras produjo
+cero límites, contactos exactos robot/proxy, solapamientos clamp–clamp y
+candidatos OBB contra la mesa/caja reconstruidas. Máximos minimum-jerk:
+`0,130433310 rad/s` y `0,033469203 rad/s²`. El gate de extremos exige una
+muestra fresca de los 20 ejes, distancia `<=0,01 rad` y velocidad
+`<=0,01 rad/s`. Los XML siguen sin instalación, no se demostró equivalencia
+con el interpolador runtime de `MetaMove` y falta aceptación específica E6.1C.
+
+El plan ponderado queda en `48,5 %`, las cuatro tareas físicas del checkpoint
+siguen en `0/4` y E6.1 queda al `60 %`: E6.1A, E6.1B, el fixture y E6.1C
+offline están cerrados; faltan aceptación/deploy, ENTRY fresca y cinco shadow.
+E6.1B no accedió ni movió el robot. E6.1C sí completó un único HOME→READY
+vendor en `20260904T130344_E6.1C-READY`; no ejecutó ENTRY, checkpoint ni
+publicador. La medida inmediata corrigió la referencia y demostró que el orden
+runtime del grupo head es `yaw;pitch`, no `pitch;yaw`.
 
 La evidencia VLA ya no depende de variables exportadas por un bloque anterior.
 `new_vla_evidence_run.sh` crea cada run de forma exclusiva y rechaza `/` y
@@ -1018,7 +1115,8 @@ wrappers autocontenidos; E2.3 usa sesiones independientes y STOP entre runs.
 E2.2, E3.0, E3.1, E3.2, E3.3, E4.0, E4.1, E4.1C, E4.1D, E4.1E,
 E4.1F, E4.2, E5.0, E5.1, E5.2, E6.0A, E6.0B, E6.0C, E6.0D, E6.0E, E6.0F,
 E6.0G, E6.0H, E6.0I, E6.0J, E6.0K, E6.0L, E6.0M, E6.0N, E6.0O, E6.0P,
-E6.0Q, E6.0R, E6.0S, E6.0T, E6.0U, E6.0V, E6.0W, E6.0X, E6.0Y, E6.0Z y E6.0-CHECK
+E6.0Q, E6.0R, E6.0S, E6.0T, E6.0U, E6.0V, E6.0W, E6.0X, E6.0Y, E6.0Z,
+E6.0-CHECK, E6.1A, E6.1B y E6.1C
 disponen ahora de
 evaluador/sink y wrappers autocontenidos. Los ejemplos aún no implementados de
 VLA-T00…T08 inicializan su directorio
@@ -1572,6 +1670,13 @@ actualizarse este archivo antes de cerrar la sesión.
 
 | Fecha | Hito | Resultado |
 |---|---|---|
+| 2026-09-04 | Contacto clamp–torso al rearmar desde READY y recuperación a HOME | ENTRY no se ejecutó. En el primer ciclo, tras liberar E-stop: self-check `passed=true`; `StartMotion` falló a las 19:58:04 con `reason:19 Limb motion failed`. La clamp izquierda quedó visiblemente contra el torso; 4003/4004 registraron `0x1003`, luego 4004 `0x2006`, y todos los esclavos pasaron a `SAFEOP ERROR`. Se accionó E-stop y se completó apagado lógico/físico; al quitar potencia el contacto se alivió y los brazos descendieron. Segundo arranque supervisado desde brazos libres: `JoystickMode`, action server `1`, whole-state presente y preflight PASS. `cruzr_recover_to_home.sh --check` midió HOME (`arms≤0,000479`, cuerpo/delta≤`0,002397`, velocidad `0`) sin enviar goals. Causa inmediata verificada: `StartMotion`/rearme desde READY, no checkpoint ni publicador. El propietario confirmó que las abrazaderas estaban invertidas deliberadamente para mejorar la manipulación de cajas; la envolvente modificada no estaba representada en URDF/CAD/mesh ni en un perfil de herramienta. Es el principal factor contribuyente al contacto, aunque el alcance del rayado y orificio/marca aparente requiere inspección. HOME→READY queda bloqueado y no se autoriza la orientación invertida para movimiento automático. |
+| 2026-09-04 | E6.1C ENTRY bloqueada antes del goal | el propietario autorizó READY→ENTRY con READY medido, clamps vacíos, fixture fuera de trayectoria, cargador fuera, ruedas bloqueadas, ambos paros liberados y dos personas. El runner abortó fail-closed en el preflight canónico. Diagnóstico posterior de sólo lectura: `CONTROL_STATE=WaitStartMotion`, último evento `Ready --(ButtonStopMotion)-> WaitStartMotion`, servidor `/mc/manipulation/action=0` y `/mc/whole_joint_states=0`. No se envió goal, no se arrancó checkpoint/publicador y no hubo movimiento. Siguiente paso: ciclo completo supervisado de v0.2.0; después READY fresco y nueva autorización. |
+| 2026-09-04 | Preflight vivo previo a E6.1C | run `20260904T125740_E6.0G`: Motion/ROS y action server listos, `ESTOP_KEY=0`, `SERVO_ESTOP_KEY=0`, cargador fuera, baterías `94,6/94,5 %`, READY S2 cargado, VLA `exited/exited`, `publishers:0` y preflight canónico aprobado. Fue sólo lectura, sin objetivo ni movimiento. No basta para mover con el fixture delante: el HOME→READY vendor mueve ambos brazos en `1,5 s` y E6.1C exige mesa/B0 ausentes durante ese tramo. |
+| 2026-09-04 | E6.1C HOME→READY físico y corrección de head | run `20260904T130344_E6.1C-READY`: preflight fresco, HOME medido 20D, clamps vacíos/fixture fuera/ruedas bloqueadas/dos personas confirmados; goal único READY `SUCCEED/status=4`, sin reintento, checkpoint ni publicador. Estado inmediato inmóvil; los 14 brazos coinciden a ≤`0,000096 rad` con el READY previo. `head_pitch=-0,651079` ante XML vendor `-0.0;-0.65` prueba que MetaMove head serializa `yaw;pitch`; el gate histórico falló seguro antes de ENTRY. Preview/recovery corregidos y reauditoría offline `20260904T130901_E6.1C`: 0 límites/contactos/candidatos. Falta confirmación visual READY; no instalar ni enviar ENTRY. |
+| 2026-09-04 | E6.1C aceptación y despliegue preparado | el operador confirmó READY visual estable, sin contactos y clamps vacíos. Run `20260904T131403_E6.1C-ACCEPTANCE`: propietario aceptó `0,15 rad/s` y `0,5 rad/s²` provisionales/no certificados sólo para READY↔ENTRY de cabeza/elevador/cintura; no autoriza una corrida ni publicador. Se implementaron instalador atómico con backup/rollback, recarga exclusiva bajo E-stop y runner con gates frescos 20D y cero reintentos. Sintaxis y auditorías offline PASS; nada instalado/recargado/ejecutado todavía. |
+| 2026-09-04 | E6.1C instalado y recargado bajo E-stop | `20260904T132339_E6.1C-INSTALL`: task list `0d24122c…64957`→`224c6fca…fac1b`, dos XML hash-matched, backup `/home/walker/cruzr-vla/backups/20260904T132339_E6.1C-INSTALL`, sin recarga/movimiento. `20260904T132423_E6.1C-RELOAD`: reinició sólo `walker-motion.manipulation_robot_app-1` con `ESTOP_KEY=1`, cargador fuera, VLA `exited/exited`, `publishers:0`; proceso posterior al task list, ninguna tarea invocada y cero movimiento. Mantener E-stop hasta liberación supervisada; ENTRY aún no autorizada. |
+| 2026-09-04 | E6.1C transición reducida READY↔ENTRY | run offline `20260904T124321_E6.1C`: el READY observado deja los 14 ejes de brazo a ≤`0,000959 rad` de `episode_000040/frame 0`; los previews de 12 s no comandan brazos y sólo ajustan cabeza/elevador/cintura. Máximos minimum-jerk `0,130433310 rad/s` y `0,033469203 rad/s²`; 401 muestras, 0 límites, 0 contactos exactos robot/proxy, 0 solapamientos clamp–clamp y 0 candidatos OBB contra fixture reconstruido. Gate 20D READY/ENTRY y 5/5 regresiones PASS. Sin robot/red/ROS/contenedor/publicador/movimiento. XML no instalado, ley runtime no demostrada, aceptación específica pendiente. E6.1=60 %, plan=48,5 % |
 | 2026-09-04 | E6.1B fixture y campaña shadow fail-closed | run offline `20260904T121621_E6.1B`: fixture `TABLE_77_B0_20260904` congelado con mesa `0,838 × 0,84 × 0,77 m`, espesor `0,038 m`, B0 azul y dos fotos originales SHA-256 válidas; azul es variación registrada, no rechazo. Contrato exacto `episode_000040/frame 0/task 0`, previews ENTRY/recovery sin ejecutor, gate fresco 20D y cinco sesiones task 0/P14. El barrido real da 44 alertas OBB y cero contactos exactos: no descarta shadow, mantiene HOME→ENTRY bloqueado. Sin robot/red/ROS/contenedor/publicador/movimiento; E6.1=50 %, plan=47,6 %, faltan ENTRY viva y 5 shadow |
 | 2026-09-04 | E6.1A transición task-matched offline y matriz de avance | run autoritativo `20260904T103516_E6.1A`: `episode_000040/frame 0/task 0`, primer delta `0,000326395 rad`; HOME→ENTRY→HOME minimum-jerk `23,59 s` por sentido. En 401 muestras: 0 límites URDF, 0 intersecciones exactas robot/proxy clamp y 0 candidatos OBB para soporte+caja en 16 variantes. Soporte inferido `0,774597 m`, no medido; referencia `0,75 × 0,50 m`. Mesa T1 no calificada para HOME→ENTRY de este frame (`+0,225403 m`, 159 alertas OBB), sin prueba de contacto real ni descarte general. Sin robot/red/ROS/contenedor/publicador/movimiento; físico no autorizado. E6.1=20 %, plan ponderado=44,6 %, tasks físicas=0/4. Sigue E6.1B |
 | 2026-09-04 | E6.0Z cierre del outlier de entrada | run `20260904T094803_E6.0Z`: metadata demuestra acciones absolutas; 500 entradas/4 tasks auditadas offline. Task 0 tiene 150 episodios y delta máximo frame-0 acción−estado `0,003134013 rad`. La entrada histórica E6.0Y estaba a `0,834773183 rad` del frame task 0 más próximo por `lifter_pitch_1_joint`, además de usar `NO_BOX` para una instrucción de pick con caja/repisa. Gate de tarea/escena/20D rechazó por tres causas; 3/3 tests. El valor exacto del target histórico no es recuperable del log anterior, pero la instrumentación futura ya conserva posiciones y deltas completos. `--ready`/`--one-point` E6.0Y retirados antes de red y código activo eliminado; regresión `20260904T100258_E6.0Y-OFFLINE`, sólo STOP/recovery histórico. Cargador conectado, cero ROS/publicador/movimiento durante E6.0Z |

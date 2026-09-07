@@ -1,6 +1,52 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
-**Última actualización:** 3 de septiembre de 2026
+**07-09, E6.1C offline retirado como vía de aprobación:** wrapper --check/--run
+y analizador directo devuelven bloqueo/salida 78. No regeneran PASS basados
+en el proxy antiguo. Informes previos preservados, no rehabilitados. Este
+cierre documental no protege HOME interno de arranque ni modifica el robot.
+
+**07-09, contraste numérico de fotos:** ajuste 2D reproducible confirma varias
+correspondencias indistinguibles del patrón central (RMS L~0,852 px y R~1,022 px).
+No demuestra orientación absoluta, plano, distancias de colisión ni protección
+de HOME. Se conserva bloqueo; falta referencia no simétrica física/CAD, no
+repetir las dimensiones de placa ni las mismas fotografías.
+
+**07-09, referencia de fijación pendiente:** el STL del sensor se auditó
+offline; z=0 es candidato, no plano real confirmado. Vistas inferiores
+recibidas (primera L, segunda R), originales `Imágenes/1.jpeg` y `2.jpeg`
+inspeccionados y hashes registrados; pendientes de correspondencia contra CAD. El patrón
+de seis contornos de ~4,2 mm es simétrico cada 120°; no identifica por sí solo
+el montaje ni demuestra equivalencia con los seis tornillos visibles.
+No sustituir esa correspondencia por
+offset PGC ni reutilizar los PASS históricos para HOME.
+
+**07-09, geometría parcial actualizada:** F=36 mm en ambos clamps confirmado;
+volumen de placa calculado offline, cinco tests aprobados. No incluye aún
+soporte completo ni transformación al sensor: no autoriza HOME/rearme.
+
+**07-09, patillas hacia interior:** confirmado por operador en postura actual;
+ancho de placa 70 mm centrado, extremo de patillas a 47 mm del centro lateral.
+No equivale a holgura respecto al torso ni a orientación fija del frame ROS.
+Contorno frontal implementado offline; sin desbloqueo de trayectorias.
+
+**07-09, cotas recibidas:** A=95 mm, B/C=45/55 mm reportados bilateralmente;
+altura remedida=100 mm; patillas=12 mm. B/C aclaradas desde unión real,
+centro daría 50/50; [detalle y cotas restantes](../incidents/2026-09-07_CONTRASTE_FOTOS_CLAMPS.md).
+No modifican la cuarentena ni validan HOME; sólo completan entradas manuales.
+
+**Actualización 07-09:** [seis fotos corregidas contrastadas con URDF](../incidents/2026-09-07_CONTRASTE_FOTOS_CLAMPS.md).
+Se conocen las referencias externas del soporte; faltan sus cotas respecto
+al sensor, no otra confirmación de la inspección ni las mismas fotografías.
+No usar el offset de la pinza PGC como offset de estas placas.
+
+> **07-09 — contención local implementada:** [estado de recalificación](../incidents/2026-09-07_REQUALIFICACION_CLAMPS.md).
+> Doce variantes de lanzamiento rechazadas en tests sin conexión; no cubre
+> HOME interno del arranque, UI/PICO ni el guard instalado en Vision.
+> E-stop mantenido; no liberar ni reiniciar para probar. Inspección reportada:
+> daño sólo en carcasa; clamps restauradas. Geometría bilateral y barrido
+> pendientes; E6.0K retirado para nuevos PASS. No hubo despliegue ni movimiento.
+
+**Última actualización:** 7 de septiembre de 2026
 **Unidad observada:** Cruzr S2 `WAE001UBT60000669`  
 **Baseline:** robot v0.2.0, abrazaderas, `HW_TYPE=cruzr_s2_v1`, PC controller 4.7.0  
 **Ámbito:** contacto contra mobiliario, objeto posiblemente sujeto, postura no
@@ -12,6 +58,14 @@ servo en procedimientos aprobados por UBTECH. El estado físico y lógico debe
 comprobarse de nuevo en cada incidente.
 
 ## 1. Resultado ejecutivo del incidente
+
+**Restricción vigente:** la [auditoría del 07-09](../incidents/2026-09-07_AUDITORIA_CONTACTOS_HOME.md)
+demuestra que el arranque v0.2.0 envía internamente `cruzr/home`. Un ciclo de
+apagado/arranque **no es una retirada segura universal** desde contacto,
+READY o postura asimétrica. Los casos históricos siguientes no autorizan
+repetirlo: primero inspección de daño, geometría real y trayectoria cualificada.
+El wrapper PC no intercepta ese HOME interno. No hay bloqueo técnico central
+desplegado por esta auditoría; no confundir restricción documental con protección.
 
 Durante teleoperación PICO el robot ejerció fuerza contra una mesa. Se accionó
 el paro y el robot quedó estable, flexionado y con una caja de cartón
@@ -214,6 +268,44 @@ paro y no rearmó, reinició, cambió modo ni envió otra trayectoria.
 **DESCARTADO:** considerar `open_arm_before_home` una retirada segura universal
 desde cualquier postura PICO. Hasta diseñar y validar una recuperación por
 regiones de postura, el script no debe ejecutarse de nuevo después de PICO.
+
+### 2.8 Cuarto incidente: rearmado `StartMotion` desde READY con clamp contra torso
+
+El 04-09 el goal E6.1C READY→ENTRY no llegó a enviarse: el preflight abortó
+porque Motion seguía en `WaitStartMotion`. Tras un ciclo completo, el operador
+liberó el E-stop desde la postura READY. El self-check terminó
+`passed=true`, pero la acción interna `StartMotion` falló trece segundos
+después con `reason:19 Limb motion failed`. La clamp izquierda quedó
+visiblemente contra el torso. A continuación 4003/4004 registraron `0x1003`,
+4004 pasó a `0x2006` y EtherCAT cayó globalmente a `SAFEOP ERROR`.
+
+No se había arrancado el checkpoint, el publicador ni ENTRY. Se accionó el
+E-stop y se hizo un segundo apagado completo; al retirar potencia el contacto
+se alivió y los brazos descendieron. El segundo arranque, ya sin contacto,
+terminó en `JoystickMode`. El preflight canónico aprobó y una muestra fresca
+midió HOME en los 20 ejes, con brazos ≤`0,000479 rad`, velocidad cero y deltas
+posición–consigna ≤`0,002397 rad`; no se envió otra trayectoria HOME desde el PC.
+**Corrección 07-09:** los logs originales demuestran `cruzr/home` interno en
+ambos arranques (19:58:01 y 20:20:14 +08); el primero registró FT −317,787 y
+abortó. El segundo ejecutó HOME y terminó. No fue sólo reenergización.
+
+El propietario confirmó posteriormente que las abrazaderas estaban montadas
+deliberadamente en orientación invertida para mejorar la manipulación de
+cajas. Ese cambio amplió o desplazó la envolvente física hacia el torso, pero
+no se representó en el URDF, en una malla de colisión ni en un perfil distinto
+de herramienta; tampoco existe un parámetro de orientación en el contrato VLA
+inspeccionado. Por ello los checks articulares podían aprobar sin detectar las
+patillas salientes. La coincidencia geométrica y temporal hace de esta
+envolvente no modelada una hipótesis contribuyente fuerte, no una causa única
+demostrada de cada daño. La distribución exacta de fuerzas y el alcance material
+requieren inspección. No repetir HOME→READY hasta registrar orientación de fábrica y
+holgura física bilateral, y sustituir la transición rápida por una validación
+escalonada.
+
+Las fotografías posteriores muestran rayado y una marca/orificio aparente en
+la cubierta. No se ha demostrado todavía si el daño es sólo cosmético o si
+afecta una pieza estructural, cableado o sensor. Debe conservarse evidencia
+fotográfica y realizarse una inspección técnica antes de calificarlo.
 
 ## 3. Posibles causas
 

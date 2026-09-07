@@ -1,5 +1,26 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+> **07-09 — contención local implementada:** [estado de recalificación](../incidents/2026-09-07_REQUALIFICACION_CLAMPS.md).
+> Doce variantes de lanzamiento rechazadas en tests sin conexión; no cubre
+> HOME interno del arranque, UI/PICO ni el guard instalado en Vision.
+> E-stop mantenido; no liberar ni reiniciar para probar. Inspección reportada:
+> daño sólo en carcasa; clamps restauradas. Geometría bilateral y barrido
+> pendientes; E6.0K retirado para nuevos PASS. No hubo despliegue ni movimiento.
+
+## Safety correction — 2026-09-07
+
+The [contact audit](../incidents/2026-09-07_AUDITORIA_CONTACTOS_HOME.md) found
+that vendor `StartMotion` invoked `cruzr/home` on both September 4 boots.
+The first HOME produced excessive left FT and failed. Restarting from READY,
+an asymmetric pose or contact is therefore **not** a universally safe recovery.
+The instructions below describe historical behaviour, not permission to retry.
+Releasing E-stop at boot may lead to movement without a PC-issued HOME goal.
+
+This guard and Control Center must be included in trajectory/incident interlock
+review. The audit did not disable or change either service; the guard was
+observed active/enabled on September 7. No entries were returned by its journal
+for the incident interval, which does not establish whether it intervened.
+
 ## Purpose
 
 After the offline v0.2.0 upgrade, the Vision computer can start Control Center

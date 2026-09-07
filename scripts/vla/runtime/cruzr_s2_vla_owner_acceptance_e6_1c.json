@@ -1,0 +1,27 @@
+{
+  "schema": "cruzr-s2-vla-owner-acceptance-e6.1c-v1",
+  "experiment_id": "E6.1C",
+  "accepted_by_role": "project_owner",
+  "acceptance_source": "explicit_confirmation_in_project_session",
+  "accepted_on": "2026-09-04",
+  "scope": "E6.1C_READY_ENTRY_LOCKED_AXES_ONLY",
+  "transition_contract_sha256": "4f157d5490584774793e143dbb22343ba2b5367afb704436ca0c88811874cd0d",
+  "commanded_joint_groups": [
+    "head",
+    "lifter",
+    "waist"
+  ],
+  "arm_joints_commanded": 0,
+  "duration_seconds_each_direction": 12.0,
+  "maximum_velocity_rad_s": 0.15,
+  "maximum_acceleration_rad_s2": 0.5,
+  "runtime_law_equivalence_demonstrated": false,
+  "manufacturer_certified": false,
+  "owner_accepted": true,
+  "acceptance_is_entry_authorization": false,
+  "acceptance_is_publisher_authorization": false,
+  "requires_run_specific_fresh_preflight": true,
+  "requires_run_specific_physical_confirmation": true,
+  "physical_execution_authorized": false,
+  "verbatim_confirmation": "READY VISUAL ESTABLE, BRAZOS Y CABEZA SIN CONTACTO, CLAMPS VACÍOS, ROBOT ESTABLE Y PERSONA JUNTO AL E-STOP; AUTORIZO PREPARAR E6.1C Y ACEPTO LOS LÍMITES PROVISIONALES 0,15 RAD/S Y 0,5 RAD/S², NO CERTIFICADOS POR UBTECH"
+}

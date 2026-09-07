@@ -177,7 +177,7 @@ command_publisher_count() {
   run_ssh "$MOTION_HOST" "docker exec walker-ros.ros2-1 bash -lc '
     source /opt/ros/humble/setup.bash
     export ROS2CLI_DISABLE_DAEMON=1
-    output=\$(timeout 8 ros2 topic info /mc/sdk/robot_command 2>&1) && rc=0 || rc=\$?
+    output=\$(timeout 8 ros2 topic info /mc/sdk/robot_command --no-daemon 2>&1) && rc=0 || rc=\$?
     if count=\$(awk '\''/Publisher count:/ {print \$3; found=1} END {exit !found}'\'' <<<\"\$output\"); then
       printf '\''%s\\n'\'' \"\$count\"
     elif grep -Fq '\''Unknown topic'\'' <<<\"\$output\"; then

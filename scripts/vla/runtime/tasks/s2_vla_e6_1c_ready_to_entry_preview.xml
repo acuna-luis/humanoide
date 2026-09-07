@@ -4,7 +4,7 @@
             <!-- E6.1C OFFLINE PREVIEW: arms stay at measured READY. -->
             <Parallel threshold="3">
                 <Action ID="MetaMove" type="head" location="single" duration="12.0"
-                    joint_angles="-0.4313362240791321; 0.0" />
+                    joint_angles="0.0; -0.4313362240791321" />
                 <Action ID="MetaMove" type="lifter" location="single" duration="12.0"
                     joint_angles="-0.8347731828689575; -0.0009587380336597562; 0.2912645936012268" />
                 <Action ID="MetaMove" type="waist" location="single" duration="12.0"

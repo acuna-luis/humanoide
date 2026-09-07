@@ -180,6 +180,11 @@ while (($#)); do
 done
 
 [[ "$HOLD_SECONDS" =~ ^[0-9]+$ ]] || die "--hold debe ser un entero."
+case "$MODE" in
+  run|grasp|deposit-held|home|home-workbin-internal|prepare-vision|grasp-after-approach)
+    bash "$SCRIPT_DIR/lib/cruzr_contact_motion_lock.sh" "workbin:$MODE" || exit $?
+    ;;
+esac
 ((HOLD_SECONDS >= 0 && HOLD_SECONDS <= 30)) || \
   die "--hold debe estar entre 0 y 30 segundos."
 
@@ -404,7 +409,7 @@ echo 'ACTUATORS_OPERATION_ENABLED=1'
 action_status="$(docker exec "$ros_container" bash -lc '
   source /opt/ros/humble/setup.bash
   export ROS2CLI_DISABLE_DAEMON=1
-  timeout 8 ros2 topic echo --once /mc/manipulation/action/_action/status
+  timeout 8 ros2 topic echo --once --no-daemon /mc/manipulation/action/_action/status
 ')" || exit 27
 if awk '$1 == "status:" && ($2 == 1 || $2 == 2 || $2 == 3) {busy=1} END {exit !busy}' \
     <<<"$action_status"; then
@@ -416,7 +421,7 @@ fi
 topic_once() {
   local topic="$1"
   docker exec "$ros_container" bash -lc \
-    "source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; timeout 8 ros2 topic echo --once '$topic'"
+    "source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; timeout 8 ros2 topic echo --once --no-daemon '$topic'"
 }
 
 estop="$(topic_once /emb/estop_key_state)"

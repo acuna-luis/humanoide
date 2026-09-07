@@ -254,6 +254,55 @@ mesa presente requiere una comprobación incremental separada. No se usa
 AprilTag en este checkpoint: su entrada es RGB+estado 20D y el frame congelado
 no contiene tag.
 
+E6.1C reduce la transición aprovechando el READY vendor observado: sus 14 ejes
+de brazo están a `0,000959 rad` del frame congelado y no vuelven a comandarse.
+Los previews de 12 s ajustan exclusivamente cabeza, elevador y cintura y su
+gate exige los 20 ejes frescos en ambos extremos. El run offline
+corregido `20260904T130901_E6.1C` obtuvo cero límites, contactos exactos y candidatos
+OBB contra el fixture reconstruido en 401 muestras; máximos minimum-jerk
+`0,130433310 rad/s` y `0,033469203 rad/s²`. Esto sólo reduce el riesgo de
+posicionamiento: los XML no están instalados, la ley runtime `MetaMove` no está
+caracterizada y no existe autorización física. Tras aceptación y deploy
+separados, el orden sigue siendo READY→ENTRY, fixture congelado, cinco shadow,
+retirar fixture, ENTRY→READY y recovery READY→HOME.
+
+El HOME→READY vivo `20260904T130344_E6.1C-READY` terminó `SUCCEED/status=4`
+y dejó los 20 ejes inmóviles. También demostró que el vector `MetaMove` de
+cabeza se serializa `yaw;pitch`: el XML vendor `-0.0;-0.65` produjo
+`head_pitch=-0.651079`, `head_yaw≈0`. El gate con la referencia histórica
+rechazó antes de ENTRY; los previews fueron corregidos y reauditorados. READY
+fue confirmado visualmente estable. La aceptación local
+`20260904T131403_E6.1C-ACCEPTANCE` cubre sólo los límites provisionales. El
+instalador, la recarga bajo E-stop y el runner 20D ya existen, pero ENTRY
+continúa sin instalar ni autorizar.
+
+Superado después: `20260904T132339_E6.1C-INSTALL` instaló atómicamente ambas
+tareas con backup y `20260904T132423_E6.1C-RELOAD` recargó sólo el task manager
+bajo E-stop. No arrancaron VLA, publicador o tarea de movimiento. ENTRY sigue
+sin autorización de corrida y exige READY 20D fresco después de liberar paros.
+
+La primera autorización específica READY→ENTRY fue recibida después, pero el
+runner abortó fail-closed antes del goal: Control Center estaba en
+`WaitStartMotion`, el action server de manipulación tenía conteo cero y no se
+anunciaba `/mc/whole_joint_states`. No hubo movimiento, checkpoint ni
+publicador. Tras el ciclo completo supervisado de v0.2.0, la referencia READY
+y la autorización de corrida deben renovarse porque son estado volátil.
+
+En el ciclo siguiente, liberar el E-stop desde READY hizo que el self-check
+pasara pero `StartMotion` fallara `reason:19 Limb motion failed`; hubo contacto
+visible clamp izquierda–torso, faults 4003/4004 y EtherCAT `SAFEOP ERROR`.
+Esto ocurrió antes de ENTRY y sin checkpoint/publicador. El segundo ciclo,
+partiendo de brazos libres, recuperó `JoystickMode` y HOME 20D sin goals. El
+dataset/checkpoint puede incorporar implícitamente el montaje usado en sus
+demostraciones, pero no incluye una variable de orientación de clamp ni aporta
+su geometría. El propietario confirmó que, durante el incidente, las
+abrazaderas estaban invertidas deliberadamente para mejorar el agarre de
+cajas; esta envolvente modificada no fue modelada. No atribuir el incidente al
+VLA: checkpoint, publicador y ENTRY no llegaron a arrancar. Bloquear
+HOME→READY hasta verificar montaje de fábrica y holgura reales; no usar la
+orientación invertida en movimiento automático sin un perfil geométrico y una
+validación propios.
+
 E3.0, run `20260828T114346_E3.0`, extendió el mismo evaluador a tasks 0–3 con
 cinco episodios distintos por task y frames en fases 0/25/50/75/100 %. Fueron
 20 muestras y 36 inferencias; las cinco ejecuciones seed 0 por task dieron
