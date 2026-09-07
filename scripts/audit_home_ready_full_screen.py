@@ -34,11 +34,21 @@ def stages():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--tool-profile', choices=('installed-clamps', 'historical-pgc'), default='installed-clamps')
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError(args.output)
     waypoints = stages()
-    joints, boxes, _ = fk.load_robot(URDF, ARCHIVE)
+    profile_sources = []
+    if args.tool_profile == 'installed-clamps':
+        import clamp_work_model
+        joints, boxes, _, tool_profile = clamp_work_model.load()
+        profile_sources = [Path(clamp_work_model.__file__), clamp_work_model.CONTRACT,
+                           ROOT/'scripts/build_clamp_simplified_model.py',
+                           ROOT/'scripts/audit_clamp_mount_requalification.py']
+    else:
+        joints, boxes, _ = fk.load_robot(URDF, ARCHIVE)
+        tool_profile = dict(profile='historical_pgc_not_installed_clamps', collision_coverage_complete=False)
     tree = ET.parse(URDF).getroot()
     fallbacks = []
     with zipfile.ZipFile(ARCHIVE) as archive:
@@ -92,10 +102,13 @@ def main():
     records = [dict(pair=[links[i], links[j]], minimum_sampled_aabb_gap_m=float(minima[k]),
                     adjacent=frozenset((links[i], links[j])) in adjacent, witness=witnesses[k])
                for k, (i, j) in enumerate(pairs)]
-    result = dict(status='HYPOTHETICAL_FULL_WAYPOINT_SCREEN_NOT_APPROVAL', samples=count,
+    removed = tool_profile.get('removed_historical_links', [])
+    result = dict(status='ROBOT_ONLY_WAYPOINT_SCREEN_TOOL_COVERAGE_INCOMPLETE', samples=count,
+                  tool_profile=tool_profile,
                   pairs=records, unresolved_aabb_pairs=int(sum(minima == 0)),
                   visual_fallbacks= fallbacks, initial_state=zero,
-                  missing_collision_links=[x.get('name') for x in tree.findall('link') if x.get('name') not in boxes],
+                  missing_collision_links=[x.get('name') for x in tree.findall('link')
+                                           if x.get('name') not in boxes and x.get('name') not in removed],
                   physical_authorized=False, robot_connections=0, movement_commands=0,
                   limitations=['historical_forward_not_current_installed', 'joint_order_mapping_not_runtime_verified',
                       'head_order_two_hypotheses_not_verified', 'synthetic_HOME_not_measured',
@@ -103,7 +116,7 @@ def main():
                       'AABB_overlap_not_proven_contact', 'visual_fallback_not_qualified',
                       'clamps_and_external_scene_absent', 'no_tracking_braking_or_solid_containment_validation'],
                   source_sha256={str(p): hashlib.sha256(p.read_bytes()).hexdigest()
-                      for p in (URDF, ARCHIVE, FORWARD, RECOVERY, Path(__file__), Path(fk.__file__))})
+                      for p in [URDF, ARCHIVE, FORWARD, RECOVERY, Path(__file__), Path(fk.__file__), *profile_sources]})
     encoded = json.dumps(result, indent=2, allow_nan=False)
     with args.output.open('x') as out:
         out.write(encoded + '\n')
