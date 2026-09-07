@@ -1,5 +1,13 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09, READY final inalterable por operador:** descartada variante cabeza fija
+para solicitud vigente. Nuevo auditor offline preserva objetivos y evalúa READY
+completo: cabeza–torso intersecta en ambas hipótesis de orden, confirmado con
+dos cruces independientes arista–cara por hipótesis. No prueba contacto real;
+un rodeo no elimina intersección en destino del modelo. Cuatro tests pasan,
+evidencia ready_endpoint_locked; ver VALIDACION_HOME_READY_HOME. Sin modificación
+de READY, robot o despliegue. Correspondencia física de mallas sigue pendiente.
+
 **07-09, testigos STL y variante offline:** 48 testigos refinados: 36 separados
 en ese punto y 12 ceros (seis PGC histórico, seis uniones de brazos en cero).
 Barrido cabeza–torso: 26/27 intersecciones por hipótesis pitch/yaw, cero separa

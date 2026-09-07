@@ -1,5 +1,38 @@
 # Prioridad: HOME→READY y READY→HOME, VLA fuera de alcance
 
+## 07-09: READY final inalterable — condición necesaria del destino
+
+Por petición explícita del propietario, la variante de cabeza fija anterior
+queda DESCARTADA para esta solicitud: cambia el estado final de READY. No se
+borra su evidencia histórica. No se modificaron tareas operativas ni READY.
+
+audit_ready_endpoint.py lee objetivos de cabeza/cintura del XML local y brazos
+del último punto del YAML forward histórico. Añade require_same_endpoint para
+rechazar cualquier cambio numérico del destino, incluida cabeza fija. Es una
+comprobación offline, no un nuevo gate instalado en Motion. Los ejes restantes
+se declaran cero sintético; la equivalencia con configuración instalada sigue
+sin demostrarse.
+
+VERIFICADO en modelo: se evaluó cabeza–torso en READY completo, con sus brazos
+finales y las dos hipótesis de orden de cabeza. Ambas distancias STL son cero.
+Para los dos triángulos testigo de cada hipótesis, un cálculo independiente
+por sistema lineal 3×3 encuentra dos cruces arista–cara. Se guardan coordenadas,
+parámetros baricéntricos y residuos; no es sólo una alerta AABB ni depender del
+mismo kernel de distancias. Evidencia 20260907_ready_endpoint_locked.json.
+
+Consecuencia lógica condicionada al modelo: todo camino con ese destino lo
+contiene, por lo que cambiar únicamente tramos intermedios no puede convertirlo
+en un recorrido sin intersecciones del modelo. No demuestra contacto físico
+ni imposibilidad del robot real. Para resolverlo hay que contrastar superficies
+del cuello, sus referencias y el estado real; no desplazar/recortar mallas ni
+excluir pares para forzar aprobación. Permanecen pendientes los útiles reales,
+escena, seguimiento y frenado. El permiso de modificación no aporta esa evidencia.
+
+Cuatro tests pasan: identidad del destino, rechazo de cambios por grupo,
+rechazo de cabeza fija y cruce/separación con cálculo independiente. Cero red,
+comandos o despliegue. Siguiente trabajo útil: validar correspondencia del modelo
+del cuello y referencias de montaje, no buscar rodeos para un extremo inconcluso.
+
 ## 07-09: refinamiento y variante de cabeza fija — INFERENCIA condicionada
 
 refine_home_ready_witnesses.py verifica hashes del barrido anterior antes de

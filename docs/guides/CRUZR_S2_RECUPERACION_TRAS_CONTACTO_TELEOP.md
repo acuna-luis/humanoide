@@ -1,5 +1,11 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09, READY preservado:** auditor de destino detecta intersección modelada
+cabeza–torso en READY, verificada mediante cálculo independiente. No inferir
+choque físico ni resolverlo con rodeo: el extremo no cambia. Cabeza fija queda
+descartada para petición vigente; sin tareas modificadas ni órdenes. Ver
+VALIDACION_HOME_READY_HOME y ready_endpoint_locked. Cuatro tests offline pasan.
+
 **07-09, refinamiento HOME↔READY:** intersecciones modeladas cabeza–torso al
 girar; variante offline conserva cabeza fija, no equivale a READY completo ni
 ordena llevarla a cero. Seis uniones de brazos ya intersectan en cero sintético;
