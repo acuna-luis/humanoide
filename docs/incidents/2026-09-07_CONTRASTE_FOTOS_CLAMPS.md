@@ -2,6 +2,57 @@
 
 ## Resultado
 
+### Revisión vigente: no se solicita otra fotografía genérica
+
+El operador ha aportado repetidamente la vista inferior solicitada y una
+vista oblicua adicional en el chat. Se reconoce que el dibujo orientativo
+no aclaró la referencia necesaria. **No falta cumplir esa solicitud:** no
+pedir otra vez la misma vista, A–F, ni buscar un conector cuya existencia o
+visibilidad no se haya identificado. No desmontar ni mover para fotografiar.
+La imagen oblicua sólo consta en el chat, sin original local/hash asignado;
+no se inventa procedencia ni identificación lateral para ella.
+
+**VERIFICADO offline:** `scripts/audit_clamp_sensor_asymmetry.py` relee el
+ZIP/URDF/STL original (origen/escala comprobados por el auditor de referencia).
+Para cada giro alrededor de z busca un vértice rotado fuera de la AABB
+original. Una salida positiva demuestra que el conjunto no se conserva
+bajo ese giro; una salida cero NO demuestra simetría. No es un registro de
+foto ni un cálculo de holgura física.
+
+| Geometría CAD, igual resultado L/R | Giro 120°: exceso fuera de AABB | Giro 240° |
+|---|---:|---:|
+| Malla completa del sensor | 13,289273 mm | 13,291598 mm |
+| Triángulos coplanares z=0 | 10,995556 mm | 10,995558 mm |
+
+Identidad 0° da exceso cero. Estos milímetros describen **el test CAD contra
+sí mismo**, no error de montaje, distancia al torso ni tolerancia aceptada.
+La simetría del patrón central no debe extrapolarse a toda la pieza.
+Esto deja abierta una vía de registro por contorno/fijaciones exteriores,
+pero NO demuestra que el contorno visible sea el externo del STL, que z=0
+sea la cara fotografiada o que las zonas discriminantes no estén cubiertas.
+Las marcas verdes no tienen correspondencia CAD demostrada.
+
+Evidencia exclusiva, sin sobrescribir informes previos:
+`/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260907_clamp_sensor_asymmetry.json`.
+Contiene hashes y vértices testigo. Tres tests dirigidos pasan (rectángulo
+asimétrico, cero que no prueba simetría, entradas inválidas).
+Estado `CAD_ASYMMETRY_ONLY_PHOTO_REGISTRATION_UNRESOLVED`; cero conexiones,
+cero movimientos, `physical_authorized=false`. Sin cambios remotos.
+
+**Punto de reanudación técnico:** contrastar la forma completa y fijaciones
+exteriores del CAD con las fotos existentes, manteniendo explícitas las
+oclusiones y las distintas caras/planos. No elegir R/t sólo por semejanza ni
+por el menor RMS de seis puntos. Si no se identifica una correspondencia
+inequívoca, se necesita un plano de montaje referido al sensor o un registro
+metrológico realizado en condiciones de aislamiento por personal competente;
+no una nueva foto genérica ni un movimiento de prueba. Esa obtención no se ha
+realizado ni autorizado aquí. Registrar el montaje tampoco cierra por sí solo
+el soporte completo, incertidumbre, trayectoria continua y HOME de arranque.
+
+Rollback local: retirar únicamente los dos scripts nuevos de asimetría y esta
+actualización documental mediante revisión de diff; no cambia ningún bloqueo
+ni requiere rollback en el robot. Sin commit ni push.
+
 ### Referencias del manual SDK revisadas
 
 Se leyó el DOCX local `SDK/Cruzr S2 优必选SDK二次开发文档【对外】6.24.docx`
@@ -17,7 +68,7 @@ R_sixforce_link con ceros. **No son el offset de las abrazaderas**: no trasladar
 esos ceros al contrato de montaje. La sección de pinzas PGC también describe
 otro efector. No se modificó el SDK ni ejecutó ningún ejemplo del documento.
 
-**Siguiente dato físico mínimo:** imagen que identifique una referencia no
+**Solicitud anterior, sustituida por la revisión vigente de arriba:** imagen que identifique una referencia no
 simétrica del sensor (por ejemplo, conector/salida de cable o marca de orientación)
 y su relación con la parte fija de la muñeca y el soporte. Las cotas A–F,
 las patitas hacia dentro y las vistas del patrón central ya están registradas.

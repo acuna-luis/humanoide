@@ -1,12 +1,23 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**07-09, corrección de solicitud fotográfica y asimetría CAD:** no pedir más
+vistas inferiores ni buscar un conector cuya visibilidad no está demostrada.
+Las fotos recibidas documentan el montaje; el pendiente es técnico. Auditoría
+local nueva demuestra que la malla completa del sensor y sus triángulos z=0
+no tienen la simetría de 120° del patrón central. No identifica todavía una
+característica física ni calcula R/t. Tres tests correctos, evidencia externa
+`20260907_clamp_sensor_asymmetry.json`. Detalle y punto de reanudación en
+`docs/incidents/2026-09-07_CONTRASTE_FOTOS_CLAMPS.md`. Sin red, movimiento,
+despliegue ni desbloqueo; mantener restricción de HOME/rearme.
+
 **07-09, ampliación autónoma y límite de evidencia:** E6.0N instalación,
 E6.0O recarga y E6.0P apply/restore con bloqueo local directo; suite v2 correcta
 (18 variantes bloqueadas, siete syntax checks). Evidencia externa
 `20260907_requalification_regressions_v2.json`. Manual SDK revisado: figura
 de ejes corresponde a manos articuladas; offsets de sensores no son del clamp.
-Siguiente dato físico: referencia no simétrica identificable del sensor
-respecto a muñeca/soporte, sin mover ni desmontar el robot. No repetir A–F.
+Pendiente técnico: identificar una correspondencia no simétrica del sensor
+respecto a muñeca/soporte; no solicitar otra foto sin localizar antes esa
+referencia en el CAD y justificar su visibilidad. No repetir A–F.
 Detalles y límites en contraste de fotos/recalificación. Cero cambios remotos.
 
 **07-09, suite offline y entradas incompletas:** HOME ya no sustituye datos

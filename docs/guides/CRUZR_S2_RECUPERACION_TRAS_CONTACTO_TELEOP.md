@@ -1,5 +1,12 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**07-09, fotos suficientes para documentar, no para cualificar:** se retira
+la solicitud genérica de otra vista/conector no identificado. La auditoría
+`audit_clamp_sensor_asymmetry.py` demuestra asimetría de la malla completa,
+no correspondencia con la herramienta real. Tres tests correctos. Falta
+registro geométrico y protección de recorridos/arranque; conservar E-stop,
+sin ensayo HOME ni rearme. Ver contraste fotográfico para evidencia y límites.
+
 **07-09, rutas heredadas:** instalación E6.0N, recarga E6.0O y apply/restore
 de READY E6.0P bloqueadas localmente antes de conexión. Suite v2: 18 variantes
 rechazadas, sin cambios en tareas instaladas ni protección del HOME interno.
