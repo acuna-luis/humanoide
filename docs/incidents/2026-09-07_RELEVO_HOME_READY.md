@@ -1,5 +1,17 @@
 # Relevo para continuar el 08-09: HOME → READY → HOME
 
+**Actualización vigente 08-09 — ciclo HOME→READY→HOME satisfactorio:**
+[Retorno y validación conjunta](2026-09-08_HOME_DESDE_READY_AUTORIZADO.md). Ambas acciones autorizadas por
+el propietario terminaron SUCCEED/status=4, con extremos medidos y confirmación
+visual posterior sin problemas/contacto. Estado final HOME: máximo 20D
+0,002684 rad, velocidad 0 y actuadores sanos; VLA detenido, writers 0.
+PASS físico de ida y vuelta con montaje actual para este ensayo. Captura parcial
+del retorno: 2.251 estados, pico de velocidad reportada 2,049366 rad/s; no valida
+el candidato offline lento ni frenado. Geometría continua/registro pendientes.
+No monitor persistente ni habilitación ENTRY/VLA. El texto siguiente conserva
+los resultados históricos de cada análisis; no anula el ensayo autorizado.
+Los wrappers locales antiguos no fueron editados y conservan sus restricciones.
+
 **Continuación realizada:** ver [resultado del 08-09](2026-09-08_REANUDACION_REFERENCIAS.md).
 El contraste P1/P2/P3 prometido abajo ya está cerrado: no añade identidad CAD
 independiente y no resuelve el montaje. El texto siguiente conserva el relevo

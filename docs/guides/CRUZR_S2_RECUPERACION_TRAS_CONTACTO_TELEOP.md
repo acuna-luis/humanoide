@@ -1,11 +1,20 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**08-09, vuelta READY→HOME completada y confirmada:** [cierre del ciclo](../incidents/2026-09-08_HOME_DESDE_READY_AUTORIZADO.md).
+Goal único SUCCEED/status=4; HOME 20D máximo 0,002684 rad, velocidad 0,
+actuadores sanos; operador confirma «todo bien». Ida y vuelta quedan PASS físico
+en este ensayo con montaje actual. Captura parcial del retorno: 2.251 estados,
+pico reportado 2,049366 rad/s. VLA detenido/writers 0; sin monitor persistente.
+No cambios remotos de configuración/protecciones; geometría continua pendiente.
+Este HOME sustituye READY como último estado físico documentado.
+
 **08-09, READY ejecutado por autorización actual del propietario:** [resultado](../incidents/2026-09-08_READY_AUTORIZADO_PROPIETARIO.md).
 Propietario revocó bloqueo anterior y confirmó condiciones físicas tras aviso
 de riesgo. Goal único SUCCEED/status=4; READY medido, error brazos 0,001938 rad,
 velocidad 0, actuadores sanos, VLA detenido y writers 0. Sin cambios de
-configuración/protecciones ni vuelta HOME. Confirmación visual posterior
-pendiente; no monitor continuo ni validación geométrica general.
+configuración/protecciones ni vuelta HOME. Operador confirma recorrido sin
+problemas y READY estable/libre de contacto: PASS físico de esta ida con montaje
+actual. Retorno y validación geométrica general pendientes; sin monitor continuo.
 
 **08-09, barrido condicionado de ida y vuelta:** [abrazaderas incluidas](../incidents/2026-09-08_BARRIDO_ABRAZADERAS.md).
 Envolventes de orientación libre y reservas explícitas calculadas en 36.864

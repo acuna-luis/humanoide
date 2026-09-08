@@ -1,7 +1,16 @@
 # HOME → READY autorizado por el propietario
 
+**08-09, vuelta READY→HOME completada y confirmada:** [cierre del ciclo](2026-09-08_HOME_DESDE_READY_AUTORIZADO.md).
+Goal único SUCCEED/status=4; HOME 20D máximo 0,002684 rad, velocidad 0,
+actuadores sanos; operador confirma «todo bien». Ida y vuelta quedan PASS físico
+en este ensayo con montaje actual. Captura parcial del retorno: 2.251 estados,
+pico reportado 2,049366 rad/s. VLA detenido/writers 0; sin monitor persistente.
+No cambios remotos de configuración/protecciones; geometría continua pendiente.
+Este HOME sustituye READY como último estado físico documentado.
+
 Fecha: 2026-09-08. Estado: VERIFICADO para ejecución y posición medida;
-PENDIENTE confirmación visual posterior y validación geométrica continua.
+OBSERVADO por el operador: movimiento sin problemas y READY estable/libre de
+contacto. PENDIENTE validación geométrica continua y retorno con montaje actual.
 
 ## Autorización y alcance
 
@@ -52,7 +61,10 @@ Muestras posteriores:
   a cero. Máximo error de estos seis ejes respecto a sus objetivos 0,001079 rad.
 - VLA sigue exited/exited, RobotCommand writers=0/readers=2.
 
-Se solicitó confirmación visual posterior. Las muestras finales son puntuales,
+El operador confirmó: «Perfecto, se movió sin problemas, actualiza todas las
+validaciones, está estable y libre de contacto». Queda cerrado el ensayo como
+`PASS_HOME_TO_READY_PHYSICAL_AND_OPERATOR_CONFIRMED`.
+Las muestras finales son puntuales,
 no monitor continuo ni prueba de ausencia de contacto durante el recorrido.
 Este éxito no elimina las incertidumbres geométricas de los informes anteriores.
 No hay retorno automático ni monitor persistente.
@@ -68,5 +80,26 @@ Evidencia local externa: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/2
 Incluye preflight, hashes, autorización, comando exacto, goal/resultado,
 lecturas anteriores/posteriores y resumen medido; manifiesto SHA-256.
 
-Reanudación: READY medido, confirmación visual pendiente. Antes de otra acción
+Reanudación: READY medido y visualmente confirmado estable/libre de contacto. Antes de otra acción
 revalidar estado actual. No reutilizar esta autorización como grant VLA.
+
+## Matriz de validación vigente después de la confirmación
+
+| Validación | Estado y alcance |
+|---|---|
+| Revocación del bloqueo anterior por propietario | OBSERVADO explícitamente; aplicada a HOME→READY solicitado |
+| Condiciones físicas previas | OBSERVADO: todas confirmadas por operador |
+| Preflight de software y HOME inicial | VERIFICADO: PASS, muestra fresca 20D |
+| Identidad de tarea/trayectoria instalada | VERIFICADO: hashes coincidentes y tarea registrada |
+| Ejecución HOME→READY con montaje actual | VERIFICADO: una ejecución, SUCCEED/status=4 |
+| Movimiento sin problemas | OBSERVADO: confirmación posterior del operador |
+| READY articular completo | VERIFICADO: brazos/cabeza/cintura y elevador comprobados |
+| READY estable y libre de contacto | VERIFICADO: velocidad cero; OBSERVADO: estabilidad/ausencia de contacto confirmadas |
+| Salud de actuadores después | VERIFICADO: errores cero, habilitados, sin consigna latente fuera del gate |
+| VLA y publicadores al terminar | VERIFICADO: exited/exited, writers 0 |
+| READY→HOME con este montaje | PENDIENTE: no ejecutado en este ensayo |
+| Registro geométrico, margen continuo y frenado | PENDIENTE: este ensayo no mide esas magnitudes |
+| Activación del checkpoint/ENTRY | Sin habilitación nueva; no ejecutados |
+
+Los informes offline y flags de geometría conservan sus resultados reales.
+Este PASS físico es evidencia nueva independiente, no regeneración de sus hashes.

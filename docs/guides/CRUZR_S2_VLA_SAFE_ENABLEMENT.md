@@ -1,5 +1,17 @@
 # Integración segura del VLA suministrado para Cruzr S2
 
+**Actualización vigente 08-09 — ciclo HOME→READY→HOME satisfactorio:**
+[Retorno y validación conjunta](../incidents/2026-09-08_HOME_DESDE_READY_AUTORIZADO.md). Ambas acciones autorizadas por
+el propietario terminaron SUCCEED/status=4, con extremos medidos y confirmación
+visual posterior sin problemas/contacto. Estado final HOME: máximo 20D
+0,002684 rad, velocidad 0 y actuadores sanos; VLA detenido, writers 0.
+PASS físico de ida y vuelta con montaje actual para este ensayo. Captura parcial
+del retorno: 2.251 estados, pico de velocidad reportada 2,049366 rad/s; no valida
+el candidato offline lento ni frenado. Geometría continua/registro pendientes.
+No monitor persistente ni habilitación ENTRY/VLA. El texto siguiente conserva
+los resultados históricos de cada análisis; no anula el ensayo autorizado.
+Los wrappers locales antiguos no fueron editados y conservan sus restricciones.
+
 > **07-09 — E6.1C offline retirado:** el wrapper (--check/--run) y analizador
 > directo devuelven salida 78, `BLOCKED_RETIRED_UNREGISTERED_CLAMP_GEOMETRY`.
 > No generan nuevos PASS con el proxy antiguo. Los informes históricos se

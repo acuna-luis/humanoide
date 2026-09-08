@@ -1,11 +1,20 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**08-09, vuelta READY→HOME completada y confirmada:** [cierre del ciclo](incidents/2026-09-08_HOME_DESDE_READY_AUTORIZADO.md).
+Goal único SUCCEED/status=4; HOME 20D máximo 0,002684 rad, velocidad 0,
+actuadores sanos; operador confirma «todo bien». Ida y vuelta quedan PASS físico
+en este ensayo con montaje actual. Captura parcial del retorno: 2.251 estados,
+pico reportado 2,049366 rad/s. VLA detenido/writers 0; sin monitor persistente.
+No cambios remotos de configuración/protecciones; geometría continua pendiente.
+Este HOME sustituye READY como último estado físico documentado.
+
 **08-09, READY ejecutado por autorización actual del propietario:** [resultado](incidents/2026-09-08_READY_AUTORIZADO_PROPIETARIO.md).
 Propietario revocó bloqueo anterior y confirmó condiciones físicas tras aviso
 de riesgo. Goal único SUCCEED/status=4; READY medido, error brazos 0,001938 rad,
 velocidad 0, actuadores sanos, VLA detenido y writers 0. Sin cambios de
-configuración/protecciones ni vuelta HOME. Confirmación visual posterior
-pendiente; no monitor continuo ni validación geométrica general.
+configuración/protecciones ni vuelta HOME. Operador confirma recorrido sin
+problemas y READY estable/libre de contacto: PASS físico de esta ida con montaje
+actual. Retorno y validación geométrica general pendientes; sin monitor continuo.
 
 **08-09, barrido con abrazaderas incluidas:** [resultado condicionado](incidents/2026-09-08_BARRIDO_ABRAZADERAS.md).
 36.864 celdas con cota intermedia continua para curvas especificadas; esferas
@@ -473,7 +482,7 @@ Sin movimiento, conexión al robot ni modificación del bloqueo.
 > daño sólo en carcasa; clamps restauradas. Geometría bilateral y barrido
 > pendientes; E6.0K retirado para nuevos PASS. No hubo despliegue ni movimiento.
 
-**Última actualización:** 7 de septiembre de 2026
+**Última actualización:** 8 de septiembre de 2026
 **Unidad:** Cruzr S2, SN `WAE001UBT60000669`  
 **Propósito:** relevo técnico y operativo entre sesiones, personas y agentes
 
@@ -528,15 +537,15 @@ rearme, reinicio o cambio remoto. El HOME/preflight de la tabla siguiente es
 
 | Elemento | Último estado documentado | Confianza |
 |---|---|---|
-| Postura | tras el incidente READY/StartMotion se completó un segundo ciclo supervisado. El robot quedó en `home` medido: 20 ejes, brazos ≤`0,000479 rad`, cuerpo ≤`0,002397 rad`, velocidad `0` y deltas posición–consigna ≤`0,002397 rad`. El operador confirmó ambos brazos estables y sin contacto | **HOME MEDIDO Y VISUALMENTE CONFIRMADO; ESTADO VOLÁTIL** |
-| Modo robot | Control Center terminó en `JoystickMode`; `/mc/manipulation/action` tiene `1` servidor, `/mc/whole_joint_states` está anunciado y el preflight canónico aprobó | **OPERATIVO; NO REPETIR HOME→READY HASTA CERRAR ORIENTACIÓN/HOLGURA DE CLAMPS** |
+| Postura | 08-09: HOME tras READY→HOME autorizado; máximo 20D 0,002684 rad, brazos 0,000959 rad, velocidad cero. Operador confirma recorrido correcto y estado estable/libre de contacto | **HOME MEDIDO Y VISUALMENTE CONFIRMADO; ESTADO VOLÁTIL** |
+| Modo robot | 08-09: última transición CC observada JoystickMode; servidor de manipulación 1, preflight aprobado y tareas READY/recuperación SUCCEED/status=4 | **VERIFICADO EN ESTA EJECUCIÓN; RECOMPROBAR ANTES DE OTRA** |
 | Efector | abrazaderas, `HW_TYPE=cruzr_s2_v1` confirmado por el check fresco | **VERIFICADO POR SOFTWARE; VACÍO DEBE RECONFIRMARSE ANTES DE MOVIMIENTO** |
-| Actuadores | muestra fresca posterior al segundo arranque: 20 ejes presentes, 14 de brazos, velocidad máxima `0`, sin fault, `Operation Enabled` y delta posición–consigna ≤`0,002397 rad` | **VERIFICADO; ESTADO VOLÁTIL** |
+| Actuadores | 08-09 posterior a HOME: 20 ejes sin error/habilitados, velocidad 0, delta posición–consigna máximo 0,002684 rad | **VERIFICADO; ESTADO VOLÁTIL** |
 | Teleoperación PC | combinación oficial robot v0.2.0 + controller 4.7.0 + UI 4.1.0, overlay `clamp,0,0` y control bimanual. La sesión 10:25 terminó por protección FT, no por VR. Tras el reinicio el robot quedó en `AutoTaskMode`; no se ha recargado ni reanudado PICO | **BLOQUEADA HASTA NUEVO PREFLIGHT Y CAMBIO DE MODO AUTORIZADO** |
 | Servicio PC/PICO | el STOP oficial tras `Ctrl+C` quedó confirmado; PC permaneció encendido durante el power cycle del robot | **STOP VERIFICADO; SIN CLIENTE FÍSICO** |
-| VLA | contenedores persistentes detenidos, `restart=no`, cero publicadores. ENTRY/checkpoint/publicador nunca arrancaron. Al rearmar desde READY, el self-check pasó pero `StartMotion` falló `reason:19 Limb motion failed`; la clamp izquierda estaba en contacto con el torso, 4003/4004 registraron `0x1003/0x2006` y EtherCAT cayó a `SAFEOP ERROR`. La geometría/CAD clamp real no existe en el modelo proveedor. El segundo ciclo recuperó HOME y salud completa. | **BLOQUEAR HOME→READY: VERIFICAR ORIENTACIÓN FÍSICA Y DISEÑAR TRANSICIÓN CON HOLGURA ANTES DE VLA** |
-| Cargador | preflight inmediatamente anterior a HOME→READY leyó `CHARGER=0`; acción y medida READY terminaron después | **DESCONECTADO EN EL ÚLTIMO PREFLIGHT; ESTADO VOLÁTIL** |
-| Paros, ruedas y zona | tras el segundo arranque el propietario liberó el E-stop, confirmó robot estable y brazos sin contacto; preflight leyó `ESTOPS=0,0`, cargador desconectado y dos baterías >84 % | **LIBERADOS EN ÚLTIMA MUESTRA; REVALIDAR ANTES DE CUALQUIER MOVIMIENTO** |
+| VLA | 08-09 posterior a HOME: contenedores exited/exited, writers RobotCommand=0. HOME→READY→HOME se ejecutó como tareas deterministas, sin checkpoint ni ENTRY | **SIN HABILITACIÓN FÍSICA VLA NUEVA** |
+| Cargador | 08-09 previo al retorno HOME: software CHARGER=0 y desconexión confirmada por operador | **DESCONECTADO EN PREFLIGHT; ESTADO VOLÁTIL** |
+| Paros, ruedas y zona | 08-09: paros 0/0 medidos; ruedas bloqueadas, escena sin caja/mesa, ningún otro cliente de control y persona junto al paro confirmados. Final estable/libre de contacto confirmado | **OBSERVADO/VERIFICADO SEGÚN FUENTE; REVALIDAR ANTES DE OTRA ACCIÓN** |
 | Mapa/localización | `test_route_01` se conservó; activación y localización son volátiles | **RECOMPROBAR** |
 
 La rama `main` estaba limpia y sincronizada con `origin/main` en el commit
@@ -553,6 +562,7 @@ v0.2.0 `11004…11001`; las regresiones de ambos mappings pasaron y un `--check`
 vivo demostró `home` sin ordenar movimiento. La recuperación general desde
 una postura arbitraria no-home sigue sin validación física; la ruta específica
 VLA READY→HOME sí quedó validada por E6.0Q.
+
 
 ### 2.2 Primeros pasos de la siguiente sesión
 
