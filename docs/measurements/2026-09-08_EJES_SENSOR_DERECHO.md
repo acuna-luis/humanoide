@@ -102,3 +102,74 @@ No reutilizar A=95 mm como distancia al centro P sin confirmar los mismos
 extremos. El centro P se obtiene de las dimensiones reales de la cara, no
 asignando 70/100 a arriba/ancho según el dibujo histórico. Al definir origen P,
 las cotas y límites antiguos deben trasladarse y reorientarse antes de usarse.
+
+## Distancia perpendicular P–eje declarada
+
+2026-09-08: usuario precisa «la distancia más corta entre el centro de la
+almohadilla y el eje de fijación unidimensional es 95mm». OBSERVADO por declaración:
+distancia punto–recta 95 mm, no distancia punto–punto P–S. El mensaje no
+especifica lado; no duplicar como medición bilateral independiente.
+
+Para una recta con dirección Z_sensor y punto A conocido sobre ella:
+sqrt((P_X-A_X)^2+(P_Y-A_Y)^2)=95 mm. No determina componente longitudinal,
+reparto X/Y ni registro de A con el origen ROS. Si el técnico confirmara además
+que P y el eje están a igual altura en la postura descrita, entonces el offset
+perpendicular sería aproximadamente +95 mm X_sensor derecho o -95 mm izquierdo,
+pero esa igualdad todavía no se ha confirmado. Incertidumbre pendiente.
+
+Siguiente información útil: lado medido, diferencia de altura entre P y eje,
+y distancia longitudinal entre S y el pie de la perpendicular trazada desde P.
+No modificar traslación ROS ni aplicar 95 mm al origen S automáticamente.
+
+## Confirmación bilateral de 95 mm e intervalo de S
+
+2026-09-08: usuario confirma distancia P–eje de 95 mm en ambos brazos. Añade
+que S está oculto en estructura metálica y su distancia proyectada al eje está
+entre 0 y 40 mm. Se conserva como intervalo comunicado, sin asignarlo a una
+componente ROS: falta referencia inicial, sentido y precisar la proyección.
+
+Centro del intervalo 20 mm y semiancho 20 mm: representación ilustrativa, no
+medición de S ni desviación estadística. Para un análisis conservador, una vez
+registrado ese intervalo en el marco correcto, considerar la unión de posiciones
+admisibles de la geometría a lo largo del intervalo (y del recorrido); comprobar
+sólo ambos extremos tampoco basta en general. Un extremo único no maximiza el
+riesgo frente a todos los obstáculos. La reserva ±20 mm no incluye los errores
+de orientación, dimensiones, 95 mm, otros offsets ni seguimiento del robot.
+Sin modificación del contrato ejecutable ni movimiento.
+
+## Referencia externa del intervalo en foto anotada
+
+2026-09-08: usuario aporta foto con segmento rojo «40 mm» entre extremos axiales
+visibles del cilindro plateado. Interpretación de la anotación: referencia 0 en
+la cara junto al soporte negro (izquierda de la imagen), +40 hacia la cara junto
+a la muñeca (derecha de la imagen). Así queda definida una coordenada externa
+para el intervalo comunicado; posición central ilustrativa 20 mm hacia muñeca.
+
+La longitud es declaración anotada, no una medición fotogramétrica nueva. La
+foto no identifica el origen sixforce_link dentro del conjunto ni demuestra que
+S, definido antes como centro de cara de fijación, esté dentro en lugar de sobre
+una cara externa. No confundir incertidumbre del origen ROS con incertidumbre de
+S. Lado de esta foto no identificado explícitamente; no consta medida axial
+bilateral independiente. Pendiente resolver caras/origen con CAD o referencias
+físicas, conservando el intervalo como hipótesis comunicada, no traslación ROS.
+
+## P a la misma altura y alineado con cara externa
+
+2026-09-08: usuario responde «misma altura» y después «alineado» a la pregunta
+sobre centro P y cara del cilindro junto al soporte. OBSERVADO por declaración,
+aplicado al contexto bilateral sin nueva medida independiente por lado.
+
+Para eliminar ambigüedad, F es el centro del eje en ESA CARA EXTERNA. F no es
+por definición S (cara real de fijación oculta) ni O (origen sixforce_link).
+En direcciones del sensor, F→P nominal derecha [95,0,0] mm e izquierda
+[-95,0,0] mm. No hay valores de precisión para las igualdades declaradas.
+
+Si, y sólo si, O está sobre el eje entre F y 40 mm hacia la muñeca, entonces
+O→P derecha [95,0,z] e izquierda [-95,0,z] mm, con z∈[0,40]. El signo positivo
+se debe a que +Z sensor apunta hacia delante, contrario al desplazamiento F→O.
+Centro ilustrativo z=20, semiancho 20, no transformación validada. Ubicación
+real de O, contención del intervalo, errores restantes y registro del modelo
+siguen pendientes. No fijar traducción en contrato ejecutable con esta hipótesis.
+
+HTML actualiza campos y punto naranja a F; dibuja P a offset lateral ±95 mm,
+a igual altura y misma coordenada axial que F. Resto de geometría es ilustrativo.

@@ -1,0 +1,34 @@
+{
+  "schema": "clamp-registration-review-20260908-v1",
+  "evidence_dir": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908T115359.543954Z_PICO-HOME-CHECK",
+  "installed_urdf_sha256": "26182d7abd1f5499d95a9bf753ef90d93fbee6db73906404e3f7ea2bb0763775",
+  "status": "INSTALLED_MODEL_REVIEWED_PHYSICAL_REGISTRATION_CONDITIONAL",
+  "sensor_mesh_z_bounds_m": [
+    -0.0265,
+    0.0
+  ],
+  "hand_origins_in_sensor_m": {
+    "L": [
+      -0.094,
+      0,
+      0.0115
+    ],
+    "R": [
+      0.094,
+      0,
+      0.0115
+    ]
+  },
+  "operator_pad_center_radial_m": {
+    "L": -0.095,
+    "R": 0.095
+  },
+  "operator_linear_error_m": 0.002,
+  "axial_interval_retained_m": [
+    0,
+    0.04
+  ],
+  "actual_geometry_mesh_correspondence_verified": false,
+  "motion_authorized_by_this_report": false,
+  "note": "Installed hand frame differs from worksheet outward-pad frame; do not copy rotations between them."
+}

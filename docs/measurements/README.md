@@ -81,3 +81,14 @@ Verificados sintaxis JavaScript y renderizado visual en Chrome.
 Comparador ampliado a cuatro vistas: identidad y giros independientes +90°
 sobre X, Y y Z fijos del sensor. Todas comparten la cámara, con explicación de
 la regla de mano derecha y de los cambios de dirección de las piezas.
+
+Ficha mínima precargada con orientaciones bilaterales aproximadas confirmadas
+cualitativamente por el técnico según usuario, dimensiones declaradas y evidencia.
+Traslación/errores/límites en el nuevo marco siguen pendientes. Los datos se ven
+antes de los ejemplos; exportación conserva estado de precarga y marca ediciones.
+
+Corrección del renderer principal: placa y patitas giradas por lado mediante
+Ry(±90°), de modo que el eje de fijación queda paralelo al plano de almohadilla.
+Los desplazamientos usados para dibujar siguen siendo arbitrarios, sin valor
+metrológico, y no se copian a las fichas. 70/100 se denominan lado corto/largo;
+no reutilizar asignaciones antiguas ancho/alto o flechas A/B/C/T sin registro.

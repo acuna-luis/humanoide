@@ -1,5 +1,76 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**2026-09-08 — tolerancias UBTECH comunicadas y presupuesto insuficiente:**
+usuario informa sin procedimiento aplicable, error articular «5ª» interpretado
+como 5° y espacial 2 mm. Si este último es seguimiento adicional, supera reserva
+previa derecha 0,856 mm. Desplazamiento angular debe acotarse por pieza; parada
+sin cota. Falsos positivos de dos pares aceptados como criterio técnico comunicado,
+sin desactivar checks. Propuesta sigue NO aprobada, sin colisión física afirmada
+ni movimiento enviado. Ver informe de cierre y error-budget-ubtech-reported.json.
+
+**2026-09-08 — revisión ampliada PICO→HOME, NO aprobación física:**
+[resultado](../measurements/2026-09-08_CIERRE_REVISION_PICO_HOME.md). Nueva lectura inmóvil;
+376 pares/202 estados, 33 refinamientos STL y 40 muestras adicionales de
+brazos–torso. Dos intersecciones nominales ya iniciales en uniones requieren
+interpretación, no prueban contacto real. Plantillas de ejecución leídas sin
+llamarlas; equivalencia con curva revisada y cotas de seguimiento/parada no
+demostradas. Decisión documentada NOT_APPROVED; ninguna ejecución ni reinicio.
+
+**2026-09-08 — VERIFICADO, origen en modelo instalado y chequeo PICO→HOME:**
+[resultado y alcance](../measurements/2026-09-08_REVISION_ORIGEN_Y_PICO_HOME.md). URDF instalado distinto
+del SDK archivado: sí contiene L/R_hand_link. Sensor z[-26,5;0] mm; origen mano
+[±94,0,11,5] mm. Error 2 mm y contención declarados registrados. Propuesta
+25,870372 s dentro de límites; barrido condicionado y refinamiento de malla dejan
+cotas propias de muñeca hasta 0,86 mm, sin margen angular/dinámico ni calificación
+física del detalle. NO aprobación de movimiento; cero comandos. Origen en modelo
+cerrado, correspondencia física/robot–robot/escena/controlador aún pendientes.
+
+**2026-09-08 — P alineado con cara externa y sin desnivel, por declaración:**
+referencia externa F diferenciada de S y origen ROS. F→P derecha [95,0,0] e
+izquierda [-95,0,0] mm en direcciones del sensor. Si O está en tramo axial
+F→muñeca de 0–40 mm, O→P tiene Z en [0,+40] mm; hipótesis, no registro probado.
+Ficha y dibujo actualizados; precisión/modelo pendientes, contrato físico sin cambios.
+
+**2026-09-08 — foto anotada de intervalo axial 40 mm:** referencia externa
+interpretada desde cara del cilindro junto al soporte negro hacia cara junto
+a muñeca. No identifica automáticamente S ni origen ROS; asociación de lado
+y medición axial bilateral pendientes. HTML y registro actualizados, sin movimiento.
+
+**2026-09-08 — declaraciones bilaterales y S oculto:** 95 mm P–eje confirmados
+por usuario en ambos brazos. Proyección de S comunicada entre 0 y 40 mm; referencia
+y sentido pendientes. Centro 20 ±20 mm sólo representa intervalo, no coordenada
+ROS validada. Conservadurismo requiere cubrir intervalo completo, no elegir un
+extremo. Registrado en HTML/nota de ejes; sin movimiento ni contrato alterado.
+
+**2026-09-08 — OBSERVADO por declaración, distancia P–eje 95 mm:** usuario
+identifica distancia mínima del centro exterior de almohadilla al eje de
+fijación (punto–recta). No es P–S ni una componente ROS determinada. Lado de la
+medición, reparto perpendicular, posición longitudinal e incertidumbre pendientes.
+Registrado en ficha HTML y nota de ejes; sin modificar contrato ni mover robot.
+
+**2026-09-08 — CORRECCIÓN del dibujo 3D de abrazaderas:** usuario señala que
+el eje de fijación es paralelo al plano de almohadillas. El renderer principal
+aún dibujaba orientación identidad; ahora aplica Ry(+90°) derecha/Ry(-90°)
+izquierda a placa y patitas, coherente con direcciones contrastadas. Patitas
+hacia +Y, eje del sensor dibujado; P en centro de cara girada y S en fijación.
+Traslación de pantalla arbitraria y explícitamente ilustrativa: no medida ni
+exportada como registro. Cotas 70/100 pasan a lado corto/largo; retiradas flechas
+A/B/C/T del marco antiguo hasta registrar referencias. Visualización Chrome y
+sintaxis comprobadas; contrato físico y robot sin cambios.
+
+**2026-09-08 — referencias S/P visibles en HTML:** marcadores con llamadas
+naranja/verde en fijación y cara de almohadilla; vista inicial de posición y
+botón desde la ficha. Corregida definición antigua de P como punto del soporte.
+Posiciones del esquema ilustrativas, no medidas ni registro ROS. Sintaxis y
+visualización Chrome comprobadas. Sin comandos al robot.
+
+**2026-09-08 — HTML rellenado con datos disponibles:** orientación aproximada
+por lado con confirmación técnica comunicada, cotas declaradas, deducciones
+descriptivas y evidencia. Traslación, incertidumbre y límites en nuevo marco
+permanecen explícitamente pendientes. Ejemplos ficticios separados en desplegables;
+exportación conserva estado de precarga y ediciones. Sin registro de colisión
+ni comandos al robot.
+
 **2026-09-08 — OBSERVADO por confirmación técnica comunicada, orientación bilateral:**
 usuario confirma también ejes izquierdos. Candidatas cualitativas derecha
 Ry(+90°), izquierda Ry(-90°), marco útil +Y hacia patitas/+Z hacia contacto.

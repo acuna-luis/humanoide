@@ -8,37 +8,68 @@
     "bilateral_scratches_event": "second_boot_home_approximately_14:20_Madrid",
     "both_clamps_restored_to_factory_orientation": true,
     "independent_metrology_or_inspection_certificate": false,
-    "underside_photos_chat_order": ["L", "R"],
-    "underside_photos_local_paths": ["/home/lacuna/Imágenes/1.jpeg", "/home/lacuna/Imágenes/2.jpeg"],
-    "underside_photos_sha256": ["30052b8cbab874a4aabb133b2e5ae888fe4840c7eec58a5c5359f59a17a9e377", "a584276dd7088b856b636629802160076544d5b15829b9f3a915341685c222c3"],
-    "underside_photos_cad_registration_verified": false
+    "underside_photos_chat_order": [
+      "L",
+      "R"
+    ],
+    "underside_photos_local_paths": [
+      "/home/lacuna/Imágenes/1.jpeg",
+      "/home/lacuna/Imágenes/2.jpeg"
+    ],
+    "underside_photos_sha256": [
+      "30052b8cbab874a4aabb133b2e5ae888fe4840c7eec58a5c5359f59a17a9e377",
+      "a584276dd7088b856b636629802160076544d5b15829b9f3a915341685c222c3"
+    ],
+    "underside_photos_cad_registration_verified": false,
+    "followup_20260908": {
+      "technician_orientation_confirmation_communicated": {
+        "L": true,
+        "R": true
+      },
+      "pad_center_to_axis_m": {
+        "L": 0.095,
+        "R": 0.095
+      },
+      "same_height_and_front_face_alignment_reported": true,
+      "linear_error_m": 0.002,
+      "all_parts_inside_reported_geometry": true,
+      "does_not_identify_installed_mesh_as_physically_qualified": true
+    }
   },
   "reported_dimensions": {
     "source": "operator_chat_2026-09-07",
-    "applies_to_sides": ["L", "R"],
+    "applies_to_sides": [
+      "L",
+      "R"
+    ],
     "axis_to_pad_face_m": 0.095,
     "upper_edge_from_mount_plane_reported_m": 0.045,
     "lower_edge_from_mount_plane_reported_m": 0.055,
-    "plate_height_directly_remeasured_m": 0.100,
+    "plate_height_directly_remeasured_m": 0.1,
     "tab_projection_from_plate_edge_m": 0.012,
     "tabs_per_clamp": 2,
     "upper_lower_reference_confirmed_after_diagram_correction": true,
     "mount_plane_above_plate_midheight_m": 0.005,
-    "plate_width_m": 0.070,
+    "plate_width_m": 0.07,
     "plate_lateral_position_relative_to_sensor_axis_m": 0.0,
     "tabs_on_same_lateral_edge": true,
     "tabs_direction_operator_report": "toward_robot_interior_on_both_clamps_in_current_pose",
     "tabs_direction_is_pose_dependent_not_ROS_axis": true,
     "plate_with_pads_thickness_m": 0.036,
-    "thickness_components_operator_report_m": [0.034, 0.002],
+    "thickness_components_operator_report_m": [
+      0.034,
+      0.002
+    ],
     "same_dimensions_both_clamps_confirmed": true,
-    "total_tool_depth_from_pad_face_m": 0.130,
+    "total_tool_depth_from_pad_face_m": 0.13,
     "support_contained_in_reported_other_margins": true,
     "total_tool_envelope_report_source": "operator_chat_2026-09-07",
     "total_tool_envelope_report_verbatim": "T=130, no sobresale nada fuera de los otros márgenes",
     "total_tool_envelope_bilateral_scope": "applied_using_prior_operator_report_of_identical_clamps;not_independent_bilateral_metrology",
-    "measurement_uncertainty_m": null,
-    "note": "Operator clarified B/C=45/55 from actual mounting interface; plate midheight would give 50/50. Interface is 5 mm above midheight. This does not establish ROS frame axes. Tab projection is lateral, not added to A. Historical 105 mm was approximate and is not the current plate height."
+    "measurement_uncertainty_m": 0.002,
+    "note": "Operator clarified B/C=45/55 from actual mounting interface; plate midheight would give 50/50. Interface is 5 mm above midheight. This does not establish ROS frame axes. Tab projection is lateral, not added to A. Historical 105 mm was approximate and is not the current plate height.",
+    "containment_reconfirmed_20260908": true,
+    "uncertainty_source": "operator_20260908_2mm; angular/robot_tracking errors not established"
   },
   "reported_static_tab_to_body_measurements": {
     "source": "operator_chat_2026-09-07_photos_13.10",
@@ -49,7 +80,12 @@
     "uncertainty_m": null,
     "synchronized_joint_state": null,
     "model_endpoint_coordinates": null,
-    "photo_order_sides": ["L", "L", "L", "R"],
+    "photo_order_sides": [
+      "L",
+      "L",
+      "L",
+      "R"
+    ],
     "photo_sha256": [
       "0153fa1b2d13dad788107af62c5c1671eeb7b477a4bb17ef85335c99bf3e48a8",
       "6003d8a84e4fb5ac9036289a7b7dc8589a5f8e6fb8fa76534bf3748963f598b6",
