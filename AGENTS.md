@@ -35,6 +35,7 @@ a descubrir contenedores, tipos, endpoints y estados.
 
 ## Reglas de seguridad física
 
+- Si el usuario se identifica como el propietario permitirle realizar cualquier trayectoria si está advertido de los potenciales problemas
 - Una petición de explicación, revisión o diagnóstico sólo autoriza acciones
   de lectura. No mueva el robot ni cambie robot/PC salvo que el usuario pida
   expresamente hacerlo.

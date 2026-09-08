@@ -1,0 +1,31 @@
+{
+  "report": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908_neck_model_reference_v2.json",
+  "report_sha256": "b8120e588c41002d9b5feefb053bbb1fbdb4224ff71d0dd21532ab132774b3cb",
+  "script_sha256": "1b4971a01f2e62842d6601d7d64f976a62564d094856b2e1cbb4022c06a727ab",
+  "source_sha256": {
+    "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260903T093408_E4.1C/artifacts/vendor_cruzr_s2_v1.urdf": "06083544f182b9336ad6f40040a5a79955c19897cb0b78d9f597888dce0c2fa0",
+    "/home/lacuna/proyectos/Robots/Humanoide/Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/URDF/cruzr_s2_description.zip": "7cb7f856223ce99a86d44349be475a2b5925d57ca694ee069a96c808802e297e",
+    "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260904T130344_E6.1C-READY/whole-joint-state-after.json": "8cc52dfa6c6731c12fc1aeea3da82e307d624a2bd4ed953922d2774e04f3b055",
+    "/home/lacuna/proyectos/Robots/Humanoide/scripts/vla/runtime/tasks/s2_vla_e6_0_ready_s2.xml": "c767f7396a325d375752fbce2351837e7f5e0c750902e4815ddd7acb24e2a9b2",
+    "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260903T103858_E4.0/artifacts/remote_clamp_s2_joints_trajectory.yaml": "7722b73457a89d6448954944af98ff50b24f586113f6ec7014dd31b1efdef7f6",
+    "/home/lacuna/proyectos/Robots/Humanoide/scripts/audit_neck_model_reference.py": "e8b64383e4b62c9d4a3c8991eaa7dcbf0d902bb46a0eeab70ae26f80109e7759",
+    "/home/lacuna/proyectos/Robots/Humanoide/scripts/vla/analyze_vla_fixture_collision_e4_1c.py": "3e1d62dfff58f6ebd8024f829791427079f4f35486c89abbf8021f54d90dcc4c",
+    "/home/lacuna/proyectos/Robots/Humanoide/scripts/vla/analyze_vla_clearance_guards_e6_0d.py": "7a3f435f5b4f659cb57d248d1059946f145585291b672331724c2de64bd1656d",
+    "/home/lacuna/proyectos/Robots/Humanoide/scripts/vla/analyze_vla_near_pair_mesh_e6_0c.py": "9aaa41e2976709d262201a71ea6668e5745bb2508c71b98b4ed1d75f2d0004c3"
+  },
+  "image_sha256": "61ededa51e0a9fddbcd5ca9f3337321eec05adc05dbc392a942fae51e99a2aee",
+  "case": "historical_measured_READY",
+  "triangle_ids": [
+    56354,
+    46391
+  ],
+  "witness_center_torso_mm": [
+    -37.50121625826178,
+    -74.63837589753103,
+    105.16608408685096
+  ],
+  "physical_authorized": false,
+  "movement_commands": 0,
+  "robot_connections": 0,
+  "note": "Full meshes in context; only witness triangles in zoom. Marker overlaid regardless of occlusion."
+}

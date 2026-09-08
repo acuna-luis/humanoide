@@ -1,5 +1,10 @@
 # Relevo para continuar el 08-09: HOME → READY → HOME
 
+**Continuación realizada:** ver [resultado del 08-09](2026-09-08_REANUDACION_REFERENCIAS.md).
+El contraste P1/P2/P3 prometido abajo ya está cerrado: no añade identidad CAD
+independiente y no resuelve el montaje. El texto siguiente conserva el relevo
+histórico; no repetir esa tarea.
+
 ## Objetivo y restricciones vigentes
 
 Validar ambos recorridos con las abrazaderas reales. El operador autoriza trabajo

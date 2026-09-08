@@ -1,5 +1,63 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**08-09, READY ejecutado por autorización actual del propietario:** [resultado](incidents/2026-09-08_READY_AUTORIZADO_PROPIETARIO.md).
+Propietario revocó bloqueo anterior y confirmó condiciones físicas tras aviso
+de riesgo. Goal único SUCCEED/status=4; READY medido, error brazos 0,001938 rad,
+velocidad 0, actuadores sanos, VLA detenido y writers 0. Sin cambios de
+configuración/protecciones ni vuelta HOME. Confirmación visual posterior
+pendiente; no monitor continuo ni validación geométrica general.
+
+**08-09, barrido con abrazaderas incluidas:** [resultado condicionado](incidents/2026-09-08_BARRIDO_ABRAZADERAS.md).
+36.864 celdas con cota intermedia continua para curvas especificadas; esferas
+contienen soporte/patitas en cualquier orientación bajo errores supuestos.
+Cuerpo central, brazo contrario y otras abrazaderas separados en esos casos;
+propia muñeca/antebrazo inconclusos. No es registro geométrico físico ni
+aprobación de interpolación vendor. Cero movimiento/conexiones, diez tests OK.
+
+**08-09, rutas contrastadas en lectura:** [HOME↔READY](incidents/2026-09-08_CONTRASTE_RUTAS_HOME_READY.md).
+Cuatro hashes instalados coinciden con referencias; retorno invierte puntos de
+brazos. Task-list: TimeRatio ida 0.5/vuelta 1.0, no equivalencia temporal
+demostrada. Éxitos históricos conservados; montaje registrado y barrido continuo
+siguen pendientes. Diez tests locales OK; cero movimiento/cambios remotos.
+
+**08-09, operador confirma HOME estable sin incidencias:** nueva lectura puntual
+recibe FT bilateral y joints inmóviles; ver HOME_INTERNO_TRAS_LIBERACION.
+FT no tarado/compensación no verificada, no prueba de ausencia de contacto.
+READY solicitado pero no enviado: recorrido no validado. Sin monitor continuo.
+
+**08-09, paro liberado por operador:** [HOME interno observado](incidents/2026-09-08_HOME_INTERNO_TRAS_LIBERACION.md).
+CC ejecutó StartMotion y cruzr/home, terminó JoystickMode. Lectura posterior:
+20 ejes no rueda error=0/status=0x1237, |q| y delta ≤0,003068 rad, velocidad 0;
+paros 0/0, action server 1, robot_command writers 0, VLA detenido. No se envió
+movimiento desde PC ni se monitorizó preventivamente. Confirmación visual pendiente;
+no valida HOME↔READY. Sin monitor continuo.
+
+**08-09, diagnóstico vivo bajo E-stop:** [informe](incidents/2026-09-08_DIAGNOSTICO_BAJO_ESTOP.md).
+Principal 1/chasis 0, CC en WaitEStopRelease según log actual; hardware espera
+start, actuator writers 0 y action server 0. Sin joints completos/FT disponibles.
+Wi-Fi operativo, guard Vision disabled/inactive, VLA exited/restart=no.
+Carga input 0, baterías discharging 67,0/98,4 %. Netdata Vision unhealthy y posible
+desfase PC–robot ~25 s, sin corregir. Sólo lecturas, cero movimiento/rearme;
+no preflight PASS ni monitor continuo. READY/rutas siguen pendientes.
+
+**08-09, testigo del cuello ilustrado:** MODELO_CUELLO incluye PNG 3D determinista
+de las mallas completas y ampliación de los dos triángulos que se cruzan en READY
+histórico. Hashes y vértices contrastados, imagen inspeccionada. Marcador superpuesto,
+no visibilidad física demostrada ni instrucción para inclinar cabeza. Sin movimiento.
+
+**08-09, cuello revisado offline:** [auditoría de referencias](incidents/2026-09-08_MODELO_CUELLO.md).
+URDF idéntico al ZIP; visual/colisión iguales y sin escala extra para cabeza/torso.
+FK independiente coincide; con READY histórico medido persiste cruce modelado
+cerca de la unión del cuello. No explica contacto real ni autoriza corregir
+mallas por conveniencia. Tres tests pasan, READY intacto, cero conexión/movimiento.
+
+**08-09, reanudación offline:** [contraste P1/P2/P3 cerrado](incidents/2026-09-08_REANUDACION_REFERENCIAS.md).
+Son puntos 0/1/4 ya ajustados; sobreviven las dos correspondencias 2D y no se
+obtiene montaje 3D. No repetir fotos/cotas. El run E6.1C-READY del 04-09 ya
+documenta cabeza yaw;pitch; los dos órdenes del barrido posterior son sensibilidad,
+no incertidumbre histórica nueva. Sin conexión, movimiento ni estado físico
+actual comprobado. READY intacto; trayectos sin aprobación.
+
 **RELEVO 07-09 → 08-09:** operador pide guardar para mañana. Punto exacto en
 [`docs/incidents/2026-09-07_RELEVO_HOME_READY.md`](incidents/2026-09-07_RELEVO_HOME_READY.md).
 Reconocidos P1/P2/P3 en foto izquierda; contraste CAD aún no ejecutado, patrón

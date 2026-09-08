@@ -1,5 +1,53 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**08-09, READY ejecutado por autorización actual del propietario:** [resultado](../incidents/2026-09-08_READY_AUTORIZADO_PROPIETARIO.md).
+Propietario revocó bloqueo anterior y confirmó condiciones físicas tras aviso
+de riesgo. Goal único SUCCEED/status=4; READY medido, error brazos 0,001938 rad,
+velocidad 0, actuadores sanos, VLA detenido y writers 0. Sin cambios de
+configuración/protecciones ni vuelta HOME. Confirmación visual posterior
+pendiente; no monitor continuo ni validación geométrica general.
+
+**08-09, barrido condicionado de ida y vuelta:** [abrazaderas incluidas](../incidents/2026-09-08_BARRIDO_ABRAZADERAS.md).
+Envolventes de orientación libre y reservas explícitas calculadas en 36.864
+celdas; separación condicionada de cuerpo central/brazo contrario/otra
+abrazadera. Muñeca y antebrazo propios siguen inconclusos. No se aprueba
+movimiento ni se cambia READY; errores de montaje e interpolación sin verificar.
+
+**08-09, contraste de ida y recuperación:** [informe de rutas](../incidents/2026-09-08_CONTRASTE_RUTAS_HOME_READY.md).
+XML/YAML instalados coinciden por hash; retorno conserva puntos inversos,
+pero TimeRatio registrado difiere (0.5/1.0). No acredita barrido de abrazaderas
+sin transformación al sensor ni curva continua del controlador. Sin acciones
+o cambios remotos; diez tests locales OK. READY final conservado.
+
+**08-09, confirmación visual posterior recibida:** operador reporta HOME sin
+incidencias y estable. FT y joints puntuales disponibles, sin tara/compensación
+verificadas. READY no enviado, ruta sin validar; detalles en HOME_INTERNO_TRAS_LIBERACION.
+
+**08-09, estado posterior:** [liberación del operador y HOME interno](../incidents/2026-09-08_HOME_INTERNO_TRAS_LIBERACION.md).
+StartMotion/home terminaron; muestra posterior próxima a cero, errores cero y
+velocidades cero. Sólo diagnóstico retrospectivo; ausencia de roce no demostrada,
+confirmación visual pendiente. No se envió READY ni se validó recorrido.
+
+**08-09, lectura bajo paro:** [disponibilidad](../incidents/2026-09-08_DIAGNOSTICO_BAJO_ESTOP.md).
+Principal 1/chasis 0 corroborados; CC espera liberación, actuadores sin writer,
+manipulación sin servidor. Sin posición/fuerza actuales verificables. No llamar
+start ni liberar paro para completar diagnóstico. Guard disabled, VLA detenido.
+Lecturas sin movimientos/reinicios/despliegues; no monitor activo.
+
+**08-09, ilustración CAD disponible:** MODELO_CUELLO muestra ubicación del cruce
+modelado y triángulos ampliados. No reproduce el robot actual ni exige moverlo
+para obtener esa vista. Referencia física equivalente sigue pendiente.
+
+**08-09, auditoría del cuello:** [resultado](../incidents/2026-09-08_MODELO_CUELLO.md).
+Copia/escala/FK revisados; cruce modelado persiste con READY medido histórico.
+No se alteran referencias/mallas para eliminarlo. No prueba contacto físico,
+no aprueba rutas ni exige mover para fotografiar. Tres tests, sólo offline.
+
+**08-09:** [reanudación offline](../incidents/2026-09-08_REANUDACION_REFERENCIAS.md).
+P1/P2/P3 contrastados: dos correspondencias 2D siguen empatadas, sin registro
+3D ni nueva autorización. Cabeza yaw;pitch ya observada en E6.1C-READY histórico.
+No se consultó ni movió robot; estado físico de hoy desconocido, sin monitor.
+
 **Relevo 07-09:** ver [punto de reanudación](../incidents/2026-09-07_RELEVO_HOME_READY.md).
 Último reporte físico energizado/paros liberados/estable sin contacto; no se
 confirmó aislamiento o apagado. No tratar guardado de conversación como parada.
