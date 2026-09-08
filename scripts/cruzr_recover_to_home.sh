@@ -202,7 +202,7 @@ detect_manipulation_state() {
   output="$(ssh_motion bash -s <<'REMOTE'
 set -Eeuo pipefail
 latest="$(find /etc/walker/log/motion -maxdepth 1 -type f \
-  -name 'robot_app*.log' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+  -name 'robot_app*.log' -printf '%T@ %p\n' | sort -nr | sed -n '1p' | cut -d' ' -f2-)"
 [[ -n "$latest" && -f "$latest" ]] || exit 51
 
 last_line() {
@@ -222,7 +222,7 @@ ready_line="$(last_line "BTree task: 'transport/clamp_ready_cruzr' is start")"
 clamp_line="$(last_line "BTree task: 'cruzr/blue_workbin_clamp_only' is start")"
 deposit_line="$(last_line "BTree task: 'cruzr/blue_workbin_auto_deposit' is start")"
 open_line="$(last_line 'Start MetaClamp: byd/open_arm_cruzr')"
-unsafe_record="$(last_regex_record 'Excessive force|Self collision between|Collision detected, command not sent|MoveToGoalFailed|Operation disabled unexpected|SAFEOP ERROR|servo [0-9]+ error code:0x(1001|1003|2007)')"
+unsafe_record="$(last_regex_record 'Excessive force|force protection triggered!|Self collision between|Collision detected, command not sent|MoveToGoalFailed|Operation disabled unexpected|SAFEOP ERROR|servo [0-9]+ error code:0x(1001|1003|2007)')"
 
 home_line="${home_line:-0}"
 safe_home_line="${safe_home_line:-0}"
@@ -235,7 +235,7 @@ unsafe_line="${unsafe_record%%:*}"
 [[ "$unsafe_line" =~ ^[0-9]+$ ]] || unsafe_line=0
 
 unsafe_event=none
-if [[ "$unsafe_record" == *"Excessive force"* ]]; then
+if [[ "$unsafe_record" == *"Excessive force"* || "$unsafe_record" == *"force protection triggered!"* ]]; then
   unsafe_event=excessive_force
 elif [[ "$unsafe_record" == *"Self collision between"* || "$unsafe_record" == *"Collision detected, command not sent"* ]]; then
   unsafe_event=self_collision
@@ -288,7 +288,11 @@ fi
 printf 'LATEST_STATE_LINE=%s\nHISTORICAL_STATE=%s\nUNSAFE_AFTER_STATE=%s\n' \
   "$latest_state_line" "$historical_state" "$unsafe_after_state"
 REMOTE
-)" || die "No se pudo determinar la postura actual desde el registro de motion."
+)" || {
+    local read_rc=$?
+    printf 'MOTION_LOG_READ_FAILED_RC=%s\n%s\n' "$read_rc" "$output" >&2
+    die "Falló la lectura del historial de Motion; no se ha clasificado la postura ni enviado movimiento."
+  }
 
   printf '%s\n' "$output"
   HISTORICAL_STATE="$(awk -F= '/^HISTORICAL_STATE=/ {print $2; exit}' <<<"$output")"

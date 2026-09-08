@@ -1,5 +1,63 @@
 # Plan de trabajo: recoger, transportar, vaciar y depositar una caja
 
+**08-09, recuperación operativa y HOME verificados:** [resultado](incidents/2026-09-08_HOME_TRAS_RECUPERAR_CONTROL_CENTER.md).
+Tras reinicio único de CC y liberación supervisada, self-check/StartMotion
+correctos y JoystickMode. HOME20D máximo0,003068 rad, velocidad0, actuadores
+sanos; servidor1, VLA detenido/writers0. Confirmación visual posterior pendiente.
+Sustituye Fault como estado vigente; causa watchdog6002/SIGSEGV sigue abierta,
+sin otro restart de hw ni HOME publicado por agente. Sin monitor persistente.
+
+**08-09, recuperación post-FT evaluada:** [resultado y bloqueo técnico](incidents/2026-09-08_EVALUACION_RECUPERACION_POST_FT.md).
+Postura sana/inmóvil pero a 0,783135 rad de READY; HOME genérico simultáneo y
+OMPL sin plan previo comprobable no proporcionan recuperación demostrada.
+No nuevo movimiento/rearme/reinicio. Pendiente retirada presencial cualificada
+o procedimiento aplicable; autorización del propietario ya recibida.
+
+**08-09, recuperación solicitada tras disparo FT:** el operador confirma caja
+retirada, abrazaderas vacías, estabilidad/sin contacto, zona libre y otros mandos
+detenidos. El --check de recuperación rechaza ACTION_BUSY (rc27). Se canceló
+únicamente la tarea PICO `ac314729-ec21-4ea5-9439-4d4d8f179824` por CancelGoal;
+respuesta aceptada y status final 5 (CANCELED). ROSA falló en conversión local
+del UUID antes de llamar; la llamada ROS2 estándar sí fue aceptada.
+Muestra posterior sana e inmóvil, delta máximo 0,001900 rad, NO HOME.
+No se envió trayectoria ni rearme. Recuperación HOME pendiente: postura PICO
+tras fuerza no cubierta por READY→HOME ni por el ciclo de caja del wrapper.
+No hubo cambio persistente de configuración ni reinicio; sin monitor activo.
+
+**08-09, nueva detención PICO con caja vacía:** [diagnóstico](incidents/2026-09-08_PARADA_PICO_CAJA_VACIA.md).
+Protección de fuerza izquierda y derecha activadas con 0,200 s de separación.
+Operador dice caja soltada y ningún paro; lecturas paros 0/0, actuadores sanos
+inmóviles, delta 0,001900 rad. Postura teleoperada NO HOME sustituye estado
+anterior. Causa mecánica/estado físico y recuperación específica pendientes.
+Sólo lectura; no rearme, HOME, reinicio ni modificación de protecciones.
+
+**08-09, HOME tras finalizar el ensayo ENTRY:** [registro](incidents/2026-09-08_HOME_TRAS_ENTRY.md).
+READY→HOME SUCCEED/status=4; HOME 20D máximo 0,002780 rad, velocidad cero,
+actuadores sanos. Último estado medido HOME sustituye READY; confirmación visual
+posterior pendiente. Revisión de ENTRY por inclinación y shadow 0/5 pendientes.
+
+**08-09, retorno ENTRY→READY completado:** [registro](incidents/2026-09-08_RETORNO_ENTRY_READY.md).
+Último estado medido READY: SUCCEED/status=4, error brazos 0,001633 rad,
+cuerpo en READY, velocidad cero y actuadores sanos. Operador confirma estabilidad, ausencia de contacto y postura adecuada del torso. ENTRY sigue pendiente de revisión por inclinación; shadow 0/5.
+Esta actualización sustituye ENTRY como último estado medido.
+
+**08-09, observación posterior del propietario:** señala inclinación del torso
+muy pronunciada y aporta fotografía. OBSERVADO: postura visual inclinada;
+no confirma aceptación física de ENTRY ni estabilidad/ausencia de contacto.
+La ejecución y el gate articular siguen verificados, pero la idoneidad de esta
+postura queda PENDIENTE de revisión antes de avanzar con fixture/shadow.
+El XML solicita lifter_pitch_1 = −0,834773 rad (−47,83°) y lifter_pitch_3 =
+0,291265 rad (16,69°): son ángulos articulares, no medición del torso respecto
+al suelo. La fotografía no demuestra el estado físico actual ni las holguras.
+No se ha enviado movimiento ni modificado el objetivo por esta observación.
+
+**08-09, HOME→READY→ENTRY ejecutado:** [evidencia y estado](incidents/2026-09-08_READY_ENTRY_AUTORIZADO.md).
+Ambas acciones SUCCEED/status=4; ENTRY 20D error 0,003835 rad, velocidad 0,
+actuadores sanos. Captura completa de la transición: pico reportado 0,107861 rad/s.
+Último estado ENTRY, VLA detenido/writers 0. Confirmación visual posterior
+pendiente; retorno ENTRY→READY y cinco shadow (0/5) pendientes.
+Esta actualización prevalece sobre los estados históricos HOME/ENTRY pendiente.
+
 **Actualización vigente 08-09 — ciclo HOME→READY→HOME satisfactorio:**
 [Retorno y validación conjunta](incidents/2026-09-08_HOME_DESDE_READY_AUTORIZADO.md). Ambas acciones autorizadas por
 el propietario terminaron SUCCEED/status=4, con extremos medidos y confirmación
@@ -29,7 +87,30 @@ Los wrappers locales antiguos no fueron editados y conservan sus restricciones.
 
 ## Matriz ejecutiva de avance
 
-### Gate prioritario de incidente — 07-09
+### Gate vigente — 08-09: E6.1 después de HOME↔READY
+
+[Reanudación, evidencia y rollback](incidents/2026-09-08_REANUDACION_PLAN_E6_1.md).
+HOME↔READY está probado con el montaje actual y deja de bloquear el avance.
+Se da por funcional para continuar el plan; no exige rediseñarlo ni repetir
+las medidas/fotos recibidas. Último estado comprobado: HOME tras cierre del ensayo ENTRY, inmóvil y sano.
+
+| Bloqueante | Estado actual | Próximo paso concreto |
+|---|---|---|
+| HOME↔READY | CERRADO como ensayo físico con confirmaciones | Sólo preflight fresco antes de reutilizarlo |
+| Instalación/aceptación READY↔ENTRY | CERRADO: archivos cotejados y aceptación existente válida | No reinstalar, recargar ni pedir de nuevo aceptación de límites |
+| Compatibilidad READY actual con ENTRY | CERRADO offline: error proyectado 0,001055 rad | Medir ENTRY real después de la transición |
+| Perfil P14 ausente/código shadow obsoleto | RESUELTO: perfil añadido, dos componentes actualizados con backup | --check con hashes PASS; no contenedores arrancados |
+| Alcance geométrico de READY↔ENTRY | AVANZADO: relaciones rígidas identificadas y 4.096 celdas condicionales | Mantener explícitos robot completo/escena/estabilidad y dinámica sin verificar |
+| READY↔ENTRY físico | IDA Y RETORNO EJECUTADOS: Motion y gates PASS | Revisar idoneidad de ENTRY por torso inclinado; retorno confirmado estable y sin contacto |
+| Fixture actual y ENTRY 20D | ENTRY 20D PASS; fixture actual PENDIENTE | Colocación sólo tras ENTRY inmóvil, verificación de escena |
+| Cinco shadow P14 desde SUPPORTED_LOW | PENDIENTE: 0/5 | Capturar RGB/20D/targets/deltas y STOP entre sesiones |
+| VLA físico | PENDIENTE E6.1–E6.4 | No publicar al robot por completar HOME↔READY |
+
+### Historial del gate de incidente — 07-09
+
+Las tablas de este apartado registran lo que estaba pendiente el 07-09.
+La matriz vigente precedente y el informe del 08-09 prevalecen para reanudar.
+
 
 #### Reanudación tras la ejecución offline autónoma
 
@@ -114,34 +195,18 @@ recalculan arbitrariamente mientras se redefine la recalificación.
 
 No se emitió movimiento ni se modificó el robot en esta auditoría.
 
-**Lectura en una mirada (2026-09-04):** avance ponderado del plan
-**`49,1 %`**; avance de las tareas físicas del checkpoint **`0/4 = 0 %`**;
-avance de la misión automatizada con VLA
-`PICK → TRANSPORT → TIP/POUR → PLACE`
-**`0/4 = 0 %`**. El gate activo es **E6.1** (`65 %`): E6.1A, E6.1B, el
-fixture físico y la transición reducida E6.1C están cerrados offline. E6.1C
-conserva los 14 ejes de brazo en READY y mueve sólo cabeza/elevador/cintura;
-HOME→READY ya se ejecutó físicamente una vez con resultado `SUCCEED`; esto es
-posicionamiento y no cuenta todavía como ejecución física de task 0. Faltan
-ENTRY viva y cinco shadow. READY quedó medido y
-visualmente confirmado; los límites provisionales E6.1C fueron aceptados en
-`20260904T131403_E6.1C-ACCEPTANCE`. Una autorización específica de ENTRY se
-recibió, pero el runner abortó antes del goal: Motion quedó en
-`WaitStartMotion`, sin action server ni joint-state. No hubo movimiento,
-checkpoint ni publicador. El ciclo posterior falló en `StartMotion` desde
-READY con contacto clamp izquierda–torso y EtherCAT `SAFEOP ERROR`. Un segundo
-ciclo recuperó HOME medido sin goals adicionales del PC; la auditoría del
-07-09 demuestra que el arranque sí ejecutó internamente `cruzr/home`. El propietario confirmó después que las
-abrazaderas estaban invertidas deliberadamente para mejorar la manipulación de
-cajas, cambio geométrico que no estaba modelado. Antes de continuar toca
-verificar y documentar el montaje de fábrica de ambas clamps y sustituir
-HOME→READY por una transición escalonada con holgura demostrada. La orientación
-invertida no se admite en movimiento automático sin perfil de herramienta,
-modelo de colisión y validación independientes.
-**No existe autorización física abierta.** El robot
-está cargando por confirmación del propietario: cualquier movimiento queda
-bloqueado hasta desconectar el cargador y obtener un preflight fresco con
-`CHARGER=disconnected`.
+**Lectura vigente (2026-09-08):** HOME↔READY completado y confirmado;
+continúa E6.1. READY↔ENTRY está instalado pero no ejecutado; shadow P14 ya
+preparado con fuentes verificadas y contenedores detenidos. Faltan ENTRY real,
+escena actual y cinco shadow. La geometría heredada de E6.1 no recupera un PASS
+por asumir válida la ida/vuelta de brazos; el análisis nuevo detalla su alcance.
+
+La referencia documental de avance se conserva en **49,1 %**, E6.1 **65 %**;
+no se añaden puntos por repetir una ruta ya contabilizada ni por preparar
+shadow. Son contadores de entregables, no porcentaje de seguridad ni de éxito.
+Las tareas físicas del checkpoint y la misión VLA siguen **0/4**. No se afirma
+que esté cargando: el último preflight físico confirmó cargador desconectado.
+La preparación de este turno no envió nuevas órdenes de movimiento ni inferencia.
 
 Los porcentajes no estiman probabilidad de éxito del robot:
 
@@ -150,7 +215,7 @@ Los porcentajes no estiman probabilidad de éxito del robot:
 - **Peso global**: importancia cuantitativa dentro de todo este plan; la suma
   de los pesos de E1.0–E8.2 es `100 %`.
 - **Aporte global logrado**: `peso × cumplimiento / 100`, expresado en puntos
-  porcentuales (`pp`). La suma actual es `48,5 pp = 48,5 %`.
+  porcentuales (`pp`). La suma de referencia es `49,1 pp = 49,1 %`.
 - **Importancia**: impacto de dejar el caso sin resolver. `CRÍTICA` bloquea o
   protege movimiento físico; `ALTA` condiciona validez técnica o selección de
   modelo; `MEDIA` caracteriza o prepara el sistema.
@@ -164,12 +229,12 @@ Los porcentajes no estiman probabilidad de éxito del robot:
 | 1 | Escenario y baseline | 95 % | 6 % | 5,7 pp | ALTA | 🟡 B0 fotografiada/colocada; falta masa |
 | 2 | Primeras inferencias seguras | 100 % | 8 % | 8,0 pp | MEDIA | ✅ Cerrada como shadow/offline, no éxito físico |
 | 3 | Dataset, OOD y temporalidad | 85 % | 10 % | 8,5 pp | ALTA | 🟡 Métrica OOD y semántica vendor abiertas |
-| 4 | ENTRY/READY y fixture | 63 % | 16 % | 10,0 pp | CRÍTICA | 🟡 Transición READY↔ENTRY instalada; falta ejecución |
+| 4 | ENTRY/READY y fixture | 62,5 % | 16 % | 10,0 pp | CRÍTICA | 🟡 Archivos ENTRY cotejados; falta ensayo de seis ejes |
 | 5 | Perfiles 14–20 | 100 % | 10 % | 10,0 pp | ALTA | ✅ P14 es candidato offline preliminar |
-| 6 | Canary task-matched | 36 % | 20 % | 7,2 pp | CRÍTICA | 🔄 READY/deploy cerrados; faltan ENTRY fresca y 5 shadow |
+| 6 | Canary task-matched | 34,5 % | 20 % | 6,9 pp | CRÍTICA | 🔄 HOME↔READY PASS y shadow preparado; faltan ENTRY y 5 shadow |
 | 7 | Tasks físicos 0–3 | 0 % | 20 % | 0,0 pp | CRÍTICA | ⛔ Bloqueada por E6.1–E6.4 |
 | 8 | Selección/evolución del checkpoint | 0 % | 10 % | 0,0 pp | ALTA | ⛔ Requiere evidencia física y/o datos propios |
-| **TOTAL** | **Objetivo completo** | **49,1 % ponderado** | **100 %** | **49,1 pp** | — | **HOME→READY bloqueado por contacto clamp–torso** |
+| **TOTAL** | **Objetivo completo** | **49,1 % ponderado** | **100 %** | **49,1 pp** | — | **HOME↔READY PASS; siguen ENTRY real y cinco shadow** |
 
 ### Detalle por experimento
 
@@ -190,16 +255,16 @@ Los porcentajes no estiman probabilidad de éxito del robot:
 | E4.0 | 70 % | 3 % | 2,1 pp | CRÍTICA | 🟡 Pose/overlay READY reconstruidos | Integrar ENTRY task-matched, no reutilizar READY histórico |
 | E4.1 | 70 % | 4 % | 2,8 pp | CRÍTICA | 🟡 Calibración métrica y colisiones parciales | Confirmar físicamente soporte E6.1 |
 | E4.2 | 60 % | 3 % | 1,8 pp | ALTA | 🟡 Grupos low/middle observados | Congelar cotas por task, no asumir escalar |
-| E4.3 | 60 % | 3 % | 1,8 pp | CRÍTICA | 🟡 READY↔HOME sin caja validado | Sustituir por ENTRY task 0 reproducible |
-| E4.4 | 50 % | 3 % | 1,5 pp | CRÍTICA | 🔄 Transición auditada, instalada y cargada | Ejecutar ENTRY y validar escena viva |
+| E4.3 | 60 % | 3 % | 1,8 pp | CRÍTICA | ✅ HOME↔READY vigente confirmado | Completar READY↔ENTRY task 0 reproducible |
+| E4.4 | 50 % | 3 % | 1,5 pp | CRÍTICA | 🔄 Instalación cotejada; análisis nuevo condicionado | Ensayar ENTRY y validar escena viva |
 | E5.0 | 100 % | 3 % | 3,0 pp | ALTA | ✅ 8 perfiles/16 celdas sink | Cerrado offline |
 | E5.1 | 100 % | 4 % | 4,0 pp | ALTA | ✅ 160 bundles replay | Cerrado offline |
 | E5.2 | 100 % | 3 % | 3,0 pp | ALTA | ✅ P14 preliminar para tasks 0–3 | Revalidar sobre ENTRY/escena vivas |
 | E6.0 | 100 % | 3 % | 3,0 pp | CRÍTICA | ✅ `RETIRED_FAIL_CLOSED`; cero frames publicados | No repetir ni aumentar `0,1 rad` |
-| E6.1 | 65 % | 6 % | 3,9 pp | CRÍTICA | ⛔ READY produjo contacto al rearmar; HOME recuperado | Verificar clamps y rediseñar HOME→READY antes de ENTRY |
-| ↳ E6.1A | 100 % | Incluido en E6.1 | — | CRÍTICA | ✅ Auditoría offline `20260904T103516_E6.1A` | Cerrado; no autoriza movimiento |
+| E6.1 | 65 % | 6 % | 3,9 pp | CRÍTICA | 🔄 HOME↔READY PASS actual; perfil/runtime shadow preparados | Primer ENTRY medido y cinco shadow |
+| ↳ E6.1A | 100 % | Incluido en E6.1 | — | CRÍTICA | Archivo offline `20260904T103516_E6.1A` | Geometría histórica retirada; usar alcance nuevo E6.1 |
 | ↳ E6.1B | 100 % offline + fixture | Incluido en E6.1 | — | CRÍTICA | ✅ `20260904T121621_E6.1B`, fixture/fotos SHA-256 PASS | ENTRY y shadow separados; no autoriza movimiento |
-| ↳ E6.1C | 100 % diseño/deploy, 0 % ejecución | Incluido en E6.1 | — | CRÍTICA | ⛔ ENTRY nunca enviada; `StartMotion` desde READY causó contacto/SAFEOP | Congelar; orientación/holgura clamp y transición escalonada |
+| ↳ E6.1C | 100 % diseño/deploy, 0 % ejecución | Incluido en E6.1 | — | CRÍTICA | 🔄 ENTRY no enviada; XML instalados/verificados, análisis reducido actualizado | Ensayo específico sin reiniciar/rearmar READY |
 | E6.2 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | PASS completo de E6.1 + launcher revisado |
 | E6.3 | 0 % | 3 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | PASS E6.2 antes de añadir H/W/L |
 | E6.4 | 0 % | 4 % | 0,0 pp | CRÍTICA | ⛔ Bloqueado | Ejecutor físico y STOP validados |

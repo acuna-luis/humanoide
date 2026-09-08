@@ -1,5 +1,62 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**08-09, diagnóstico adicional localización02039005:** get_map_name de consulta
+termina SUCCESS/status4 y devuelve mapanuevo (no asumir test_route_01 histórico).
+Locate3d informa LocateRunning y publica pose, con avisos repetidos de estado
+estimado anterior al último tiempo. VSLAM sigue extrayendo características,
+pero advierte TF L_arm_base_link inexistente al calcular máscara de brazo.
+No demuestra que ese TF ni los avisos temporales causen02039005; tampoco que
+el mapa corresponda a escena actual. Preguntado al operador sobre mapanuevo.
+Sin navegación, cambio de mapa, pose inicial, reinicios ni cambio de umbrales.
+Resolución pendiente: confirmar mapa/escena, visibilidad y calibración/TF antes
+de relocalizar o remapear; no ocultar el aviso. Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908T091128Z_LOCALIZATION-WARNING/`.
+
+**08-09, anillo rojo explicado por localización:** log CC correlaciona
+occur02039005 con logo→warning-red; varias resoluciones temporales y nueva
+aparición persistente en última transición. Catálogo instalado define02039005
+como cantidad baja de características coincidentes durante localización,
+sistema navegación/localización; solución vendor pendiente. No atribuir al
+vr_status0 ni al watchdog FT anterior. Consulta actual CC JoystickMode,
+paros0/0, actuadores sin errores y velocidad0, hw sin nuevo reinicio. Posibles
+causas visuales/mapa aún no investigadas. Sin movimientos/cambios de modo,
+sin ocultar aviso ni reiniciar. Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908T090540Z_RED-FACE/`.
+
+**08-09, vr_status0 durante sesión PICO:** lectura pasiva PC muestra transición
+1→0 a10:52:58, seguida de Pico publisher stop y operation_type1. Tracking vuelve
+1 a10:52:59 y0 a10:54:15. Dos TCP establecidos desde PICO42.211 a PC42.215:63901;
+ADB sin dispositivos. Esto no demuestra pérdida Wi-Fi ni sensor averiado.
+Lanzador --teleoperate todavía presente (PID distinto entre consultas); no
+inferir sesión finalizada sólo por STOP del publisher. Antes de reactivar
+Working cerrar lanzador con Ctrl+C para evitar reanudación al volver tracking.
+No se abrió WebSocket, reconectó ADB, reinició app/servicio ni envió movimiento.
+Pendiente comprobar dentro del visor Head+Controllers/Send data/Working y
+repetir --check con lanzador detenido. Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908T085738Z_VR-STATUS-ZERO/`.
+
+**08-09, recuperación operativa y HOME verificados:** [resultado](../incidents/2026-09-08_HOME_TRAS_RECUPERAR_CONTROL_CENTER.md).
+Tras reinicio único de CC y liberación supervisada, self-check/StartMotion
+correctos y JoystickMode. HOME20D máximo0,003068 rad, velocidad0, actuadores
+sanos; servidor1, VLA detenido/writers0. Confirmación visual posterior pendiente.
+Sustituye Fault como estado vigente; causa watchdog6002/SIGSEGV sigue abierta,
+sin otro restart de hw ni HOME publicado por agente. Sin monitor persistente.
+
+**08-09, recuperación solicitada tras disparo FT:** el operador confirma caja
+retirada, abrazaderas vacías, estabilidad/sin contacto, zona libre y otros mandos
+detenidos. El --check de recuperación rechaza ACTION_BUSY (rc27). Se canceló
+únicamente la tarea PICO `ac314729-ec21-4ea5-9439-4d4d8f179824` por CancelGoal;
+respuesta aceptada y status final 5 (CANCELED). ROSA falló en conversión local
+del UUID antes de llamar; la llamada ROS2 estándar sí fue aceptada.
+Muestra posterior sana e inmóvil, delta máximo 0,001900 rad, NO HOME.
+No se envió trayectoria ni rearme. Recuperación HOME pendiente: postura PICO
+tras fuerza no cubierta por READY→HOME ni por el ciclo de caja del wrapper.
+No hubo cambio persistente de configuración ni reinicio; sin monitor activo.
+
+**08-09, nueva detención PICO con caja vacía:** [diagnóstico](../incidents/2026-09-08_PARADA_PICO_CAJA_VACIA.md).
+Protección de fuerza izquierda y derecha activadas con 0,200 s de separación.
+Operador dice caja soltada y ningún paro; lecturas paros 0/0, actuadores sanos
+inmóviles, delta 0,001900 rad. Postura teleoperada NO HOME sustituye estado
+anterior. Causa mecánica/estado físico y recuperación específica pendientes.
+Sólo lectura; no rearme, HOME, reinicio ni modificación de protecciones.
+
 **Última actualización:** 28 de agosto de 2026<br>
 **Estado del documento:** operativo y en evolución<br>
 **Plataforma:** Cruzr S2 con abrazaderas, PICO 4 Ultra Enterprise y PC Ubuntu<br>

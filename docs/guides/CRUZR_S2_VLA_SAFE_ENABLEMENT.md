@@ -1,5 +1,42 @@
 # Integración segura del VLA suministrado para Cruzr S2
 
+**08-09, HOME tras finalizar el ensayo ENTRY:** [registro](../incidents/2026-09-08_HOME_TRAS_ENTRY.md).
+READY→HOME SUCCEED/status=4; HOME 20D máximo 0,002780 rad, velocidad cero,
+actuadores sanos. Último estado medido HOME sustituye READY; confirmación visual
+posterior pendiente. Revisión de ENTRY por inclinación y shadow 0/5 pendientes.
+
+**08-09, retorno ENTRY→READY completado:** [registro](../incidents/2026-09-08_RETORNO_ENTRY_READY.md).
+Último estado medido READY: SUCCEED/status=4, error brazos 0,001633 rad,
+cuerpo en READY, velocidad cero y actuadores sanos. Operador confirma estabilidad, ausencia de contacto y postura adecuada del torso. ENTRY sigue pendiente de revisión por inclinación; shadow 0/5.
+Esta actualización sustituye ENTRY como último estado medido.
+
+**08-09, observación posterior del propietario:** señala inclinación del torso
+muy pronunciada y aporta fotografía. OBSERVADO: postura visual inclinada;
+no confirma aceptación física de ENTRY ni estabilidad/ausencia de contacto.
+La ejecución y el gate articular siguen verificados, pero la idoneidad de esta
+postura queda PENDIENTE de revisión antes de avanzar con fixture/shadow.
+El XML solicita lifter_pitch_1 = −0,834773 rad (−47,83°) y lifter_pitch_3 =
+0,291265 rad (16,69°): son ángulos articulares, no medición del torso respecto
+al suelo. La fotografía no demuestra el estado físico actual ni las holguras.
+No se ha enviado movimiento ni modificado el objetivo por esta observación.
+
+**08-09, HOME→READY→ENTRY ejecutado:** [evidencia y estado](../incidents/2026-09-08_READY_ENTRY_AUTORIZADO.md).
+Ambas acciones SUCCEED/status=4; ENTRY 20D error 0,003835 rad, velocidad 0,
+actuadores sanos. Captura completa de la transición: pico reportado 0,107861 rad/s.
+Último estado ENTRY, VLA detenido/writers 0. Confirmación visual posterior
+pendiente; retorno ENTRY→READY y cinco shadow (0/5) pendientes.
+Esta actualización prevalece sobre los estados históricos HOME/ENTRY pendiente.
+
+**08-09, plan reanudado en E6.1:** [gates y preparación](../incidents/2026-09-08_REANUDACION_PLAN_E6_1.md).
+HOME↔READY deja de ser bloqueante pendiente de ensayo. ENTRY XML/aceptación
+cotejados; error proyectado al frame 40 de 0,001055 rad. Auditor nuevo identifica
+relaciones rígidas y calcula barrido condicionado de útiles (4.096 celdas);
+no validación física completa de ENTRY. Perfil P14 faltante añadido a ambos
+hosts; validador Motion/inferencia Vision actualizados con backup y sin arrancar
+contenedores. --check ahora verifica hashes de código y pasa. Seis tests nuevos,
+shadow local correcto; HOME medido, VLA exited/restart=no. No nuevo movimiento.
+Siguen pendientes ENTRY físico, fixture actual y cinco shadow (0/5).
+
 **Actualización vigente 08-09 — ciclo HOME→READY→HOME satisfactorio:**
 [Retorno y validación conjunta](../incidents/2026-09-08_HOME_DESDE_READY_AUTORIZADO.md). Ambas acciones autorizadas por
 el propietario terminaron SUCCEED/status=4, con extremos medidos y confirmación

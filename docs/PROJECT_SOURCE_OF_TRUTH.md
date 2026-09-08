@@ -1,5 +1,279 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**2026-09-08 — OBSERVADO por confirmación técnica comunicada, orientación bilateral:**
+usuario confirma también ejes izquierdos. Candidatas cualitativas derecha
+Ry(+90°), izquierda Ry(-90°), marco útil +Y hacia patitas/+Z hacia contacto.
+Siguiente medición: tres componentes S→P, cara de fijación a centro de almohadilla,
+en mm; registrar S respecto al origen URDF antes de obtener traslación ROS.
+[Detalle y pendientes](measurements/2026-09-08_EJES_SENSOR_DERECHO.md). Sin movimiento ni contrato de colisión alterado.
+
+**2026-09-08 — confirmación técnica comunicada del lado derecho e inferencia izquierda:**
+usuario confirma resultado derecho por técnico. Nueva muestra 11:26:59 UTC y
+URDF archivado sitúan +X izquierdo hacia fuera, +Y arriba y +Z delante; R útil
+candidata Ry(-90°), con +Z hacia almohadilla y +Y hacia patitas. Contraste físico
+izquierdo y precisión pendientes. [Registro](measurements/2026-09-08_EJES_SENSOR_DERECHO.md).
+Sin movimiento ni cambio del contrato de geometría.
+
+**2026-09-08 — INFERENCIA, ejes derechos calculados sin movimiento:**
+[resultado](measurements/2026-09-08_EJES_SENSOR_DERECHO.md). Muestra actual inmóvil y URDF
+archivado sitúan aproximadamente +X sensor al centro, +Y arriba y +Z delante.
+Con descripción del usuario y marco útil explícito, R candidata ≈Ry(+90°).
+No registro validado: runtime/modelo físico, marco dimensional e incertidumbre
+siguen pendientes; contrato geométrico no alterado, cero comandos de movimiento.
+
+**2026-09-08 — ejemplos de R ampliados a X/Y/Z:** comparador didáctico con
+identidad y tres giros independientes de +90 grados respecto al sensor fijo.
+Incluye matrices, sentido de giro y dirección de almohadilla, borde y patitas.
+Ejemplos ficticios, sin modificar geometría real ni validación de trayectorias.
+
+**2026-09-08 — VERIFICADO, comparación didáctica de R:** [dos vistas 3D](measurements/orientacion_R_ejemplos.html), integradas en la ficha. Sensor y traslación
+idénticos; identidad frente a giro de +90 grados sobre Z. Matrices aplicadas a
+la geometría del útil, cámara sincronizada y ejemplo de coordenadas. Sintaxis
+JavaScript y visualización Chrome comprobadas. Son ejemplos ficticios; registro
+real sigue PENDIENTE. Sin movimiento ni cambios al modelo físico.
+
+**2026-09-08 — orientación explicada para el operador:** la ficha HTML describe
+cómo queda girada la abrazadera respecto al sensor de muñeca, mediante cara de
+almohadilla, borde superior y patitas. Matriz de ejemplo en desplegable técnico;
+la descripción fotográfica no sustituye el registro numérico, aún PENDIENTE.
+Sin cambios geométricos ni acciones sobre el robot.
+
+**2026-09-08 — ejemplos numéricos en la ficha:** fotos históricas 1/2.jpeg
+revisadas; no aportan registro métrico al sensor. Borrador de límites descriptivos
+[-35,47], [-55,45], [-35,95] mm derivado de cotas declaradas, no medido ni
+registrado en ROS. Traslación cero, identidad y errores 2/3 mm y 5 grados son
+ejemplos ficticios de formato, separados de datos y etiquetados no utilizables
+para movimiento. Geometría y validación física siguen PENDIENTES.
+
+**2026-09-08 — ficha geométrica mínima y unidades:** cinco apartados por lado
+(posición, orientación, envolvente, incertidumbre y evidencia); medidas en mm,
+ángulos en grados con convención, matriz sin unidades. Doce fichas detalladas
+quedan opcionales. Datos existentes reutilizados desde el contrato local;
+registro y geometría siguen PENDIENTES. JSON v3 no ejecutable. No constituye
+aprobación de todas las trayectorias: cada recorrido e interpolador requieren
+validación específica con estado, entorno y márgenes. Sin acciones en el robot.
+
+**2026-09-08 — ayuda por campo de medición:** HTML ampliado con definición,
+extremos/dirección de cada distancia, ejemplos sin valor medido y situación de
+partida por campo. Distingue ocho cotas declaradas de referencias por identificar,
+geometría por medir y evidencia por documentar. Registro físico sigue PENDIENTE;
+sin cambios de geometría ni acciones sobre el robot.
+
+**2026-09-08 — cotas declaradas visibles en la ficha HTML:** ocho longitudes
+precargadas por lado, con estado pendiente de confirmar; referencias y medidas
+ausentes diferenciadas. Exportación v2 conserva valores declarados y estado por
+campo, incluso en paneles no visitados. No acredita medición ni modifica el robot.
+
+**2026-09-08 — VERIFICADO, aclaración de la guía de medición:** leyenda de
+O/X/Y/Z y cotas A/B/C/T añadida al HTML; marcas fotográficas renombradas
+P1/P2/P3 para evitar confundir puntos con longitudes. Sin cambios geométricos
+ni comandos al robot; registro físico de referencias sigue PENDIENTE.
+
+**2026-09-08 — VERIFICADO, guía visual de medición disponible:**
+[Modelo 3D interactivo](measurements/abrazadera_mediciones_3d.html) y
+[instrucciones](measurements/README.md). Doce fichas por lado, vistas giratorias
+y descarga JSON; comprobación local en Chrome de los doce paneles, separación
+izquierda/derecha y vistas completada. Esquema ilustrativo: únicamente la placa
+usa cotas nominales declaradas; montaje, sensor y holguras no están medidos.
+**PENDIENTE:** fotos con escala coplanar, mediciones del técnico, transformación
+al marco del robot e incertidumbre. La cinta aporta escala local, no certifica
+geometría ni trayectoria PICO→HOME. Sólo archivos locales, sin comandos al robot.
+Punto de reanudación: completar ambas fichas y registrar las zonas no accesibles.
+
+**08-09, unión fija de abrazadera precisada:** [auditoría](incidents/2026-09-08_UNION_FIJA_ABRAZADERA.md).
+Modelo distingue sensor+wrist_roll rígidos de wrist_pitch móvil. Los dos
+solapamientos históricos afectan wrist_pitch: no son exenciones de montaje.
+Añadida topología explícita, sin recortar envolvente ni ocultar colisiones;
+cinco tests pasan. PICO→HOME sigue sin validación geométrica. Cero movimiento.
+
+**08-09, propuesta PICO→HOME offline preparada:** [alcance](incidents/2026-09-08_PROPUESTA_PICO_HOME_OFFLINE.md).
+Captura20D sana/inmóvil; propuesta matemática de25,870372s y rangos URDF pasan.
+No búsqueda de camino ni validación de contacto; JSON no ejecutable, cero
+movimientos. Tres tests pasan. Script físico sigue pendiente de ruta revisada.
+
+**08-09, diagnóstico adicional localización02039005:** get_map_name de consulta
+termina SUCCESS/status4 y devuelve mapanuevo (no asumir test_route_01 histórico).
+Locate3d informa LocateRunning y publica pose, con avisos repetidos de estado
+estimado anterior al último tiempo. VSLAM sigue extrayendo características,
+pero advierte TF L_arm_base_link inexistente al calcular máscara de brazo.
+No demuestra que ese TF ni los avisos temporales causen02039005; tampoco que
+el mapa corresponda a escena actual. Preguntado al operador sobre mapanuevo.
+Sin navegación, cambio de mapa, pose inicial, reinicios ni cambio de umbrales.
+Resolución pendiente: confirmar mapa/escena, visibilidad y calibración/TF antes
+de relocalizar o remapear; no ocultar el aviso. Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908T091128Z_LOCALIZATION-WARNING/`.
+
+**08-09, anillo rojo explicado por localización:** log CC correlaciona
+occur02039005 con logo→warning-red; varias resoluciones temporales y nueva
+aparición persistente en última transición. Catálogo instalado define02039005
+como cantidad baja de características coincidentes durante localización,
+sistema navegación/localización; solución vendor pendiente. No atribuir al
+vr_status0 ni al watchdog FT anterior. Consulta actual CC JoystickMode,
+paros0/0, actuadores sin errores y velocidad0, hw sin nuevo reinicio. Posibles
+causas visuales/mapa aún no investigadas. Sin movimientos/cambios de modo,
+sin ocultar aviso ni reiniciar. Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908T090540Z_RED-FACE/`.
+
+**08-09, vr_status0 durante sesión PICO:** lectura pasiva PC muestra transición
+1→0 a10:52:58, seguida de Pico publisher stop y operation_type1. Tracking vuelve
+1 a10:52:59 y0 a10:54:15. Dos TCP establecidos desde PICO42.211 a PC42.215:63901;
+ADB sin dispositivos. Esto no demuestra pérdida Wi-Fi ni sensor averiado.
+Lanzador --teleoperate todavía presente (PID distinto entre consultas); no
+inferir sesión finalizada sólo por STOP del publisher. Antes de reactivar
+Working cerrar lanzador con Ctrl+C para evitar reanudación al volver tracking.
+No se abrió WebSocket, reconectó ADB, reinició app/servicio ni envió movimiento.
+Pendiente comprobar dentro del visor Head+Controllers/Send data/Working y
+repetir --check con lanzador detenido. Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908T085738Z_VR-STATUS-ZERO/`.
+
+**08-09, recuperación operativa y HOME verificados:** [resultado](incidents/2026-09-08_HOME_TRAS_RECUPERAR_CONTROL_CENTER.md).
+Tras reinicio único de CC y liberación supervisada, self-check/StartMotion
+correctos y JoystickMode. HOME20D máximo0,003068 rad, velocidad0, actuadores
+sanos; servidor1, VLA detenido/writers0. Confirmación visual posterior pendiente.
+Sustituye Fault como estado vigente; causa watchdog6002/SIGSEGV sigue abierta,
+sin otro restart de hw ni HOME publicado por agente. Sin monitor persistente.
+
+**08-09, reinicio de Control Center autorizado y completado:** propietario pidió
+reiniciar lo necesario y confirmó E-stop principal presionado. Lectura desde
+Vision verifica data1 antes de una única llamada docker restart --time5 a
+walker-system.control_center-1. rc0; nueva instancia y log muestran
+waitBootReady→Recover→WaitEStopRelease, principal pressed/servo released.
+No se reinició hw de nuevo: ya estaba reiniciado automáticamente y esperando
+/mc/rosa_control/start. No se llamó start, servo enable, reset ni HOME.
+Cambio volátil de proceso; sin archivos/configuración modificados en robot,
+sin rollback automático porque reanudar puede mover. Mantener paro hasta nueva
+comprobación y liberación supervisada. Esto restaura espera de arranque, NO
+prueba resuelto el watchdog6002 ni HOME. Relojes hosts/PC con desfase; comparar
+instancia/PID y secuencia, no ordenar timestamps de hosts distintos a ciegas.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908T083040Z_SERVICE-RECOVERY/`. Sin monitor persistente.
+
+**08-09, EtherCAT diagnosticado:** [secuencia y límites](incidents/2026-09-08_DIAGNOSTICO_ECAT_6002.md).
+6002 identificado como FT derecho; enumerado antes del watchdog0x1b durante
+SAFEOP→OP. Master falla y hw sufre SIGSEGV; Docker lo reinicia una vez,
+sin restaurar Motion. OOMfalse. Causa física/software primaria aún no aislada;
+no demuestra sobrecarga ni sensor averiado. Sólo lectura; no reparaciones ni
+reintentos. Pendiente revisión técnica de bus/sensor y fallo software.
+
+**08-09, resultado tras liberación supervisada: FALLO StartMotion.** Self-check
+passed=true/error0, pero StartMotion fail reason19 y Control Center Fault.
+Log hw: sensor FT KunWeiTech EtherCAT 6002 queda SAFEOP ERROR (0x14),
+Sync manager watchdog (0x1b); no alcanza OP, master error0x98110024. Después
+fallo del proceso hw y timeout de /mc/servo/enable. Manipulación espera
+ListControllers; servidor de acciones0, actuadores sin muestra (timeout7s).
+Paros0/0 y cargador0 en consulta. No asignar lado físico a6002 sin cotejar mapa;
+no interpretar watchdog como prueba de daño o repetir reinicio a ciegas.
+Readiness previo x86/cámaras sí pasó; no garantizaba inicialización EtherCAT.
+HOME/estado físico de servos no verificables. Sólo diagnóstico desde agente:
+ningún HOME, rearme, restart o cambio de protecciones. Sin monitor persistente.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908T082533Z_BOOT-AFTER-RELEASE/`.
+
+**08-09, siguiente arranque preparado para liberación supervisada:** operador
+confirma brazos abajo, abrazaderas vacías, estabilidad/sin contacto, recorrido
+libre, ruedas bloqueadas y persona junto al paro. Primera consulta Motion
+agotada; posterior descubrimiento observa contenedores recién iniciados.
+Guard instalado leído y ejecutado sólo --check: rc0, v0.2.0, WaitEStopRelease,
+x86 funcional 3/3, seis cámaras 2/2, seguridad 1/0/0 (principal/servo/cargador).
+No reinicio ni movimiento desde agente. Condiciones técnicas previas satisfechas
+para liberar el principal bajo supervisión confirmada; puede iniciar HOME
+interno. Pendientes self-check/StartMotion y medición 20D posteriores; no se
+considera HOME ni recuperación final completada. No monitor persistente.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908T082050Z_BOOT-BEFORE-RELEASE/guard-check.log`.
+
+**08-09, reinicio del operador con E-stop ya liberado:** reporta brazos abajo.
+Lectura nueva confirma ambos paros 0 y cargador 0; no permite inferir HOME.
+Control Center pasó WaitEStopRelease→SelfChecking→Fault: self-check false,
+error 4; servicios x86 no disponibles durante el chequeo, errores de consulta
+IP/reloj/red y sensores. Contenedores Motion running desde hace ~2 min y Vision
+~4 min; compatible con arranque desfasado, no causa única demostrada.
+Servidor manipulación 0, actuadores sin muestra (timeout 7 s). Estado físico
+articular y servo NO VERIFICABLE; VLA exited/restart=no. No se llamó StartMotion,
+reset, cambio de modo, HOME ni se liberó paro mediante agente. Evitar nuevas
+órdenes mientras se diagnostica el arranque fallido. Sin monitor persistente.
+Evidencia externa: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908T081454Z_REBOOT-ESTOP-RELEASED/`.
+
+**08-09, petición de script PICO→HOME:** añadida herramienta exclusivamente
+de diagnóstico `scripts/teleoperation/check_pico_home_recovery.py --check`.
+Descubre contenedores, captura actuadores/joints/status y distingue HOME,
+READY completo u OTHER sin inferir posición del historial. No contiene --run,
+publicación, cancelación ni rearme; no satisface todavía la recuperación física
+solicitada. Primera prueba corrigió selección ambigua ros2/ros2-export antes de
+consultar ROS. Prueba conectada posterior completa: OTHER, cero movimientos,
+exit 3 y evidencia 20260908T080600.790170Z_PICO-HOME-CHECK fuera de Git.
+Pendiente trayectoria revisada desde postura PICO actual y montaje real.
+No retirar bloqueo por ser dueño ni interpretar esto como falta de autorización:
+la autorización existe y falta resolver el recorrido físico.
+
+**08-09, error del script de recuperación revisado:** usuario aporta --run --yes
+abortado al leer historial, después de actuadores sanos y lock de tareas libre.
+No movimiento en ese intento según la rama ejecutada. Lectura repetida funciona:
+HISTORICAL_STATE=teleoperated_pose; fallo original no reproducido ni causa probada.
+Se mejora scripts/cruzr_recover_to_home.sh: conserva código de error/salida,
+sustituye head por sed para evitar cierre anticipado bajo pipefail y reconoce
+`force protection triggered!` como evento de fuerza. No relaja rutas de HOME.
+Sintaxis y self-test pasan; tres regresiones de logs FT pasan. Lectura remota
+reconoce disparo en línea 3523 y nueva tarea PICO en 4306: evento anterior a esa
+tarea no se declara evento nuevo, ni se considera resuelto mecánicamente.
+Sin cambios remotos ni movimiento. Postura actual requiere medición y una ruta
+aplicable; ACTIONS=ready sólo indica disponibilidad de acciones, no postura READY.
+
+**08-09, recuperación post-FT evaluada:** [resultado y bloqueo técnico](incidents/2026-09-08_EVALUACION_RECUPERACION_POST_FT.md).
+Postura sana/inmóvil pero a 0,783135 rad de READY; HOME genérico simultáneo y
+OMPL sin plan previo comprobable no proporcionan recuperación demostrada.
+No nuevo movimiento/rearme/reinicio. Pendiente retirada presencial cualificada
+o procedimiento aplicable; autorización del propietario ya recibida.
+
+**08-09, recuperación solicitada tras disparo FT:** el operador confirma caja
+retirada, abrazaderas vacías, estabilidad/sin contacto, zona libre y otros mandos
+detenidos. El --check de recuperación rechaza ACTION_BUSY (rc27). Se canceló
+únicamente la tarea PICO `ac314729-ec21-4ea5-9439-4d4d8f179824` por CancelGoal;
+respuesta aceptada y status final 5 (CANCELED). ROSA falló en conversión local
+del UUID antes de llamar; la llamada ROS2 estándar sí fue aceptada.
+Muestra posterior sana e inmóvil, delta máximo 0,001900 rad, NO HOME.
+No se envió trayectoria ni rearme. Recuperación HOME pendiente: postura PICO
+tras fuerza no cubierta por READY→HOME ni por el ciclo de caja del wrapper.
+No hubo cambio persistente de configuración ni reinicio; sin monitor activo.
+
+**08-09, nueva detención PICO con caja vacía:** [diagnóstico](incidents/2026-09-08_PARADA_PICO_CAJA_VACIA.md).
+Protección de fuerza izquierda y derecha activadas con 0,200 s de separación.
+Operador dice caja soltada y ningún paro; lecturas paros 0/0, actuadores sanos
+inmóviles, delta 0,001900 rad. Postura teleoperada NO HOME sustituye estado
+anterior. Causa mecánica/estado físico y recuperación específica pendientes.
+Sólo lectura; no rearme, HOME, reinicio ni modificación de protecciones.
+
+**08-09, HOME tras finalizar el ensayo ENTRY:** [registro](incidents/2026-09-08_HOME_TRAS_ENTRY.md).
+READY→HOME SUCCEED/status=4; HOME 20D máximo 0,002780 rad, velocidad cero,
+actuadores sanos. Último estado medido HOME sustituye READY; confirmación visual
+posterior pendiente. Revisión de ENTRY por inclinación y shadow 0/5 pendientes.
+
+**08-09, retorno ENTRY→READY completado:** [registro](incidents/2026-09-08_RETORNO_ENTRY_READY.md).
+Último estado medido READY: SUCCEED/status=4, error brazos 0,001633 rad,
+cuerpo en READY, velocidad cero y actuadores sanos. Operador confirma estabilidad, ausencia de contacto y postura adecuada del torso. ENTRY sigue pendiente de revisión por inclinación; shadow 0/5.
+Esta actualización sustituye ENTRY como último estado medido.
+
+**08-09, observación posterior del propietario:** señala inclinación del torso
+muy pronunciada y aporta fotografía. OBSERVADO: postura visual inclinada;
+no confirma aceptación física de ENTRY ni estabilidad/ausencia de contacto.
+La ejecución y el gate articular siguen verificados, pero la idoneidad de esta
+postura queda PENDIENTE de revisión antes de avanzar con fixture/shadow.
+El XML solicita lifter_pitch_1 = −0,834773 rad (−47,83°) y lifter_pitch_3 =
+0,291265 rad (16,69°): son ángulos articulares, no medición del torso respecto
+al suelo. La fotografía no demuestra el estado físico actual ni las holguras.
+No se ha enviado movimiento ni modificado el objetivo por esta observación.
+
+**08-09, HOME→READY→ENTRY ejecutado:** [evidencia y estado](incidents/2026-09-08_READY_ENTRY_AUTORIZADO.md).
+Ambas acciones SUCCEED/status=4; ENTRY 20D error 0,003835 rad, velocidad 0,
+actuadores sanos. Captura completa de la transición: pico reportado 0,107861 rad/s.
+Último estado ENTRY, VLA detenido/writers 0. Confirmación visual posterior
+pendiente; retorno ENTRY→READY y cinco shadow (0/5) pendientes.
+Esta actualización prevalece sobre los estados históricos HOME/ENTRY pendiente.
+
+**08-09, plan reanudado en E6.1:** [gates y preparación](incidents/2026-09-08_REANUDACION_PLAN_E6_1.md).
+HOME↔READY deja de ser bloqueante pendiente de ensayo. ENTRY XML/aceptación
+cotejados; error proyectado al frame 40 de 0,001055 rad. Auditor nuevo identifica
+relaciones rígidas y calcula barrido condicionado de útiles (4.096 celdas);
+no validación física completa de ENTRY. Perfil P14 faltante añadido a ambos
+hosts; validador Motion/inferencia Vision actualizados con backup y sin arrancar
+contenedores. --check ahora verifica hashes de código y pasa. Seis tests nuevos,
+shadow local correcto; HOME medido, VLA exited/restart=no. No nuevo movimiento.
+Siguen pendientes ENTRY físico, fixture actual y cinco shadow (0/5).
+
 **08-09, vuelta READY→HOME completada y confirmada:** [cierre del ciclo](incidents/2026-09-08_HOME_DESDE_READY_AUTORIZADO.md).
 Goal único SUCCEED/status=4; HOME 20D máximo 0,002684 rad, velocidad 0,
 actuadores sanos; operador confirma «todo bien». Ida y vuelta quedan PASS físico

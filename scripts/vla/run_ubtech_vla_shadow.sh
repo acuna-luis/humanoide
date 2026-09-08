@@ -250,8 +250,16 @@ deploy_runtime() {
 }
 
 check_installation() {
+  local validator_sha inference_sha
   assert_containers
   assert_command_path_absent
+  validator_sha="$(sha256sum "$RUNTIME_LOCAL/cruzr_s2_shadow_validator.py" | awk '{print $1}')"
+  inference_sha="$(sha256sum "$RUNTIME_LOCAL/cruzr_s2_inference_shadow.py" | awk '{print $1}')"
+  run_ssh "$MOTION_HOST" "test \"\$(sha256sum '$RUNTIME_REMOTE/cruzr_s2_shadow_validator.py' | awk '{print \$1}')\" = '$validator_sha'" || \
+    die "El validador shadow instalado no coincide con la versión local revisada."
+  run_ssh "$VISION_HOST" "test \"\$(sha256sum '$RUNTIME_REMOTE/cruzr_s2_inference_shadow.py' | awk '{print \$1}')\" = '$inference_sha'" || \
+    die "La inferencia shadow instalada no coincide con la versión local de captura de evidencia."
+  printf 'SHADOW_RUNTIME_SOURCES_OK=validator:%s,inference:%s\n' "$validator_sha" "$inference_sha"
   run_ssh "$MOTION_HOST" "test -s '$RUNTIME_REMOTE/cruzr_s2_shadow_validator.py'; test -s '$RUNTIME_REMOTE/$PROFILE_NAME'; test \"\$(sha256sum '$RUNTIME_REMOTE/$PROFILE_NAME' | awk '{print \$1}')\" = '$PROFILE_SHA256'" || \
     die "El perfil remoto $PROFILE_NAME falta o no coincide (ejecute --deploy de forma separada)."
   run_ssh "$VISION_HOST" "test -s '$REMOTE_ROOT/additional/checkpoint-40000/config.json'; test -s '$REMOTE_ROOT/additional/vla-onboard/src/gr00t_control/gr00t_inference.py'; test \"\$(sha256sum '$RUNTIME_REMOTE/vendor-overrides/gr00t/experiment/data_config.py' | awk '{print \$1}')\" = '$DATA_CONFIG_SHA256'; test \"\$(sha256sum '$RUNTIME_REMOTE/vendor-overrides/gr00t/model/backbone/eagle_backbone.py' | awk '{print \$1}')\" = '$EAGLE_BACKBONE_SHA256'; test \"\$(sha256sum '$REMOTE_ROOT/additional/checkpoint-40000/experiment_cfg/metadata.json' | awk '{print \$1}')\" = '$METADATA_SHA256'"

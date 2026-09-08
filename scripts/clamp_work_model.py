@@ -19,6 +19,29 @@ def descendants(joints, parent):
     return found
 
 
+
+def fixed_component(joints, frame):
+    """Rigid connection topology only; never collision permission or a cut mask."""
+    graph = {}
+    for joint in joints:
+        parent, child = joint['parent'], joint['child']
+        graph.setdefault(parent, set())
+        graph.setdefault(child, set())
+        if joint['type'] == 'fixed':
+            graph[parent].add(child)
+            graph[child].add(parent)
+    if frame not in graph:
+        raise ValueError('unknown attachment frame: ' + frame)
+    seen, pending = set(), [frame]
+    while pending:
+        node = pending.pop()
+        if node in seen:
+            continue
+        seen.add(node)
+        pending.extend(graph[node] - seen)
+    return sorted(seen)
+
+
 def load():
     joints, boxes, meshes = fk.load_robot(URDF, ARCHIVE)
     contract = json.loads(CONTRACT.read_text())
@@ -41,7 +64,12 @@ def load():
             coordinate_warning=nominal['coordinate_warning'],
             translation_m=mount['translation_m'], rotation_matrix=mount['rotation_matrix'],
             uncertainty_m=mount['uncertainty_m'],
-            status='NOMINAL_ENVELOPE_NOT_REGISTERED', world_geometry_available=False)
+            status='NOMINAL_ENVELOPE_NOT_REGISTERED', world_geometry_available=False,
+            attachment_topology=dict(
+                rigidly_connected_robot_links=[n for n in fixed_component(joints, side+'_sixforce_link') if n not in removed],
+                topology_is_contact_permission=False,
+                allowed_contact_regions=[], envelope_cut_applied=False,
+                cut_requires='registered mounting surface and bounded region; no whole-link exemption'))
         # No guessed mounting transform or silent identity transform.
         if mount['translation_m'] is not None or mount['rotation_matrix'] is not None:
             raise ValueError('registration supplied: qualified transform loader required')

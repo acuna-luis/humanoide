@@ -1,5 +1,15 @@
 # Revisión de bloqueos de aprobación — 07-09-2026
 
+**08-09, plan reanudado en E6.1:** [gates y preparación](2026-09-08_REANUDACION_PLAN_E6_1.md).
+HOME↔READY deja de ser bloqueante pendiente de ensayo. ENTRY XML/aceptación
+cotejados; error proyectado al frame 40 de 0,001055 rad. Auditor nuevo identifica
+relaciones rígidas y calcula barrido condicionado de útiles (4.096 celdas);
+no validación física completa de ENTRY. Perfil P14 faltante añadido a ambos
+hosts; validador Motion/inferencia Vision actualizados con backup y sin arrancar
+contenedores. --check ahora verifica hashes de código y pasa. Seis tests nuevos,
+shadow local correcto; HOME medido, VLA exited/restart=no. No nuevo movimiento.
+Siguen pendientes ENTRY físico, fixture actual y cinco shadow (0/5).
+
 **Actualización vigente 08-09 — ciclo HOME→READY→HOME satisfactorio:**
 [Retorno y validación conjunta](2026-09-08_HOME_DESDE_READY_AUTORIZADO.md). Ambas acciones autorizadas por
 el propietario terminaron SUCCEED/status=4, con extremos medidos y confirmación

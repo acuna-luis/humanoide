@@ -1,5 +1,58 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+**08-09, recuperación operativa y HOME verificados:** [resultado](../incidents/2026-09-08_HOME_TRAS_RECUPERAR_CONTROL_CENTER.md).
+Tras reinicio único de CC y liberación supervisada, self-check/StartMotion
+correctos y JoystickMode. HOME20D máximo0,003068 rad, velocidad0, actuadores
+sanos; servidor1, VLA detenido/writers0. Confirmación visual posterior pendiente.
+Sustituye Fault como estado vigente; causa watchdog6002/SIGSEGV sigue abierta,
+sin otro restart de hw ni HOME publicado por agente. Sin monitor persistente.
+
+**08-09, reinicio de Control Center autorizado y completado:** propietario pidió
+reiniciar lo necesario y confirmó E-stop principal presionado. Lectura desde
+Vision verifica data1 antes de una única llamada docker restart --time5 a
+walker-system.control_center-1. rc0; nueva instancia y log muestran
+waitBootReady→Recover→WaitEStopRelease, principal pressed/servo released.
+No se reinició hw de nuevo: ya estaba reiniciado automáticamente y esperando
+/mc/rosa_control/start. No se llamó start, servo enable, reset ni HOME.
+Cambio volátil de proceso; sin archivos/configuración modificados en robot,
+sin rollback automático porque reanudar puede mover. Mantener paro hasta nueva
+comprobación y liberación supervisada. Esto restaura espera de arranque, NO
+prueba resuelto el watchdog6002 ni HOME. Relojes hosts/PC con desfase; comparar
+instancia/PID y secuencia, no ordenar timestamps de hosts distintos a ciegas.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908T083040Z_SERVICE-RECOVERY/`. Sin monitor persistente.
+
+**08-09, EtherCAT diagnosticado:** [secuencia y límites](../incidents/2026-09-08_DIAGNOSTICO_ECAT_6002.md).
+6002 identificado como FT derecho; enumerado antes del watchdog0x1b durante
+SAFEOP→OP. Master falla y hw sufre SIGSEGV; Docker lo reinicia una vez,
+sin restaurar Motion. OOMfalse. Causa física/software primaria aún no aislada;
+no demuestra sobrecarga ni sensor averiado. Sólo lectura; no reparaciones ni
+reintentos. Pendiente revisión técnica de bus/sensor y fallo software.
+
+**08-09, resultado tras liberación supervisada: FALLO StartMotion.** Self-check
+passed=true/error0, pero StartMotion fail reason19 y Control Center Fault.
+Log hw: sensor FT KunWeiTech EtherCAT 6002 queda SAFEOP ERROR (0x14),
+Sync manager watchdog (0x1b); no alcanza OP, master error0x98110024. Después
+fallo del proceso hw y timeout de /mc/servo/enable. Manipulación espera
+ListControllers; servidor de acciones0, actuadores sin muestra (timeout7s).
+Paros0/0 y cargador0 en consulta. No asignar lado físico a6002 sin cotejar mapa;
+no interpretar watchdog como prueba de daño o repetir reinicio a ciegas.
+Readiness previo x86/cámaras sí pasó; no garantizaba inicialización EtherCAT.
+HOME/estado físico de servos no verificables. Sólo diagnóstico desde agente:
+ningún HOME, rearme, restart o cambio de protecciones. Sin monitor persistente.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908T082533Z_BOOT-AFTER-RELEASE/`.
+
+**08-09, siguiente arranque preparado para liberación supervisada:** operador
+confirma brazos abajo, abrazaderas vacías, estabilidad/sin contacto, recorrido
+libre, ruedas bloqueadas y persona junto al paro. Primera consulta Motion
+agotada; posterior descubrimiento observa contenedores recién iniciados.
+Guard instalado leído y ejecutado sólo --check: rc0, v0.2.0, WaitEStopRelease,
+x86 funcional 3/3, seis cámaras 2/2, seguridad 1/0/0 (principal/servo/cargador).
+No reinicio ni movimiento desde agente. Condiciones técnicas previas satisfechas
+para liberar el principal bajo supervisión confirmada; puede iniciar HOME
+interno. Pendientes self-check/StartMotion y medición 20D posteriores; no se
+considera HOME ni recuperación final completada. No monitor persistente.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260908T082050Z_BOOT-BEFORE-RELEASE/guard-check.log`.
+
 ## Control Center configuration review — 2026-09-07
 
 Read-only inspection confirmed its startup loads base.conf and cc.conf. Neither
