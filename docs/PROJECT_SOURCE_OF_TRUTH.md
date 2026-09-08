@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**2026-09-08 — refinamiento condicional HOME y comparación de órdenes:**
+Con parada hipotética (+0,68755°), error articular 5° y origen axial 0–40 mm,
+la comprobación continua local abrazadera–muñeca conserva reservas de 0,304 mm
+izquierda y 0,018 mm derecha después de márgenes 2+2 mm. Cierra ese cálculo
+local, no la validación física. Los tres órdenes nominales comparados conservan
+el mismo mínimo muestreado de 25,056 mm frente al elevador. Parada real,
+incertidumbre global y equivalencia de ejecución siguen sin demostrarse.
+Sin movimiento. [Detalle y evidencia](measurements/2026-09-08_CIERRE_REVISION_PICO_HOME.md).
+
 **2026-09-08 — tolerancias UBTECH comunicadas y presupuesto insuficiente:**
 usuario informa sin procedimiento aplicable, error articular «5ª» interpretado
 como 5° y espacial 2 mm. Si este último es seguimiento adicional, supera reserva

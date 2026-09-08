@@ -1,0 +1,22 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="pico_to_home_owner_sequence">
+            <!-- Stage 1: both empty clamps move to zero while body joints remain fixed. -->
+            <Parallel threshold="2">
+                <Action ID="MetaMove" type="arm" location="left" duration="19.617"
+                    joint_angles="0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0" />
+                <Action ID="MetaMove" type="arm" location="right" duration="19.617"
+                    joint_angles="0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0" />
+            </Parallel>
+            <!-- Stage 2: arms stay at zero while head, lifter and waist reach numeric HOME. -->
+            <Parallel threshold="3">
+                <Action ID="MetaMove" type="head" location="single" duration="6.254"
+                    joint_angles="0.0; 0.0" />
+                <Action ID="MetaMove" type="lifter" location="single" duration="6.254"
+                    joint_angles="0.0; 0.0; 0.0" />
+                <Action ID="MetaMove" type="waist" location="single" duration="6.254"
+                    joint_angles="0.0" />
+            </Parallel>
+        </Sequence>
+    </BehaviorTree>
+</root>

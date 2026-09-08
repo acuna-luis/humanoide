@@ -102,3 +102,50 @@ La aceptación de falsos positivos nominales no resuelve el error durante el
 movimiento. La propuesta actual permanece no aprobada para ejecución; haría
 falta una envolvente robusta a esas tolerancias, separación suficiente y cota
 de parada, no elevar un umbral para declarar PASS. Cero movimiento enviado.
+
+## 2026-09-08 — alternativa y parada hipotética, análisis offline
+
+**OBSERVADO EN CÁLCULO; NO VALIDACIÓN FÍSICA.** Se evaluó primero el destino
+HOME, sin mandar comandos al robot. Para responder sin nuevas preguntas se
+adoptó un escenario de diseño: velocidad 0,02 rad/s, respuesta 0,5 s y frenado
+constante mínimo 0,1 rad/s². Con velocidad limitada durante la respuesta,
+v·t + v²/(2a) = 0,012 rad = 0,68755°. Se sumó a los 5° articulares declarados:
+intervalo de giro ±5,68755°. Estos parámetros **no están verificados como cotas
+del controlador**; no son una garantía conservadora de su parada real.
+
+Se calculó la distancia entre la malla instalada de cada abrazadera, desplazada
+según la hipótesis de registro, y su propia muñeca pitch. El barrido continuo
+cubre el error de wrist_roll y todo el intervalo axial 0–40 mm. Subdivisión
+adaptativa con cota Lipschitz: distancia central menos radio máximo respecto al
+eje multiplicado por semiancho angular y menos semiancho axial. Se descontaron
+2 mm geométricos y otros 2 mm como error espacial relativo adicional, para este
+escenario; si describen la misma fuente, esta suma es deliberadamente restrictiva.
+
+- Izquierda: cota de separación superficial 4,304315 mm; reserva 0,304315 mm.
+- Derecha: cota de separación superficial 4,018193 mm; reserva 0,018193 mm.
+- 134 evaluaciones exactas STL, 68 celdas aceptadas, ninguna pendiente en este
+  dominio local. El radio calculado es 191,114 mm, menor que la cota genérica
+  usada anteriormente; por eso la estimación anterior no demuestra colisión.
+
+**Cierre local condicional:** este par no impide HOME dentro de este modelo y
+estos intervalos. No certifica el resto del robot, todos los errores articulares
+simultáneos, la escena, la correspondencia física de la malla ni la ejecución.
+La pequeña reserva derecha tampoco justifica ampliar los supuestos.
+
+Se compararon tres caminos nominales: brazos simultáneos, izquierdo primero y
+derecho primero, seguidos del mismo tramo de cuerpo. Con 101 muestras por tramo,
+la menor separación SAT fuera de las tres parejas locales de montaje de cada
+brazo fue la misma: **25,055996 mm**, abrazadera derecha–lifter_pitch_2_link.
+Las parejas locales se conservan en los informes; separarlas para comparar no
+las excluye de la validación. Cambiar el orden no mejora ese cuello de botella.
+Esta comparación es muestreada, sin certificado de incertidumbre global.
+
+No se aprueba el ejecutor PICO→HOME: queda completada esta comprobación local y
+la comparación de órdenes; la envolvente global con errores y la equivalencia
+con el controlador siguen sin demostrarse. No se movió ni reconfiguró el robot.
+
+Evidencia reproducible en el directorio indicado arriba:
+`home-endpoint-uncertainty-check.json`, `home-local-continuous-uncertainty.json`,
+`home-order-comparison.json` y los scripts `check_home_uncertainty.py`,
+`refine_home_uncertainty.py`, `compare_home_orders.py` (ejecutar desde la raíz del
+repositorio, en ese orden; usan exclusivamente los archivos archivados).
