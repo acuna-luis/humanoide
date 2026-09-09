@@ -31,6 +31,13 @@ PICO_REFERENCE = [
     0.2999891178308857, -0.5002694844492047, 0.19960925002361907, 0.0,
 ]
 HOME_REFERENCE = [0.0] * 20
+# Discrete second endpoint: PICO arms with head/lifter/waist at numeric HOME.
+# Do not accept an arbitrary body posture or mix joints from the two endpoints.
+PICO_BODY_ZERO_REFERENCE = PICO_REFERENCE[:14] + HOME_REFERENCE[14:]
+PICO_VARIANTS = {
+    "pico_body_flexed": PICO_REFERENCE,
+    "pico_body_zero": PICO_BODY_ZERO_REFERENCE,
+}
 POSITION_TOLERANCE_RAD = 0.02
 VELOCITY_TOLERANCE_RAD_S = 0.01
 
@@ -43,6 +50,8 @@ def load_sample(path: Path) -> dict:
 
 
 def evaluate(sample: dict, expected: str) -> dict:
+    if expected not in ("pico", "home"):
+        raise ValueError("referencia desconocida: " + str(expected))
     names = sample.get("name")
     positions = sample.get("position")
     velocities = sample.get("velocity")
@@ -63,7 +72,13 @@ def evaluate(sample: dict, expected: str) -> dict:
     missing = [name for name in JOINT_ORDER if name not in values]
     if missing:
         raise ValueError("faltan articulaciones: " + ",".join(missing))
-    reference = PICO_REFERENCE if expected == "pico" else HOME_REFERENCE
+    references = PICO_VARIANTS if expected == "pico" else {"home": HOME_REFERENCE}
+    variant_errors = {
+        label: max(abs(values[name][0] - target) for name, target in zip(JOINT_ORDER, ref, strict=True))
+        for label, ref in references.items()
+    }
+    closest_variant = min(variant_errors, key=variant_errors.get)
+    reference = references[closest_variant]
     errors = [abs(values[name][0] - target) for name, target in zip(JOINT_ORDER, reference, strict=True)]
     velocities_20d = [abs(values[name][1]) for name in JOINT_ORDER]
     worst_index = max(range(20), key=errors.__getitem__)
@@ -75,9 +90,20 @@ def evaluate(sample: dict, expected: str) -> dict:
     return {
         "schema": "cruzr-pico-to-home-owner-endpoint-gate-v1",
         "expected": expected,
+        "closest_reference": closest_variant,
+        "matched_reference": closest_variant if not reasons else None,
+        "reference_maximum_errors_rad": variant_errors,
         "qualified": not reasons,
         "maximum_position_error_rad": errors[worst_index],
         "maximum_position_error_joint": JOINT_ORDER[worst_index],
+        "maximum_position_error_measured_rad": values[JOINT_ORDER[worst_index]][0],
+        "maximum_position_error_expected_rad": reference[worst_index],
+        "out_of_tolerance_joints": [
+            {"joint": name, "measured_rad": values[name][0], "expected_rad": target,
+             "absolute_error_rad": error}
+            for name, target, error in zip(JOINT_ORDER, reference, errors, strict=True)
+            if error > POSITION_TOLERANCE_RAD
+        ],
         "maximum_absolute_velocity_rad_s": max(velocities_20d),
         "position_tolerance_rad": POSITION_TOLERANCE_RAD,
         "velocity_tolerance_rad_s": VELOCITY_TOLERANCE_RAD_S,

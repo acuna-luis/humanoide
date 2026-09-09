@@ -15,7 +15,7 @@ readonly EXPECTED_HW_TYPE="cruzr_s2_v1"
 readonly EXPECTED_IMAGE_FRAGMENT="utars-integration:zs2_motion-v0.2.0"
 readonly CONFIG_ROOT="/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config"
 readonly META_ROOT="/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config"
-readonly MIN_BATTERY_SOC="30"
+readonly MIN_BATTERY_SOC="20"
 readonly DEFAULT_HOLD_SECONDS="5"
 readonly ACTION_NAME="/mc/manipulation/action"
 readonly ACTION_TYPE="mc_task_msgs/action/ArmTask"
@@ -27,6 +27,7 @@ readonly ARMS_READY_TASK="transport/clamp_ready_cruzr"
 readonly DETECT_TASK="cruzr/blue_workbin_detect_only"
 readonly CLAMP_TASK="cruzr/blue_workbin_clamp_only"
 readonly DEPOSIT_TASK="cruzr/blue_workbin_auto_deposit"
+readonly OPEN_ONLY_TASK="cruzr/blue_workbin_open_only"
 # Esta tarea vendor queda restringida a posturas conocidas del ciclo de caja.
 # El 28-08 produjo sobreesfuerzo y faults al invocarse desde una postura PICO
 # cruzada; no es una retirada universal ni un planificador de colisiones.
@@ -43,6 +44,7 @@ readonly OPEN_META_SHA="02df67780fd37ee45d287a1e8a103f5e299c653481137b9e94895130
 readonly DETECT_TEMPLATE_SHA="cf32fbeb905e8fe7f7a3c3c58429044cc96ee79956c8c1060a6787b201028a4b"
 readonly CLAMP_TEMPLATE_SHA="76509f5694f0d73d71f65c59f12abc8f4e7740f3704cfdda7b56eca5d6dc0209"
 readonly DEPOSIT_TEMPLATE_SHA="b6b1fbf078b0d8447078b49853d698fd39ffbe6250184b221d1e0b448ebc1f5b"
+readonly OPEN_ONLY_TEMPLATE_SHA="90cd1be8ac7421ed36882175735429b9c6d2bd88831b3f2995501b4e7e37b119"
 
 CRUZR_SSH_PASSWORD="${CRUZR_SSH_PASSWORD:-$DEFAULT_PASSWORD}"
 export CRUZR_SSH_PASSWORD
@@ -60,6 +62,7 @@ readonly TEMPLATE_DIR="$SCRIPT_DIR/custom_tasks"
 readonly DETECT_TEMPLATE="$TEMPLATE_DIR/test_blue_workbin_detect_only.xml"
 readonly CLAMP_TEMPLATE="$TEMPLATE_DIR/test_blue_workbin_clamp_only.xml"
 readonly DEPOSIT_TEMPLATE="$TEMPLATE_DIR/blue_workbin_auto_deposit.xml"
+readonly OPEN_ONLY_TEMPLATE="$TEMPLATE_DIR/test_blue_workbin_factory_open_only.xml"
 readonly RECOVERY_SCRIPT="$SCRIPT_DIR/cruzr_recover_to_home.sh"
 
 MODE="check"
@@ -81,6 +84,8 @@ Uso:
   ./scripts/cruzr_blue_workbin_cycle.sh --grasp [--yes]
   ./scripts/cruzr_blue_workbin_cycle.sh --verify-grasp
   ./scripts/cruzr_blue_workbin_cycle.sh --deposit-held [--yes]
+  ./scripts/cruzr_blue_workbin_cycle.sh --check-open-only
+  ./scripts/cruzr_blue_workbin_cycle.sh --open-only
   ./scripts/cruzr_blue_workbin_cycle.sh --home [--yes]
   ./scripts/cruzr_blue_workbin_cycle.sh --prepare-vision [--yes]
   ./scripts/cruzr_blue_workbin_cycle.sh --measure-box
@@ -102,6 +107,14 @@ Modos:
   --deposit-held
              Verifica un agarre vigente, baja hasta contacto con el apoyo y
              abre los cogedores. No mueve el chasis.
+  --check-open-only
+             Comprueba la apertura aislada sin instalar ni mover.
+  --open-only
+             Recuperación manual tras agarre workbin, incluso imperfecto:
+             separa cada abrazadera 5 cm hacia fuera en unos 2 s. Puede dejar
+             caer/bascular la caja. Sin descenso previo, transporte ni HOME.
+             Exige terminal y confirmación escrita; no admite --yes/--fast.
+             No es una recuperación desde PICO ni desde cualquier postura.
   --home     Solicita la ruta restringida del ciclo de caja: separa primero
              los brazos y
              después devuelve brazos, cabeza, cintura y elevador a cero.
@@ -154,7 +167,7 @@ warn() {
 
 while (($#)); do
   case "$1" in
-    --check|--install|--run|--grasp|--verify-grasp|--deposit-held|--home|--home-workbin-internal|--prepare-vision|--measure-box|--measure-box-fast|--grasp-after-approach)
+    --check|--install|--run|--grasp|--verify-grasp|--deposit-held|--check-open-only|--open-only|--home|--home-workbin-internal|--prepare-vision|--measure-box|--measure-box-fast|--grasp-after-approach)
       MODE="${1#--}"
       ;;
     --hold)
@@ -180,8 +193,12 @@ while (($#)); do
 done
 
 [[ "$HOLD_SECONDS" =~ ^[0-9]+$ ]] || die "--hold debe ser un entero."
+if [[ "$MODE" == "open-only" || "$MODE" == "check-open-only" ]]; then
+  ((YES == 0 && FAST == 0)) || die "La apertura aislada no admite --yes ni --fast."
+  [[ "$MODE" != "open-only" || -t 0 ]] || die "La apertura exige un operador en terminal interactiva."
+fi
 case "$MODE" in
-  run|grasp|deposit-held|home|home-workbin-internal|prepare-vision|grasp-after-approach)
+  run|grasp|deposit-held|open-only|home|home-workbin-internal|prepare-vision|grasp-after-approach)
     bash "$SCRIPT_DIR/lib/cruzr_contact_motion_lock.sh" "workbin:$MODE" || exit $?
     ;;
 esac
@@ -190,7 +207,7 @@ esac
 
 require_local_tools() {
   local command_name
-  for command_name in ssh scp setsid sha256sum python3 nc flock readlink; do
+  for command_name in base64 ssh scp setsid sha256sum python3 nc flock readlink; do
     command -v "$command_name" >/dev/null 2>&1 || \
       die "Falta el comando local '$command_name'."
   done
@@ -284,11 +301,13 @@ PY
 }
 
 remote_preflight() {
+  local posture_gate_b64
+  posture_gate_b64="$(base64 -w0 "$SCRIPT_DIR/lib/cruzr_home_posture_gate.py")" || return $?
   ssh_motion bash -s -- \
     "$MOTION_CONTAINER" "$ROS_CONTAINER" "$EXPECTED_HW_TYPE" \
     "$EXPECTED_IMAGE_FRAGMENT" "$HEAD_LOWER_SHA" "$ARMS_READY_SHA" \
     "$HOME_SHA" "$DIRECT_HOME_SHA" "$CLAMP_META_SHA" "$DEPOSIT_META_SHA" "$OPEN_META_SHA" \
-    "$MIN_BATTERY_SOC" <<'REMOTE'
+    "$MIN_BATTERY_SOC" "$posture_gate_b64" <<'REMOTE'
 set -Eeuo pipefail
 motion_container="$1"
 ros_container="$2"
@@ -302,6 +321,7 @@ clamp_meta_sha="$9"
 deposit_meta_sha="${10}"
 open_meta_sha="${11}"
 min_soc="${12}"
+posture_gate_b64="${13}"
 
 [[ "$(hostname)" == "motion" ]] || {
   echo "HOST_ERROR=$(hostname)"
@@ -365,41 +385,19 @@ actuator_state="$(docker exec "$motion_container" bash -lc '
   source /opt/walker/setup.bash
   timeout 8 rosa topic echo --once --no-daemon /mc/actuator_state
 ')" || exit 33
-actuator_faults="$(python3 -c '
-import json
+# Reutilizar el gate estricto 20D evita aceptar listas vacías, IDs duplicados,
+# campos ausentes o NaN. Se ejecuta en memoria, sin instalar archivos remotos.
+if ! actuator_report="$(python3 -c '
+import base64
 import sys
-
-message = json.load(sys.stdin)
-faults = []
-for actuator in message.get("act_item", []):
-    actuator_id = int(actuator.get("id", 0))
-    if actuator_id in (18001, 18002):
-        continue
-    error_code = int(actuator.get("error_code", 0))
-    status = int(actuator.get("status", 0))
-    position = float(actuator.get("position", 0.0))
-    velocity = float(actuator.get("velocity", 0.0))
-    command_position = float(actuator.get("cmd_pos", position))
-    command_delta = command_position - position
-    operation_enabled = (status & 0x0007) == 0x0007
-    fault = bool(status & 0x0008)
-    stale_command = abs(command_delta) > 0.01
-    moving = abs(velocity) > 0.02
-    if error_code or fault or not operation_enabled or stale_command or moving:
-        name = actuator.get("name", "unknown")
-        faults.append(
-            f"{actuator_id},{name},"
-            f"error=0x{error_code:04x},status=0x{status:04x},"
-            f"velocity={velocity:.6f},command_delta={command_delta:.6f}"
-        )
-print("\n".join(faults))
-' <<<"$actuator_state")"
-if [[ -n "$actuator_faults" ]]; then
-  while IFS= read -r fault; do
-    printf 'ACTUATOR_FAULT=%s\n' "$fault"
-  done <<<"$actuator_faults"
+code = base64.b64decode(sys.argv[1], validate=True).decode("utf-8")
+sys.argv = ["cruzr_home_posture_gate.py"]
+exec(compile(code, "cruzr_home_posture_gate.py", "exec"))
+' "$posture_gate_b64" <<<"$actuator_state" 2>&1)"; then
+  printf '%s\n' "$actuator_report" >&2
   exit 33
 fi
+printf '%s\n' "$actuator_report" | grep -E '^(ACTUATOR_(BODY|ARM)_COUNT|BODY_MAX_ABS_(VELOCITY|COMMAND_DELTA))='
 echo 'ACTUATORS_OPERATION_ENABLED=1'
 
 # v0.2.0 mantiene un cliente de acción persistente aun cuando no existe un
@@ -424,22 +422,36 @@ topic_once() {
     "source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; timeout 8 ros2 topic echo --once --no-daemon '$topic'"
 }
 
-estop="$(topic_once /emb/estop_key_state)"
-servo_estop="$(topic_once /emb/servo_estop_key_state)"
+# Cuatro lecturas independientes en paralelo; fallar cualquiera impide mover.
+# Se esperan todas antes de borrar sus ficheros, incluso si una agota timeout.
+safety_dir="$(mktemp -d)"
+trap 'rm -rf -- "$safety_dir"' EXIT
+topic_once /emb/estop_key_state >"$safety_dir/estop" & estop_pid=$!
+topic_once /emb/servo_estop_key_state >"$safety_dir/servo" & servo_pid=$!
+topic_once /emb/battery_state >"$safety_dir/battery" & battery_pid=$!
+topic_once /emb/chrg_input_status >"$safety_dir/charge" & charge_pid=$!
+safety_status=0
+for pid in "$estop_pid" "$servo_pid" "$battery_pid" "$charge_pid"; do
+  wait "$pid" || safety_status=$?
+done
+((safety_status == 0)) || { echo "SAFETY_SAMPLE_FAILED=$safety_status"; exit "$safety_status"; }
+estop="$(<"$safety_dir/estop")"
+servo_estop="$(<"$safety_dir/servo")"
 [[ "$(awk '/data:/ {print $2; exit}' <<<"$estop")" == "0" ]] || exit 28
 [[ "$(awk '/data:/ {print $2; exit}' <<<"$servo_estop")" == "0" ]] || exit 29
 
-battery="$(topic_once /emb/battery_state)"
+battery="$(<"$safety_dir/battery")"
 mapfile -t socs < <(awk '/batsoc:/ {print $2}' <<<"$battery")
 [[ "${#socs[@]}" == "2" ]] || exit 30
 for soc in "${socs[@]}"; do
-  awk -v soc="$soc" -v minimum="$min_soc" 'BEGIN {exit !(soc >= minimum)}' || {
+  [[ "$soc" =~ ^[0-9]+([.][0-9]+)?$ ]] &&
+    awk -v soc="$soc" -v minimum="$min_soc" 'BEGIN {exit !(soc >= minimum && soc <= 100)}' || {
     echo "BATTERY_LOW=$soc"
     exit 31
   }
 done
 
-charge="$(topic_once /emb/chrg_input_status)"
+charge="$(<"$safety_dir/charge")"
 [[ "$(awk '/data:/ {print $2; exit}' <<<"$charge")" == "0" ]] || {
   echo "CHARGER_CONNECTED=1"
   exit 32
@@ -653,17 +665,24 @@ import sys
 samples = [[float(value) for value in sample.split()] for sample in sys.argv[1:]]
 if len(samples) not in (1, 2, 3) or any(len(sample) != 7 for sample in samples):
     raise SystemExit("Se requieren entre una y tres poses de visión")
+if any(not math.isfinite(value) for sample in samples for value in sample):
+    raise SystemExit("La pose de aproximación contiene valores no finitos")
 
 for index, (x, y, z, qx, qy, qz, qw) in enumerate(samples, 1):
     if abs(x) > 0.55:
         raise SystemExit(f"Muestra {index}: caja demasiado descentrada (x={x:.3f} m)")
     # Ventana amplia usada solamente mientras los brazos siguen recogidos y
     # el chasis aún está lejos. La ventana estrecha se revalida obligatoriamente
-    # justo antes del agarre.
-    if not (0.10 <= y <= 1.10 and 0.65 <= z <= 1.80):
+    # justo antes del agarre. Y es vertical óptica, no altura sobre la mesa:
+    # MESAS2 produjo una caja completa a y=0.050, z=1.730 m. Admitimos esa
+    # observación sólo fuera de la profundidad de agarre; cerca conservamos
+    # el mínimo anterior. Esto no autoriza extender los brazos.
+    minimum_y = 0.0 if z > 1.15 else 0.10
+    if not (minimum_y <= y <= 1.10 and 0.65 <= z <= 1.80):
         raise SystemExit(
             f"Muestra {index}: caja fuera de la ventana de aproximación "
-            f"(y={y:.3f}, z={z:.3f})"
+            f"(y={y:.3f}, z={z:.3f} m; "
+            f"y permitido=[{minimum_y:.2f},1.10], z=[0.65,1.80] m)"
         )
     norm = math.sqrt(qx*qx + qy*qy + qz*qz + qw*qw)
     if not math.isclose(norm, 1.0, rel_tol=0.0, abs_tol=0.03):
@@ -725,8 +744,10 @@ PY
 
 verify_clamp_log() {
   local log_excerpt
-  log_excerpt="$(ssh_motion bash -s -- <<'REMOTE'
+  log_excerpt="$(ssh_motion bash -s -- "$MOTION_CONTAINER" <<'REMOTE'
 set -Eeuo pipefail
+started_at="$(docker inspect --format '{{.State.StartedAt}}' "$1")"
+[[ -n "$started_at" ]] || exit 59
 marker="BTree task: 'cruzr/blue_workbin_clamp_only' is start"
 
 # El proceso puede rotar robot_app.log justo entre el fin de la acción y esta
@@ -736,7 +757,7 @@ marker="BTree task: 'cruzr/blue_workbin_clamp_only' is start"
 for attempt in 1 2 3 4 5; do
   mapfile -t records < <(
     find /etc/walker/log/motion -maxdepth 1 -type f \
-      -name 'robot_app*.log' -printf '%T@\t%p\n' |
+      -name 'robot_app*.log' -newermt "$started_at" -printf '%T@\t%p\n' |
       sort -n | tail -n 12
   )
 
@@ -762,8 +783,14 @@ for attempt in 1 2 3 4 5; do
       done
     })"
 
+    if grep -Eq 'ClampBoxImperfect|ClampBoxFailed|BTree tick failed|btree_status is FAILURE' <<<"$segment"; then
+      printf '__CRUZR_CLAMP_LOG_SEGMENT__\n%s\n' "$segment"
+      exit 0
+    fi
     if grep -qF "left-right-arm tool's distance on base:" <<<"$segment" && \
-       grep -qF "left_force_base" <<<"$segment"; then
+       grep -qF "left_force_base" <<<"$segment" && \
+       grep -qF "End MetaClamp: clamp_cruzr_byd_large" <<<"$segment" && \
+       grep -qF "BTree tick succeeded" <<<"$segment"; then
       printf '__CRUZR_CLAMP_LOG_SEGMENT__\n%s\n' "$segment"
       exit 0
     fi
@@ -778,6 +805,7 @@ REMOTE
 )"
 
   python3 -c '
+import math
 import re
 import sys
 
@@ -787,6 +815,34 @@ index = text.find(sentinel)
 if index < 0:
     raise SystemExit("No se recibió el segmento completo del último agarre")
 segment = text[index + len(sentinel):]
+
+# Fuerza y separación plausibles también aparecen en ClampBoxImperfect.
+# Nunca convertir un fallo explícito de Motion en permiso para transportar
+# o depositar mediante --resume-held / --deposit-held.
+if re.search(
+    r"ClampBoxImperfect|ClampBoxFailed|Excessive force|"
+    r"result:\s*FAILURE|btree_status is FAILURE|BTree tick failed|"
+    r"force protection triggered|Self collision between|MoveToGoalFailed|"
+    r"Collision detected, command not sent|Operation disabled unexpected|SAFEOP ERROR|"
+    r"cancel(?:ed|led|ing|ling)",
+    segment,
+    re.IGNORECASE,
+):
+    raise SystemExit("Motion rechazó el agarre; requiere recuperación específica, no reanudación con carga")
+
+tasks = re.findall(r"BTree task: \x27([^\x27]+)\x27 is start", segment)
+if tasks != ["cruzr/blue_workbin_clamp_only"]:
+    raise SystemExit("El agarre ya no es la única última tarea conocida; no se reanudará con carga")
+if "BTree tick succeeded" not in segment:
+    raise SystemExit("No se confirma la finalización del árbol de agarre")
+
+clamp_results = re.findall(
+    r"End MetaClamp: clamp_cruzr_byd_large[^\n]*\n"
+    r"(?:[^\n]*\n){0,5}?\s*result:\s*(\w+)",
+    segment,
+)
+if not clamp_results or clamp_results[-1] != "SUCCESS":
+    raise SystemExit("No se confirma la finalización SUCCESS del último agarre en Motion")
 
 release_markers = (
     "Start MetaClamp: put_collision_cruzr",
@@ -815,6 +871,10 @@ if not distance_matches or not force_matches:
 
 dx, separation, dz = map(float, distance_matches[-1])
 forces = [tuple(map(float, match)) for match in force_matches]
+if not all(math.isfinite(value) for value in (dx, separation, dz)) or not all(
+    math.isfinite(value) for force in forces for value in force
+):
+    raise SystemExit("Medidas de agarre/fuerza no finitas")
 final_fx, final_fy, final_fz = forces[-1]
 peak_fy = max(abs(force[1]) for force in forces)
 
@@ -930,6 +990,99 @@ EOF
   info "DEPÓSITO COMPLETADO: caja apoyada y cogedores abiertos; el chasis no se movió."
 }
 
+open_only_context() {
+  local context
+  context="$(ssh_motion bash -s -- "$MOTION_CONTAINER" <<'REMOTE'
+set -Eeuo pipefail
+container="$1"
+started="$(docker inspect --format '{{.State.StartedAt}}' "$container")"
+docker exec -i "$container" python3 - "$started" <<'PY'
+import datetime
+import json
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+# Docker da nanosegundos; Python 3.8 del robot sólo acepta microsegundos.
+stamp = re.sub(r"(\.\d{6})\d+(?=Z|[+-])", r"\1", sys.argv[1])
+started = datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00")).timestamp()
+files = sorted(Path("/etc/walker/log/motion").glob("robot_app*.log"),
+               key=lambda p: p.stat().st_mtime)
+text = "\n".join(p.read_text(errors="replace") for p in files[-12:]
+                 if p.stat().st_mtime >= started)
+tasks = list(re.finditer(r"BTree task: '([^']+)' is start", text))
+last_task = tasks[-1].group(1) if tasks else None
+segment = text[tasks[-1].start():] if tasks else ""
+unsafe = bool(re.search(r"Excessive force|force protection triggered|MoveToGoalFailed|"
+                        r"self[-_ ]collision.*(?:detected|triggered)", segment, re.I))
+info = subprocess.check_output(["bash", "-lc", "source /opt/walker/setup.bash; "
+    "export ROS2CLI_DISABLE_DAEMON=1; timeout 7 rosa topic info /mc/sdk/robot_command"],
+    text=True, timeout=10)
+match = re.search(r"Writer count:\s*(\d+)", info)
+print(json.dumps(dict(last_task=last_task, unsafe_event=unsafe,
+                     writers=int(match[1]) if match else None)))
+PY
+REMOTE
+)"
+  python3 "$SCRIPT_DIR/lib/cruzr_open_only_gate.py" <<<"$context"
+}
+
+check_open_only_actuators() {
+  local sample
+  sample="$(ssh_motion bash -s -- "$MOTION_CONTAINER" <<'REMOTE'
+set -Eeuo pipefail
+docker exec "$1" bash -lc 'source /opt/walker/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; timeout 8 rosa topic echo --once --no-daemon /mc/actuator_state'
+REMOTE
+)"
+  python3 "$SCRIPT_DIR/lib/cruzr_home_posture_gate.py" <<<"$sample" |
+    awk '/^ACTUATOR_|^BODY_MAX_ABS_VELOCITY=|^BODY_MAX_ABS_COMMAND_DELTA=/'
+}
+
+run_open_only() {
+  local context answer
+  [[ "$(sha256sum "$OPEN_ONLY_TEMPLATE" | awk '{print $1}')" == "$OPEN_ONLY_TEMPLATE_SHA" ]] || \
+    die "La plantilla de apertura aislada no coincide con la revisada."
+  check_open_only_actuators
+  context="$(open_only_context)" || die "No se permite esta apertura desde el estado actual."
+  if [[ "$context" == "already_attempted" ]]; then
+    info "OPEN_ONLY_NO_ACTION: ya se intentó esta apertura; no se repite. Comprueba el resultado físico."
+    return 0
+  fi
+  [[ "$context" == "clamp" ]] || die "Contexto de apertura desconocido."
+  if [[ "$MODE" == "check-open-only" ]]; then
+    info "OPEN_ONLY_CHECK_OK: comprobaciones técnicas superadas; falta confirmar entorno y postura. No se instaló ni movió nada."
+    return 0
+  fi
+  install_one_template "$OPEN_ONLY_TEMPLATE" "$OPEN_ONLY_TASK.xml" "$OPEN_ONLY_TEMPLATE_SHA"
+  cat <<'EOF'
+
+APERTURA AISLADA — cada abrazadera se separará 5 cm hacia fuera en unos 2 s.
+La caja puede caer o bascular. No se baja previamente ni se ejecuta HOME.
+Confirma ahora:
+  - brazos frente a la caja, en la postura de este agarre workbin;
+  - caja vacía, estable sobre un apoyo o caída aceptada y zona de caída libre;
+  - recorridos de brazos/abrazaderas libres de mesa, objetos y personas;
+  - robot estable, ruedas bloqueadas, cargador desconectado;
+  - PICO, mando y otros scripts detenidos, y una persona junto al paro.
+
+Escribe ABRIR ABRAZADERAS para ejecutar una única apertura:
+EOF
+  IFS= read -r answer || die "Confirmación interrumpida; no se envió movimiento."
+  [[ "$answer" == "ABRIR ABRAZADERAS" ]] || die "Apertura cancelada."
+  # La espera ante el prompt puede ser larga: renovar todos los checks.
+  remote_preflight
+  check_open_only_actuators
+  [[ "$(open_only_context)" == "clamp" ]] || die "El estado cambió durante la confirmación."
+  if ! run_motion_task "$OPEN_ONLY_TASK" 15; then
+    die "Apertura sin éxito confirmado. No repitas ni hagas HOME; comprueba robot y caja."
+  fi
+  if ! check_open_only_actuators; then
+    die "Motion informó éxito, pero no se verificó el estado posterior. Comprueba el robot; no repitas."
+  fi
+  info "OPEN_ONLY_SUCCEEDED: Motion confirmó apertura. Comprueba caja estable y abrazaderas libres; brazos abiertos, sin HOME."
+}
+
 run_home() {
   local -a args=(--run)
   ((YES == 0)) || args+=(--yes)
@@ -947,7 +1100,7 @@ run_home_workbin_internal() {
     die "El home interno exige el gate central de recuperación."
   ((FAST == 0)) || die "El home interno nunca admite --fast."
   case "$source_state" in
-    deposited_open_near_table|arms_extended_near_table)
+    deposited_open_near_table|opened_workbin_near_table|arms_extended_near_table)
       ;;
     *)
       die "Estado de origen no permitido para home vendor: ${source_state:-unset}."
@@ -979,7 +1132,10 @@ main() {
     exit 0
   fi
 
-  if ((FAST == 0)); then
+  if ((FAST == 0)) || [[ "$MODE" == check || "$MODE" == run ||
+      "$MODE" == grasp || "$MODE" == grasp-after-approach ||
+      "$MODE" == prepare-vision || "$MODE" == deposit-held || "$MODE" == verify-grasp ||
+      "$MODE" == home-workbin-internal ]]; then
     validate_templates
     info "Comprobando versión, acciones, paros, batería y cargador..."
     remote_preflight
@@ -1010,6 +1166,9 @@ main() {
     deposit-held)
       ((FAST == 1)) || install_templates
       run_deposit_held
+      ;;
+    open-only|check-open-only)
+      run_open_only
       ;;
     home)
       run_home

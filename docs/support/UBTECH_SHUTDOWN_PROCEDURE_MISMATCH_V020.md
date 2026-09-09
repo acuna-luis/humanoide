@@ -1,5 +1,18 @@
 # Discrepancia del procedimiento de apagado — Cruzr S2 v0.2.0
 
+**2026-09-09 — Apagado postcontacto pendiente de confirmación visual:**
+Usuario confirma caja retirada y entorno despejado; después comunica pulsación
+Power durante cinco segundos. No se envió /emb/pm_shutdown: PC había perdido
+Wi-Fi robot, Motion/Vision SSH timeout. SSID Cruzr S2-0669 visible; intento
+acotado de reactivar perfil guardado `Cruzr S2-0669 1` en wlx80afcad40bd6
+(never-default, ruta .11/24 vía .42.2) agotó 15 s. Sin modificación persistente
+de perfil ni de DSA CORPORATE. No inferir apagado por falta de conectividad.
+Mantener E-stop, no repetir Power ni pulsar KEY1 hasta pantalla/luces apagadas.
+Después KEY1 y finalmente chasis; comprobar indicador verde apagado y estabilidad.
+Pendiente confirmar estado visual; no se declaró apagado completado.
+Evidencia diagnóstico de red: /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260909T123421Z_POST-CONTACT-SHUTDOWN.
+
+
 Fecha de la observación: 2026-08-21  
 Última verificación en esta unidad: 2026-08-28
 Robot: Cruzr S2, SN `WAE001UBT60000669`  

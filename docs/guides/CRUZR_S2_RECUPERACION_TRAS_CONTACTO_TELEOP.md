@@ -1,5 +1,308 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**2026-09-09 — Corrección local PICO→HOME open_v2 (VERIFICADO offline; NO instalada/ejecutada):**
+Se retira del wrapper la tarea directa `cruzr/pico_to_home_owner` tras contacto
+comunicado por el operador. Nueva tarea independiente `cruzr/pico_to_home_open_v2`:
+abrir hombros roll a −0,60 rad (10 s), bajar otros ejes de brazo manteniendo
+apertura (40 s), llevar cuerpo a cero manteniendo brazos abiertos (15 s), cerrar
+hombros de brazos ya bajados (15 s). XML/hash nuevos; si sólo existe el antiguo,
+--run no envía acción. Instalación/recarga pendientes bajo condiciones existentes.
+Doce pruebas y sintaxis correctas; mapeo MetaMove verificado, espera aumentada
+120 s para 80 s nominales, nueva lectura articular después de confirmación,
+conservación de stdout/stderr y código remoto incluso cuando falla una acción.
+Barrido de envolventes, dos variantes/501 muestras por etapa: mínimo fuera de
+uniones locales 69,79 mm; menor cota entre muestras 7,95 mm condicionada a la
+interpolación común monótona. Todos los pares locales siguen informados, sin
+nuevas exenciones. No certifica registro físico, desviaciones, frenado ni escena;
+no sustituye ensayo real. Límites de postura/velocidad y protecciones intactos.
+Cambios sólo en PC; cero consultas o escrituras al robot durante esta revisión.
+Detalle: docs/teleoperation/CRUZR_PICO_HOME_OPEN_V2.md.
+Evidencia/backup previo: /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260909T124028Z_PICO-HOME-OPEN-REVISION.
+No restaurar la versión retirada para ejecutar; rollback operativo = suspender
+ruta y retirar únicamente la nueva tarea bajo E-stop, conservando otros cambios.
+Punto siguiente: instalación, recarga y ensayo supervisado pendientes después
+de resolver contacto/apagado. No asumir postura actual ni apagado completado.
+
+
+**2026-09-09 — CONTACTO REAL durante PICO→HOME body-zero (OBSERVADO por operador):**
+El usuario informa contacto al ejecutar owner --run tras aprobar pico_body_zero
+(error inicial 0,002684466 rad); resultado ACTION_FAILED_NO_RETRY. Esta evidencia
+invalida reutilizar el recorrido como libre de contacto: reconocimiento de postura
+y pruebas nominales NO demostraban seguridad del barrido. Se suspende su uso,
+incluida cualquier repetición desde la postura posterior al contacto. No enviar
+HOME, rearmar ni cambiar de modo para recuperar. Usuario solicita instrucciones
+para apagado con E-stop presionado; estado de caja/apoyo de brazos aún pendiente.
+Mantener paro; apagado lógico antes de KEY1 y chasis conforme informe de esta
+unidad. Apagado no garantiza relajación controlada ni liberación de frenos.
+Ningún movimiento, rearme o apagado enviado por el agente en este diagnóstico.
+Evidencia: ../Humanoide-vla-evidence/20260909T142542_PICO-HOME-OWNER-RUN/.
+
+
+**2026-09-09 — Nuevo bloqueo con caja durante PICO (OBSERVADO, recuperación pendiente):**
+Usuario informa caja sujeta y brazos asimétricos; considera segura la suelta.
+Consulta pasiva: Motion registra protección de fuerza izquierda 20:20:34.504
+(hora del log) y derecha 20:20:38.404, separadas 3,900 s. Cancelación de tarea
+PICO a 20:23:17 y nuevo inicio de tarea observado a 20:23:53; no asumir control
+inactivo persistente. En muestra inicial ambos paros 0, writers RobotCommand 0;
+gate de actuadores rechaza consigna latente, delta máximo 0,010203 rad.
+La secuencia de disparos puede explicar la asimetría, no demuestra por sí sola
+la causa mecánica del esfuerzo. No ejecutar HOME ni apertura workbin desde esta
+postura: apertura existente limitada al agarre frontal workbin. No se enviaron
+servicios, movimientos, cancelaciones ni rearme. Pendiente estado físico de
+apoyo de caja y cese confirmado de otros mandos antes de preparar liberación.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260909T122324Z_TELEOP-BOX-BLOCK`. Sustituye como estado operativo al preflight PICO
+body-zero previo; no reutilizar aquella postura ni su aprobación de extremos.
+
+
+**2026-09-09 — Corregido PICO→HOME con cuerpo a cero (VERIFICADO local y preflight vivo):**
+El gate reconoce dos referencias completas y discretas: `pico_body_flexed`
+(original) y `pico_body_zero` (los mismos 14 ejes de brazos; cabeza, elevador y
+cintura a cero). Selecciona la referencia más próxima y exige que TODOS los
+ejes cumplan 0,02 rad y velocidad máxima 0,01 rad/s. No mezcla referencias ni
+acepta posturas intermedias; HOME sigue exigiendo veinte ceros. El informe
+incluye referencia, valores esperados/medidos y cada articulación discrepante.
+XML/hash, tiempos 19,617+6,254 s, protecciones y confirmación local intactos;
+no requiere instalar ni recargar. Ocho tests pasan, incluidos rechazos en cada
+uno de los veinte ejes de ambas variantes, mezcla, datos inválidos y secuencia
+XML. `--preflight` vivo finalizó 0: `matched_reference=pico_body_zero`, error
+máximo 0,00278034 rad, velocidad cero, sano/control exclusivo, `MOVEMENT_COMMANDS=0`.
+Revisión geométrica archivada, 101 muestras por segmento y variante: menor
+separación OBB fuera de uniones locales 3,473 mm frente a lifter_pitch_2_link
+(antes 25,056 mm). Las 15 consultas de superficies STL cerca de ese mínimo,
+con hipótesis axial 0/20/40 mm, dieron mínimo 19.303 mm. Son distancias
+nominales muestreadas, no cota global ni certificación física; las uniones locales
+siguen en el informe y no se crean exenciones. Interpolador, errores dinámicos,
+parada y escena conservan las limitaciones ya declaradas al operador.
+Cambios persistentes sólo locales: gate, tests, ayuda y etiqueta del wrapper.
+Backup/rollback: restaurar esos tres archivos desde `before/` de la evidencia
+con el ejecutor detenido, preservando otros cambios. Sin reinicios ni movimiento.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260909T121801Z_PICO-HOME-BODY-ZERO`. Próximo paso: `--run` por operador presente,
+con confirmación literal existente; ejecución física de esta variante pendiente.
+
+
+**2026-09-09 — VERIFICADO: recuperación tras depósito completada y HOME medido:**
+`cruzr_recover_to_home.sh --run --yes` terminó exit0. Retirada única de
+0,492031 m, lateral -0,002139 m y giro 0,471 grados; después tarea vendor
+`cruzr/open_arm_before_home`, goal `2f4b2a37-b6ff-469e-ba85-907b81d32573`,
+SUCCEED/state1101001/status4. Lock de tareas libre, sin reset ni reinicios.
+Verificación final: 20D presentes, MEASURED_HOME=1, posición absoluta máxima
+0,002780 rad (brazos 0,000863), velocidad0, delta consigna máximo0,002780 rad.
+Baterías 73,1/74,7 %, paros0/0, cargador desconectado, actuadores habilitados.
+El robot queda en HOME, separado de mesa 2; caja depositada y previamente
+confirmada estable por el usuario. La autorización del corredor trasero de
+esta disposición se conserva como se describe debajo. No repetir retirada.
+No se cambiaron scripts durante la ejecución ni se instalaron archivos remotos.
+La transferencia automática completa sin tags y el error auxiliar VSLAM siguen
+pendientes; este éxito corresponde a depósito aislado seguido de recuperación.
+Evidencia: `../Humanoide-vla-evidence/20260909T105640Z_POST-DEPOSIT-HOME/`.
+
+**2026-09-09 — CONFIRMADO por el propietario: espacio de recuperación libre en la disposición actual de mesa 2:**
+tras confirmar el depósito, el usuario confirmó 1,50 m libres detrás del robot,
+recorrido de brazos despejado, ningún mando activo y persona junto al paro.
+Pidió conservar la comprobación del espacio para no volver a preguntarla.
+Se registra para el corredor de esta disposición de mesa 2 y la retirada única
+prevista de 0,50 m. Reutilizar la confirmación mientras no haya cambios que
+invaliden ese corredor; no pedirla otra vez sólo por iniciar otro turno.
+No equivale a declarar libre cualquier posición del mapa ni a repetir una
+retirada interrumpida. Si cambia la disposición o aparecen obstáculos/personas,
+se vuelve a comprobar el tramo afectado. Mantener comprobaciones técnicas
+frescas de postura, paros, cargador, batería y clientes de control.
+Preflight --check terminó con RECOVERY_CHECK_OK, estado deposited_open_near_table,
+20D inmóviles y sin eventos inseguros. Autorizado --run --yes para retirada+HOME;
+resultado pendiente del registro de ejecución.
+
+**2026-09-09 — VERIFICADO, reconocimiento de apertura aislada en recuperación HOME; movimiento PENDIENTE:**
+el --check del operador clasificaba box_may_be_held pese a la apertura aislada
+exitosa. Se corrige `scripts/cruzr_recover_to_home.sh`: nuevo estado
+`opened_workbin_near_table`, distinto de depósito. Exige última tarea
+blue_workbin_open_only, precedente clamp_only, una sola primitiva
+byd/open_arm_cruzr, resultado MetaClamp SUCCESS y BTree tick succeeded posterior,
+sin fallo/cancelación/evento inseguro durante o después. Tareas posteriores,
+incluso desconocidas, invalidan esa clasificación. Una apertura incompleta o
+fallida produce open_result_unverified. El HOME interno admite el nuevo estado
+bajo el mismo gate central; se conservan preflight, batería mínima 20 %, 20D,
+retroceso 0,50 m y revalidación antes del HOME vendor. No se valida el agarre
+fallido para transporte ni se modifica ninguna primitiva/protección remota.
+
+Se aclara la confirmación: caja estable sobre mesa o retirada, abrazaderas
+vacías y libres, mesa/caja/personas fuera del recorrido completo, 1,50 m libre
+detrás, sin cargador/Ethernet/otros mandos y persona junto al paro. El retroceso
+ya está incluido; no ejecutarlo antes por separado ni repetir automáticamente
+una recuperación interrumpida después de mover la base.
+
+Verificación: 8 pruebas nuevas del clasificador/ruta, self-test del recuperador,
+16 de apertura aislada, 6 de agarre, sintaxis Bash. Registro real leído por SSH
+reproduce nuevo estado, apertura línea 2098 y sin evento inseguro posterior.
+--check conectado posterior terminó código 31 por BATTERY_LOW=19.899999618530273,
+antes de clasificar/retroceder. **No se movió el robot y no se completó el
+preflight de recuperación.** Reanudar tras cargar y desconectar cargador con
+--check; sólo después --run con comprobación física actual de todo el recorrido.
+Rollback: retirar selectivamente esta clasificación y su estado admitido del
+ciclo interno, conservando cambios ajenos. Evidencia:
+`Humanoide-vla-evidence/20260909T075754Z_OPEN-TO-HOME-INTEGRATION/`.
+
+**2026-09-09 — VERIFICADO, ejecutor manual reutilizable de apertura aislada:**
+a petición del propietario se añade `scripts/cruzr_blue_workbin_open_only.sh`,
+con --check predeterminado y --run interactivo. Delega en modos específicos
+--check-open-only/--open-only del ciclo canónico, conservando el bloqueo local
+compartido, preflight completo y validación estricta 20D antes/después.
+[Guía de liberación](CRUZR_WORKBIN_LIBERAR_CAJA.md).
+Ejecuta sólo el XML/primitiva ya contrastados: cada útil ±5 cm lateral en ~2 s,
+sin descenso previo, transporte o HOME. Puede dejar caer/bascular la caja.
+No requiere un agarre exitoso porque sirve para liberar el agarre imperfecto;
+no relaja la verificación de --resume-held ni --deposit-held.
+
+Exige última tarea workbin_clamp_only en registros de la instancia actual,
+sin eventos de fuerza/autocolisión ni publicadores RobotCommand; PICO/HOME/
+otras tareas o estado no demostrable bloquean. Una apertura ya intentada produce
+OPEN_ONLY_NO_ACTION y no se repite automáticamente, aunque hubiese fallado.
+Esto no certifica postura/entorno ni reemplaza la comprobación presencial.
+--run pide escribir ABRIR ABRAZADERAS, rechaza --yes/--fast y entrada sin TTY;
+tras la confirmación renueva preflight, 20D y contexto. Instala el XML sólo si
+falta y bloquea conflictos de hash. Sin reset/reinicio ni reintento ante fallo.
+
+Verificación: 16 pruebas nuevas del ejecutor/gate (incluyendo despacho simulado
+único, fallo sin reintento, salud cambiada, cancelación y repetición bloqueada),
+6 de agarre y 8 de aproximación, sintaxis Bash y diff check. Primer --check
+conectado detectó incompatibilidad Python 3.8 con timestamp Docker nanosegundos;
+corregida truncando a microsegundos y cubierta por regresión. Segunda ejecución
+--check exit 0: 21,9/23,6 % batería, paros 0/0, cargador desconectado, 20D
+inmóvil y delta 0,001885 rad; detectó apertura anterior y emitió NO_ACTION.
+El nuevo wrapper no ejecutó movimiento físico; la primitiva subyacente sí
+había sido ejecutada y confirmada antes. Ningún cambio remoto adicional durante
+estas comprobaciones. Preparación futura: usar guía, con persona junto al paro.
+Rollback local: retirar wrapper/gate y modos añadidos de forma selectiva;
+no revertir archivos completos porque contienen otros cambios del usuario.
+Evidencia: `Humanoide-vla-evidence/20260909T074532Z_OPEN-ONLY-SCRIPT/`.
+
+**2026-09-09 — VERIFICADO, apertura aislada completada y confirmada físicamente:**
+propietario pidió abrir aceptando caída/basculación de caja vacía y confirmó
+recorridos laterales de 5 cm despejados, zona de caída libre y persona junto
+al paro. Preflight final: 23,6/25,0 % batería, paros 0/0, cargador desconectado,
+actuadores habilitados, servidor ready, RobotCommand escritores 0 y hash del
+XML correcto. Goal único `cruzr/blue_workbin_open_only`,
+`b550b1e2-32b2-499f-a17f-abd142715df0`: SUCCEED, status 4, estado 1101001.
+Se ejecutó únicamente la primitiva instalada `byd/open_arm_cruzr`; no se
+ordenó descenso previo, navegación, HOME, reintento, rearme ni reinicio.
+Muestra posterior: 22 actuadores, velocidades cero, error_code cero, cuerpo
+Operation Enabled y delta máximo de consigna 0,001789 rad; odometría twist cero.
+Operador confirma caja estable sobre la mesa y ambas abrazaderas libres de
+contacto. **Recuperación de la caja/liberación completada; brazos abiertos,
+HOME no solicitado ni alcanzado por esta acción.** No convierte el agarre
+anterior ClampBoxImperfect en válido ni valida la transferencia completa.
+La tarea nueva conserva hash
+`90cd1be8ac7421ed36882175735429b9c6d2bd88831b3f2995501b4e7e37b119`;
+ubicación/rollback en preparación inferior. Sin cambios de protecciones,
+primitivas vendor o umbrales; avisos del anillo no tratados en esta maniobra.
+Evidencia: `Humanoide-vla-evidence/20260909T072838Z_OWNER-OPEN-ONLY/`
+(`open_action.json`, preflight final, actuadores y odometría posteriores).
+Siguiente movimiento requiere decidir recorrido desde brazos abiertos y
+comprobar caja/mesa fuera de su envolvente; no repetir el ciclo desde aquí.
+
+**2026-09-09 — apertura aislada preparada por petición expresa del propietario:**
+usuario solicita abrir y acepta caída de caja vacía parcialmente apoyada.
+Se contrastó primitiva instalada `byd/open_arm_cruzr`: desplazamientos relativos
+izquierda +0,05 m en Y y derecha −0,05 m en Y, duración 2 s, sin objetivo de
+descenso y objetivo relativo de torso cero. La trayectoria efectiva del cuerpo
+no queda certificada sólo por esos objetivos. XML versionado
+`test_blue_workbin_factory_open_only.xml` contiene únicamente esa acción.
+Preflight canónico --check pasó: 24,4/25,7 % de batería, paros 0/0, cargador
+desconectado, actuadores habilitados y acciones ready. Muestra previa inmóvil,
+sin errores y máximo delta corporal 0,006763 rad; RobotCommand escritores 0.
+Se instaló como archivo nuevo `config/cruzr/blue_workbin_open_only.xml` en
+manipulation_task_manager, hash
+`90cd1be8ac7421ed36882175735429b9c6d2bd88831b3f2995501b4e7e37b119`.
+No se sobrescribió ningún XML ni se reinició/recargó Motion; no se modificó
+la primitiva vendor, el verificador de agarre ni protecciones.
+**PENDIENTE: confirmación actual de 5 cm laterales libres en ambos brazos,
+zona de caída/basculación libre y persona junto al paro. Ningún goal enviado.**
+Preparación no equivale a liberación, depósito ni HOME. Rollback del archivo
+nuevo: retirarlo sólo con Motion inactivo respecto a esta tarea y conservando
+la evidencia; no se necesita reiniciar para restaurar el archivo.
+Evidencia: `Humanoide-vla-evidence/20260909T072838Z_OWNER-OPEN-ONLY/`.
+
+**2026-09-09 — recuperación preparada, apertura pendiente con caja parcialmente apoyada:**
+operador confirma inmovilidad y todos los scripts/mando/PICO inactivos.
+Después estima 85 % de la base sobre el tablero y esquina elevada unos 8 cm;
+su apreciación «se puede soltar sin problema» no demuestra ausencia de basculación
+ni descarga de abrazaderas. No se ordenó apertura, descenso, HOME ni reinicio.
+Muestra fresca 07:20 UTC: 22 actuadores inmóviles, sin error_code, máximo delta
+corporal de consigna 0,007051 rad. FT leídos en marcos de sensores; no se
+interpretan directamente como pesos ni distribución de apoyos.
+Depósito instalado secuencia `put_collision_cruzr` → `byd/open_arm_cruzr`:
+el primer contacto no demuestra apoyo completo en esta situación. XML alternativo
+`test_blue_workbin_release_only.xml` baja 6 cm y abre; no se ejecutó ni se
+considera recuperación validada desde esquina elevada 8 cm y apoyo parcial.
+
+**Corrección local necesaria:** se reprodujo offline que `verify_clamp_log`
+aceptaba el log real con ClampBoxImperfect (separación 0,580 m, Fy 21,5 N).
+Ahora rechaza fallo explícito de Motion y exige finalización MetaClamp SUCCESS,
+además de las comprobaciones previas de fuerza/distancia y ausencia de liberación.
+Esto afecta --verify-grasp, --deposit-held y reanudaciones con carga; no convierte
+ese depósito en una recuperación desde agarre fallido. Espera también el marcador
+End MetaClamp al recoger el registro. Reproducción real ahora rechazada; seis
+regresiones nuevas y ocho de aproximación pasan, más sintaxis y diff check.
+El caso SUCCESS del test es sintético; no se afirma nuevo agarre físico válido.
+No había scripts workbin activos al editar. Cambios anteriores preservados.
+Reversión selectiva de este parche de verificación sólo para depuración offline:
+la versión anterior puede autorizar una reanudación tras fallo y no debe usarse
+para mover. PENDIENTE estabilizar/apoyar completamente la caja mediante
+intervención presencial adecuada, sin acceso bajo carga ni manipular brazos;
+después determinar una liberación compatible con postura, contacto y entorno.
+Evidencia: `Humanoide-vla-evidence/20260909T072023Z_PARTIAL-BOX-RECOVERY-CHECK/`.
+
+**2026-09-09 — OBSERVADO, agarre imperfecto y caja parcialmente apoyada:**
+tras aportar un check histórico satisfactorio y foto, el operador declara
+«caja apoyada en el lado más lejano y derecho del robot». Se registra apoyo
+parcial, no depósito completo ni abrazaderas descargadas. Falta confirmar
+si algún script/mando permanece activo y estado de soporte del resto de caja.
+Lectura 07:18 UTC: 22 actuadores con velocidad cero y sin error_code;
+RobotCommand con 0 escritores (no demuestra por sí solo todos los clientes
+inactivos). Baterías actuales 26,5/27,4 %, distintas del 31,0/30,1 % del check
+aportado. Avisos activos siguen 00001001 y 02029001; no se ha recuperado blanco.
+Motion registra a las 07:16:09–10 UTC (15:16 +08) intento de clamp:
+`distance_on_float_base.y: 0.581279 > box size.outside_len: 0.578`,
+`ClampBoxImperfect`, MetaClamp FAILURE y árbol detenido. Diferencia 3,279 mm
+entre distancia modelada de útiles y límite configurado; NO es una medición
+independiente del ancho real ni prueba de que el error sea despreciable.
+El registro sugiere contacto en borde superior/otra sección más ancha, sin
+confirmarlo como causa única. No se ha demostrado agarre válido para transporte.
+No usar --resume-held, repetir --run, abrir, HOME o reiniciar desde este apoyo
+parcial sin recuperación específica y comprobación física actuales.
+Intervención del agente exclusivamente de lectura y documentación: ninguna
+orden física, modificación de umbrales, reset o reinicio. PENDIENTE resolver
+apoyo/descarga de caja, postura y control exclusivo antes de recuperar.
+Evidencia: `Humanoide-vla-evidence/20260909T071802Z_RING-AFTER-USER-CHECK/`.
+
+## 2026-09-08 — ejecutor PICO→HOME autorizado por el propietario
+
+Se añadió `scripts/teleoperation/cruzr_pico_to_home_owner.sh` y la tarea
+`scripts/teleoperation/tasks/cruzr_pico_to_home_owner.xml`. La ruta concreta
+es: ambos brazos a cero en 19,617 s manteniendo la postura corporal medida;
+después cabeza, los tres ejes del elevador y cintura a cero en 6,254 s.
+
+El ejecutor no parte de una postura PICO genérica. Compara los veinte ejes con
+la muestra PICO revisada y bloquea si el error máximo supera 0,02 rad o la
+velocidad supera 0,01 rad/s. Además aplica el gate de actuadores (fault, estado,
+velocidad y consigna latente), el preflight canónico, ausencia de publicadores
+concurrentes, hash del XML y orden de carga del task manager. `--run` sólo
+funciona en TTY y exige transcribir una declaración que asigna al operador la
+decisión de iniciar bajo observación directa y con mano en E-stop. Tras éxito
+de la acción exige HOME20D medido; un fallo termina sin reintento.
+
+Secuencia operativa prevista:
+
+1. Con E-stop accionado: `--install`.
+2. Manteniendo el E-stop: `--reload`.
+3. Liberación supervisada mediante el procedimiento de arranque aplicable.
+4. Con zona nuevamente comprobada: `--preflight`.
+5. Sólo por decisión del operador presente: `--run`.
+
+Limitación aceptada por el propietario: Motion puede no reproducir la ley
+quintic revisada y no existe una cota de parada verificada. No se desactivan
+protecciones para compensarlo. Estado al documentar: pruebas locales correctas;
+ninguna instalación remota, reinicio o orden de movimiento enviada.
+
 **2026-09-08 — refinamiento condicional HOME y comparación de órdenes:**
 Con parada hipotética (+0,68755°), error articular 5° y origen axial 0–40 mm,
 la comprobación continua local abrazadera–muñeca conserva reservas de 0,304 mm

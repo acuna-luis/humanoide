@@ -1,5 +1,808 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**2026-09-09 — Corrección local PICO→HOME open_v2 (VERIFICADO offline; NO instalada/ejecutada):**
+Se retira del wrapper la tarea directa `cruzr/pico_to_home_owner` tras contacto
+comunicado por el operador. Nueva tarea independiente `cruzr/pico_to_home_open_v2`:
+abrir hombros roll a −0,60 rad (10 s), bajar otros ejes de brazo manteniendo
+apertura (40 s), llevar cuerpo a cero manteniendo brazos abiertos (15 s), cerrar
+hombros de brazos ya bajados (15 s). XML/hash nuevos; si sólo existe el antiguo,
+--run no envía acción. Instalación/recarga pendientes bajo condiciones existentes.
+Doce pruebas y sintaxis correctas; mapeo MetaMove verificado, espera aumentada
+120 s para 80 s nominales, nueva lectura articular después de confirmación,
+conservación de stdout/stderr y código remoto incluso cuando falla una acción.
+Barrido de envolventes, dos variantes/501 muestras por etapa: mínimo fuera de
+uniones locales 69,79 mm; menor cota entre muestras 7,95 mm condicionada a la
+interpolación común monótona. Todos los pares locales siguen informados, sin
+nuevas exenciones. No certifica registro físico, desviaciones, frenado ni escena;
+no sustituye ensayo real. Límites de postura/velocidad y protecciones intactos.
+Cambios sólo en PC; cero consultas o escrituras al robot durante esta revisión.
+Detalle: docs/teleoperation/CRUZR_PICO_HOME_OPEN_V2.md.
+Evidencia/backup previo: /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260909T124028Z_PICO-HOME-OPEN-REVISION.
+No restaurar la versión retirada para ejecutar; rollback operativo = suspender
+ruta y retirar únicamente la nueva tarea bajo E-stop, conservando otros cambios.
+Punto siguiente: instalación, recarga y ensayo supervisado pendientes después
+de resolver contacto/apagado. No asumir postura actual ni apagado completado.
+
+
+**2026-09-09 — Apagado postcontacto pendiente de confirmación visual:**
+Usuario confirma caja retirada y entorno despejado; después comunica pulsación
+Power durante cinco segundos. No se envió /emb/pm_shutdown: PC había perdido
+Wi-Fi robot, Motion/Vision SSH timeout. SSID Cruzr S2-0669 visible; intento
+acotado de reactivar perfil guardado `Cruzr S2-0669 1` en wlx80afcad40bd6
+(never-default, ruta .11/24 vía .42.2) agotó 15 s. Sin modificación persistente
+de perfil ni de DSA CORPORATE. No inferir apagado por falta de conectividad.
+Mantener E-stop, no repetir Power ni pulsar KEY1 hasta pantalla/luces apagadas.
+Después KEY1 y finalmente chasis; comprobar indicador verde apagado y estabilidad.
+Pendiente confirmar estado visual; no se declaró apagado completado.
+Evidencia diagnóstico de red: /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260909T123421Z_POST-CONTACT-SHUTDOWN.
+
+
+**2026-09-09 — CONTACTO REAL durante PICO→HOME body-zero (OBSERVADO por operador):**
+El usuario informa contacto al ejecutar owner --run tras aprobar pico_body_zero
+(error inicial 0,002684466 rad); resultado ACTION_FAILED_NO_RETRY. Esta evidencia
+invalida reutilizar el recorrido como libre de contacto: reconocimiento de postura
+y pruebas nominales NO demostraban seguridad del barrido. Se suspende su uso,
+incluida cualquier repetición desde la postura posterior al contacto. No enviar
+HOME, rearmar ni cambiar de modo para recuperar. Usuario solicita instrucciones
+para apagado con E-stop presionado; estado de caja/apoyo de brazos aún pendiente.
+Mantener paro; apagado lógico antes de KEY1 y chasis conforme informe de esta
+unidad. Apagado no garantiza relajación controlada ni liberación de frenos.
+Ningún movimiento, rearme o apagado enviado por el agente en este diagnóstico.
+Evidencia: ../Humanoide-vla-evidence/20260909T142542_PICO-HOME-OWNER-RUN/.
+
+
+**2026-09-09 — Nuevo bloqueo con caja durante PICO (OBSERVADO, recuperación pendiente):**
+Usuario informa caja sujeta y brazos asimétricos; considera segura la suelta.
+Consulta pasiva: Motion registra protección de fuerza izquierda 20:20:34.504
+(hora del log) y derecha 20:20:38.404, separadas 3,900 s. Cancelación de tarea
+PICO a 20:23:17 y nuevo inicio de tarea observado a 20:23:53; no asumir control
+inactivo persistente. En muestra inicial ambos paros 0, writers RobotCommand 0;
+gate de actuadores rechaza consigna latente, delta máximo 0,010203 rad.
+La secuencia de disparos puede explicar la asimetría, no demuestra por sí sola
+la causa mecánica del esfuerzo. No ejecutar HOME ni apertura workbin desde esta
+postura: apertura existente limitada al agarre frontal workbin. No se enviaron
+servicios, movimientos, cancelaciones ni rearme. Pendiente estado físico de
+apoyo de caja y cese confirmado de otros mandos antes de preparar liberación.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260909T122324Z_TELEOP-BOX-BLOCK`. Sustituye como estado operativo al preflight PICO
+body-zero previo; no reutilizar aquella postura ni su aprobación de extremos.
+
+
+**2026-09-09 — Corregido PICO→HOME con cuerpo a cero (VERIFICADO local y preflight vivo):**
+El gate reconoce dos referencias completas y discretas: `pico_body_flexed`
+(original) y `pico_body_zero` (los mismos 14 ejes de brazos; cabeza, elevador y
+cintura a cero). Selecciona la referencia más próxima y exige que TODOS los
+ejes cumplan 0,02 rad y velocidad máxima 0,01 rad/s. No mezcla referencias ni
+acepta posturas intermedias; HOME sigue exigiendo veinte ceros. El informe
+incluye referencia, valores esperados/medidos y cada articulación discrepante.
+XML/hash, tiempos 19,617+6,254 s, protecciones y confirmación local intactos;
+no requiere instalar ni recargar. Ocho tests pasan, incluidos rechazos en cada
+uno de los veinte ejes de ambas variantes, mezcla, datos inválidos y secuencia
+XML. `--preflight` vivo finalizó 0: `matched_reference=pico_body_zero`, error
+máximo 0,00278034 rad, velocidad cero, sano/control exclusivo, `MOVEMENT_COMMANDS=0`.
+Revisión geométrica archivada, 101 muestras por segmento y variante: menor
+separación OBB fuera de uniones locales 3,473 mm frente a lifter_pitch_2_link
+(antes 25,056 mm). Las 15 consultas de superficies STL cerca de ese mínimo,
+con hipótesis axial 0/20/40 mm, dieron mínimo 19.303 mm. Son distancias
+nominales muestreadas, no cota global ni certificación física; las uniones locales
+siguen en el informe y no se crean exenciones. Interpolador, errores dinámicos,
+parada y escena conservan las limitaciones ya declaradas al operador.
+Cambios persistentes sólo locales: gate, tests, ayuda y etiqueta del wrapper.
+Backup/rollback: restaurar esos tres archivos desde `before/` de la evidencia
+con el ejecutor detenido, preservando otros cambios. Sin reinicios ni movimiento.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260909T121801Z_PICO-HOME-BODY-ZERO`. Próximo paso: `--run` por operador presente,
+con confirmación literal existente; ejecución física de esta variante pendiente.
+
+
+**2026-09-09 — Diagnóstico de rechazo del ejecutor PICO→HOME (VERIFICADO en captura):**
+El intento del operador `20260909T141428_PICO-HOME-OWNER-RUN` no envió
+movimiento: el gate exige una única referencia PICO20D con elevador
+[0,299989118; −0,500269484; 0,199609250] rad. La captura guardada muestra
+[−0,000191748; −0,000191748; −0,000383495] rad, prácticamente HOME corporal.
+Los 14 ejes de brazos sí coinciden con PICO (error máximo 0,002013350 rad).
+Por tanto `postura_no_coincide_con_pico` no significa que el usuario no esté
+en modo PICO: significa que no coincide la postura corporal específica del
+recorrido revisado. Error máximo elevador 2 = 0,500077737 rad (28,65°),
+tolerancia 0,02 rad. Inferencia: variante de brazos PICO con cuerpo a cero,
+compatible con el overlay de control sólo de brazos; no demuestra modo vivo.
+No se alteraron referencias, tolerancias, tareas ni robot durante el diagnóstico.
+Pendiente adaptar y revisar explícitamente esa variante antes de ejecutarla;
+no ensanchar la tolerancia ni llevar el torso a la referencia antigua para pasar.
+Evidencia: `../Humanoide-vla-evidence/20260909T141428_PICO-HOME-OWNER-RUN/before-joints.yaml`
+y `scripts/teleoperation/cruzr_pico_to_home_owner_gate.py`.
+
+
+**2026-09-09 — Reanudación y HOME cerrados (VERIFICADO):**
+La ejecución `SRG3DFN4` terminó con código 0 en 443 s. Depósito Motion
+SUCCEED, retirada odométrica 0,492029 m y HOME vendor
+`43d16648-273d-4395-854b-d0f94e679652`, SUCCEED/status4. Medición final:
+`MEASURED_HOME=1`, 20D máximo absoluto 0,002780 rad, brazos 0,000863 rad,
+velocidad máxima 0. No se reiniciaron contenedores ni se alteraron límites.
+Punto de reanudación: robot en HOME detrás de mesa 2; caja liberada por la
+acción de depósito. Confirmación visual final del operador no recogida aún.
+Evidencia persistida en
+`../Humanoide-vla-evidence/20260909T112523Z_USLAM-AUX-RESUME/completed-transfer/`.
+Las entradas «en curso» de abajo describen fases anteriores ya terminadas.
+
+
+**2026-09-09 — Depósito reanudado con éxito (VERIFICADO Motion y mapa):**
+`--resume-held-approach --yes --fast` avanzó 0,474785 m y luego 0,503024 m,
+recalculando tras una llegada intermedia con error 0,029 m. Pose final fresca
+−0,323384265933/1,06489210132/1,66272749992: error de posición 0,0043 m y
+orientación −1,10° respecto al depósito enseñado. No se ampliaron tolerancias.
+`cruzr/blue_workbin_auto_deposit`, goal
+`165d4649-88a7-4ab1-b47d-9b61e2c36dbd`, SUCCEED/status4; registro posterior
+`deposited_open_near_table`, sin eventos inseguros y articulaciones quietas.
+Log `/tmp/cruzr-table-transfer.SRG3DFN4` y copia en evidencia
+`20260909T112523Z_USLAM-AUX-RESUME`. Recuperación de HOME aún en curso.
+Pendiente una repetición completa desde mesa 1 para verificar físicamente el
+tratamiento del resultado auxiliar de navegación; esta reanudación no navegó.
+
+
+**2026-09-09 — Reanudación medida dentro de la aproximación (VERIFICADO offline; ejecución en curso):**
+Los 5,1 cm eran error de localización respecto a la **premesa virtual**, situada
+1,0 m antes de la pose de depósito enseñada; no distancia caja–mesa. El intento
+`gl8OhUFM` bloqueó antes de avanzar al superar 5 cm. Una corrección local
+0,049032 m adelante/−0,047125 m lateral se interrumpió por objetivo fuera del
+arco frontal (−75,2°); hubo avance parcial, no se repitió. Nueva pose fresca
+−0,241386/0,120383/1,657037: unos 5,3 cm dentro del tramo, 1,9 cm lateral.
+Cambio LOCAL: `--resume-held-approach` sólo sin tags calcula el resto desde
+pose fresca, dentro del corredor y orientación enseñados, y rechaza una
+proyección recta fuera del margen. Cada tramo recalcula la distancia desde la
+llegada medida; también el flujo normal deja de acumular distancias nominales.
+Se conservan tolerancias de mapa, agarre, paros, LiDAR y límites de primitivas.
+97 pruebas workbin pasan (incluyen corredor, distancias, ausencia de repetición
+de agarre/retirada y bloqueo antes de movimiento). No se cambia perfil ni XML.
+Rollback: con robot detenido, retirar el modo nuevo y revisar sólo las funciones
+modificadas, preservando cambios anteriores. Nunca repetir una distancia fija
+desde un tramo parcialmente recorrido. Copia del código probado en evidencia/changed.
+Ejecución `--resume-held-approach --yes --fast`, log
+`/tmp/cruzr_remaining_resume_run.log`; resultado físico pendiente.
+
+
+**2026-09-09 — Corrección del aviso VSLAM auxiliar y reanudación desde premesa (en curso):**
+nuevo intento `/tmp/cruzr-table-transfer.yk6hsjdq`, 328 s, se detuvo por el
+rechazo explícito de VSLAM_MAP_DIR_ERROR pese a llegada real a premesa.
+Planificador: FINISH, goal interno5e585d95-e06f-44ed-9904-8e80aa273c86;
+pose objetivo -0,216672/0,070232/1,681930, lectura fresca posterior
+-0,261118/0,049621/1,685730, error<0,05 m. Agarre vigente0,566 m,
+Fy28,7 N/Fz-10,1 N, 20D inmóviles y writer de RobotCommand0.
+Cambio LOCAL map_route: caso excepcional sólo para navigate-map-pose en uslam,
+respuesta status4 + dmsg navigation_start SUCCEEDED + desc exactamente
+VSLAM_MAP_DIR_ERROR. Esa combinación exige todavía tres lecturas frescas
+estables y llegada dentro de las tolerancias configuradas; si no, bloquea.
+Fuera de ese caso conserva rechazo estricto (fusion/auto, otros errores,
+lectura fallida, desviación, aborto). El aviso se informa; no se finge resuelto
+el guardado visual ni se cambia el árbol vendor. LiDAR y controles intactos.
+94 tests workbin/sintaxis/diff correctos. Usuario autorizó corregir y continuar
+con la misma disposición; se inició --resume-held --yes --fast, sin repetir
+agarre, retirada inicial ni navegación a premesa. Resultado físico pendiente.
+Evidencia: `../Humanoide-vla-evidence/20260909T112523Z_USLAM-AUX-RESUME/`.
+
+**2026-09-09 11:11 UTC — VERIFICADO: anillo blanco y recuperación operativa tras liberar E-stop:**
+el propietario confirmó paro liberado y anillo blanco. Lectura nueva: principal0,
+fault_current vacío; instancia nueva de CC muestra selfcheck passed=true/error0,
+StartMotion succ y transición SelfChecking→JoystickMode. Postura fresca: 20D
+válidos, MEASURED_HOME=1, máximo absoluto0,002780 rad (brazos0,000959),
+velocidad0 y delta consigna0,002780 rad. Sin nuevos movimientos enviados por
+el agente en esta verificación. El fallo histórico 02029001 permanece archivado
+con resolve3/Restart (id55); no se forzó el color ni se modificó la base.
+Caso de anillo rojo CERRADO. Esto no valida el flujo completo sin AprilTag ni
+elimina la deuda separada del error auxiliar VSLAM durante navegación.
+Evidencia: `../Humanoide-vla-evidence/20260909T110505Z_CC-RESTART-RED-RING/`.
+
+**2026-09-09 11:09 UTC — VERIFICADO: preparación para liberar E-stop tras retirar aviso rojo:**
+`/usr/local/sbin/cruzr-v020-boot-guard --check` terminó rc0 en la instancia nueva.
+Tres pruebas funcionales x86, dos rondas de las seis cámaras, versión v0.2.0,
+CONTROL_STATE=WaitEStopRelease y SAFETY_STATE=1 0 0 (principal/servo/cargador).
+Fue sólo --check, sin otro reinicio ni órdenes de movimiento. Se indica al
+operador liberar el paro bajo la supervisión ya confirmada; puede iniciar
+HOME interno. Pendientes self-check/StartMotion, ausencia de fallos después de
+liberar y confirmación visual del anillo. No declarar recuperación operativa
+completa por el mero vaciado de fault_current.
+
+**2026-09-09 11:05 UTC — VERIFICADO: aviso histórico 02029001 archivado tras reinicio único de Control Center:**
+operador confirmó E-stop principal pulsado; lectura VOLATILE dio principal1,
+servo0. Se ejecutó una sola vez `docker restart --time 5 walker-system.control_center-1`,
+rc0. StartedAt cambió de 05:20:04Z a 11:05:01Z (reloj robot, desfasado del PC).
+La nueva instancia registró `Found unresolved fault code=02029001, will mark
+as resolved with Restart`; fault_current quedó vacío y fault_history incorporó
+id55/code2029001/resolve3. No se editó la base, no se simuló resolución ni se
+forzó expresión facial. Archivo de mapa MESAS3 fallido no se recuperó; se archivó
+su aviso histórico. La causa auxiliar VSLAM de navegación es un asunto separado.
+Secuencia nueva: WaitBootReady succ → Recover succ → WaitEStopRelease.
+E-stop continúa1. Preparación de arranque en comprobación antes de liberar.
+Sin reiniciar Motion/hw, sin comandos de brazos/chasis; el propio Control Center
+puede iniciar self-check/StartMotion y HOME interno tras liberar el paro.
+Resultado visual blanco y recuperación operativa posterior aún PENDIENTES.
+Evidencia: `../Humanoide-vla-evidence/20260909T110505Z_CC-RESTART-RED-RING/`.
+
+**2026-09-09 11:01–11:03 UTC — OBSERVADO, anillo rojo después de HOME:**
+lectura SQLite readonly de Control Center muestra únicamente 02029001,
+iniciado en 1788935580688 ms: fallo de guardado de mapa durante cartografía.
+Los avisos de batería 00001001 ya constan resueltos (resolve1); no son la causa
+actual. Catálogo instalado asigna 02029001 a guardado de mapa, solución pendiente.
+No hay otros códigos activos en esa consulta. Servicios y contenedores
+redescubiertos por Wi-Fi. No se modificó la expresión, la base de fallos ni
+se ejecutó fault_solve (el binario lo describe como simulación).
+El binario contiene processUnresolvedFaults y el mensaje de archivado de fallos
+pendientes como Restart al inicializar; el historial tiene resoluciones tipo3.
+INFERENCIA: reiniciar sólo Control Center puede retirar este aviso histórico;
+se debe verificar después, sin afirmar recuperado el blanco antes de observarlo.
+Intervención preparada: único reinicio de walker-system.control_center-1,
+con E-stop principal físicamente presionado por el operador y verificado por
+lectura antes de reiniciar; después comprobar nueva instancia y estado de
+arranque antes de liberar. Razón: CC puede disparar HOME/StartMotion interno,
+como consta en CRUZR_V020_BOOT_GUARD.md. No se ha reiniciado ningún servicio.
+La confirmación de corredor libre sigue vigente para esa disposición; esta
+petición del paro no vuelve a preguntar por el espacio.
+Evidencia: `../Humanoide-vla-evidence/20260909T110137Z_RED-RING/`.
+
+**2026-09-09 — VERIFICADO: recuperación tras depósito completada y HOME medido:**
+`cruzr_recover_to_home.sh --run --yes` terminó exit0. Retirada única de
+0,492031 m, lateral -0,002139 m y giro 0,471 grados; después tarea vendor
+`cruzr/open_arm_before_home`, goal `2f4b2a37-b6ff-469e-ba85-907b81d32573`,
+SUCCEED/state1101001/status4. Lock de tareas libre, sin reset ni reinicios.
+Verificación final: 20D presentes, MEASURED_HOME=1, posición absoluta máxima
+0,002780 rad (brazos 0,000863), velocidad0, delta consigna máximo0,002780 rad.
+Baterías 73,1/74,7 %, paros0/0, cargador desconectado, actuadores habilitados.
+El robot queda en HOME, separado de mesa 2; caja depositada y previamente
+confirmada estable por el usuario. La autorización del corredor trasero de
+esta disposición se conserva como se describe debajo. No repetir retirada.
+No se cambiaron scripts durante la ejecución ni se instalaron archivos remotos.
+La transferencia automática completa sin tags y el error auxiliar VSLAM siguen
+pendientes; este éxito corresponde a depósito aislado seguido de recuperación.
+Evidencia: `../Humanoide-vla-evidence/20260909T105640Z_POST-DEPOSIT-HOME/`.
+
+**2026-09-09 — CONFIRMADO por el propietario: espacio de recuperación libre en la disposición actual de mesa 2:**
+tras confirmar el depósito, el usuario confirmó 1,50 m libres detrás del robot,
+recorrido de brazos despejado, ningún mando activo y persona junto al paro.
+Pidió conservar la comprobación del espacio para no volver a preguntarla.
+Se registra para el corredor de esta disposición de mesa 2 y la retirada única
+prevista de 0,50 m. Reutilizar la confirmación mientras no haya cambios que
+invaliden ese corredor; no pedirla otra vez sólo por iniciar otro turno.
+No equivale a declarar libre cualquier posición del mapa ni a repetir una
+retirada interrumpida. Si cambia la disposición o aparecen obstáculos/personas,
+se vuelve a comprobar el tramo afectado. Mantener comprobaciones técnicas
+frescas de postura, paros, cargador, batería y clientes de control.
+Preflight --check terminó con RECOVERY_CHECK_OK, estado deposited_open_near_table,
+20D inmóviles y sin eventos inseguros. Autorizado --run --yes para retirada+HOME;
+resultado pendiente del registro de ejecución.
+
+**2026-09-09 — CONFIRMACIÓN PRESENCIAL del depósito de las 10:52 UTC:**
+el usuario confirmó caja apoyada estable y ambas abrazaderas libres de contacto.
+El depósito queda confirmado físicamente; HOME sigue pendiente. Esta confirmación
+no valida la navegación ni el ciclo completo de transferencia.
+
+**2026-09-09 10:52 UTC — VERIFICADO por Motion, depósito aislado en mesa 2; confirmación física final PENDIENTE:**
+el usuario confirmó caja justo encima de la mesa, con toda su base dentro de
+los márgenes, registró de nuevo la referencia fresca y pidió depositarla.
+Se ejecutó `cruzr_blue_workbin_cycle.sh --deposit-held --yes` tras --verify-grasp,
+lectura de postura, paros/cargador/baterías y comprobación nativa de writers=0.
+Sólo tarea `cruzr/blue_workbin_auto_deposit`, goal
+`cc47207e-6274-4121-b686-c860eae8a117`, SUCCEED/state1101001/status4, exit0.
+Plantillas ya presentes: no instalación nueva ni cambios de primitivas.
+Postlectura: 20 articulaciones válidas, velocidad0, delta consigna máximo
+0,001751 rad; twist de base0; MEASURED_HOME=0. Brazos abiertos, sin ordenar
+navegación, retirada ni HOME. Baterías antes del depósito 74,1/75,6 %.
+Nueva referencia registrada a 10:49:56 UTC: X=-0,327576313007 m,
+Y=1,06406329955 m, yaw=1,68192970908 rad; capture_method=volatile-stamped-v2.
+El depósito aislado no valida aún el ciclo completo ni resuelve el error
+auxiliar VSLAM de la navegación anterior. Próximo paso: confirmar caja apoyada
+estable y abrazaderas libres antes de preparar la recuperación HOME.
+Evidencia: `../Humanoide-vla-evidence/20260909T105221Z_MESA2-DEPOSIT-ONLY/`.
+
+**2026-09-09 10:42–10:46 UTC — VERIFICADO: parada en premesa sin tags por pose retenida; referencia de depósito NO VÁLIDA:**
+intento `--run --fast`, log `/tmp/cruzr-table-transfer.VsaES4gk`, 342 s.
+Agarró correctamente (separación 0,567 m; Fy 24,6 N), retrocedió 0,492 m y
+el planificador llegó a premesa con FINISH. No ejecutó aproximación final,
+depósito ni HOME. Restauró el perfil de percepción original. Foto del usuario:
+caja elevada. La situación física posterior requiere confirmación presencial.
+
+`ros2 topic echo --once /nav/robot_pose` recibió una muestra TRANSIENT_LOCAL
+con stamp 1788933620.562976, X/Y/yaw -0,278215821/0,886028107/1,678875678,
+de más de cuatro horas antes. Es exactamente la usada al enseñar el depósito.
+La suscripción VOLATILE y ROSA nativo recibieron pose actual aproximada
+-0,211166/-0,089866/1,6827, a 0,0447 m de la premesa solicitada.
+El supuesto error de distancia de 1 m procedía de comparar la muestra retenida.
+`VSLAM_MAP_DIR_ERROR` se produjo en save_auto_update_map después de FINISH;
+el árbol vendor ignora ese fallo auxiliar y responde status=4/dmsg SUCCEEDED.
+No demuestra fallo de llegada a premesa ni permite validar el depósito.
+
+Correcciones locales: `scripts/lib/cruzr_map_pose_gate.py` suscribe VOLATILE,
+exige dos sellos crecientes, edad <=3 s usando el reloj del host robot, marco
+map, geometría finita y cuaternión planar válido. map_route usa este lector y
+rechaza resultados de navegación con errores internos aunque status=4.
+Los perfiles sin capture_method=volatile-stamped-v2 se rechazan: deben volver
+a enseñarse físicamente; no añadir la marca manualmente. Perfil actual y backup
+preservados, sin modificar coordenadas. No se enviaron movimientos, reinicios,
+servicios ni cambios remotos durante este diagnóstico. Lector nuevo verificado
+en vivo mediante suscripción; 92 tests workbin offline y sintaxis Bash correctos.
+Evidencia y copias previas: `../Humanoide-vla-evidence/20260909T104241Z_NO-TAG-NAV-FAILURE/`.
+Pendiente: asegurar/descargar caja con procedimiento presencial, enseñar depósito
+con lectura fresca y resolver resultado auxiliar de navegación antes del siguiente
+ciclo. No reanudar el metro restante con la referencia antigua ni repetir --run.
+
+
+**2026-09-09 — Sobrescritura explícita de referencia sin tags (offline):**
+se añade `--teach-mesa2 --overwrite-mesa2` al orquestador y wrapper sin tags.
+Captura y valida antes de sustituir; conserva copia exacta `.bak.*` junto al
+perfil y usa sustitución atómica. Fallo de captura conserva el original;
+sin opción explícita mantiene el rechazo previo. No envía movimiento.
+Evidencia reproducible: tests de `scripts/test_workbin_without_apriltag.py`
+para copia exacta, fallo de captura y rechazo de enlaces/modos incompatibles.
+Cambios sólo locales en scripts y documentación; captura física PENDIENTE.
+Rollback y comando en la guía
+`docs/guides/TRANSFERENCIA_CAJA_ENTRE_MESAS_SIN_APRILTAG.md`.
+
+**2026-09-09 — VERIFICADO offline, variante de transferencia sin AprilTags; enseñanza/prueba física PENDIENTES:**
+se añade `scripts/cruzr_blue_workbin_table_transfer_no_tag.sh`, wrapper del
+orquestador con --without-apriltag. Conserva detector workbin para recoger,
+perfil de percepción de carga, depósito por contacto y recuperación HOME.
+No requiere ni invoca el alineador, servicio o tópico AprilTag. Todos los modos
+--check/--stage-held/--run/reanudaciones mantienen su separación de etapas.
+--stage-held termina en la premesa enseñada, sin aproximar ni depositar.
+
+--teach-mesa2 --approach-distance METROS lee tres poses estables y registra
+la pose actual de base como depósito, más una distancia elegida de 0,10–1,20 m.
+No mueve ni posiciona al robot. Calcula premesa detrás según yaw; perfil JSON
+local ligado a nombre/tipo de mapa y huella de umap.json/user/task.json.
+No sobrescribe perfiles por defecto (opción explícita documentada arriba). El ejemplo contiene null en referencias no conocidas
+y no permite ejecutar. Cada ejecución valida y copia el perfil antes de conectar;
+no inventa coordenadas ni convierte la enseñanza en aprobación geométrica.
+
+El flujo navega a premesa y verifica X/Y/yaw, comprueba posición antes de avanzar,
+parte la aproximación en tramos iguales de hasta 0,60 m y vuelve a comprobar mapa
+tras cada tramo. Fuera de tolerancia, avance fallido o mapa cambiado bloquean
+el depósito; no hay reintentos ni correcciones automáticas. Valores iniciales
+0,05 m y 0,05 rad, pendientes de confirmar dentro del margen físico de la mesa.
+El perfil usa --fast; --fluid queda reservado a la variante AprilTag.
+Se mantiene mapa preparado sin carga/relocalización automática. Los nuevos
+modos de map_route leen referencia, comprueban pose o navegan una pose numérica;
+validan números/ángulos antes de conectar y propagan fallos de lecturas incluso
+dentro de sustituciones Bash. La huella no detecta mesas movidas ni certifica SLAM.
+
+Validación: 91 tests offline, sintaxis Bash, self-test del recuperador y diff check.
+Incluye ausencia total de dependencias AprilTag, enseñanza sin movimiento, perfil
+incompleto/mapa distinto, segmentación/orientación, estabilidad de pose, rechazo
+tras avance y fallo de navegación con restauración. Sin SSH/ROS/movimiento real,
+instalación remota, cambios de velocidades vendor, commits ni push.
+Próximo paso: enseñar pose adecuada con montaje/postura de caja repetibles y
+mesas fijas; después --check y prueba supervisada --stage-held/--resume-held.
+[Guía sin AprilTags](guides/TRANSFERENCIA_CAJA_ENTRE_MESAS_SIN_APRILTAG.md).
+Rollback: retirar selectivamente wrapper/opción/módulo y modos nuevos comparando
+con before/; conservar cambios anteriores del usuario. Evidencia:
+`Humanoide-vla-evidence/20260909T090753Z_TABLE-TRANSFER-NO-APRILTAG/`.
+
+**2026-09-09 — VERIFICADO offline, revisión del flujo de transferencia; prueba física PENDIENTE:**
+se corrigen fallo oculto de restauración de percepción, reintento que añadía
+retroceso y cambiaba destino, aproximación no anunciada en --stage-held,
+mensajes incorrectos de caja tras interrupción y repetición posible de HOME.
+Se retira caché fluida entre ejecuciones; --check/transferencia no cargan ni
+relocalizan mapa. --fast conserva salud fresca antes de acciones/verificación
+de agarre. Preflight usa gate estricto 20D y cuatro lecturas de seguridad en
+paralelo. Historial de agarre acotado al arranque del contenedor, árbol terminado
+y sin tareas/fallos posteriores. Perfil de percepción anterior exige restaurar.
+Se guardan logs por etapa y códigos de fallo; no se reintenta navegación.
+
+68 tests sin robot, self-test HOME, sintaxis Bash y diff check pasaron. Tres
+regresiones fallan con la copia anterior y pasan tras la corrección. Flujo
+normal del padre: 18→12 invocaciones al retirar cuatro verificaciones de agarre
+y dos mediciones de tag duplicadas; ahorro real de tiempo sin medir.
+No hubo conexión, movimiento, cambio remoto, velocidad/tolerancia nueva ni
+commit. Próximo paso: mapa previamente preparado, --check conectado y prueba
+supervisada --stage-held/--resume-held, con calibración de mesa/tag comprobada.
+Detalles, límites, pruebas y rollback en
+[revisión offline](reviews/2026-09-09_WORKBIN_TABLE_TRANSFER_OFFLINE.md).
+Evidencia: `Humanoide-vla-evidence/20260909T083451Z_TABLE-TRANSFER-OFFLINE-REVIEW/`.
+
+**2026-09-09 — VERIFICADO, reconocimiento de apertura aislada en recuperación HOME; movimiento PENDIENTE:**
+el --check del operador clasificaba box_may_be_held pese a la apertura aislada
+exitosa. Se corrige `scripts/cruzr_recover_to_home.sh`: nuevo estado
+`opened_workbin_near_table`, distinto de depósito. Exige última tarea
+blue_workbin_open_only, precedente clamp_only, una sola primitiva
+byd/open_arm_cruzr, resultado MetaClamp SUCCESS y BTree tick succeeded posterior,
+sin fallo/cancelación/evento inseguro durante o después. Tareas posteriores,
+incluso desconocidas, invalidan esa clasificación. Una apertura incompleta o
+fallida produce open_result_unverified. El HOME interno admite el nuevo estado
+bajo el mismo gate central; se conservan preflight, batería mínima 20 %, 20D,
+retroceso 0,50 m y revalidación antes del HOME vendor. No se valida el agarre
+fallido para transporte ni se modifica ninguna primitiva/protección remota.
+
+Se aclara la confirmación: caja estable sobre mesa o retirada, abrazaderas
+vacías y libres, mesa/caja/personas fuera del recorrido completo, 1,50 m libre
+detrás, sin cargador/Ethernet/otros mandos y persona junto al paro. El retroceso
+ya está incluido; no ejecutarlo antes por separado ni repetir automáticamente
+una recuperación interrumpida después de mover la base.
+
+Verificación: 8 pruebas nuevas del clasificador/ruta, self-test del recuperador,
+16 de apertura aislada, 6 de agarre, sintaxis Bash. Registro real leído por SSH
+reproduce nuevo estado, apertura línea 2098 y sin evento inseguro posterior.
+--check conectado posterior terminó código 31 por BATTERY_LOW=19.899999618530273,
+antes de clasificar/retroceder. **No se movió el robot y no se completó el
+preflight de recuperación.** Reanudar tras cargar y desconectar cargador con
+--check; sólo después --run con comprobación física actual de todo el recorrido.
+Rollback: retirar selectivamente esta clasificación y su estado admitido del
+ciclo interno, conservando cambios ajenos. Evidencia:
+`Humanoide-vla-evidence/20260909T075754Z_OPEN-TO-HOME-INTEGRATION/`.
+
+**2026-09-09 — VERIFICADO, ejecutor manual reutilizable de apertura aislada:**
+a petición del propietario se añade `scripts/cruzr_blue_workbin_open_only.sh`,
+con --check predeterminado y --run interactivo. Delega en modos específicos
+--check-open-only/--open-only del ciclo canónico, conservando el bloqueo local
+compartido, preflight completo y validación estricta 20D antes/después.
+[Guía de liberación](guides/CRUZR_WORKBIN_LIBERAR_CAJA.md).
+Ejecuta sólo el XML/primitiva ya contrastados: cada útil ±5 cm lateral en ~2 s,
+sin descenso previo, transporte o HOME. Puede dejar caer/bascular la caja.
+No requiere un agarre exitoso porque sirve para liberar el agarre imperfecto;
+no relaja la verificación de --resume-held ni --deposit-held.
+
+Exige última tarea workbin_clamp_only en registros de la instancia actual,
+sin eventos de fuerza/autocolisión ni publicadores RobotCommand; PICO/HOME/
+otras tareas o estado no demostrable bloquean. Una apertura ya intentada produce
+OPEN_ONLY_NO_ACTION y no se repite automáticamente, aunque hubiese fallado.
+Esto no certifica postura/entorno ni reemplaza la comprobación presencial.
+--run pide escribir ABRIR ABRAZADERAS, rechaza --yes/--fast y entrada sin TTY;
+tras la confirmación renueva preflight, 20D y contexto. Instala el XML sólo si
+falta y bloquea conflictos de hash. Sin reset/reinicio ni reintento ante fallo.
+
+Verificación: 16 pruebas nuevas del ejecutor/gate (incluyendo despacho simulado
+único, fallo sin reintento, salud cambiada, cancelación y repetición bloqueada),
+6 de agarre y 8 de aproximación, sintaxis Bash y diff check. Primer --check
+conectado detectó incompatibilidad Python 3.8 con timestamp Docker nanosegundos;
+corregida truncando a microsegundos y cubierta por regresión. Segunda ejecución
+--check exit 0: 21,9/23,6 % batería, paros 0/0, cargador desconectado, 20D
+inmóvil y delta 0,001885 rad; detectó apertura anterior y emitió NO_ACTION.
+El nuevo wrapper no ejecutó movimiento físico; la primitiva subyacente sí
+había sido ejecutada y confirmada antes. Ningún cambio remoto adicional durante
+estas comprobaciones. Preparación futura: usar guía, con persona junto al paro.
+Rollback local: retirar wrapper/gate y modos añadidos de forma selectiva;
+no revertir archivos completos porque contienen otros cambios del usuario.
+Evidencia: `Humanoide-vla-evidence/20260909T074532Z_OPEN-ONLY-SCRIPT/`.
+
+**2026-09-09 — VERIFICADO, apertura aislada completada y confirmada físicamente:**
+propietario pidió abrir aceptando caída/basculación de caja vacía y confirmó
+recorridos laterales de 5 cm despejados, zona de caída libre y persona junto
+al paro. Preflight final: 23,6/25,0 % batería, paros 0/0, cargador desconectado,
+actuadores habilitados, servidor ready, RobotCommand escritores 0 y hash del
+XML correcto. Goal único `cruzr/blue_workbin_open_only`,
+`b550b1e2-32b2-499f-a17f-abd142715df0`: SUCCEED, status 4, estado 1101001.
+Se ejecutó únicamente la primitiva instalada `byd/open_arm_cruzr`; no se
+ordenó descenso previo, navegación, HOME, reintento, rearme ni reinicio.
+Muestra posterior: 22 actuadores, velocidades cero, error_code cero, cuerpo
+Operation Enabled y delta máximo de consigna 0,001789 rad; odometría twist cero.
+Operador confirma caja estable sobre la mesa y ambas abrazaderas libres de
+contacto. **Recuperación de la caja/liberación completada; brazos abiertos,
+HOME no solicitado ni alcanzado por esta acción.** No convierte el agarre
+anterior ClampBoxImperfect en válido ni valida la transferencia completa.
+La tarea nueva conserva hash
+`90cd1be8ac7421ed36882175735429b9c6d2bd88831b3f2995501b4e7e37b119`;
+ubicación/rollback en preparación inferior. Sin cambios de protecciones,
+primitivas vendor o umbrales; avisos del anillo no tratados en esta maniobra.
+Evidencia: `Humanoide-vla-evidence/20260909T072838Z_OWNER-OPEN-ONLY/`
+(`open_action.json`, preflight final, actuadores y odometría posteriores).
+Siguiente movimiento requiere decidir recorrido desde brazos abiertos y
+comprobar caja/mesa fuera de su envolvente; no repetir el ciclo desde aquí.
+
+**2026-09-09 — apertura aislada preparada por petición expresa del propietario:**
+usuario solicita abrir y acepta caída de caja vacía parcialmente apoyada.
+Se contrastó primitiva instalada `byd/open_arm_cruzr`: desplazamientos relativos
+izquierda +0,05 m en Y y derecha −0,05 m en Y, duración 2 s, sin objetivo de
+descenso y objetivo relativo de torso cero. La trayectoria efectiva del cuerpo
+no queda certificada sólo por esos objetivos. XML versionado
+`test_blue_workbin_factory_open_only.xml` contiene únicamente esa acción.
+Preflight canónico --check pasó: 24,4/25,7 % de batería, paros 0/0, cargador
+desconectado, actuadores habilitados y acciones ready. Muestra previa inmóvil,
+sin errores y máximo delta corporal 0,006763 rad; RobotCommand escritores 0.
+Se instaló como archivo nuevo `config/cruzr/blue_workbin_open_only.xml` en
+manipulation_task_manager, hash
+`90cd1be8ac7421ed36882175735429b9c6d2bd88831b3f2995501b4e7e37b119`.
+No se sobrescribió ningún XML ni se reinició/recargó Motion; no se modificó
+la primitiva vendor, el verificador de agarre ni protecciones.
+**PENDIENTE: confirmación actual de 5 cm laterales libres en ambos brazos,
+zona de caída/basculación libre y persona junto al paro. Ningún goal enviado.**
+Preparación no equivale a liberación, depósito ni HOME. Rollback del archivo
+nuevo: retirarlo sólo con Motion inactivo respecto a esta tarea y conservando
+la evidencia; no se necesita reiniciar para restaurar el archivo.
+Evidencia: `Humanoide-vla-evidence/20260909T072838Z_OWNER-OPEN-ONLY/`.
+
+**2026-09-09 — recuperación preparada, apertura pendiente con caja parcialmente apoyada:**
+operador confirma inmovilidad y todos los scripts/mando/PICO inactivos.
+Después estima 85 % de la base sobre el tablero y esquina elevada unos 8 cm;
+su apreciación «se puede soltar sin problema» no demuestra ausencia de basculación
+ni descarga de abrazaderas. No se ordenó apertura, descenso, HOME ni reinicio.
+Muestra fresca 07:20 UTC: 22 actuadores inmóviles, sin error_code, máximo delta
+corporal de consigna 0,007051 rad. FT leídos en marcos de sensores; no se
+interpretan directamente como pesos ni distribución de apoyos.
+Depósito instalado secuencia `put_collision_cruzr` → `byd/open_arm_cruzr`:
+el primer contacto no demuestra apoyo completo en esta situación. XML alternativo
+`test_blue_workbin_release_only.xml` baja 6 cm y abre; no se ejecutó ni se
+considera recuperación validada desde esquina elevada 8 cm y apoyo parcial.
+
+**Corrección local necesaria:** se reprodujo offline que `verify_clamp_log`
+aceptaba el log real con ClampBoxImperfect (separación 0,580 m, Fy 21,5 N).
+Ahora rechaza fallo explícito de Motion y exige finalización MetaClamp SUCCESS,
+además de las comprobaciones previas de fuerza/distancia y ausencia de liberación.
+Esto afecta --verify-grasp, --deposit-held y reanudaciones con carga; no convierte
+ese depósito en una recuperación desde agarre fallido. Espera también el marcador
+End MetaClamp al recoger el registro. Reproducción real ahora rechazada; seis
+regresiones nuevas y ocho de aproximación pasan, más sintaxis y diff check.
+El caso SUCCESS del test es sintético; no se afirma nuevo agarre físico válido.
+No había scripts workbin activos al editar. Cambios anteriores preservados.
+Reversión selectiva de este parche de verificación sólo para depuración offline:
+la versión anterior puede autorizar una reanudación tras fallo y no debe usarse
+para mover. PENDIENTE estabilizar/apoyar completamente la caja mediante
+intervención presencial adecuada, sin acceso bajo carga ni manipular brazos;
+después determinar una liberación compatible con postura, contacto y entorno.
+Evidencia: `Humanoide-vla-evidence/20260909T072023Z_PARTIAL-BOX-RECOVERY-CHECK/`.
+
+**2026-09-09 — OBSERVADO, agarre imperfecto y caja parcialmente apoyada:**
+tras aportar un check histórico satisfactorio y foto, el operador declara
+«caja apoyada en el lado más lejano y derecho del robot». Se registra apoyo
+parcial, no depósito completo ni abrazaderas descargadas. Falta confirmar
+si algún script/mando permanece activo y estado de soporte del resto de caja.
+Lectura 07:18 UTC: 22 actuadores con velocidad cero y sin error_code;
+RobotCommand con 0 escritores (no demuestra por sí solo todos los clientes
+inactivos). Baterías actuales 26,5/27,4 %, distintas del 31,0/30,1 % del check
+aportado. Avisos activos siguen 00001001 y 02029001; no se ha recuperado blanco.
+Motion registra a las 07:16:09–10 UTC (15:16 +08) intento de clamp:
+`distance_on_float_base.y: 0.581279 > box size.outside_len: 0.578`,
+`ClampBoxImperfect`, MetaClamp FAILURE y árbol detenido. Diferencia 3,279 mm
+entre distancia modelada de útiles y límite configurado; NO es una medición
+independiente del ancho real ni prueba de que el error sea despreciable.
+El registro sugiere contacto en borde superior/otra sección más ancha, sin
+confirmarlo como causa única. No se ha demostrado agarre válido para transporte.
+No usar --resume-held, repetir --run, abrir, HOME o reiniciar desde este apoyo
+parcial sin recuperación específica y comprobación física actuales.
+Intervención del agente exclusivamente de lectura y documentación: ninguna
+orden física, modificación de umbrales, reset o reinicio. PENDIENTE resolver
+apoyo/descarga de caja, postura y control exclusivo antes de recuperar.
+Evidencia: `Humanoide-vla-evidence/20260909T071802Z_RING-AFTER-USER-CHECK/`.
+
+**2026-09-09 — VERIFICADO, petición de recuperar anillo blanco: dos avisos activos:**
+consulta 07:15–07:16 UTC de `fault_current` y catálogo instalado confirma
+`02029001` (fallo al guardar mapa durante cartografía, MESAS3) y `00001001`
+(aviso de batería baja, ocurrido 06:54:54 UTC). SOC actuales 27,0/27,6 %,
+ambas descargando. `get_map_name` confirma MESAS2 y `check_state` devuelve
+FSM_WAITNAVIGATE. El cambio anterior de mínimo a 20 % es local a los scripts;
+no modifica el aviso de batería de Control Center. No atribuir todo el rojo
+al fallo histórico de mapa ni prometer blanco eliminando sólo ese aviso.
+El binario contiene `fault_solve`, descrito como «Simulate a fault solving»;
+no se ejecutó porque simular resolución no demuestra recuperación real.
+No se alteraron fault.db, expresión facial, umbrales, firmware ni estados;
+no hubo reinicios, navegación o movimiento. El catálogo indica procedimiento
+pendiente de confirmar para ambos códigos; no se identificó un procedimiento
+normal de reconocimiento del aviso de guardado en lo inspeccionado.
+PENDIENTE cargar físicamente las baterías y verificar resolución del aviso
+00001001, además de recuperar/retirar por procedimiento válido el aviso de
+mapa. Umbral exacto de desactivación e histéresis no verificados. Anillo blanco
+NO conseguido ni afirmado; ambos avisos permanecen activos al cierre.
+Evidencia: `Humanoide-vla-evidence/20260909T071558Z_RED-RING-ACTIVE-FAULTS/`.
+
+**2026-09-09 — VERIFICADO en software y percepción, corrección de ventana lejana MESAS2:**
+por petición «corrige ese bloqueo», `validate_approach_samples` en
+`cruzr_blue_workbin_cycle.sh` admite y mínimo 0,00 m solamente si z>1,15 m.
+Para z≤1,15 m conserva y mínimo 0,10 m; se mantienen y máximo 1,10 m,
+z 0,65–1,80 m, centrado, coherencia entre muestras y orientación. Rechaza
+además cualquier coordenada/cuaternión no finito. Es una ampliación acotada
+del filtro perceptivo lejano motivada por la imagen y pose de MESAS2;
+no constituye validación geométrica ni autorización de agarre a esa distancia.
+El agarre conserva y=0,20–0,75 m, z=0,65–1,15 m y centrado ±0,035 m;
+el planificador también conserva su control previo a extender brazos.
+En `cruzr_blue_workbin_carry_back.sh`, los reintentos dicen «pose visual
+admisible» y remiten al motivo concreto, sin atribuir todo rechazo a ruido.
+Verificación: sintaxis Bash, diff sin errores de espacios y 8 tests offline
+(`scripts/test_workbin_approach_window.py`): muestra observada, fronteras
+lejanas/cercanas, no finitos, dispersión, cuaternión y separación entre
+aproximación y agarre. Consulta real `--measure-box` finalizó código 0:
+`BOX_POSE_CAMERA=0.167983 0.044992 1.741459 -4.614227` (m y grados).
+Preflight: baterías 28,0/28,4 %, paros 0/0, cargador desconectado, acciones ready.
+No se ordenó movimiento, ni cambio de firmware, configuración remota o mapa.
+Scripts no estaban ejecutándose al editar. Cambios previos del usuario conservados.
+Reversión selectiva: restaurar y mínimo fijo 0,10 m en el filtro de
+aproximación; no revertir el archivo completo porque contiene otros cambios.
+PENDIENTE prueba física completa: despejar persona/cables/equipo vistos en
+la cámara y verificar de nuevo la zona y postura antes de ejecutar `--run`.
+Evidencia: `Humanoide-vla-evidence/20260909T071047Z_APPROACH-WINDOW-FIX/`.
+
+**2026-09-09 — VERIFICADO/OBSERVADO, cámara y detector consultados por Wi-Fi:**
+ruta a Vision 192.168.11.3 vía 192.168.42.2, interfaz wlx80afcad40bd6.
+Captura por suscripción a `/sensor/camera/stereo_left/image/raw` (Image6m,
+yuv422, 1920×1536); consulta exclusivamente perceptiva a
+`/cv/task/transport_action`, cámara head, box_size 0,60×0,40×0,22 m.
+Resultado `ok=True`, status 4, workbin, marco
+`stereo_left_rectified_optical_frame`: x=0,164391, y=0,050471,
+z=1,730504 m. Imagen `/cv/pose_6d_info/segment` muestra el volumen detectado
+sobre la caja azul visible en la mesa; dimensiones dibujadas son las del modelo
+solicitado, no una medición independiente. El topic segment tiene stamp=0:
+se conserva hora de adquisición y coincidencia de coordenadas con esta consulta,
+sin atribuirle sincronización exacta con la captura de cámara anterior.
+Se confirma que la caja visible es detectada; el rechazo previo corresponde
+al mínimo y=0,10 m del script de aproximación, no a ausencia de detección ni
+a distancia z fuera de rango. La imagen también muestra una persona junto
+a la caja y cables/equipo en el suelo delante de la mesa: la zona debe despejarse
+y verificarse de nuevo antes de movimiento. No inferir distancias libres de esta foto.
+No se ordenó movimiento ni se modificaron límites/configuración; suscripciones
+finalizadas y acción de percepción terminada. Pendiente revisar la ventana de
+aproximación frente a esta disposición sin dar por validado el ciclo completo.
+Evidencia: `Humanoide-vla-evidence/20260909T070402Z_BOX-CAMERA/`
+(`head_camera.png`, `detector_segment.png`, respuestas originales).
+
+**2026-09-09 — OBSERVADO, intento físico completo MESAS2/uslam interrumpido antes del agarre:**
+con autorización explícita y confirmación de caja apoyada en mesa 1 y referencia
+AprilTag/altura de mesa 2 conservadas, se ejecutó transferencia `--run --yes`.
+Preflight completo OK; baterías 30,0/29,4 %, ambos paros 0 y cargador desconectado.
+Motion confirmó `move_head_lower` SUCCEED. Primera medición de aproximación
+rechazada tres veces: (y,z) = (0,051;1,734), (0,045;1,746), (0,049;1,737) m.
+El rechazo concreto es **y < 0,10 m en el marco de cámara**; z sí cumple
+0,65–1,80 m. El mensaje final «detección no estable» es genérico: no demuestra
+inestabilidad entre pares porque la validación falla antes de compararlos.
+No se ordenaron agarre, avance de aproximación, transporte ni depósito.
+El script terminó código 1, etapa `agarre-mesa1`, 112 s; no se reintentó ni
+se ordenó HOME. Lectura posterior 07:00:44 UTC: 22 actuadores con velocidad 0,
+sin error_code, odometría con twist 0 y 0 escritores de RobotCommand.
+Caja no agarrada por este intento; cabeza queda bajada según la acción realizada.
+Perfil de carga estaba desactivado y no se alcanzó su activación.
+PENDIENTE comprobar identificación/encuadre de la caja y geometría de la escena
+antes de repetir desde el inicio; no usar `--resume-held` ni ampliar límites
+basándose sólo en estas lecturas. Ciclo completo todavía NO validado.
+Sin modificaciones remotas de configuración ni cambios de umbral en este intento.
+Evidencia: `Humanoide-vla-evidence/20260909T070044Z_MESAS2-FULL-ATTEMPT/` (`transfer.log`,
+actuadores, odometría y grafo de comandos posteriores). La cabeza bajada no
+constituye HOME completo; comprobar postura antes de otra ejecución.
+
+**2026-09-09 — mínimo de batería 20 % solicitado por el propietario:**
+`cruzr_blue_workbin_cycle.sh` y el inicio de `cruzr_blue_workbin_map_route.sh`
+pasan de 30 a 20 %. Retorno/reanudación de mapa pasa de 25 a 20 % para no
+rechazar una continuación con más batería que la exigida al inicio. Ambos
+SOC deben ser al menos 20 % en las comprobaciones existentes. El ciclo es
+compartido por transferencia, agarre, alineación y recuperación HOME; el
+alcance incluye esos consumidores. Cambio local, sin movimiento ni cambios
+en firmware/BMS. Verificación local de sintaxis y frontera 19,9/20/20,1 %;
+no demuestra autonomía restante ni constituye prueba física del ciclo.
+Reversión: restaurar 30 % en ciclo/inicio de mapa y 25 % en retorno de mapa.
+
+**2026-09-09 — recuperación operativa MESAS2 en modo LiDAR del fabricante:**
+**Verificación final:** `--check` terminó con código 0 y
+`TABLE_TRANSFER_CHECK_OK`, baterías 31,2/30,4 %. Hashes de todos los archivos
+MESAS2 idénticos antes/después. Log final `check_final.log` en la evidencia.
+por autorización «haz todo lo necesario», se seleccionó explícitamente
+`map_type=uslam` en `map_set` y `relocation_start`. Árboles instalados admiten
+ese modo; configuración de relocalización leída con `non_rotate=true` y
+`global_using_rotation=false`. Resultado `NAVIGATION_READY`/`FSM_WAITNAVIGATE`
+y poses publicadas. Se reiniciaron sólo `walker-nav.vslam-1` y
+`walker-nav.nav_taskmanager-1`; posteriormente se restauró MESAS2/uslam.
+VSLAM quedó `READY`. Motion y Control Center no se reiniciaron. No se ordenó
+navegación a destinos ni manipulación; no se modificaron umbrales/protecciones.
+El código `02039001` ya no estaba activo al consultar `fault_current`;
+`02029001` (guardado MESAS3 fallido) sigue retenido, también tras los reinicios.
+No se manipuló esa base de datos ni se dio el mapa visual por reparado.
+
+Scripts locales ahora aceptan `CRUZR_MAP_TYPE=auto|uslam|fusion`, con `auto`
+predeterminado; el tipo explícito viaja en carga/relocalización y separa las
+cachés de preparación. Se preservan MESAS2 y sus waypoints. Primera comprobación
+completa de transferencia satisfactoria; otra alcanzó todos los checks pero
+salió 127 al editarse la ayuda del script mientras Bash aún lo ejecutaba
+(`irm_once`). No repetir ediciones de scripts en ejecución; verificación final
+repetida con archivos estables. Pruebas locales: sintaxis, 9 tests de puntos y
+10 comprobaciones de payload/modo sin conexión. Baterías últimas 31,5/30,4 %;
+gate de inicio 30 % conservado. Antes de navegación física comprobar que la
+pose dibujada coincide con posición/orientación reales: relocalizaciones
+globales anteriores dieron poses distintas. Transferencia física pendiente.
+
+Evidencia externa `Humanoide-vla-evidence/20260909T063738Z_MAPPING-REPAIR/`:
+configuraciones leídas, hashes previos del mapa, acciones y reinicios. No hubo
+edición de configuración del robot; cambio persistente local en scripts y
+cachés remotas de mapa. Reversión local: quitar `CRUZR_MAP_TYPE`; para cambiar
+el modo runtime se requiere carga explícita del modo elegido. `fusion` puede
+activar giro de cabeza durante relocalización y exige preparación física.
+La fuente del fallo visual permanece pendiente; el mapa 2D MESAS2 tenía 69
+nodos, mientras el tramo de MESAS3 produjo sólo uno. No confundir las 11 poses
+del trazado 2D con nodos clave ni dar la captura visual por reparada.
+
+**2026-09-09 — VERIFICADO, guardado visual MESAS3 fallido:** lectura 06:35 UTC
+confirma intento de guardado a las 06:33 UTC: 2D `MAPPING_SUCCESS`, VSLAM
+`rigs size: 0`, `NO date to save!`, `SAVE_MAP_FAILED`. CC añade `02029001`
+(catálogo: fallo de guardado de mapa); no aparece resolución de ese aviso ni
+del anterior `02039001` en la muestra. MESAS3 carece de los archivos visuales
+de mapa esperados. El operador volvió a MESAS2; registro confirma carga y
+estado visual `LOAD_MAP_FINISHED`, que no demuestra localización recuperada.
+MESAS2 conserva su mapa visual anterior (13 puntos/una pose). Se confirma
+captura visual vacía en MESAS3, aunque el origen del fallo sigue pendiente.
+No repetir recorridos hasta diagnosticar inserción de datos visuales. Evidencia
+externa `Humanoide-vla-evidence/20260909T063514Z_MAP-RETURN/`. Sólo lecturas.
+
+**2026-09-09 — revisión del diagnóstico durante grabación:** recorrido 2D
+creció a 11 poses; cámaras/VIO activos. `use_lidar_mapping=true` y
+`enable_mapping_callback=false` en configuración instalada. ROS2 reporta cero
+publicadores de `/nav/robot_pose`, pero ROSA reporta dos; las suscripciones
+acotadas no recibieron muestra estando parado. NO demuestra conexión ausente.
+El árbol vendor guarda primero mapa 2D y después VSLAM `save_map`; por tanto,
+`cannot get rig from map` durante grabación no basta para declarar fallida la
+captura ni justificar cambiar configuración. Pendiente finalizar el tramo de
+prueba desde UI bajo nombre nuevo, revisar resultado guardado y relocalizar.
+Evidencia externa `Humanoide-vla-evidence/20260909T062910Z_MAPPING-DIAG/`.
+Sólo lectura; ningún reinicio, edición remota ni comando de movimiento.
+
+**2026-09-09 — OBSERVADO, primera comprobación tras tramo manual:** a las
+06:27 UTC sigue `MAPPING_RUNNING`, pero continúa `cannot get rig from map`.
+Entre las poses VIO inicial/final de la ventana de registro hay aproximadamente
+0,45 m de variación; el seguimiento detecta desplazamiento, sin incorporación
+de poses al mapa demostrada. Ya no basta explicar el aviso por inmovilidad.
+Evidencia externa `Humanoide-vla-evidence/20260909T062710Z_MAPPING-PROGRESS/`.
+Sin comandos físicos; pendiente diagnosticar inserción de referencias visuales.
+
+**2026-09-09 — OBSERVADO, nueva cartografía iniciada:** tras aviso del operador,
+VSLAM confirma `MAPPING_RUNNING` y mapping2d `MAPPING_NORMAL`. Imágenes de
+cuatro cámaras llegan y VIO calcula poses, pero durante la muestra inicial
+persiste `cannot get rig from map`/`draw map failed`; incorporación de poses
+al mapa visual aún PENDIENTE. No atribuirlo a avería sin distinguir inicio
+inmóvil de recorrido efectivo. Sólo lectura; evidencia externa
+`Humanoide-vla-evidence/20260909T062503Z_MAPPING-LIVE/`.
+
+**2026-09-09 — OBSERVADO, relocalización forzada no recupera VSLAM:**
+lecturas 06:16–06:17 UTC confirman dos `FSM_Relocating SUCCEEDED` con
+`map_type: fusion`, pero persiste `LOCATION_LOST`; VSLAM recibe imágenes y
+extrae características, con intentos repetidos `matched map point num is 0`.
+MESAS2 contiene un `vslam/source_map/points.pcd` de sólo 13 puntos y
+`mapping_pose.csv` con una fila; `localization_map/map.pb` ocupa 1372 bytes.
+INFERENCIA: cobertura visual guardada muy escasa, probable impedimento para
+relocalización; no se ha demostrado el motivo de su generación ni el contenido
+completo del protobuf. No basta el éxito del navegador para cerrar este aviso.
+Evidencia externa `Humanoide-vla-evidence/20260909T061650Z_LOCALIZATION-AFTER-FORCED/`.
+Sin cambios remotos ni movimiento. Reanudación: revisar captura del mapa visual
+y preparar nueva cartografía conservando MESAS2 y sus puntos.
+
+**2026-09-09 — OBSERVADO, anillo rojo por fallo de relocalización visual:**
+lecturas nuevas a las 06:10–06:11 UTC: CC registra `02039001` seguido de
+`logo -> warning-red`, sin resolución posterior en el registro actual;
+`/vnav/vslam/state=LOCATION_LOST`. Catálogo instalado: fallo de relocalización
+basada en características. Ambos paros `0`; LiDAR publica `LocateRunning`,
+lo que no demuestra recuperación de VSLAM. No es el aviso histórico `02039005`.
+La causa de la pérdida visual sigue PENDIENTE; no atribuirla al nuevo mapa
+sin más evidencia. Diagnóstico de lectura, sin movimientos ni cambios remotos.
+Evidencia: `../Humanoide-vla-evidence/20260909T061055Z_RED-FACE/` (respecto a
+la raíz del repositorio). Reanudación: comprobar recuperación de localización
+antes del transporte autónomo; no se relocalizó ni reinició ningún servicio.
+
+**2026-09-09 — puntos MESAS2 guardados como mapping_marker:** lectura directa
+de `umap.json` a las 06:05 UTC confirma MESA1_PRE/MESA2_PRE con `mode=""`,
+`type="mapping_marker"` y coordenadas/orientación. El mapa histórico utiliza
+`logo_nav`/`precise_marker`. El preflight directo y la consulta de waypoint
+admiten ahora ese formato concreto de la UI; navegación a esos puntos utiliza
+sus coordenadas mediante `free_nav` en lugar de enviar su ID como `logo_nav`.
+Otros modos vacíos/desconocidos siguen rechazados. Validación de puntos ejecutada
+en lectura sobre MESAS2; pruebas locales de validación y despacho simulado.
+No se modificó el mapa ni se envió navegación. Prueba física pendiente.
+
+**2026-09-09 — corrección del preflight de transferencia en mapas nuevos:**
+el operador observó carga y localización satisfactorias de `MESAS2`, seguidas
+de rechazo por `task.json` sin ruta. La transferencia ahora exige únicamente
+`MESA2_PRE` en `umap.json`; navegación directa valida el destino solicitado.
+Se admiten rutas programadas vacías en esos modos, conservando comprobaciones
+de existencia, unicidad, modo y coordenadas/orientación finitas. El recorrido
+histórico conserva su secuencia obligatoria. Pruebas locales sin conexiones;
+pendiente repetir `--check` en MESAS2. No se modificó el mapa ni se movió el robot.
+
+**2026-09-09 — VERIFICADO localmente, mapa parametrizado:** navegación acepta
+`CRUZR_MAP_NAME` (predeterminado `test_route_01`), heredado por transferencia y
+ruta corta. Nombre validado antes de conectar; caché de preparación fluida
+asociada al mapa. No crea mapas ni modifica waypoints/calibraciones; sigue
+exigiendo la secuencia histórica en el preflight de mapa. Sin acciones remotas.
+
+
+**2026-09-08 — ejecutor PICO→HOME creado por autorización expresa del propietario:**
+`scripts/teleoperation/cruzr_pico_to_home_owner.sh` implementa `--check`,
+`--install`, `--reload`, `--preflight` y `--run`. La tarea mueve primero los
+dos brazos a cero en 19,617 s conservando los seis ejes corporales y después
+cabeza/elevador/cintura a cero en 6,254 s. Instalación y recarga exigen E-stop;
+ejecución exige tarea exacta cargada, preflight canónico, cero publicadores,
+actuadores sanos, postura PICO medida dentro de 0,02 rad, velocidad máxima
+0,01 rad/s, confirmación humana literal y verificación HOME posterior. No hay
+reintento automático ni se desactiva ninguna protección. El operador acepta
+explícitamente que interpolador y parada no están certificados. XML, gate y
+tres tests locales pasan; **no se instaló, recargó ni ejecutó en el robot**.
+Punto de continuación: `--install` con E-stop activo.
+
 **2026-09-08 — refinamiento condicional HOME y comparación de órdenes:**
 Con parada hipotética (+0,68755°), error articular 5° y origen axial 0–40 mm,
 la comprobación continua local abrazadera–muñeca conserva reservas de 0,304 mm

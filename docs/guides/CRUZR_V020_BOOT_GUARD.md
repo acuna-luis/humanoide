@@ -1,5 +1,64 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+**2026-09-09 11:11 UTC — VERIFICADO: anillo blanco y recuperación operativa tras liberar E-stop:**
+el propietario confirmó paro liberado y anillo blanco. Lectura nueva: principal0,
+fault_current vacío; instancia nueva de CC muestra selfcheck passed=true/error0,
+StartMotion succ y transición SelfChecking→JoystickMode. Postura fresca: 20D
+válidos, MEASURED_HOME=1, máximo absoluto0,002780 rad (brazos0,000959),
+velocidad0 y delta consigna0,002780 rad. Sin nuevos movimientos enviados por
+el agente en esta verificación. El fallo histórico 02029001 permanece archivado
+con resolve3/Restart (id55); no se forzó el color ni se modificó la base.
+Caso de anillo rojo CERRADO. Esto no valida el flujo completo sin AprilTag ni
+elimina la deuda separada del error auxiliar VSLAM durante navegación.
+Evidencia: `../Humanoide-vla-evidence/20260909T110505Z_CC-RESTART-RED-RING/`.
+
+**2026-09-09 11:09 UTC — VERIFICADO: preparación para liberar E-stop tras retirar aviso rojo:**
+`/usr/local/sbin/cruzr-v020-boot-guard --check` terminó rc0 en la instancia nueva.
+Tres pruebas funcionales x86, dos rondas de las seis cámaras, versión v0.2.0,
+CONTROL_STATE=WaitEStopRelease y SAFETY_STATE=1 0 0 (principal/servo/cargador).
+Fue sólo --check, sin otro reinicio ni órdenes de movimiento. Se indica al
+operador liberar el paro bajo la supervisión ya confirmada; puede iniciar
+HOME interno. Pendientes self-check/StartMotion, ausencia de fallos después de
+liberar y confirmación visual del anillo. No declarar recuperación operativa
+completa por el mero vaciado de fault_current.
+
+**2026-09-09 11:05 UTC — VERIFICADO: aviso histórico 02029001 archivado tras reinicio único de Control Center:**
+operador confirmó E-stop principal pulsado; lectura VOLATILE dio principal1,
+servo0. Se ejecutó una sola vez `docker restart --time 5 walker-system.control_center-1`,
+rc0. StartedAt cambió de 05:20:04Z a 11:05:01Z (reloj robot, desfasado del PC).
+La nueva instancia registró `Found unresolved fault code=02029001, will mark
+as resolved with Restart`; fault_current quedó vacío y fault_history incorporó
+id55/code2029001/resolve3. No se editó la base, no se simuló resolución ni se
+forzó expresión facial. Archivo de mapa MESAS3 fallido no se recuperó; se archivó
+su aviso histórico. La causa auxiliar VSLAM de navegación es un asunto separado.
+Secuencia nueva: WaitBootReady succ → Recover succ → WaitEStopRelease.
+E-stop continúa1. Preparación de arranque en comprobación antes de liberar.
+Sin reiniciar Motion/hw, sin comandos de brazos/chasis; el propio Control Center
+puede iniciar self-check/StartMotion y HOME interno tras liberar el paro.
+Resultado visual blanco y recuperación operativa posterior aún PENDIENTES.
+Evidencia: `../Humanoide-vla-evidence/20260909T110505Z_CC-RESTART-RED-RING/`.
+
+**2026-09-09 11:01–11:03 UTC — OBSERVADO, anillo rojo después de HOME:**
+lectura SQLite readonly de Control Center muestra únicamente 02029001,
+iniciado en 1788935580688 ms: fallo de guardado de mapa durante cartografía.
+Los avisos de batería 00001001 ya constan resueltos (resolve1); no son la causa
+actual. Catálogo instalado asigna 02029001 a guardado de mapa, solución pendiente.
+No hay otros códigos activos en esa consulta. Servicios y contenedores
+redescubiertos por Wi-Fi. No se modificó la expresión, la base de fallos ni
+se ejecutó fault_solve (el binario lo describe como simulación).
+El binario contiene processUnresolvedFaults y el mensaje de archivado de fallos
+pendientes como Restart al inicializar; el historial tiene resoluciones tipo3.
+INFERENCIA: reiniciar sólo Control Center puede retirar este aviso histórico;
+se debe verificar después, sin afirmar recuperado el blanco antes de observarlo.
+Intervención preparada: único reinicio de walker-system.control_center-1,
+con E-stop principal físicamente presionado por el operador y verificado por
+lectura antes de reiniciar; después comprobar nueva instancia y estado de
+arranque antes de liberar. Razón: CC puede disparar HOME/StartMotion interno,
+como consta en CRUZR_V020_BOOT_GUARD.md. No se ha reiniciado ningún servicio.
+La confirmación de corredor libre sigue vigente para esa disposición; esta
+petición del paro no vuelve a preguntar por el espacio.
+Evidencia: `../Humanoide-vla-evidence/20260909T110137Z_RED-RING/`.
+
 **08-09, recuperación operativa y HOME verificados:** [resultado](../incidents/2026-09-08_HOME_TRAS_RECUPERAR_CONTROL_CENTER.md).
 Tras reinicio único de CC y liberación supervisada, self-check/StartMotion
 correctos y JoystickMode. HOME20D máximo0,003068 rad, velocidad0, actuadores

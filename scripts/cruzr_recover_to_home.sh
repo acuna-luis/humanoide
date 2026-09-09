@@ -281,6 +281,47 @@ if ((latest_state_line == 0)); then
   historical_state=unknown
 fi
 
+# La apertura aislada no es un depósito. Sólo habilita la recuperación si
+# es la última tarea, procede del agarre workbin y terminó completamente.
+open_only_record="$(python3 - "$latest" <<'PY_OPEN_HISTORY'
+import pathlib
+import re
+import sys
+text = pathlib.Path(sys.argv[1]).read_text(errors="replace")
+tasks = list(re.finditer(r"BTree task: '([^']+)' is start", text))
+state = "unknown"
+line = 0
+if tasks:
+    task = tasks[-1]
+    line = text.count("\n", 0, task.start()) + 1
+    if task.group(1) == "cruzr/blue_workbin_open_only":
+        state = "open_result_unverified"
+        segment = text[task.end():]
+        starts = re.findall(r"Start MetaClamp: ([^\s]+)", segment)
+        end = re.search(
+            r"End MetaClamp: byd/open_arm_cruzr[^\n]*\n"
+            r"(?:[^\n]*\n){0,5}?\s*result:\s*SUCCESS\b", segment)
+        failed = re.search(
+            r"result:\s*FAILURE|BTree tick failed|btree_status is FAILURE|"
+            r"Excessive force|force protection triggered|Self collision between|"
+            r"Collision detected, command not sent|MoveToGoalFailed|"
+            r"Operation disabled unexpected|SAFEOP ERROR|servo \d+ error code:0x(?:1001|1003|2007)|"
+            r"cancel(?:ed|led|ing|ling)|halted", segment, re.I)
+        if (len(tasks) >= 2 and
+                tasks[-2].group(1) == "cruzr/blue_workbin_clamp_only" and
+                starts == ["byd/open_arm_cruzr"] and end and not failed and
+                "BTree tick succeeded" in segment[end.end():]):
+            state = "opened_workbin_near_table"
+print(line, state)
+PY_OPEN_HISTORY
+)"
+read -r last_task_line open_only_state <<<"$open_only_record"
+if ((last_task_line > latest_state_line)); then
+  latest_state_line="$last_task_line"
+  historical_state="$open_only_state"
+fi
+printf 'OPEN_ONLY_STATE=%s\n' "$open_only_state"
+
 unsafe_after_state=0
 if ((unsafe_line > latest_state_line)); then
   unsafe_after_state=1
@@ -342,7 +383,7 @@ select_recovery_route() {
   fi
 
   case "$HISTORICAL_STATE" in
-    deposited_open_near_table|arms_extended_near_table)
+    deposited_open_near_table|opened_workbin_near_table|arms_extended_near_table)
       MANIPULATION_STATE="$HISTORICAL_STATE"
       RETREAT_REQUIRED="true"
       HOME_ACTION_REQUIRED="true"
@@ -351,8 +392,8 @@ select_recovery_route() {
     teleoperated_pose)
       die "Postura PICO no home: open_arm_before_home está prohibido desde este estado. Vuelva a home dentro de PICO antes de STOP o use recuperación controlada sin otra trayectoria."
       ;;
-    box_may_be_held|deposit_result_unverified)
-      die "El registro no demuestra abrazaderas vacías y depósito completado; no se enviará home."
+    box_may_be_held|deposit_result_unverified|open_result_unverified)
+      die "El registro no demuestra una liberación completada de la caja; no se enviará home."
       ;;
     home_attempted_unverified)
       die "Existe un intento de home, pero los 20 ejes no están en cero; no se repetirá la trayectoria."
@@ -445,9 +486,12 @@ confirm_run() {
 
 RUTA RESTRINGIDA DEL CICLO DE CAJA
 La recuperación retrocederá el chasis 0,50 m y sólo después ejecutará la
-secuencia vendor desde una postura de caja reconocida. Confirma que la caja y
-la mesa fueron retiradas, que las abrazaderas están vacías, que hay 1,50 m
-libres detrás, que nadie está en la envolvente y que el paro está preparado.
+secuencia vendor desde una postura de caja reconocida. Confirma que la caja
+está estable sobre la mesa o retirada y las abrazaderas vacías y sin contacto.
+La mesa, caja y personas deben quedar fuera de todo el recorrido de retroceso
+y recogida de brazos/cuerpo. Debe haber 1,50 m libres detrás, suelo despejado,
+cargador y Ethernet desconectados, ningún otro mando activo y una persona
+junto al paro. No hagas un retroceso previo: esta secuencia ya lo incluye.
 
 Escribe RECUPERAR CICLO DE CAJA A HOME para continuar:
 EOF

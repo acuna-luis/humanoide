@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "map_name": "MESAS2",
+  "map_type": "uslam",
+  "map_fingerprint": "a37895a6e89695e4b3a5fd966eeb80209f871a4dd7e3255308e57b9538f9f557",
+  "drop_pose_m_rad": [
+    -0.278215821,
+    0.886028107,
+    1.678875678
+  ],
+  "approach_distance_m": 1.0,
+  "position_tolerance_m": 0.05,
+  "yaw_tolerance_rad": 0.05,
+  "recorded_at_utc": "2026-09-09T10:30:55.409225+00:00",
+  "reference_description": "Pose de base enseñada en mesa 2; confirmar montaje, postura de caja, apoyo y mesas inmóviles antes de ejecutar."
+}

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "map_name": "MESAS2",
+  "map_type": "uslam",
+  "map_fingerprint": null,
+  "drop_pose_m_rad": null,
+  "approach_distance_m": 1.0,
+  "position_tolerance_m": 0.05,
+  "yaw_tolerance_rad": 0.05,
+  "recorded_at_utc": null,
+  "reference_description": "EJEMPLO INCOMPLETO, no ejecutable. --teach-mesa2 registra la pose real y la huella. 1.0 m es ilustrativo; elegir y comprobar la separación de premesa."
+}

@@ -1,21 +1,22 @@
 <root main_tree_to_execute="MainTree">
     <BehaviorTree ID="MainTree">
-        <Sequence name="pico_to_home_owner_sequence">
-            <!-- Stage 1: both empty clamps move to zero while body joints remain fixed. -->
-            <Parallel threshold="2">
-                <Action ID="MetaMove" type="arm" location="left" duration="19.617"
-                    joint_angles="0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0" />
-                <Action ID="MetaMove" type="arm" location="right" duration="19.617"
-                    joint_angles="0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0" />
+        <Sequence name="pico_to_home_open_v2">
+            <Parallel name="open_arms" threshold="2">
+                <Action ID="MetaMove" type="arm" location="left" duration="10.000" joint_angles="-0.0013422331894; -0.6; -1.56935821981; -1.56792011282; -0.374003690846; 9.58737992429e-05; 0" />
+                <Action ID="MetaMove" type="arm" location="right" duration="10.000" joint_angles="0.00124635939016; -0.6; 1.56916647221; -1.56772836522; 0.373332574252; -0.000479368996214; -0.000575242795457" />
             </Parallel>
-            <!-- Stage 2: arms stay at zero while head, lifter and waist reach numeric HOME. -->
-            <Parallel threshold="3">
-                <Action ID="MetaMove" type="head" location="single" duration="6.254"
-                    joint_angles="0.0; 0.0" />
-                <Action ID="MetaMove" type="lifter" location="single" duration="6.254"
-                    joint_angles="0.0; 0.0; 0.0" />
-                <Action ID="MetaMove" type="waist" location="single" duration="6.254"
-                    joint_angles="0.0" />
+            <Parallel name="lower_arms_while_open" threshold="2">
+                <Action ID="MetaMove" type="arm" location="left" duration="40.000" joint_angles="0; -0.6; 0; 0; 0; 0; 0" />
+                <Action ID="MetaMove" type="arm" location="right" duration="40.000" joint_angles="0; -0.6; 0; 0; 0; 0; 0" />
+            </Parallel>
+            <Parallel name="body_home_while_open" threshold="3">
+                <Action ID="MetaMove" type="head" location="single" duration="15.000" joint_angles="0; 0" />
+                <Action ID="MetaMove" type="lifter" location="single" duration="15.000" joint_angles="0; 0; 0" />
+                <Action ID="MetaMove" type="waist" location="single" duration="15.000" joint_angles="0" />
+            </Parallel>
+            <Parallel name="close_lowered_arms" threshold="2">
+                <Action ID="MetaMove" type="arm" location="left" duration="15.000" joint_angles="0; 0; 0; 0; 0; 0; 0" />
+                <Action ID="MetaMove" type="arm" location="right" duration="15.000" joint_angles="0; 0; 0; 0; 0; 0; 0" />
             </Parallel>
         </Sequence>
     </BehaviorTree>

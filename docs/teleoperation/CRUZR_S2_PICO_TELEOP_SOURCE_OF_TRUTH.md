@@ -1,5 +1,112 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**2026-09-09 — Corrección local PICO→HOME open_v2 (VERIFICADO offline; NO instalada/ejecutada):**
+Se retira del wrapper la tarea directa `cruzr/pico_to_home_owner` tras contacto
+comunicado por el operador. Nueva tarea independiente `cruzr/pico_to_home_open_v2`:
+abrir hombros roll a −0,60 rad (10 s), bajar otros ejes de brazo manteniendo
+apertura (40 s), llevar cuerpo a cero manteniendo brazos abiertos (15 s), cerrar
+hombros de brazos ya bajados (15 s). XML/hash nuevos; si sólo existe el antiguo,
+--run no envía acción. Instalación/recarga pendientes bajo condiciones existentes.
+Doce pruebas y sintaxis correctas; mapeo MetaMove verificado, espera aumentada
+120 s para 80 s nominales, nueva lectura articular después de confirmación,
+conservación de stdout/stderr y código remoto incluso cuando falla una acción.
+Barrido de envolventes, dos variantes/501 muestras por etapa: mínimo fuera de
+uniones locales 69,79 mm; menor cota entre muestras 7,95 mm condicionada a la
+interpolación común monótona. Todos los pares locales siguen informados, sin
+nuevas exenciones. No certifica registro físico, desviaciones, frenado ni escena;
+no sustituye ensayo real. Límites de postura/velocidad y protecciones intactos.
+Cambios sólo en PC; cero consultas o escrituras al robot durante esta revisión.
+Detalle: docs/teleoperation/CRUZR_PICO_HOME_OPEN_V2.md.
+Evidencia/backup previo: /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260909T124028Z_PICO-HOME-OPEN-REVISION.
+No restaurar la versión retirada para ejecutar; rollback operativo = suspender
+ruta y retirar únicamente la nueva tarea bajo E-stop, conservando otros cambios.
+Punto siguiente: instalación, recarga y ensayo supervisado pendientes después
+de resolver contacto/apagado. No asumir postura actual ni apagado completado.
+
+
+**2026-09-09 — CONTACTO REAL durante PICO→HOME body-zero (OBSERVADO por operador):**
+El usuario informa contacto al ejecutar owner --run tras aprobar pico_body_zero
+(error inicial 0,002684466 rad); resultado ACTION_FAILED_NO_RETRY. Esta evidencia
+invalida reutilizar el recorrido como libre de contacto: reconocimiento de postura
+y pruebas nominales NO demostraban seguridad del barrido. Se suspende su uso,
+incluida cualquier repetición desde la postura posterior al contacto. No enviar
+HOME, rearmar ni cambiar de modo para recuperar. Usuario solicita instrucciones
+para apagado con E-stop presionado; estado de caja/apoyo de brazos aún pendiente.
+Mantener paro; apagado lógico antes de KEY1 y chasis conforme informe de esta
+unidad. Apagado no garantiza relajación controlada ni liberación de frenos.
+Ningún movimiento, rearme o apagado enviado por el agente en este diagnóstico.
+Evidencia: ../Humanoide-vla-evidence/20260909T142542_PICO-HOME-OWNER-RUN/.
+
+
+**2026-09-09 — Nuevo bloqueo con caja durante PICO (OBSERVADO, recuperación pendiente):**
+Usuario informa caja sujeta y brazos asimétricos; considera segura la suelta.
+Consulta pasiva: Motion registra protección de fuerza izquierda 20:20:34.504
+(hora del log) y derecha 20:20:38.404, separadas 3,900 s. Cancelación de tarea
+PICO a 20:23:17 y nuevo inicio de tarea observado a 20:23:53; no asumir control
+inactivo persistente. En muestra inicial ambos paros 0, writers RobotCommand 0;
+gate de actuadores rechaza consigna latente, delta máximo 0,010203 rad.
+La secuencia de disparos puede explicar la asimetría, no demuestra por sí sola
+la causa mecánica del esfuerzo. No ejecutar HOME ni apertura workbin desde esta
+postura: apertura existente limitada al agarre frontal workbin. No se enviaron
+servicios, movimientos, cancelaciones ni rearme. Pendiente estado físico de
+apoyo de caja y cese confirmado de otros mandos antes de preparar liberación.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260909T122324Z_TELEOP-BOX-BLOCK`. Sustituye como estado operativo al preflight PICO
+body-zero previo; no reutilizar aquella postura ni su aprobación de extremos.
+
+
+**2026-09-09 — Corregido PICO→HOME con cuerpo a cero (VERIFICADO local y preflight vivo):**
+El gate reconoce dos referencias completas y discretas: `pico_body_flexed`
+(original) y `pico_body_zero` (los mismos 14 ejes de brazos; cabeza, elevador y
+cintura a cero). Selecciona la referencia más próxima y exige que TODOS los
+ejes cumplan 0,02 rad y velocidad máxima 0,01 rad/s. No mezcla referencias ni
+acepta posturas intermedias; HOME sigue exigiendo veinte ceros. El informe
+incluye referencia, valores esperados/medidos y cada articulación discrepante.
+XML/hash, tiempos 19,617+6,254 s, protecciones y confirmación local intactos;
+no requiere instalar ni recargar. Ocho tests pasan, incluidos rechazos en cada
+uno de los veinte ejes de ambas variantes, mezcla, datos inválidos y secuencia
+XML. `--preflight` vivo finalizó 0: `matched_reference=pico_body_zero`, error
+máximo 0,00278034 rad, velocidad cero, sano/control exclusivo, `MOVEMENT_COMMANDS=0`.
+Revisión geométrica archivada, 101 muestras por segmento y variante: menor
+separación OBB fuera de uniones locales 3,473 mm frente a lifter_pitch_2_link
+(antes 25,056 mm). Las 15 consultas de superficies STL cerca de ese mínimo,
+con hipótesis axial 0/20/40 mm, dieron mínimo 19.303 mm. Son distancias
+nominales muestreadas, no cota global ni certificación física; las uniones locales
+siguen en el informe y no se crean exenciones. Interpolador, errores dinámicos,
+parada y escena conservan las limitaciones ya declaradas al operador.
+Cambios persistentes sólo locales: gate, tests, ayuda y etiqueta del wrapper.
+Backup/rollback: restaurar esos tres archivos desde `before/` de la evidencia
+con el ejecutor detenido, preservando otros cambios. Sin reinicios ni movimiento.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260909T121801Z_PICO-HOME-BODY-ZERO`. Próximo paso: `--run` por operador presente,
+con confirmación literal existente; ejecución física de esta variante pendiente.
+
+
+**2026-09-09 — Diagnóstico de rechazo del ejecutor PICO→HOME (VERIFICADO en captura):**
+El intento del operador `20260909T141428_PICO-HOME-OWNER-RUN` no envió
+movimiento: el gate exige una única referencia PICO20D con elevador
+[0,299989118; −0,500269484; 0,199609250] rad. La captura guardada muestra
+[−0,000191748; −0,000191748; −0,000383495] rad, prácticamente HOME corporal.
+Los 14 ejes de brazos sí coinciden con PICO (error máximo 0,002013350 rad).
+Por tanto `postura_no_coincide_con_pico` no significa que el usuario no esté
+en modo PICO: significa que no coincide la postura corporal específica del
+recorrido revisado. Error máximo elevador 2 = 0,500077737 rad (28,65°),
+tolerancia 0,02 rad. Inferencia: variante de brazos PICO con cuerpo a cero,
+compatible con el overlay de control sólo de brazos; no demuestra modo vivo.
+No se alteraron referencias, tolerancias, tareas ni robot durante el diagnóstico.
+Pendiente adaptar y revisar explícitamente esa variante antes de ejecutarla;
+no ensanchar la tolerancia ni llevar el torso a la referencia antigua para pasar.
+Evidencia: `../Humanoide-vla-evidence/20260909T141428_PICO-HOME-OWNER-RUN/before-joints.yaml`
+y `scripts/teleoperation/cruzr_pico_to_home_owner_gate.py`.
+
+
+**2026-09-08 — ejecutor específico de salida PICO→HOME:** por autorización
+expresa del propietario se creó `scripts/teleoperation/cruzr_pico_to_home_owner.sh`.
+Sólo admite la referencia PICO20D revisada (tolerancia 0,02 rad e inmovilidad),
+mueve brazos a cero antes de los seis ejes corporales, exige instalación/recarga
+bajo E-stop y confirmación humana literal para `--run`, conserva las protecciones
+y no reintenta. Interpolador y parada siguen no certificados y quedan aceptados
+en la confirmación del operador. Validación local correcta; no instalado ni
+ejecutado sobre el robot al registrar esta entrada.
+
 **08-09, diagnóstico adicional localización02039005:** get_map_name de consulta
 termina SUCCESS/status4 y devuelve mapanuevo (no asumir test_route_01 histórico).
 Locate3d informa LocateRunning y publica pose, con avisos repetidos de estado

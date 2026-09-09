@@ -1351,13 +1351,13 @@ approach_box_before_arms() {
         measurement_ok=1
         break
       fi
-      warn "Par visual transitorio descartado (intento ${measurement_attempt}/3)."
+      warn "Medición visual rechazada; consulte el motivo anterior (intento ${measurement_attempt}/3)."
       if ((measurement_attempt < 3)); then
         sleep "$APPROACH_SETTLE_SECONDS"
       fi
     done
     ((measurement_ok == 1)) || \
-      die "La detección visual de la caja no fue estable tras tres pares nuevos."
+      die "No se obtuvo una pose visual admisible tras tres intentos; consulte el motivo anterior."
     read -r camera_x camera_y camera_z camera_yaw_deg <<<"$pose"
     [[ -n "$camera_x" && -n "$camera_y" && -n "$camera_z" && -n "$camera_yaw_deg" ]] || \
       die "La pose visual de la caja está incompleta."
