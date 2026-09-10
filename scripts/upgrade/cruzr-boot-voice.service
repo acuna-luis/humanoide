@@ -1,0 +1,14 @@
+[Unit]
+Description=Cruzr initial boot readiness voice and screen (no motion or recovery)
+After=docker.service
+
+[Service]
+Type=simple
+User=walker
+SupplementaryGroups=docker
+ExecStart=/usr/bin/python3 /etc/walker/boot/cruzr_boot_voice.py --watch
+TimeoutStopSec=10
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

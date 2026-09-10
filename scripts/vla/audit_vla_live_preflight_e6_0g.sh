@@ -22,7 +22,6 @@ readonly SHADOW_SCRIPT="$SCRIPT_DIR/run_ubtech_vla_shadow.sh"
 readonly MANIPULATION_CHECK="$REPO_ROOT/scripts/cruzr_blue_workbin_cycle.sh"
 readonly MOTION_HOST="${CRUZR_MOTION_HOST:-192.168.11.2}"
 readonly ROBOT_USER="walker"
-readonly DEFAULT_PASSWORD="aa"
 readonly ROS_CONTAINER="walker-ros.ros2-1"
 readonly MOTION_CONTAINER="walker-motion.manipulation_robot_app-1"
 readonly TASK_ROOT="/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config"
@@ -31,11 +30,10 @@ readonly READY_XML="$TASK_ROOT/s2_bio_vla/s2_vla_pick_large_teleop_ready.xml"
 readonly EXPECTED_VENDOR_READY_SHA256="f4025124491eba995ec824db3e3be91875f781a4b4e98928654bde9a021d8323"
 readonly EXPECTED_S2_READY_SHA256="c767f7396a325d375752fbce2351837e7f5e0c750902e4815ddd7acb24e2a9b2"
 
-CRUZR_SSH_PASSWORD="${CRUZR_SSH_PASSWORD:-$DEFAULT_PASSWORD}"
+CRUZR_SSH_PASSWORD="${CRUZR_SSH_PASSWORD:-}"
 export CRUZR_SSH_PASSWORD
 if [[ "${CRUZR_INTERNAL_ASKPASS:-0}" == "1" ]]; then
-  printf '%s\n' "$CRUZR_SSH_PASSWORD"
-  exit 0
+  exec python3 "$REPO_ROOT/scripts/lib/cruzr_ssh_askpass.py"
 fi
 
 MODE="check"
@@ -223,7 +221,13 @@ manipulation_status='CANONICAL_MANIPULATION_PREFLIGHT=not-run-estop-active'
 if [[ "$EXPECT_ESTOP" == "released" ]]; then
   if ! manipulation_status="$($MANIPULATION_CHECK --check 2>&1)"; then
     printf '%s\n%s\n%s\n' "$snapshot" "$shadow_status" "$manipulation_status"
-    printf 'ERROR: preflight canónico no disponible. Si Control Center está en WaitStartMotion tras un E-stop, no pulse Power/KEY1 ni improvise StartMotion: aplique el ciclo completo supervisado de la guía v0.2.0. No se envió movimiento.\n' >&2
+    if grep -q '^HASH_ERROR=' <<<"$manipulation_status"; then
+      printf 'PREFLIGHT_FAILURE=config-hash\n' >&2
+      printf 'ERROR: un archivo de Motion no coincide con el contrato del comprobador. Revise el HASH_ERROR anterior y la versión instalada; un reinicio no corrige esta discrepancia. No se envió movimiento.\n' >&2
+    else
+      printf 'PREFLIGHT_FAILURE=canonical-check\n' >&2
+      printf 'ERROR: preflight canónico rechazado; el motivo concreto figura arriba. No se envió movimiento.\n' >&2
+    fi
     exit 1
   fi
   grep -Fq 'ACTUATORS_OPERATION_ENABLED=1' <<<"$manipulation_status"

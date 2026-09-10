@@ -1,6 +1,10 @@
 # Paquetes externos conservados localmente (69 GB y 34 GB).
 /cruzrss2_vla_pack-002/
 /utars-udoke-config-v0.2.0_offline-001/
+# Paquetes 3D originales del proveedor (~107 MB entre ambos).
+# Mantenerlos completos en disco; referencias y hashes en docs/reports/.
+/cruzr_s2_description/
+/cruzr_s2_description_splint/
 
 # Instaladores y SOP de teleoperación conservados localmente. El índice
 # utats/README.md sí se versiona; los binarios se obtienen del proveedor.
@@ -24,6 +28,32 @@
 .cache/
 __pycache__/
 *.py[cod]
+/.secrets/
+
+# Entornos y resultados de herramientas Python.
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+
+# Artefactos de compilación y grabaciones de ROS/colcon del workspace.
+/build/
+/install/
+/log/
+/.colcon/
+/rosbag2_*/
+*.db3
+*.db3-shm
+*.db3-wal
+*.mcap
 
 # Configuración local de editores y sistema operativo.
 .idea/

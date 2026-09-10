@@ -1,5 +1,267 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**2026-09-10 — Limpieza del índice y credenciales locales (VERIFICADO offline).**
+Por petición del propietario se prepara un commit de los cambios pendientes.
+Se retiran del índice los dos paquetes 3D originales del proveedor: 130 archivos,
+unos 107 MB, conservados en disco y con todos sus SHA256 sin cambios.
+`.gitignore` añade esos directorios, secretos locales, entornos/cachés Python,
+salidas de ROS/colcon y grabaciones. Se comprueban 12 rutas excluidas y seis
+rutas de fuentes/ejemplos que siguen admitidas. Los modelos y las evidencias
+externas deben respaldarse aparte para reproducir los análisis desde otro PC.
+Tres scripts modificados dejan de incluir contraseña literal y usan un helper
+ASKPASS con entorno o archivo privado ignorado; se conserva el acceso local
+mediante `.secrets/cruzr_ssh_password`, permisos 600 en directorio 700.
+No se cambian credenciales del robot ni se reescribe el historial de Git.
+[Registro y restauración: OPS-01/PC-03](SYSTEM_CUSTOMIZATIONS.md).
+Validación: 91 pruebas Python offline, pruebas JavaScript del visor y sintaxis
+Bash/Python/XML/JavaScript correctas. No se conectó ni se ordenó nada al robot
+para esta limpieza. La validación física pendiente de trayectorias no cambia.
+Índice previo, fuentes anteriores, manifiesto y resultados de pruebas:
+`../Humanoide-vla-evidence/20260910T122441Z_COMMIT-CLEANUP/`.
+
+**2026-09-10 — Apertura adaptativa implementada en planificador; activación física PENDIENTE.**
+Propietario solicita aplicar optimizaciones y no abrir de más. Nuevo
+`plan_clamp_home_adaptive.py`: abre cada hombro sólo hasta `min(actual,−0,50rad)`,
+conserva el lado más abierto y los demás ángulos, baja antes de cerrar, omite
+etapas exactamente inmóviles y corrige pequeños errores corporales. Clasifica
+sólo formas PICO/brazos abajo y dos familias corporales; rechaza otras posturas.
+Siete casos auditados501muestras: límites y cotas nominales no locales positivos;
+PICO cuerpo cero15,417s, flexionado18,544s, ya abierto13,876s. Hipótesis quintic.
+Con error5° siguen25–35pares sin separación demostrada y la parada no está
+acotada. **No se exportó/instaló una ruta ni se sustituyó HOME interno; reducir
+apertura/tiempos en el robot sigue pendiente.** Los perfiles Motion conservan20s.
+**Sí aplicado al ejecutor PC:** si actuadores sanos y JointState nuevos demuestran
+HOME20D≤0,005rad e inmovilidad≤0,002rad/s, termina `ALREADY_HOME_MEASURED` sin
+enviar trayectoria. Errores de lectura abortan; fuera de HOME conserva gate PICO.
+Ocho pruebas nuevas del planificador y22del ejecutor pasan. Lectura realJointState
+vacía/ROSA sin tipo fue rechazada; preflight posterior abortó por paro accionado.
+Lecturas independientes confirman principal1/servo0. No se acredita una postura
+actual ni ensayo del camino nuevo. Sólo lectura remota y cambios PC; cero
+movimientos, instalaciones o reinicios. [Detalle y reanudación](teleoperation/CRUZR_HOME_ADAPTATIVO.md).
+Backup/planes/consultas: `../Humanoide-vla-evidence/20260910T120838Z_ADAPTIVE-HOME/`.
+
+**2026-09-10 — Corregida incompatibilidad del preflight con HOME abierto (VERIFICADO local y en vivo, sólo lectura).**
+El ejecutor PICO 4× rechazaba `home.xml` SHA05174d2b…8cbe, aunque era exactamente
+el overlay MOT-01 instalado. El preflight canónico de `cruzr_blue_workbin_cycle.sh`
+conservaba únicamente el hash del HOME directo anterior. Ahora reconoce ambos
+archivos exactos; para open-v3-20s exige además el hash de `libmeta_move.so`
+comprobado por el instalador. No admite hashes arbitrarios ni cambia trayectorias.
+El auditor E6.0G diferencia `PREFLIGHT_FAILURE=config-hash` y deja de diagnosticar
+WaitStartMotion/recomendar el ciclo de encendido por cualquier fallo canónico.
+Seis regresiones nuevas y cinco controles previos pasan; sintaxis Bash correcta.
+`cruzr_pico_to_home_owner.sh --preflight` completo termina con
+`PICO_HOME_PREFLIGHT_OK` y `MOVEMENT_COMMANDS=0`: perfil4× exacto, acciones1,
+PICO body_zero, velocidad0, error máximo0,002972rad, baterías59,3/65%,
+paros0/0 y cargador0. No hubo instalación, recarga, cambio de modo ni movimiento.
+Cambios persistentes sólo en PC. Reanudación: el mismo `--run` con su comprobación
+presencial; no hace falta `install`/`reload`. Esto no cierra el ensayo físico4×.
+Backup, log y fuentes: `../Humanoide-vla-evidence/20260910T114627Z_HOME-PREFLIGHT-CONTRACT/`.
+[Contrato y reversión](teleoperation/CRUZR_HOME_INTERNO_APERTURA.md#compatibilidad-del-preflight-canónico).
+
+**2026-09-10 — Comparación de trayectorias con abrazaderas terminada (VERIFICADO offline; candidatos sin activar).**
+Nuevo comparador FK/envolventes/tiempos y ocho pruebas, sin cambios a XML,
+generadores ni ejecutor. Conserva geometría completa/2mm/intervalo0–40mm y todos
+los pares locales registrados. Concordancia `splint`–runtime en744estados:
+orígenes de abrazaderas <0,027mm y orientación<0,0023°; cabeza difiere4,6mm.
+PICO cuerpo a cero: omitir etapa exactamente inmóvil permitiría20→16,25s,
+sin variar recorrido nominal ni máximos quintic individuales. Requiere verificar
+asentamiento real antes de activarlo. Apertura−0,45rad permite14,946s pero pierde
+unos35mm nominales respecto al torso; no se prioriza. Cuerpo y brazos en paralelo
+mantienen máximos individuales pero requieren comprobar cargas/sincronización.
+La cota conservadora con5° por articulación no demuestra separación para todos
+los pares; frenado sin cota. No se afirma validación física ni despliegue.
+Se revisó además el alcance de READY/ENTRY/MetaClamp/transferencia: el URDF solo
+no describe primitivas nombradas, contacto, carga y escena de todo el flujo.
+[Informe completo y reproducción](reports/2026-09-10_OPTIMIZACION_TRAYECTORIAS_ABRAZADERAS.md).
+Fuentes/evidencia: `../Humanoide-vla-evidence/20260910T113554Z_CLAMP-TRAJECTORY-OPTIMIZATION/`.
+Reanudación: para optimizar en operación, contrastar la variante sin etapa
+inmóvil antes de reducir apertura o escalar todos los tiempos. Perfil vigente20s.
+
+**2026-09-10 — Revisión de carpetas de descripción 3D (VERIFICADO local).**
+La variante base describe pinzas PGC con dos dedos; `splint` las sustituye por
+abrazaderas rígidas. Sólo cambia el URDF entre archivos comunes y se añaden
+dos STL. Sus mallas de abrazadera coinciden byte a byte con la captura runtime
+del 08-09: no son una geometría nueva para resolver los solapamientos.
+El URDF completo difiere del runtime; los auditores actuales siguen usando su
+snapshot explícito. Parseo/árbol/mallas correctos, sin lanzar ROS ni modificar
+modelos o robot. Mismo nombre interno en ambos paquetes y dependencia GUI
+omitida en manifiesto. [Informe y hashes](reports/2026-09-10_MODELOS_CRUZR_S2_DESCRIPTION.md).
+Evidencia: `../Humanoide-vla-evidence/20260910T112000Z_DESCRIPTION-REVIEW/`.
+Reanudación: si se pide integrarlos, contrastar cinemática/montaje y preparar
+visualización o análisis aislado. Sólo documentación añadida, sin commit/push.
+
+**2026-09-10 — Política global de registro y recuperación tras actualización (VERIFICADO local).**
+Por petición del propietario, `AGENTS.md` obliga a registrar en la misma
+intervención todo cambio de robot, PC y PICO, incluidas acciones temporales,
+archivos, servicios, contenedores, red, paquetes, mapas y calibraciones.
+Nuevo [registro de adaptaciones](SYSTEM_CUSTOMIZATIONS.md), con IDs, estado
+vigente, fuentes, destinos, dependencias, respaldo, aplicación, activación,
+verificación y reversión; separa cambios retirados/borradores y pruebas pendientes.
+Nueva [guía de respaldo y reaplicación](guides/CRUZR_REAPLICAR_CAMBIOS_TRAS_ACTUALIZACION.md)
+con copia externa de ambos hosts y trabajo sin commit, comparación de versiones
+y receta de espera/voz/pantalla. No restaurar indiscriminadamente compose,
+HOME antiguo, guard retirado o estados transitorios de control.
+Se amplió `preupgrade_backup_remote.sh`: boot/systemd/overlays y configuraciones
+de manipulación, navegación y visor dentro de contenedores; inventario/diff,
+permisos privados iniciales, checksums transportables y errores parciales
+explícitos. Cuatro pruebas offline correctas, sintaxis Bash y enlaces revisados.
+Consolidación basada en evidencia documental; no es inventario nuevo en vivo.
+PENDIENTE: primera captura con el respaldo ampliado en ambos hosts; permanecen
+las pruebas físicas y de próximo arranque ya pendientes. No hubo conexiones,
+movimientos, despliegues ni reinicios del robot en esta intervención.
+Backup/fuentes/hashes: `../Humanoide-vla-evidence/20260910T110924Z_SYSTEM-CHANGE-POLICY/`.
+Punto de reanudación: usar la ficha OPS-01 y la guía antes de una actualización;
+mantener el registro con cada intervención futura. Sin commit/push.
+
+**2026-09-10 — Aviso visual de arranque añadido a la voz (VERIFICADO en pantalla).**
+Por petición del usuario, el aviso inglés se acompaña de `巡检`/`inspection.mp4`
+(anillo azul con barrido) durante la primera espera de liberar E-stop. El añadido
+sólo se superpone a `breath`; otras expresiones del proveedor tienen prioridad.
+Permiso de visualización renovable y caducidad12s independiente en navegador:
+lecturas Motion/cámaras crecientes/paros/cargador/identidadCC; al perderlas deja
+la pantalla nativa. Cero llamadas de expresión ni comandos de movimiento.
+Instalados módulo/JS de pantalla y servicio de voz actualizado en Vision; enabled,
+Type=simple y voz única por boot conservada. Pruebas23Python+Node+Chromium
+correctas, captura real del visor muestra巡检. Se recargó exclusivamente la
+sesión gráfica LightDM para aplicar; CC y contenedores conservan identidad.
+Primera versión refrescaba en18s; consultas paralelizadas y lectura de proceso directa para conservar TTL12s.
+Renovación final observada8,54–8,75s; preview activo hasta liberación/pérdida
+de comprobación o30min. PENDIENTE: próximo encendido con voz y vídeo combinados. El indicador
+no valida el ensayo físico del HOME nuevo ni sustituye la preparación presencial.
+Backup: /etc/walker/boot/backups/20260910T102219Z_BOOT-VISUAL/.
+Evidencia: ../Humanoide-vla-evidence/20260910T102219Z_BOOT-VISUAL/.
+[Uso y reversión](guides/CRUZR_AVISO_VOZ_ARRANQUE.md).
+
+**2026-09-10 — Chequeo previo a primera liberación del HOME nuevo (VERIFICADO técnico).**
+`cruzr_boot_ready.sh --check` terminó con RELEASE_TECHNICAL_CHECK=passed:
+CC en primera espera de liberación, tres respuestas Motion y seis cámaras con
+marcas de tiempo avanzando. Principal pulsado, servo liberado, cargador
+desconectado y HOME open-v3-20s/hash de MetaMove esperados. Baterías 70,8/68,3 %.
+Consulta VLA de sólo lectura: inferencia/control detenidos y publicadores del
+SDK cero. No se envió movimiento ni se reinició ningún servicio.
+**PENDIENTE:** confirmación actual del espacio de apertura lateral, sujeciones
+retiradas y supervisión junto al paro, seguida de ensayo físico del HOME nuevo.
+La comprobación técnica no constituye validación física de la trayectoria.
+Evidencia: ../Humanoide-vla-evidence/20260910T101530Z_INTERNAL-HOME-FIRST-RELEASE/.
+
+**2026-09-10 — HOME interno sustituido por apertura relativa; 20 s instalados.**
+Usuario confirma brazos abajo/vacíos/libres y solicita corregir `cruzr/home`.
+Se reemplazó su XML por home_open_v3_20s: abrir ambos hombros −0,4 rad relativos
+conservando los otros ángulos; bajar abiertos a roll−0,6; cuerpo HOME; cerrar
+sólo con brazos abajo. Evita que copiar PICO abra elevando brazos desde abajo.
+No cambia task_list, primitivas, límites ni el ejecutor PICO. Principal1/servo0/
+cargador0 y hash de MetaMove comprobados antes/después de instalación y recarga.
+XML nuevo SHA05174d2b…8cbe; original50d819d6…ed88 respaldado en
+/etc/walker/trajectory-overlays/20260910T100528.529307Z_home_open_v3/.
+Sólo manipulación reiniciada (StartedAt10:06:09Z); CC/hw no reiniciados, cero
+objetivos enviados. Manipulación espera ListControllers bajo paro: no afirmar
+validación física ni ejecución del árbol. Se conservó E-stop pulsado.
+Barrido4referencias×4etapas×501muestras: mínimo69,79mm fuera de uniones locales,
+cota condicional7,929mm. No cubre escena/seguimiento/parada ni posturas arbitrarias.
+7 pruebas nuevas y20 previas correctas. Seis segundos: borrador local, sin
+instalar; aceleración quintic estimada11,11× frente a20s. Tiempo instalado20s,
+primera prueba física pendiente. No repetir reload/cambiar modo para probar.
+Evidencia: ../Humanoide-vla-evidence/20260910T095255Z_HOME-ROUTE-REVIEW/ y
+20260910T100548.301769Z / 20260910T100621.887349Z_INTERNAL-HOME-CHANGE.
+[Detalle, limitaciones y reversión](teleoperation/CRUZR_HOME_INTERNO_APERTURA.md).
+
+**2026-09-10 — Incidente tras instalar 4×: HOME interno por cambio a auto (VERIFICADO).**
+El perfil 4× quedó instalado con XML/hash exacto, pero la recarga dejó acciones0
+sin estados articulares. Liberar el paro no recuperó por sí solo Motion.
+A09:38:19Z CC recibió `workMode:auto_task` desde TeleopMode y ejecutó StartMotion;
+a09:38:33Z Motion inició `cruzr/home`, ordenando todos los ejes de ambos brazos
+a cero en6s. Operador pulsó E-stop a09:38:37Z al ver acercamiento al cuerpo.
+Los intentos del script 4× se detuvieron en preflight; no enviaron esa ruta.
+La nueva trayectoria no sustituye el HOME interno del fabricante. No usar
+cambio a auto/StartMotion/reinicio para recuperar desde brazos elevados.
+Nuevo encendido: principal1 y CC WaitEStopRelease comprobados. Voz autónoma
+completó su chequeo y TTS Success/status4 a09:45:27Z, primera ejecución en
+encendido completo registrada; no confirma por sí misma postura ni audición.
+Pendientes respuesta física (brazos abajo/elevados, carga, contacto), liberación
+supervisada y ensayo 4×. Mantener E-stop mientras se verifica la postura.
+Sólo lectura remota y documentación local; cero reinicios/objetivos/cambios
+remotos del agente. Evidencia: ../Humanoide-vla-evidence/20260910T094443Z_RELEASE-AFTER-RELOAD/.
+[Secuencia y diagnóstico](incidents/2026-09-10_HOME_INTERNO_TRAS_RELOAD_4X.md).
+
+**2026-09-10 — PICO→HOME: 4× por defecto; perfiles rápidos verificados sólo en PC.**
+**OBSERVADO por el operador:** open_v2 original funciona bien, pero es lenta.
+**VERIFICADO local:** el ejecutor acepta `--speed 1|3|4` en todos sus modos;
+por petición expresa, omitirlo selecciona 4×. Tiempos de movimiento nominales:
+80 / 26,666 / 20 s, más preflight y verificación. Se conservan objetivos,
+apertura de hombros, orden de las cuatro etapas y protecciones. Cada velocidad
+exige su XML/hash y tarea independientes; si falta, no envía acción ni cambia
+a otro perfil. El XML original mantiene hash6b8309f3…6999; 3×f66e53b2…8da y
+4×6dd482a7…7dc. Veinte pruebas y bash -n correctos; ShellCheck no está instalado. Sin argumentos
+sigue siendo --check local, sin movimiento. Timeout120s y TimeRatio1 intactos.
+**PENDIENTE:** instalar/cargar y ensayar 3×/4× en robot; no hubo conexión,
+escritura remota ni movimiento en esta modificación. El éxito comunicado de
+1× no certifica seguimiento/parada a 4× ni acredita el estado físico actual.
+Preparar instalación con brazos abajo/vacíos y E-stop conforme a la guía;
+no reiniciar desde PICO para forzar la carga. Reversión: `--speed 1`, sin
+restaurar la tarea directa retirada. Evidencia/backup antes y después:
+`../Humanoide-vla-evidence/20260910T091420Z_PICO-HOME-SPEED/`.
+[Perfiles, carga y límites de la verificación](teleoperation/CRUZR_PICO_HOME_OPEN_V2.md).
+
+**2026-09-10 — Aviso de voz de arranque instalado; comprobación técnica verificada:**
+A petición del propietario, Vision tiene `cruzr-boot-voice.service` habilitado
+para decir «Ready to release the emergency stop.» una vez por encendido.
+No necesita PC ni Codex. El servicio nuevo sólo consulta y usa la acción TTS;
+no inicia Motion ni reinicia contenedores. Espera al CC actual en su primera
+WaitEStopRelease, tres respuestas Motion, seis cámaras en dos rondas con
+marcas temporales crecientes y paros/cargador1/0/0. Recomprueba antes de hablar.
+El wrapper previo de CC ahora incluye esas cámaras antes del arranque vendor.
+Guard antiguo disabled/inactive; compose, ID y StartedAt de CC conservados.
+Alternativa desde PC: `./scripts/cruzr_boot_ready.sh --check`, que ya ha pasado
+en vivo y mostrado LISTO PARA LIBERAR EL E-STOP. Preparación física de brazos
+abajo/vacíos y zona libre sigue a cargo del operador; el aviso es técnico.
+Pruebas locales16 correctas; systemd-analyze verify rc0. Dos reproducciones:
+la segunda devolvió status4, desc Success, SpeechState1001000 y el operador
+confirmó «Sí, se entiende bien». Corregido el análisis del resultado TTS
+(esperaba SUCCEED en vez del Success real); comprobado contra la respuesta
+capturada, sin repetir voz de nuevo. Instalación y audición verificadas;
+pendiente observar el aviso durante el siguiente encendido completo.
+[Uso, instalación, evidencia y rollback](guides/CRUZR_AVISO_VOZ_ARRANQUE.md).
+Evidencia: ../Humanoide-vla-evidence/20260910T081749Z_BOOT-VOICE/.
+
+**2026-09-10 — Nuevo arranque en frío: espera de Motion verificada; paro aún pulsado:**
+Tras apagado completo y brazos abajo confirmados, el usuario inicia el encendido
+y pregunta por un sonido. Ambos hosts responden. Contenedor CC inició07:53:53Z;
+hw, manipulación y self-check Motion07:55:29Z, sin reinicios automáticos.
+La espera instalada registró cuatro respuestas fallidas0/3, después1/3,2/3,3/3,
+y sólo inició CC a07:56:02Z. Nueva instancia cc_main.20260910_155603.184.log
+alcanza WaitEStopRelease; no reutilizar el log Term del apagado anterior.
+Principal1/servo0/cargador0. Guard antiguo disabled/inactive y ambos hashes
+sin cambios. XML open_v2 y task_list sobreviven al apagado con hashes exactos.
+Prevención de la carrera observada comprobada en este encendido; no equivale
+a Motion operativo antes de self-check/StartMotion tras liberar.
+Comprobación ampliada sólo --check terminada rc0: x86 tres respuestas, seis
+cámaras en dos rondas, v0.2.0, WaitEStopRelease y seguridad1/0/0.
+Se indica liberar el principal con brazos abajo/vacíos/libres de las sujeciones
+del apagado, recorrido despejado y persona junto al paro. Puede iniciar HOME interno.
+Pendientes confirmación de liberación, autodiagnóstico, StartMotion, HOME y anillo.
+Sin reinicios ni objetivos enviados por el agente en este arranque.
+Evidencia: restart-20260910T075519Z dentro de
+../Humanoide-vla-evidence/20260910T072711Z_PICO-RELOAD-NO-ACTION/.
+
+**2026-09-10 — Apagado completo confirmado; brazos abajo, nuevo arranque pendiente:**
+Usuario confirmó E-stop pulsado y brazos asegurados, además de abrazaderas
+vacías y postura PICO estable/sin contacto. Lectura nueva: principal1, servo0,
+cargador0; servicio /emb/pm_shutdown redescubierto con tipo ShutDown.
+Se envió una única solicitud deadline_sec15/confirm-to-shutdown a las07:45:08Z
+(PC); success=True. No se reinició ni rearmó Motion ni se envió HOME.
+Después ambos hosts dejaron de responder; el operador confirmó pantalla y
+luces superiores apagadas y brazos asegurados/estables. Sólo entonces se indicó
+KEY1 y después botón metálico del chasis, conservando paro y aseguramiento.
+Después de KEY1 y chasis, usuario confirma «apagado y brazos abajo» en respuesta
+a indicador verde apagado/estabilidad. Apagado completo cerrado. Se indica
+nuevo arranque habitual chasis→KEY1→encendido manteniendo E-stop pulsado y
+brazos vacíos/libres, antes de comprobar servicios y permitir liberar el paro.
+PENDIENTE: confirmación de encendido con paro, readiness y recuperación Motion.
+La nueva ruta open_v2 sigue sin ensayo; no activar PICO hasta recuperar el arranque.
+Evidencia: subdirectorio shutdown-* de
+../Humanoide-vla-evidence/20260910T072711Z_PICO-RELOAD-NO-ACTION/.
+Detalle: docs/incidents/2026-09-10_PICO_RECARGA_SIN_MOTION.md.
+
 **2026-09-10 — PICO→HOME instalado, pero Motion detenido tras E-stop (VERIFICADO):**
 El operador instaló/recargó open_v2; XML remoto hash6b8309f3…6999 exacto,
 una entrada y proceso posterior al task_list. Después de entrar/salir de PICO,
@@ -8,11 +270,15 @@ espera /mc/rosa_control/start; manipulación recargada07:20:47Z espera ListContr
 Liberar a15:24:16 no produjo nuevo StartMotion. Acción0 y actuadores sin muestra
 (timeout7s); fault_current vacío no demuestra disponibilidad. CC conserva la
 prevención de arranque y última transición AutoTaskMode, no WaitStartMotion.
-Usuario confirma «en PICO, estable sin contacto»; abrazaderas vacías por confirmar.
+Usuario confirma «en PICO, estable sin contacto» y después abrazaderas vacías.
 No reutilizar HOME medido anterior ni reiniciar para probar: HOME interno no es open_v2.
 Corregido wrapper LOCAL: propaga fallos dentro de sustituciones Bash, conserva
 diagnóstico, distingue orden temporal/servidor disponible y retira indicación
 de liberar paro inmediatamente tras recarga. Preparación exige brazos abajo/vacíos.
+Preparación de apagado: servicio /emb/pm_shutdown y contrato ShutDown verificados
+sólo por lectura; principal sigue0. Se indica pulsarlo y se espera confirmar paro
+y aseguramiento presencial de los brazos contra caída/golpe antes de apagar.
+No se ha enviado apagado: ausencia de caja no demuestra descenso controlado.
 17 pruebas locales pasan; --preflight vivo corregido falla1 con PREFLIGHT_FAILED
 antes de consultar runtime, sin objetivos. Ninguna escritura/reinicio en robot
 desde el agente durante este diagnóstico. Recuperación física y ensayo pendientes.
@@ -1903,6 +2169,12 @@ Estos cambios son workarounds locales y deben revisarse después de cualquier
 actualización oficial.
 
 ### 4.3 Guard de arranque v0.2.0
+
+**Nota de vigencia 2026-09-10:** el mecanismo descrito a continuación es
+histórico. Su unidad permanece deshabilitada/inactiva; fue sustituido por la
+espera preventiva dentro del comando de CC, con voz y pantalla separadas.
+Para reinstalar usar las fichas BOOT-01/02/03 del
+[registro vigente](SYSTEM_CUSTOMIZATIONS.md), no activar el guard antiguo.
 
 **VERIFICADO:** Vision arrancaba Control Center antes de que Motion ofreciera
 servicios x86 funcionales. El self-check fallaba, la cara quedaba roja y la

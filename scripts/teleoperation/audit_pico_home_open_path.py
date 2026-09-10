@@ -16,7 +16,8 @@ from cruzr_pico_home_open_path import waypoints, DURATIONS_S, REVISION
 from cruzr_pico_to_home_owner_gate import JOINT_ORDER, PICO_VARIANTS
 
 
-def audit(snapshot, samples):
+def audit(snapshot, samples, *, path=waypoints, durations=DURATIONS_S,
+          revision=REVISION, variants=PICO_VARIANTS):
     if not 101 <= samples <= 2001:
         raise ValueError("samples must be 101..2001")
     joints, boxes, meshes = fk.load_robot(snapshot/'runtime.urdf', snapshot/'runtime-meshes.zip')
@@ -30,7 +31,7 @@ def audit(snapshot, samples):
     limits = {j.get('name'): [float(j.find('limit').get(k)) for k in ('lower', 'upper')]
               for j in ET.parse(snapshot/'runtime.urdf').getroot().findall('joint')
               if j.get('name') in JOINT_ORDER}
-    report = {'revision': REVISION, 'movement_commands': 0, 'physical_approval': False,
+    report = {'revision': revision, 'movement_commands': 0, 'physical_approval': False,
               'scope': 'clamp-robot and clamp-clamp; archived geometry, monotone joint segments',
               'limitations': ['Not a physical safety certificate; prior contact invalidated direct HOME.',
                              'Actual interpolation, tracking, braking and external scene not verified.',
@@ -39,9 +40,11 @@ def audit(snapshot, samples):
               'source_sha256': {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in
                   [snapshot/'runtime.urdf', snapshot/'runtime-meshes.zip', snapshot/'geometry-check-1001.json',
                    Path(__file__), Path(__file__).with_name('cruzr_pico_home_open_path.py')]}}
-    for variant, start in PICO_VARIANTS.items():
+    for variant, start in variants.items():
         records = []
-        points = waypoints(start)
+        points = path(start)
+        if len(points) != len(durations)+1 or any(d <= 0 for d in durations):
+            raise ValueError('Each segment needs a positive duration')
         for point in points:
             if any(not limits[n][0] <= q <= limits[n][1] for n, q in zip(JOINT_ORDER, point)):
                 raise ValueError('Target exceeds URDF limits')
@@ -63,12 +66,12 @@ def audit(snapshot, samples):
                            for n in ('sixforce', 'wrist_roll', 'wrist_pitch')}
             body_pairs = {k: v for k, v in minima.items() if k not in local_pairs}
             worst = min(body_pairs, key=lambda k: body_pairs[k]['gap_m'])
-            record = {'segment': i, 'duration_s': DURATIONS_S[i], 'minimum_by_pair': minima,
+            record = {'segment': i, 'duration_s': durations[i], 'minimum_by_pair': minima,
                       'sampling_pair_travel_bound_m': travel_pair,
                       'nonattachment_minimum_pair': worst,
                       'nonattachment_sample_min_m': body_pairs[worst]['gap_m'],
                       'nonattachment_conditional_lower_bound_m': body_pairs[worst]['gap_m']-travel_pair,
-                      'quintic_vmax_rad_s': float(1.875*np.max(np.abs(z-a))/DURATIONS_S[i])}
+                      'quintic_vmax_rad_s': float(1.875*np.max(np.abs(z-a))/durations[i])}
             records.append(record)
             print(variant, i, worst, record['nonattachment_conditional_lower_bound_m'], flush=True)
         report['variants'][variant] = records

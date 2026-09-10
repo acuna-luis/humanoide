@@ -119,6 +119,38 @@ Este baseline es histórico y debe verificarse al comienzo de una intervención:
 
 ## Disciplina documental y de cambios
 
+- La política de registro es **global para este proyecto**: robot (Motion y
+  Vision), PC, PICO y herramientas auxiliares. Consulte y mantenga
+  [`docs/SYSTEM_CUSTOMIZATIONS.md`](docs/SYSTEM_CUSTOMIZATIONS.md). Es el índice
+  del estado que se quiere conservar después de una actualización; los logs y
+  las incidencias conservan la historia, no sustituyen ese índice.
+- **Todo cambio del sistema debe quedar registrado en la misma intervención**,
+  también si se hace manualmente o sólo altera el estado en ejecución:
+  archivos, firmware, paquetes, contenedores, servicios/autoarranque, red,
+  permisos, parámetros, modelos, mapas, calibraciones y perfiles. Un reinicio
+  o una prueba temporal se registra con su resultado y restauración; una
+  consulta que no cambia nada sólo necesita evidencia si aporta un hallazgo.
+- Antes de modificar, identifique y respalde el estado anterior; después,
+  actualice la ficha con ID estable, fecha/zona, motivo, destino exacto
+  (host/contenedor/ruta), fuente reproducible, versión/hash, dependencias,
+  procedimiento de aplicación, activación, verificación, reversión y evidencia.
+  Distinga `instalado`, `cargado` y `probado físicamente`. Si falta algún dato,
+  marque `PENDIENTE`; no lo dé por comprobado.
+- Las instrucciones para recrear un cambio deben quedar en un script o receta
+  versionados y enlazados desde su ficha, sin depender del chat, `/tmp` ni de un
+  historial de terminal. No cierre una intervención con cambios sin registrar.
+  Si se sustituye o retira una adaptación, actualice el estado vigente y
+  conserve la referencia a la anterior para evitar reinstalarla por error.
+- Antes y después de firmware, imágenes Docker, SDK o recreación de
+  contenedores, siga
+  [`docs/guides/CRUZR_REAPLICAR_CAMBIOS_TRAS_ACTUALIZACION.md`](docs/guides/CRUZR_REAPLICAR_CAMBIOS_TRAS_ACTUALIZACION.md):
+  copia externa al robot, inventario de versiones y comparación por ficha.
+  Reaplique selectivamente sólo adaptaciones compatibles; no copie encima una
+  configuración antigua completa ni restaure estados transitorios de control.
+- Los backups privados, credenciales, paquetes grandes y evidencias sin
+  sanear permanecen fuera de Git. Registre su ubicación y checksum, no secretos.
+  Conserve también los archivos locales aún no incluidos en un commit; un hash
+  de commit por sí solo no reproduce una carpeta con cambios pendientes.
 - Después de un hallazgo o cambio material, actualice
   `docs/PROJECT_SOURCE_OF_TRUTH.md` y la fuente especializada correspondiente.
 - Registre fecha, estado (`VERIFICADO`, `OBSERVADO`, `INFERENCIA`, `PENDIENTE`

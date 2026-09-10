@@ -14,6 +14,12 @@ iniciar una sesión desde este repositorio y lo dirige después a la guía
 especializada correspondiente. El estado físico siempre debe comprobarse de
 nuevo: el relevo documenta el último estado conocido, no el estado presente.
 
+El [registro de adaptaciones del sistema](docs/SYSTEM_CUSTOMIZATIONS.md)
+identifica qué conservar, sus fuentes, respaldos y comprobaciones. La
+[guía para recrearlas tras una actualización](docs/guides/CRUZR_REAPLICAR_CAMBIOS_TRAS_ACTUALIZACION.md)
+ordena el respaldo y la reaplicación selectiva. Mantener ambos forma parte de
+la política obligatoria de `AGENTS.md`.
+
 ## Estructura
 
 ```text

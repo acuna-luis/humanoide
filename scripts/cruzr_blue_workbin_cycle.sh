@@ -8,7 +8,6 @@ set -Eeuo pipefail
 readonly MOTION_HOST="192.168.11.2"
 readonly WIFI_GATEWAY="192.168.42.2"
 readonly ROBOT_USER="walker"
-readonly DEFAULT_PASSWORD="aa"
 readonly MOTION_CONTAINER="walker-motion.manipulation_robot_app-1"
 readonly ROS_CONTAINER="walker-ros.ros2-1"
 readonly EXPECTED_HW_TYPE="cruzr_s2_v1"
@@ -37,6 +36,10 @@ readonly HEAD_LOWER_SHA="f3a73626f97b471d4a0a03c98c24de32243651116c497328e69b5dd
 readonly ARMS_READY_SHA="1527ca90105d70d7c8acda3310d15cec1a354a9938e8f30d11e11d2e923f4be7"
 readonly HOME_SHA="ec2c187c2217ca2dc1767179fba570677f062527fa7070729e81b05141f8980c"
 readonly DIRECT_HOME_SHA="50d819d6d6190280c6efee1dc275877362c3f7c807ec733fbc3c7ed217daed88"
+# Contrato del overlay MOT-01; mantener sincronizado con su instalador.
+# Reconocer un archivo no equivale a validar su trayectoria desde cualquier postura.
+readonly OPEN_HOME_SHA="05174d2b4cf003b9b1c5274cd445b0d4faefe4276c5fbe8e59e68e6b64ee8cbe"
+readonly OPEN_HOME_META_SHA="bfeab1c7a295b58cd96fddd20916fc3f7fe16bd8c8ad1e77720f48aad34ccc69"
 readonly CLAMP_META_SHA="531f02cd9b3922142d66944633d35f717f50b6bd5a9a17c9ac7d770edd010b8f"
 readonly DEPOSIT_META_SHA="88179f36bfa17aa1e161792680ece2cd716ca0c7cc457ee5c9135e0dd5172f11"
 readonly OPEN_META_SHA="02df67780fd37ee45d287a1e8a103f5e299c653481137b9e94895130d01f7a3d"
@@ -46,13 +49,12 @@ readonly CLAMP_TEMPLATE_SHA="76509f5694f0d73d71f65c59f12abc8f4e7740f3704cfdda7b5
 readonly DEPOSIT_TEMPLATE_SHA="b6b1fbf078b0d8447078b49853d698fd39ffbe6250184b221d1e0b448ebc1f5b"
 readonly OPEN_ONLY_TEMPLATE_SHA="90cd1be8ac7421ed36882175735429b9c6d2bd88831b3f2995501b4e7e37b119"
 
-CRUZR_SSH_PASSWORD="${CRUZR_SSH_PASSWORD:-$DEFAULT_PASSWORD}"
+CRUZR_SSH_PASSWORD="${CRUZR_SSH_PASSWORD:-}"
 export CRUZR_SSH_PASSWORD
 
 # ssh/scp usan este mismo archivo como proveedor de contraseña.
 if [[ "${CRUZR_INTERNAL_ASKPASS:-0}" == "1" ]]; then
-  printf '%s\n' "$CRUZR_SSH_PASSWORD"
-  exit 0
+  exec python3 "$(dirname -- "$(readlink -f -- "$0")")/lib/cruzr_ssh_askpass.py"
 fi
 
 SCRIPT_PATH="$(readlink -f -- "$0")"
@@ -307,7 +309,7 @@ remote_preflight() {
     "$MOTION_CONTAINER" "$ROS_CONTAINER" "$EXPECTED_HW_TYPE" \
     "$EXPECTED_IMAGE_FRAGMENT" "$HEAD_LOWER_SHA" "$ARMS_READY_SHA" \
     "$HOME_SHA" "$DIRECT_HOME_SHA" "$CLAMP_META_SHA" "$DEPOSIT_META_SHA" "$OPEN_META_SHA" \
-    "$MIN_BATTERY_SOC" "$posture_gate_b64" <<'REMOTE'
+    "$MIN_BATTERY_SOC" "$posture_gate_b64" "$OPEN_HOME_SHA" "$OPEN_HOME_META_SHA" <<'REMOTE'
 set -Eeuo pipefail
 motion_container="$1"
 ros_container="$2"
@@ -322,6 +324,8 @@ deposit_meta_sha="${10}"
 open_meta_sha="${11}"
 min_soc="${12}"
 posture_gate_b64="${13}"
+open_home_sha="${14}"
+open_home_meta_sha="${15}"
 
 [[ "$(hostname)" == "motion" ]] || {
   echo "HOST_ERROR=$(hostname)"
@@ -364,7 +368,19 @@ meta_root="/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/con
 check_hash "$head_sha" "$task_root/cruzr/move_head_lower.xml"
 check_hash "$ready_sha" "$task_root/transport/clamp_ready_cruzr.xml"
 check_hash "$home_sha" "$task_root/cruzr/open_arm_before_home.xml"
-check_hash "$direct_home_sha" "$task_root/cruzr/home.xml"
+# HOME interno puede ser el original o el overlay exacto con apertura previa.
+# El overlay usa delta_joint_angles: su biblioteca también forma parte del contrato.
+internal_home_path="$task_root/cruzr/home.xml"
+internal_home_sha="$(docker exec "$motion_container" sha256sum "$internal_home_path" | awk '{print $1}')"
+case "$internal_home_sha" in
+  "$direct_home_sha") internal_home_variant=vendor-direct-6s ;;
+  "$open_home_sha")
+    check_hash "$open_home_meta_sha" /opt/walker/manipulation_meta_tasks/lib/libmeta_move.so
+    internal_home_variant=open-v3-20s
+    ;;
+  *) echo "HASH_ERROR=$internal_home_path:$internal_home_sha"; exit 24 ;;
+esac
+printf 'INTERNAL_HOME_VARIANT=%s\nINTERNAL_HOME_SHA256=%s\n' "$internal_home_variant" "$internal_home_sha"
 check_hash "$clamp_meta_sha" "$meta_root/meta_clamp/clamp_cruzr_byd_large.yaml"
 check_hash "$deposit_meta_sha" "$meta_root/meta_clamp/put_collision_cruzr.yaml"
 check_hash "$open_meta_sha" "$meta_root/meta_clamp/byd/open_arm_cruzr.yaml"

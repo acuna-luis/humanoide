@@ -9,6 +9,8 @@ Uso:
   ./scripts/teleoperation/cruzr_pico_to_home_owner.sh --reload
   ./scripts/teleoperation/cruzr_pico_to_home_owner.sh --preflight
   ./scripts/teleoperation/cruzr_pico_to_home_owner.sh --run
+  ./scripts/teleoperation/cruzr_pico_to_home_owner.sh --run --speed 3
+  ./scripts/teleoperation/cruzr_pico_to_home_owner.sh --run --speed 4
 
 --check      Pruebas locales; no conecta ni mueve.
 --install    Instala tarea y entrada en task_list con un E-stop accionado.
@@ -17,8 +19,13 @@ Uso:
 --preflight  Lectura en vivo; exige tarea cargada y una referencia PICO inmóvil.
 --run        Repite preflight, exige confirmación humana exacta, ejecuta una vez
              y comprueba HOME con una muestra nueva. Nunca reintenta.
+             Si ambas lecturas frescas ya demuestran HOME, termina sin mover.
+--speed N    Perfil 1 (original), 3 o 4 (predeterminado); válido en todos los modos.
+             Movimiento nominal: 80 s, 26,666 s o 20 s, respectivamente.
+             Los perfiles 3/4 se instalan por separado con --install --speed N
+             y deben estar cargados antes de ejecutar --run --speed N.
 
-Revisión open_v2, cuatro etapas (80 s nominales):
+Perfil 1 de referencia, cuatro etapas (80 s nominales; perfil 4 divide por cuatro):
 1. Abre los hombros hacia fuera a -0,60 rad: 10 s.
 2. Baja los brazos manteniendo esa apertura: 40 s.
 3. Lleva cabeza/elevador/cintura a cero con brazos aún abiertos: 15 s.
@@ -29,7 +36,9 @@ Tras el E-stop, siga la recuperación de arranque documentada antes del prefligh
 Reconoce dos referencias completas: brazos PICO con cuerpo flexionado original
 o brazos PICO con cabeza/elevador/cintura a cero. Tolerancia: 0,02 rad por eje;
 no admite posiciones corporales intermedias ni cualquier postura de teleoperación.
-Conserva las protecciones Motion. No certifica el interpolador ni la parada.
+Los perfiles rápidos conservan objetivos/orden; sólo dividen las duraciones.
+Conserva las protecciones Motion. No certifica el interpolador ni la parada;
+el éxito del perfil original no valida el seguimiento a mayor velocidad.
 EOF
 }
 
@@ -38,8 +47,6 @@ die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 readonly SCRIPT_PATH="$(readlink -f -- "$0")"
 readonly SCRIPT_DIR="$(dirname -- "$SCRIPT_PATH")"
 readonly REPO_ROOT="$(readlink -f -- "$SCRIPT_DIR/../..")"
-readonly XML_SOURCE="$SCRIPT_DIR/tasks/cruzr_pico_to_home_owner.xml"
-readonly XML_SHA="6b8309f3c29025baf4d7116888c4f64a4f3a86f0cd74e226642203c194dd6999"
 readonly PATH_MODEL="$SCRIPT_DIR/cruzr_pico_home_open_path.py"
 readonly ENDPOINT_GATE="$SCRIPT_DIR/cruzr_pico_to_home_owner_gate.py"
 readonly HOME_GATE="$REPO_ROOT/scripts/lib/cruzr_home_posture_gate.py"
@@ -48,30 +55,33 @@ readonly NEW_EVIDENCE="$REPO_ROOT/scripts/vla/new_vla_evidence_run.sh"
 readonly CONTACT_LOCK="$REPO_ROOT/scripts/lib/cruzr_contact_motion_lock.sh"
 readonly MOTION_HOST="${CRUZR_MOTION_HOST:-192.168.11.2}"
 readonly ROBOT_USER="walker"
-readonly DEFAULT_PASSWORD="aa"
 readonly CONTAINER="walker-motion.manipulation_robot_app-1"
 readonly TASK_ROOT="/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config"
 readonly TASK_LIST="$TASK_ROOT/task_list.yaml"
-readonly TASK_KEY="pico_to_home_open_v2"
-readonly TASK_NAME="cruzr/pico_to_home_open_v2"
-readonly XML_TARGET="$TASK_ROOT/cruzr/pico_to_home_open_v2.xml"
 readonly INSTALL_CONFIRMATION="INSTALO PICO A HOME: E-STOP ACCIONADO, BRAZOS ABAJO, ABRAZADERAS VACIAS, ROBOT ESTABLE, CARGADOR DESCONECTADO Y ZONA DESPEJADA"
 readonly RELOAD_CONFIRMATION="RECARGO PICO A HOME: E-STOP ACCIONADO, BRAZOS ABAJO, ABRAZADERAS VACIAS, ROBOT ESTABLE, CARGADOR DESCONECTADO Y ZONA DESPEJADA"
-readonly RUN_CONFIRMATION="EJECUTO PICO A HOME BAJO MI SUPERVISION: POSTURA PICO MEDIDA, ABRAZADERAS VACIAS, SIN CONTACTO, ZONA COMPLETA DESPEJADA, CARGADOR DESCONECTADO, RUEDAS BLOQUEADAS, OTROS MANDOS DETENIDOS Y MANO EN E-STOP; ACEPTO INTERPOLADOR Y PARADA NO CERTIFICADOS"
+readonly BASE_RUN_CONFIRMATION="EJECUTO PICO A HOME BAJO MI SUPERVISION: POSTURA PICO MEDIDA, ABRAZADERAS VACIAS, SIN CONTACTO, ZONA COMPLETA DESPEJADA, CARGADOR DESCONECTADO, RUEDAS BLOQUEADAS, OTROS MANDOS DETENIDOS Y MANO EN E-STOP; ACEPTO INTERPOLADOR Y PARADA NO CERTIFICADOS"
 
-CRUZR_SSH_PASSWORD="${CRUZR_SSH_PASSWORD:-$DEFAULT_PASSWORD}"
+CRUZR_SSH_PASSWORD="${CRUZR_SSH_PASSWORD:-}"
 export CRUZR_SSH_PASSWORD
 if [[ "${CRUZR_INTERNAL_ASKPASS:-0}" == 1 ]]; then
-  printf '%s\n' "$CRUZR_SSH_PASSWORD"
-  exit 0
+  exec python3 "$REPO_ROOT/scripts/lib/cruzr_ssh_askpass.py"
 fi
 
 MODE=""
+SPEED=4
+SPEED_SET=0
 while (($#)); do
   case "$1" in
     --check|--install|--reload|--preflight|--run)
       [[ -z "$MODE" ]] || die "indique un solo modo"
       MODE="${1#--}"
+      ;;
+    --speed)
+      [[ $# -ge 2 && "$SPEED_SET" == 0 ]] || die "--speed exige un valor y no puede repetirse"
+      case "$2" in 1|3|4) SPEED="$2" ;; *) die "--speed sólo admite 1, 3 o 4" ;; esac
+      SPEED_SET=1
+      shift
       ;;
     --help|-h) usage; exit 0 ;;
     *) usage >&2; die "argumento desconocido: $1" ;;
@@ -79,6 +89,30 @@ while (($#)); do
   shift
 done
 [[ -n "$MODE" ]] || MODE=check
+readonly SPEED
+case "$SPEED" in
+  1)
+    XML_SOURCE="$SCRIPT_DIR/tasks/cruzr_pico_to_home_owner.xml"
+    XML_SHA="6b8309f3c29025baf4d7116888c4f64a4f3a86f0cd74e226642203c194dd6999"
+    TASK_KEY="pico_to_home_open_v2"
+    RUN_CONFIRMATION="$BASE_RUN_CONFIRMATION"
+    ;;
+  3)
+    XML_SOURCE="$SCRIPT_DIR/tasks/cruzr_pico_to_home_open_v2_3x.xml"
+    XML_SHA="f66e53b2d2d582ab48d0468ceb621c620c846201ec5fd5087d7c52870218d8da"
+    TASK_KEY="pico_to_home_open_v2_3x"
+    RUN_CONFIRMATION="$BASE_RUN_CONFIRMATION; VELOCIDAD=3X"
+    ;;
+  4)
+    XML_SOURCE="$SCRIPT_DIR/tasks/cruzr_pico_to_home_open_v2_4x.xml"
+    XML_SHA="6dd482a70e8ec55e02f125eb442b483a12a7c591959e72965214fcc9e02027dc"
+    TASK_KEY="pico_to_home_open_v2_4x"
+    RUN_CONFIRMATION="$BASE_RUN_CONFIRMATION; VELOCIDAD=4X"
+    ;;
+esac
+readonly XML_SOURCE XML_SHA TASK_KEY RUN_CONFIRMATION
+readonly TASK_NAME="cruzr/$TASK_KEY"
+readonly XML_TARGET="$TASK_ROOT/cruzr/$TASK_KEY.xml"
 
 for tool in awk cp date find flock grep nc python3 readlink scp setsid sha256sum sort ssh tee timeout xargs; do
   command -v "$tool" >/dev/null || die "falta herramienta local: $tool"
@@ -89,17 +123,22 @@ for required in "$XML_SOURCE" "$PATH_MODEL" "$ENDPOINT_GATE" "$HOME_GATE" "$LIVE
 done
 [[ "$(sha256sum "$XML_SOURCE" | awk '{print $1}')" == "$XML_SHA" ]] || \
   die "el XML local no coincide con el hash revisado"
-python3 - "$SCRIPT_DIR" "$XML_SOURCE" <<'PY'
+python3 - "$SCRIPT_DIR" "$XML_SOURCE" "$SPEED" <<'PY'
 import sys
 sys.path.insert(0, sys.argv[1])
-from cruzr_pico_home_open_path import validate_xml
-validate_xml(sys.argv[2])
+from cruzr_pico_home_open_path import validate_xml, stage_durations, STAGE_NAMES, task_key
+speed = int(sys.argv[3])
+validate_xml(sys.argv[2], speed)
+durations = stage_durations(speed)
+print(f'SPEED_FACTOR={speed}')
+print(f'TASK_NAME=cruzr/{task_key(speed)}')
+print(f'NOMINAL_MOVEMENT_SECONDS={sum(durations):.3f}')
+print('TRAJECTORY=' + ','.join(f'{name}:{duration:g}s' for name,duration in zip(STAGE_NAMES,durations)))
 PY
 
 if [[ "$MODE" == check ]]; then
   python3 -m unittest "$SCRIPT_DIR/test_cruzr_pico_to_home_owner_gate.py"
   printf 'LOCAL_CHECK_OK=xml-exact,endpoint-gate-tests-pass,default-no-motion\n'
-  printf 'TRAJECTORY=open-10s,lower-open-40s,body-home-open-15s,close-lowered-arms-15s\n'
   printf 'EXECUTION=not-started\n'
   exit 0
 fi
@@ -198,8 +237,8 @@ REMOTE
 }
 capture_state() {
   local joint_file="$1" actuator_file="$2"
-  run_ssh "docker exec '$CONTAINER' bash -lc 'set +u; source /opt/walker/setup.bash; set -u; timeout 8 rosa topic echo --once --no-daemon /mc/whole_joint_states'" >"$joint_file"
-  run_ssh "docker exec '$CONTAINER' bash -lc 'set +u; source /opt/walker/setup.bash; set -u; timeout 8 rosa topic echo --once --no-daemon /mc/actuator_state'" >"$actuator_file"
+  run_ssh "docker exec '$CONTAINER' bash -lc 'set +u; source /opt/walker/setup.bash; set -u; timeout 8 rosa topic echo --once --no-daemon /mc/whole_joint_states'" >"$joint_file" || return $?
+  run_ssh "docker exec '$CONTAINER' bash -lc 'set +u; source /opt/walker/setup.bash; set -u; timeout 8 rosa topic echo --once --no-daemon /mc/actuator_state'" >"$actuator_file" || return $?
 }
 gate_live_state() {
   local directory="$1" expected="$2" label="$3"
@@ -207,6 +246,29 @@ gate_live_state() {
   python3 "$HOME_GATE" <"$directory/$label-actuators.json" | tee "$directory/$label-actuator-gate.log"
   python3 "$ENDPOINT_GATE" --input "$directory/$label-joints.yaml" --expect "$expected" \
     --output "$directory/$label-endpoint-gate.json" | tee "$directory/$label-endpoint-gate.log"
+}
+already_home_check() {
+  local directory="$1" status
+  # The no-op requires a fresh actuator health gate plus the independent
+  # JointState endpoint check; never infer HOME from an earlier log.
+  capture_state "$directory/initial-joints.yaml" "$directory/initial-actuators.json" || return $?
+  python3 "$HOME_GATE" --home-tolerance 0.005 <"$directory/initial-actuators.json" \
+    >"$directory/initial-actuator-gate.log" || return $?
+  if python3 "$ENDPOINT_GATE" --input "$directory/initial-joints.yaml" --expect home \
+    --output "$directory/initial-home-gate.json" >"$directory/initial-home-gate.log"; then
+    grep -Fxq 'MEASURED_HOME=1' "$directory/initial-actuator-gate.log" || return 3
+    python3 - "$directory/initial-home-gate.json" <<'PY'
+import json,sys
+r=json.load(open(sys.argv[1]))
+ok=(r.get('qualified') is True and r['maximum_position_error_rad'] <= .005
+    and r['maximum_absolute_velocity_rad_s'] <= .002)
+raise SystemExit(0 if ok else 3)
+PY
+  else
+    status=$?
+    # 3 means a valid sample is outside HOME. Malformed/missing data aborts.
+    return "$status"
+  fi
 }
 finalize_evidence() {
   local directory="$1"
@@ -283,7 +345,7 @@ REMOTE
   after="$(remote_state)"; printf '%s\n' "$after" | tee "$run_dir/remote-after.log"
   grep -Fq 'INSTALL_STATE=exact' <<<"$after"
   finalize_evidence "$run_dir"
-  printf 'INSTALL_EVIDENCE=%s\nNEXT=mantenga E-stop y ejecute --reload\n' "$run_dir"
+  printf 'INSTALL_EVIDENCE=%s\nNEXT=mantenga E-stop; prepare la carga del perfil --speed %s conforme a la guía de arranque.\n' "$run_dir" "$SPEED"
   exit 0
 fi
 
@@ -293,7 +355,7 @@ if [[ "$MODE" == reload ]]; then
   }
   printf '%s\n' "$preflight"
   before="$(remote_state)"; printf '%s\n' "$before"
-  grep -Fq 'INSTALL_STATE=exact' <<<"$before" || die "falta la revisión open_v2: use --install y --reload con E-stop accionado; la tarea antigua no se reutiliza"
+  grep -Fq 'INSTALL_STATE=exact' <<<"$before" || die "falta el perfil $TASK_NAME: prepare --install --speed $SPEED con brazos abajo y E-stop accionado; no se sustituye por otro perfil"
   if grep -Fxq 'TASK_PROCESS_ORDER=after-task-list' <<<"$before"; then
     printf 'RELOAD_NOOP=process-already-started-after-task-list\n'
     printf 'NEXT=No repita --reload. La recarga no recupera Motion tras el E-stop; siga la guía de arranque y compruebe la postura antes de liberar o reiniciar.\n'
@@ -317,7 +379,7 @@ REMOTE
   active_estop_preflight >"$run_dir/preflight-after.log"
   finalize_evidence "$run_dir"
   printf 'RELOAD_EVIDENCE=%s\n' "$run_dir"
-  printf 'NEXT=Mantenga E-stop: reiniciar este proceso no recupera Motion. Siga docs/guides/CRUZR_V020_BOOT_GUARD.md; sólo tras recuperar el arranque y verificar la postura, ejecute --preflight.\n'
+  printf 'NEXT=Mantenga E-stop: reiniciar este proceso no recupera Motion. Siga docs/guides/CRUZR_V020_BOOT_GUARD.md; sólo tras recuperar el arranque y verificar la postura, ejecute --preflight --speed %s.\n' "$SPEED"
   printf 'PICO_CAUTION=Si los brazos siguen elevados en PICO, no libere ni reinicie para probar: el HOME interno puede usar otra trayectoria.\n'
   exit 0
 fi
@@ -330,6 +392,10 @@ if [[ "$MODE" == preflight ]]; then
 else
   work_dir="$($NEW_EVIDENCE --experiment PICO-HOME-OWNER-RUN)"
 fi
+printf 'SPEED_FACTOR=%s\nTASK_NAME=%s\nXML_SHA256=%s\n' "$SPEED" "$TASK_NAME" "$XML_SHA" >"$work_dir/speed-profile.log"
+if [[ "$MODE" == run ]]; then
+  cp -- "$SCRIPT_PATH" "$XML_SOURCE" "$PATH_MODEL" "$work_dir/"
+fi
 preflight="$(released_preflight)" || {
   status=$?
   printf '%s\n' "$preflight" | tee "$work_dir/preflight-before.log"
@@ -338,8 +404,20 @@ preflight="$(released_preflight)" || {
   exit "$status"
 }
 printf '%s\n' "$preflight" | tee "$work_dir/preflight-before.log"
+if already_home_check "$work_dir"; then
+  printf 'RESULT=ALREADY_HOME_MEASURED\nMOVEMENT_COMMANDS=0\n' | tee "$work_dir/result.log"
+  [[ "$MODE" != run ]] || finalize_evidence "$work_dir"
+  exit 0
+else
+  initial_state_rc=$?
+  if ((initial_state_rc != 3)); then
+    printf 'ERROR: no se pudo comprobar la postura inicial; no se enviará movimiento.\n' >&2
+    [[ "$MODE" != run ]] || finalize_evidence "$work_dir"
+    exit "$initial_state_rc"
+  fi
+fi
 runtime="$(remote_state)"; printf '%s\n' "$runtime" | tee "$work_dir/runtime-before.log"
-grep -Fq 'INSTALL_STATE=exact' <<<"$runtime" || die "falta la revisión open_v2: use --install y --reload con E-stop accionado; la tarea antigua no se reutiliza"
+grep -Fq 'INSTALL_STATE=exact' <<<"$runtime" || die "falta el perfil $TASK_NAME: prepare --install --speed $SPEED con brazos abajo y E-stop accionado; no se sustituye por otro perfil"
 grep -Fxq 'TASK_PROCESS_ORDER=after-task-list' <<<"$runtime" || die "la tarea necesita recarga; prepárela con brazos abajo siguiendo la guía, no improvise un E-stop/reinicio desde PICO"
 grep -Fq 'ACTION_SERVERS=1' <<<"$runtime" || die "servidor de acciones no disponible"
 gate_live_state "$work_dir" pico before
@@ -353,8 +431,10 @@ cat <<'EOF'
 ADVERTENCIA DEL EJECUTOR
 La revisión open_v2 abre antes de bajar y mantiene los brazos abiertos al
 recoger el cuerpo. El contacto anterior impide reutilizar la trayectoria antigua.
-La revisión del modelo es offline; la trayectoria nueva aún necesita ensayo
-físico. El interpolador Motion y la distancia real de parada no están certificados. El operador decide iniciar
+El operador ha comunicado que el perfil original funciona bien. Los perfiles
+rápidos aún necesitan ensayo físico propio: conservar los objetivos no demuestra
+el mismo seguimiento ni la misma parada a mayor velocidad.
+El interpolador Motion y la distancia real de parada no están certificados. El operador decide iniciar
 la prueba física, debe observar todo el recorrido y accionar inmediatamente el
 E-stop ante aproximación, contacto, ruido, tirón o movimiento inesperado.
 EOF

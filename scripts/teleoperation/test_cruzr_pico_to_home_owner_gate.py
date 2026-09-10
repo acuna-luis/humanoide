@@ -96,6 +96,109 @@ class PreflightShellTests(unittest.TestCase):
             self.assertNotIn('RUNTIME_STATE=loaded',result.stdout)
 
 
+class HomeNoopTests(unittest.TestCase):
+    def test_noop_requires_two_fresh_healthy_strict_home_samples(self):
+        import json
+        source=(ROOT/'scripts/teleoperation/cruzr_pico_to_home_owner.sh').read_text()
+        function='already_home_check() {'+source.split('already_home_check() {',1)[1].split('finalize_evidence() {',1)[0]
+        for capture_rc,health_rc,health_home,endpoint_rc,error,velocity,expected in [
+                (0,0,1,0,.003,0.,0),(0,0,0,0,.003,0.,3),
+                (0,0,1,0,.006,0.,3),(0,0,1,0,.003,.003,3),
+                (0,0,0,3,1.57,0.,3),(0,2,1,0,.003,0.,2),
+                (0,0,1,2,.003,0.,2),(44,0,1,0,.003,0.,44)]:
+            with tempfile.TemporaryDirectory() as directory:
+                root=Path(directory)
+                health=root/'health.py'
+                health.write_text('import os,sys\nprint("MEASURED_HOME="+os.environ["MOCK_HOME"])\nraise SystemExit(int(os.environ["MOCK_HEALTH_RC"]))\n')
+                endpoint=root/'endpoint.py'
+                endpoint.write_text('import os,sys,pathlib\npathlib.Path(sys.argv[sys.argv.index("--output")+1]).write_text(os.environ["MOCK_RESULT"])\nraise SystemExit(int(os.environ["MOCK_ENDPOINT_RC"]))\n')
+                code=('set -euo pipefail\ncapture_state() { : >"$1"; : >"$2"; return "$MOCK_CAPTURE_RC"; }\n'
+                      +function+'\nif already_home_check "$TEST_DIR"; then echo NOOP; else exit $?; fi\n')
+                env=dict(os.environ,HOME_GATE=str(health),ENDPOINT_GATE=str(endpoint),TEST_DIR=directory,
+                         MOCK_CAPTURE_RC=str(capture_rc),MOCK_HEALTH_RC=str(health_rc),MOCK_HOME=str(health_home),
+                         MOCK_ENDPOINT_RC=str(endpoint_rc),MOCK_RESULT=json.dumps(dict(qualified=endpoint_rc==0,
+                         maximum_position_error_rad=error,maximum_absolute_velocity_rad_s=velocity)))
+                result=subprocess.run(['bash','-s'],input=code,text=True,capture_output=True,env=env)
+                self.assertEqual(result.returncode,expected,result.stderr)
+                self.assertEqual('NOOP' in result.stdout,expected==0)
+
+    def test_capture_failure_is_not_hidden_by_second_ssh(self):
+        source=(ROOT/'scripts/teleoperation/cruzr_pico_to_home_owner.sh').read_text()
+        function='capture_state() {'+source.split('capture_state() {',1)[1].split('gate_live_state() {',1)[0]
+        with tempfile.TemporaryDirectory() as directory:
+            code=('set -euo pipefail\nCONTAINER=mock\nrun_ssh() { echo CALLED >&2; return 45; }\n'
+                  +function+'\nif capture_state "$TEST_DIR/joints" "$TEST_DIR/actuators"; then echo BAD; else exit $?; fi\n')
+            result=subprocess.run(['bash','-s'],input=code,text=True,capture_output=True,
+                                  env=dict(os.environ,TEST_DIR=directory))
+            self.assertEqual(result.returncode,45)
+            self.assertEqual(result.stderr.count('CALLED'),1)
+
+
+class SpeedProfileTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.source = (ROOT/'scripts/teleoperation/cruzr_pico_to_home_owner.sh').read_text()
+        cls.selection = 'MODE=""' + cls.source.split('MODE=""', 1)[1].split('for tool in', 1)[0]
+
+    def select(self, args):
+        script = ('set -Eeuo pipefail\ndie() { echo "$*" >&2; exit 1; }\n'
+                  'usage() { :; }\nSCRIPT_DIR="$TEST_SCRIPT_DIR"\nTASK_ROOT=/config\n'
+                  'BASE_RUN_CONFIRMATION=confirm\n' + self.selection +
+                  '\nprintf "%s\\n" "$MODE" "$SPEED" "$XML_SOURCE" "$XML_SHA" '
+                  '"$TASK_NAME" "$XML_TARGET" "$RUN_CONFIRMATION"\n')
+        return subprocess.run(['bash', '-s', '--', *args], input=script, text=True,
+            capture_output=True, env=dict(os.environ, TEST_SCRIPT_DIR=str(ROOT/'scripts/teleoperation')))
+
+    def test_every_mode_selects_exact_requested_profile_without_network(self):
+        import hashlib
+        from cruzr_pico_home_open_path import task_key, validate_xml
+        for mode in ('check', 'install', 'reload', 'preflight', 'run'):
+            for speed in (1, 3, 4):
+                for args in ([f'--{mode}', '--speed', str(speed)], ['--speed', str(speed), f'--{mode}']):
+                    result = self.select(args)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    selected_mode, factor, path, digest, task, target, confirmation = result.stdout.splitlines()
+                    self.assertEqual((selected_mode, factor), (mode, str(speed)))
+                    self.assertEqual(task, 'cruzr/'+task_key(speed))
+                    self.assertEqual(target, '/config/cruzr/'+task_key(speed)+'.xml')
+                    self.assertEqual(hashlib.sha256(Path(path).read_bytes()).hexdigest(), digest)
+                    validate_xml(path, speed)
+                    if speed != 1:
+                        self.assertIn(f'VELOCIDAD={speed}X', confirmation)
+
+    def test_default_and_bad_speed_arguments(self):
+        self.assertEqual(self.select([]).stdout.splitlines()[:2], ['check', '4'])
+        self.assertEqual(self.select(['--run']).stdout.splitlines()[:2], ['run', '4'])
+        bad = [['--speed'], ['--speed', '3', '--speed', '4'], ['--run', '--install']]
+        bad += [['--run', '--speed', value] for value in ('0', '2', '5', '-1', '3.0', '03', 'nan', '3;true')]
+        for args in bad:
+            result = self.select(args)
+            self.assertNotEqual(result.returncode, 0, args)
+            self.assertEqual(result.stdout, '', args)
+
+    def test_faster_xml_changes_only_durations_and_profile_name(self):
+        from cruzr_pico_home_open_path import xml_tree, stage_durations, validate_xml
+        import xml.etree.ElementTree as ET
+        def geometry(root):
+            root.find('.//Sequence').set('name', 'same_path')
+            for action in root.findall('.//Action'):
+                action.attrib.pop('duration')
+            return ET.tostring(root)
+        expected = geometry(xml_tree())
+        for speed, total in ((3, 26.666), (4, 20.0)):
+            tree = xml_tree(speed)
+            durations = stage_durations(speed)
+            self.assertAlmostEqual(sum(durations), total, places=6)
+            for stage, duration in zip(tree.findall('.//Parallel'), durations):
+                self.assertTrue(all(float(a.get('duration')) == duration for a in stage))
+            self.assertEqual(geometry(tree), expected)
+            with self.assertRaises(ValueError):
+                validate_xml(ROOT/'scripts/teleoperation/tasks/cruzr_pico_to_home_owner.xml', speed)
+        for invalid in (True, 0, 2, 5, float('nan'), 3.0, '3'):
+            with self.assertRaises(ValueError):
+                stage_durations(invalid)
+
+
 class GateTests(unittest.TestCase):
     def test_accepts_exact_pico_and_home(self):
         self.assertTrue(gate.evaluate(sample(gate.PICO_REFERENCE), "pico")["qualified"])
@@ -200,8 +303,8 @@ class GateTests(unittest.TestCase):
         import re
         from cruzr_pico_home_open_path import DURATIONS_S
         source = (ROOT/'scripts/teleoperation/cruzr_pico_to_home_owner.sh').read_text()
-        self.assertIn('readonly TASK_NAME="cruzr/pico_to_home_open_v2"',source)
-        self.assertIn('readonly XML_TARGET="$TASK_ROOT/cruzr/pico_to_home_open_v2.xml"',source)
+        self.assertIn('readonly TASK_NAME="cruzr/$TASK_KEY"',source)
+        self.assertIn('readonly XML_TARGET="$TASK_ROOT/cruzr/$TASK_KEY.xml"',source)
         timeout = int(re.search(r'timeout (\d+) rosa action send_goal',source)[1])
         self.assertGreater(timeout,sum(DURATIONS_S)+20)
 

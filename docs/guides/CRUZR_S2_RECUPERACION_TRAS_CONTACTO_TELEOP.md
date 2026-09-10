@@ -1,12 +1,78 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**2026-09-10 — HOME interno sustituido por apertura relativa; 20 s instalados.**
+Usuario confirma brazos abajo/vacíos/libres y solicita corregir `cruzr/home`.
+Se reemplazó su XML por home_open_v3_20s: abrir ambos hombros −0,4 rad relativos
+conservando los otros ángulos; bajar abiertos a roll−0,6; cuerpo HOME; cerrar
+sólo con brazos abajo. Evita que copiar PICO abra elevando brazos desde abajo.
+No cambia task_list, primitivas, límites ni el ejecutor PICO. Principal1/servo0/
+cargador0 y hash de MetaMove comprobados antes/después de instalación y recarga.
+XML nuevo SHA05174d2b…8cbe; original50d819d6…ed88 respaldado en
+/etc/walker/trajectory-overlays/20260910T100528.529307Z_home_open_v3/.
+Sólo manipulación reiniciada (StartedAt10:06:09Z); CC/hw no reiniciados, cero
+objetivos enviados. Manipulación espera ListControllers bajo paro: no afirmar
+validación física ni ejecución del árbol. Se conservó E-stop pulsado.
+Barrido4referencias×4etapas×501muestras: mínimo69,79mm fuera de uniones locales,
+cota condicional7,929mm. No cubre escena/seguimiento/parada ni posturas arbitrarias.
+7 pruebas nuevas y20 previas correctas. Seis segundos: borrador local, sin
+instalar; aceleración quintic estimada11,11× frente a20s. Tiempo instalado20s,
+primera prueba física pendiente. No repetir reload/cambiar modo para probar.
+Evidencia: ../Humanoide-vla-evidence/20260910T095255Z_HOME-ROUTE-REVIEW/ y
+20260910T100548.301769Z / 20260910T100621.887349Z_INTERNAL-HOME-CHANGE.
+[Detalle, limitaciones y reversión](../teleoperation/CRUZR_HOME_INTERNO_APERTURA.md).
+
+**2026-09-10 — Incidente tras instalar 4×: HOME interno por cambio a auto (VERIFICADO).**
+El perfil 4× quedó instalado con XML/hash exacto, pero la recarga dejó acciones0
+sin estados articulares. Liberar el paro no recuperó por sí solo Motion.
+A09:38:19Z CC recibió `workMode:auto_task` desde TeleopMode y ejecutó StartMotion;
+a09:38:33Z Motion inició `cruzr/home`, ordenando todos los ejes de ambos brazos
+a cero en6s. Operador pulsó E-stop a09:38:37Z al ver acercamiento al cuerpo.
+Los intentos del script 4× se detuvieron en preflight; no enviaron esa ruta.
+La nueva trayectoria no sustituye el HOME interno del fabricante. No usar
+cambio a auto/StartMotion/reinicio para recuperar desde brazos elevados.
+Nuevo encendido: principal1 y CC WaitEStopRelease comprobados. Voz autónoma
+completó su chequeo y TTS Success/status4 a09:45:27Z, primera ejecución en
+encendido completo registrada; no confirma por sí misma postura ni audición.
+Pendientes respuesta física (brazos abajo/elevados, carga, contacto), liberación
+supervisada y ensayo 4×. Mantener E-stop mientras se verifica la postura.
+Sólo lectura remota y documentación local; cero reinicios/objetivos/cambios
+remotos del agente. Evidencia: ../Humanoide-vla-evidence/20260910T094443Z_RELEASE-AFTER-RELOAD/.
+[Secuencia y diagnóstico](../incidents/2026-09-10_HOME_INTERNO_TRAS_RELOAD_4X.md).
+
+**2026-09-10 — PICO→HOME: 4× por defecto; perfiles rápidos verificados sólo en PC.**
+**OBSERVADO por el operador:** open_v2 original funciona bien, pero es lenta.
+**VERIFICADO local:** el ejecutor acepta `--speed 1|3|4` en todos sus modos;
+por petición expresa, omitirlo selecciona 4×. Tiempos de movimiento nominales:
+80 / 26,666 / 20 s, más preflight y verificación. Se conservan objetivos,
+apertura de hombros, orden de las cuatro etapas y protecciones. Cada velocidad
+exige su XML/hash y tarea independientes; si falta, no envía acción ni cambia
+a otro perfil. El XML original mantiene hash6b8309f3…6999; 3×f66e53b2…8da y
+4×6dd482a7…7dc. Veinte pruebas y bash -n correctos; ShellCheck no está instalado. Sin argumentos
+sigue siendo --check local, sin movimiento. Timeout120s y TimeRatio1 intactos.
+**PENDIENTE:** instalar/cargar y ensayar 3×/4× en robot; no hubo conexión,
+escritura remota ni movimiento en esta modificación. El éxito comunicado de
+1× no certifica seguimiento/parada a 4× ni acredita el estado físico actual.
+Preparar instalación con brazos abajo/vacíos y E-stop conforme a la guía;
+no reiniciar desde PICO para forzar la carga. Reversión: `--speed 1`, sin
+restaurar la tarea directa retirada. Evidencia/backup antes y después:
+`../Humanoide-vla-evidence/20260910T091420Z_PICO-HOME-SPEED/`.
+[Perfiles, carga y límites de la verificación](../teleoperation/CRUZR_PICO_HOME_OPEN_V2.md).
+
+**2026-09-10 — Actualización de recuperación: apagado completo y brazos abajo.**
+Con E-stop pulsado y brazos asegurados confirmados, lectura principal1 y
+solicitud única /emb/pm_shutdown aceptada. Usuario confirmó pantalla/luces
+apagadas y brazos estables. Después de KEY1/chasis, confirmó apagado y brazos
+abajo. Se indica nuevo encendido manteniendo el paro; confirmación y readiness
+pendientes antes de liberar o seleccionar PICO.
+Sin HOME ni rearme. [Detalle](../incidents/2026-09-10_PICO_RECARGA_SIN_MOTION.md).
+
 **2026-09-10 — Estado vigente tras paro para instalar open_v2:**
 Operador confirma brazos en PICO, estables/sin contacto. La tarea nueva está
 instalada pero no se ejecutó: hw espera arranque, manipulación espera
 ListControllers y no hay muestra de actuadores ni servidor de acciones.
 No aplicar HOME, reiniciar ni cambiar de modo para probar: el HOME interno
 no sigue necesariamente la ruta nueva. Preparación física/apagado pendientes;
-abrazaderas vacías todavía por confirmar. Se corrigieron localmente mensajes
+abrazaderas vacías confirmadas después por el operador. Se corrigieron localmente mensajes
 de recarga y propagación del preflight; sin movimientos/rearmes del agente.
 [Evidencia y recuperación pendiente](../incidents/2026-09-10_PICO_RECARGA_SIN_MOTION.md).
 

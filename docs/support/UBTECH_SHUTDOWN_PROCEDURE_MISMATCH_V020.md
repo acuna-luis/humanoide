@@ -1,5 +1,31 @@
 # Discrepancia del procedimiento de apagado — Cruzr S2 v0.2.0
 
+**2026-09-10 — Apagado lógico aceptado y confirmado visualmente desde PICO asegurado:**
+Operador confirmó paro pulsado y brazos asegurados contra caída/golpe; las
+abrazaderas estaban vacías y el robot estable/sin contacto. Lectura nueva de
+principal1/servo0/cargador0 y tipo de servicio correcto. Solicitud única por
+/emb/pm_shutdown, deadline_sec15 y confirm-to-shutdown: success=True a las
+07:45:08Z (PC). Sin HOME, rearme, cambio de frenos ni reinicio previo.
+Ambos hosts dejaron de responder. El operador confirmó pantalla y luces
+superiores apagadas y brazos aún asegurados/estables. Se indicó entonces KEY1
+y después botón metálico del chasis. A la comprobación de indicador verde,
+estabilidad y postura respondió «apagado y brazos abajo». Apagado completo
+confirmado. Esto no convierte el corte de alimentación en una trayectoria
+controlada: los brazos se habían asegurado físicamente antes.
+Siguiente paso indicado: encender chasis→KEY1→encendido con E-stop pulsado;
+pendiente confirmación y comprobación técnica antes de liberar o activar PICO.
+Evidencia: shutdown-* dentro de 20260910T072711Z_PICO-RELOAD-NO-ACTION.
+
+**2026-09-10 — Preparación desde PICO; apagado todavía NO solicitado:**
+Usuario confirma brazos PICO estables/sin contacto y abrazaderas vacías tras
+paro para instalar open_v2. Motion no ofrece acciones ni muestra articular.
+Consulta readonly redescubre /emb/pm_shutdown y contrato ShutDown sin cambios.
+Principal0; se indica pulsarlo y se espera confirmación de paro y aseguramiento
+presencial de brazos contra caída/golpe antes de quitar alimentación. La guía
+no demuestra descenso controlado desde PICO, ni debe suponerse por estar vacío.
+No se enviaron shutdown, rearme, HOME, reinicio ni comandos de frenos.
+[Diagnóstico y evidencia](../incidents/2026-09-10_PICO_RECARGA_SIN_MOTION.md).
+
 **2026-09-09 — Apagado postcontacto pendiente de confirmación visual:**
 Usuario confirma caja retirada y entorno despejado; después comunica pulsación
 Power durante cinco segundos. No se envió /emb/pm_shutdown: PC había perdido

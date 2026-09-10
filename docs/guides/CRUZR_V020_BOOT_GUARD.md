@@ -1,5 +1,78 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+**Política de mantenimiento 2026-09-10:** las adaptaciones vigentes de espera,
+voz y pantalla son BOOT-01/02/03 en el
+[registro del sistema](../SYSTEM_CUSTOMIZATIONS.md). Su respaldo y receta de
+reaplicación están en la [guía de actualización](CRUZR_REAPLICAR_CAMBIOS_TRAS_ACTUALIZACION.md).
+El guard systemd histórico descrito en entradas anteriores permanece retirado
+del autoarranque; no restaurarlo junto con los avisos nuevos.
+
+**2026-09-10 — Aviso visual de arranque añadido a la voz (VERIFICADO en pantalla).**
+Por petición del usuario, el aviso inglés se acompaña de `巡检`/`inspection.mp4`
+(anillo azul con barrido) durante la primera espera de liberar E-stop. El añadido
+sólo se superpone a `breath`; otras expresiones del proveedor tienen prioridad.
+Permiso de visualización renovable y caducidad12s independiente en navegador:
+lecturas Motion/cámaras crecientes/paros/cargador/identidadCC; al perderlas deja
+la pantalla nativa. Cero llamadas de expresión ni comandos de movimiento.
+Instalados módulo/JS de pantalla y servicio de voz actualizado en Vision; enabled,
+Type=simple y voz única por boot conservada. Pruebas23Python+Node+Chromium
+correctas, captura real del visor muestra巡检. Se recargó exclusivamente la
+sesión gráfica LightDM para aplicar; CC y contenedores conservan identidad.
+Primera versión refrescaba en18s; consultas paralelizadas y lectura de proceso directa para conservar TTL12s.
+Renovación final observada8,54–8,75s; preview activo hasta liberación/pérdida
+de comprobación o30min. PENDIENTE: próximo encendido con voz y vídeo combinados. El indicador
+no valida el ensayo físico del HOME nuevo ni sustituye la preparación presencial.
+Backup: /etc/walker/boot/backups/20260910T102219Z_BOOT-VISUAL/.
+Evidencia: ../Humanoide-vla-evidence/20260910T102219Z_BOOT-VISUAL/.
+[Uso y reversión](CRUZR_AVISO_VOZ_ARRANQUE.md).
+
+**2026-09-10 — HOME interno sustituido por apertura relativa; 20 s instalados.**
+Usuario confirma brazos abajo/vacíos/libres y solicita corregir `cruzr/home`.
+Se reemplazó su XML por home_open_v3_20s: abrir ambos hombros −0,4 rad relativos
+conservando los otros ángulos; bajar abiertos a roll−0,6; cuerpo HOME; cerrar
+sólo con brazos abajo. Evita que copiar PICO abra elevando brazos desde abajo.
+No cambia task_list, primitivas, límites ni el ejecutor PICO. Principal1/servo0/
+cargador0 y hash de MetaMove comprobados antes/después de instalación y recarga.
+XML nuevo SHA05174d2b…8cbe; original50d819d6…ed88 respaldado en
+/etc/walker/trajectory-overlays/20260910T100528.529307Z_home_open_v3/.
+Sólo manipulación reiniciada (StartedAt10:06:09Z); CC/hw no reiniciados, cero
+objetivos enviados. Manipulación espera ListControllers bajo paro: no afirmar
+validación física ni ejecución del árbol. Se conservó E-stop pulsado.
+Barrido4referencias×4etapas×501muestras: mínimo69,79mm fuera de uniones locales,
+cota condicional7,929mm. No cubre escena/seguimiento/parada ni posturas arbitrarias.
+7 pruebas nuevas y20 previas correctas. Seis segundos: borrador local, sin
+instalar; aceleración quintic estimada11,11× frente a20s. Tiempo instalado20s,
+primera prueba física pendiente. No repetir reload/cambiar modo para probar.
+Evidencia: ../Humanoide-vla-evidence/20260910T095255Z_HOME-ROUTE-REVIEW/ y
+20260910T100548.301769Z / 20260910T100621.887349Z_INTERNAL-HOME-CHANGE.
+[Detalle, limitaciones y reversión](../teleoperation/CRUZR_HOME_INTERNO_APERTURA.md).
+
+**2026-09-10 — Aviso autónomo en inglés y espera de cámaras instalados:**
+El arranque habitual ya dispone de un servicio de voz separado, habilitado
+para el siguiente encendido: «Ready to release the emergency stop.».
+[Procedimiento breve y detalles](CRUZR_AVISO_VOZ_ARRANQUE.md).
+El wrapper de CC espera ahora Motion y seis cámaras antes de iniciar el binario
+original. La voz comprueba además el proceso/log actual, fase inicial y
+paros/cargador frescos por ROS 2. La consulta desde PC ya pasó en vivo.
+No se reinició CC/Motion para esta instalación. Guard antiguo sigue disabled.
+La segunda reproducción terminó status4/Success; el operador confirmó
+que se entiende bien. Pendiente la prueba de un nuevo encendido completo. El color de la cara no es la señal
+previa de liberación, y el aviso no sustituye la preparación física del arranque.
+
+**2026-09-10 — Espera preventiva comprobada en un nuevo arranque en frío:**
+Con brazos abajo y E-stop mantenido tras apagar completamente, CC-container
+inició07:53:53Z y Motion07:55:29Z. El wrapper observó cuatro fallos0/3 y luego
+tres respuestas válidas; inició el binario original a07:56:02Z. El log nuevo
+`cc_main.20260910_155603.184.log` alcanza WaitEStopRelease; principal1/servo0/
+cargador0. No hubo reinicio desde el agente. El guard antiguo sigue disabled.
+Ésta verifica la espera real durante el desfase entre ordenadores; self-check
+y StartMotion posteriores a liberar el paro siguen pendientes.
+Comprobación ampliada sólo --check terminó rc0: x86 tres respuestas y seis
+cámaras en dos rondas, v0.2.0, WaitEStopRelease y seguridad1/0/0.
+Se indica liberar con brazos abajo/vacíos/libres de sujeciones y persona junto
+al paro. Puede iniciar HOME interno; confirmación y estado posterior pendientes.
+Evidencia: `../Humanoide-vla-evidence/20260910T072711Z_PICO-RELOAD-NO-ACTION/restart-20260910T075519Z/`.
+
 **2026-09-10 — Incidente posterior, distinto de la carrera de arranque:**
 Tras pasar a PICO y accionar E-stop para instalar la trayectoria, hw se reinició
 y quedó esperando arranque; manipulación espera ListControllers. Liberar el
