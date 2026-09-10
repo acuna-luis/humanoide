@@ -13,6 +13,7 @@ Uso:
 --check      Pruebas locales; no conecta ni mueve.
 --install    Instala tarea y entrada en task_list con un E-stop accionado.
 --reload     Reinicia sólo manipulation_task_manager con un E-stop accionado.
+             No recupera Motion después de un paro ni autoriza liberarlo.
 --preflight  Lectura en vivo; exige tarea cargada y una referencia PICO inmóvil.
 --run        Repite preflight, exige confirmación humana exacta, ejecuta una vez
              y comprueba HOME con una muestra nueva. Nunca reintenta.
@@ -23,6 +24,8 @@ Revisión open_v2, cuatro etapas (80 s nominales):
 3. Lleva cabeza/elevador/cintura a cero con brazos aún abiertos: 15 s.
 4. Cierra únicamente los hombros de los brazos ya bajados hacia HOME: 15 s.
 Esta revisión debe instalarse y recargarse: no ejecuta la tarea antigua.
+Prepare la instalación con los brazos abajo y vacíos antes de pasar a PICO.
+Tras el E-stop, siga la recuperación de arranque documentada antes del preflight.
 Reconoce dos referencias completas: brazos PICO con cuerpo flexionado original
 o brazos PICO con cabeza/elevador/cintura a cero. Tolerancia: 0,02 rad por eje;
 no admite posiciones corporales intermedias ni cualquier postura de teleoperación.
@@ -52,8 +55,8 @@ readonly TASK_LIST="$TASK_ROOT/task_list.yaml"
 readonly TASK_KEY="pico_to_home_open_v2"
 readonly TASK_NAME="cruzr/pico_to_home_open_v2"
 readonly XML_TARGET="$TASK_ROOT/cruzr/pico_to_home_open_v2.xml"
-readonly INSTALL_CONFIRMATION="INSTALO PICO A HOME: E-STOP ACCIONADO, ROBOT ESTABLE, CARGADOR DESCONECTADO Y ZONA DESPEJADA"
-readonly RELOAD_CONFIRMATION="RECARGO PICO A HOME: E-STOP ACCIONADO, ROBOT ESTABLE, CARGADOR DESCONECTADO Y ZONA DESPEJADA"
+readonly INSTALL_CONFIRMATION="INSTALO PICO A HOME: E-STOP ACCIONADO, BRAZOS ABAJO, ABRAZADERAS VACIAS, ROBOT ESTABLE, CARGADOR DESCONECTADO Y ZONA DESPEJADA"
+readonly RELOAD_CONFIRMATION="RECARGO PICO A HOME: E-STOP ACCIONADO, BRAZOS ABAJO, ABRAZADERAS VACIAS, ROBOT ESTABLE, CARGADOR DESCONECTADO Y ZONA DESPEJADA"
 readonly RUN_CONFIRMATION="EJECUTO PICO A HOME BAJO MI SUPERVISION: POSTURA PICO MEDIDA, ABRAZADERAS VACIAS, SIN CONTACTO, ZONA COMPLETA DESPEJADA, CARGADOR DESCONECTADO, RUEDAS BLOQUEADAS, OTROS MANDOS DETENIDOS Y MANO EN E-STOP; ACEPTO INTERPOLADOR Y PARADA NO CERTIFICADOS"
 
 CRUZR_SSH_PASSWORD="${CRUZR_SSH_PASSWORD:-$DEFAULT_PASSWORD}"
@@ -129,21 +132,31 @@ read_confirmation() {
   [[ "$answer" == "$expected" ]] || die "confirmación incorrecta; operación cancelada"
 }
 active_estop_preflight() {
-  local value
-  value="$($LIVE_AUDITOR --check --expect-active-estop)"
-  grep -Eq '^ESTOP_KEY=1$|^SERVO_ESTOP_KEY=1$' <<<"$value"
-  grep -Fq 'CHARGER=0' <<<"$value"
-  grep -Fq 'COMMAND_PATH_SAFE=publishers:0' <<<"$value"
+  local value status
+  value="$("$LIVE_AUDITOR" --check --expect-active-estop)" || {
+    status=$?; printf '%s\n' "$value"; return "$status";
+  }
+  # Bash clears errexit in command substitutions: every required check must
+  # return explicitly instead of letting the final printf hide its failure.
+  grep -Eq '^ESTOP_KEY=1$|^SERVO_ESTOP_KEY=1$' <<<"$value" &&
+    grep -Fxq 'CHARGER=0' <<<"$value" &&
+    grep -Fxq 'COMMAND_PATH_SAFE=publishers:0' <<<"$value" || {
+      printf '%s\n' "$value"; return 1;
+    }
   printf '%s\n' "$value"
 }
 released_preflight() {
-  local value
-  value="$($LIVE_AUDITOR --check --expect-released)"
-  grep -Fq 'ESTOP_KEY=0' <<<"$value"
-  grep -Fq 'SERVO_ESTOP_KEY=0' <<<"$value"
-  grep -Fq 'CHARGER=0' <<<"$value"
-  grep -Fq 'COMMAND_PATH_SAFE=publishers:0' <<<"$value"
-  grep -Fq 'CANONICAL_MANIPULATION_PREFLIGHT=passed-read-only' <<<"$value"
+  local value status
+  value="$("$LIVE_AUDITOR" --check --expect-released)" || {
+    status=$?; printf '%s\n' "$value"; return "$status";
+  }
+  grep -Fxq 'ESTOP_KEY=0' <<<"$value" &&
+    grep -Fxq 'SERVO_ESTOP_KEY=0' <<<"$value" &&
+    grep -Fxq 'CHARGER=0' <<<"$value" &&
+    grep -Fxq 'COMMAND_PATH_SAFE=publishers:0' <<<"$value" &&
+    grep -Fxq 'CANONICAL_MANIPULATION_PREFLIGHT=passed-read-only' <<<"$value" || {
+      printf '%s\n' "$value"; return 1;
+    }
   printf '%s\n' "$value"
 }
 remote_state() {
@@ -168,7 +181,16 @@ if [[ "$count" == 0 && "$present" == 0 ]]; then
   printf 'INSTALL_STATE=absent\n'
 elif [[ "$count" == 1 && "$present" == 1 && "$xml_sha" == "$expected_xml" ]]; then
   printf 'INSTALL_STATE=exact\n'
-  if ((started > mtime)); then printf 'RUNTIME_STATE=loaded\n'; else printf 'RUNTIME_STATE=reload-required\n'; fi
+  if ((started > mtime)); then
+    printf 'TASK_PROCESS_ORDER=after-task-list\n'
+  else
+    printf 'TASK_PROCESS_ORDER=reload-required\n'
+  fi
+  if [[ "$servers" == 1 ]]; then
+    printf 'RUNTIME_STATE=action-server-ready\n'
+  else
+    printf 'RUNTIME_STATE=action-server-unavailable\n'
+  fi
 else
   printf 'INSTALL_STATE=conflict\n'; exit 40
 fi
@@ -195,7 +217,10 @@ finalize_evidence() {
 nc -z -w3 "$MOTION_HOST" 22 || die "Motion no responde en $MOTION_HOST:22"
 
 if [[ "$MODE" == install ]]; then
-  preflight="$(active_estop_preflight)"; printf '%s\n' "$preflight"
+  preflight="$(active_estop_preflight)" || {
+    status=$?; printf '%s\n' "$preflight"; exit "$status";
+  }
+  printf '%s\n' "$preflight"
   before="$(remote_state)"; printf '%s\n' "$before"
   grep -Fq 'INSTALL_STATE=exact' <<<"$before" && {
     printf 'INSTALL_NOOP=already-exact\n'; exit 0;
@@ -263,11 +288,16 @@ REMOTE
 fi
 
 if [[ "$MODE" == reload ]]; then
-  preflight="$(active_estop_preflight)"; printf '%s\n' "$preflight"
+  preflight="$(active_estop_preflight)" || {
+    status=$?; printf '%s\n' "$preflight"; exit "$status";
+  }
+  printf '%s\n' "$preflight"
   before="$(remote_state)"; printf '%s\n' "$before"
   grep -Fq 'INSTALL_STATE=exact' <<<"$before" || die "falta la revisión open_v2: use --install y --reload con E-stop accionado; la tarea antigua no se reutiliza"
-  if grep -Fq 'RUNTIME_STATE=loaded' <<<"$before"; then
-    printf 'RELOAD_NOOP=already-loaded\n'; exit 0
+  if grep -Fxq 'TASK_PROCESS_ORDER=after-task-list' <<<"$before"; then
+    printf 'RELOAD_NOOP=process-already-started-after-task-list\n'
+    printf 'NEXT=No repita --reload. La recarga no recupera Motion tras el E-stop; siga la guía de arranque y compruebe la postura antes de liberar o reiniciar.\n'
+    exit 0
   fi
   read_confirmation "$RELOAD_CONFIRMATION"
   run_dir="$($NEW_EVIDENCE --experiment PICO-HOME-OWNER-RELOAD)"
@@ -279,14 +309,16 @@ container="$1"; old="$(docker inspect --format '{{.State.StartedAt}}' "$containe
 timeout 30 docker restart --time 10 "$container" >/dev/null
 test "$(docker inspect --format '{{.State.Status}}' "$container")" = running
 new="$(docker inspect --format '{{.State.StartedAt}}' "$container")"; test "$new" != "$old"
-printf 'RELOAD_OK=1\nMOVEMENT_COMMANDS=0\nSTARTED_BEFORE=%s\nSTARTED_AFTER=%s\n' "$old" "$new"
+printf 'PROCESS_RESTARTED=1\nMOVEMENT_COMMANDS=0\nSTARTED_BEFORE=%s\nSTARTED_AFTER=%s\n' "$old" "$new"
 REMOTE
   sleep 3
   after="$(remote_state)"; printf '%s\n' "$after" | tee "$run_dir/runtime-after.log"
-  grep -Fq 'RUNTIME_STATE=loaded' <<<"$after"
+  grep -Fxq 'TASK_PROCESS_ORDER=after-task-list' <<<"$after"
   active_estop_preflight >"$run_dir/preflight-after.log"
   finalize_evidence "$run_dir"
-  printf 'RELOAD_EVIDENCE=%s\nNEXT=libere E-stop bajo supervisión y ejecute --preflight\n' "$run_dir"
+  printf 'RELOAD_EVIDENCE=%s\n' "$run_dir"
+  printf 'NEXT=Mantenga E-stop: reiniciar este proceso no recupera Motion. Siga docs/guides/CRUZR_V020_BOOT_GUARD.md; sólo tras recuperar el arranque y verificar la postura, ejecute --preflight.\n'
+  printf 'PICO_CAUTION=Si los brazos siguen elevados en PICO, no libere ni reinicie para probar: el HOME interno puede usar otra trayectoria.\n'
   exit 0
 fi
 
@@ -298,10 +330,17 @@ if [[ "$MODE" == preflight ]]; then
 else
   work_dir="$($NEW_EVIDENCE --experiment PICO-HOME-OWNER-RUN)"
 fi
-preflight="$(released_preflight)"; printf '%s\n' "$preflight" | tee "$work_dir/preflight-before.log"
+preflight="$(released_preflight)" || {
+  status=$?
+  printf '%s\n' "$preflight" | tee "$work_dir/preflight-before.log"
+  printf 'PREFLIGHT_FAILED=1; no se consultará ni enviará la trayectoria.\n' >&2
+  [[ "$MODE" != run ]] || finalize_evidence "$work_dir"
+  exit "$status"
+}
+printf '%s\n' "$preflight" | tee "$work_dir/preflight-before.log"
 runtime="$(remote_state)"; printf '%s\n' "$runtime" | tee "$work_dir/runtime-before.log"
 grep -Fq 'INSTALL_STATE=exact' <<<"$runtime" || die "falta la revisión open_v2: use --install y --reload con E-stop accionado; la tarea antigua no se reutiliza"
-grep -Fq 'RUNTIME_STATE=loaded' <<<"$runtime" || die "la tarea necesita --reload con E-stop"
+grep -Fxq 'TASK_PROCESS_ORDER=after-task-list' <<<"$runtime" || die "la tarea necesita recarga; prepárela con brazos abajo siguiendo la guía, no improvise un E-stop/reinicio desde PICO"
 grep -Fq 'ACTION_SERVERS=1' <<<"$runtime" || die "servidor de acciones no disponible"
 gate_live_state "$work_dir" pico before
 printf 'PICO_HOME_PREFLIGHT_OK=recognized-pico-reference,stationary,healthy,exclusive-control\n'

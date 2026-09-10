@@ -1,5 +1,15 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**2026-09-10 — Estado vigente tras paro para instalar open_v2:**
+Operador confirma brazos en PICO, estables/sin contacto. La tarea nueva está
+instalada pero no se ejecutó: hw espera arranque, manipulación espera
+ListControllers y no hay muestra de actuadores ni servidor de acciones.
+No aplicar HOME, reiniciar ni cambiar de modo para probar: el HOME interno
+no sigue necesariamente la ruta nueva. Preparación física/apagado pendientes;
+abrazaderas vacías todavía por confirmar. Se corrigieron localmente mensajes
+de recarga y propagación del preflight; sin movimientos/rearmes del agente.
+[Evidencia y recuperación pendiente](../incidents/2026-09-10_PICO_RECARGA_SIN_MOTION.md).
+
 **2026-09-09 — Corrección local PICO→HOME open_v2 (VERIFICADO offline; NO instalada/ejecutada):**
 Se retira del wrapper la tarea directa `cruzr/pico_to_home_owner` tras contacto
 comunicado por el operador. Nueva tarea independiente `cruzr/pico_to_home_open_v2`:

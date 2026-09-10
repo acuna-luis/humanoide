@@ -1,5 +1,18 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**2026-09-10 — open_v2 instalada; Motion no disponible tras paro (VERIFICADO):**
+XML remoto exacto6b8309f3…6999 y una entrada en task_list. hw se reinició al
+accionar E-stop y espera su servicio de arranque; manipulación recargada espera
+ListControllers. Acción0, actuadores sin muestra; no basta liberar el paro.
+Operador confirma postura PICO estable/sin contacto, objeto por confirmar.
+No arrancar HOME interno desde esta postura para intentar recuperar el servidor.
+Wrapper corregido: errores de auditor/grep ya no se ocultan en sustituciones
+Bash; fechas y servidor se informan separados; se retira la indicación de
+liberar tras --reload. Instalación/recarga se preparan con brazos abajo/vacíos.
+17 pruebas locales pasan; preflight vivo se detiene antes de runtime, sin mover.
+Ensayo open_v2 y recuperación física pendientes; sin cambios remotos del agente.
+[Diagnóstico, cambios y punto de reanudación](../incidents/2026-09-10_PICO_RECARGA_SIN_MOTION.md).
+
 **2026-09-09 — Corrección local PICO→HOME open_v2 (VERIFICADO offline; NO instalada/ejecutada):**
 Se retira del wrapper la tarea directa `cruzr/pico_to_home_owner` tras contacto
 comunicado por el operador. Nueva tarea independiente `cruzr/pico_to_home_open_v2`:

@@ -1,6 +1,15 @@
 # PICO a HOME abriendo los brazos antes de bajarlos
 
-2026-09-09 — Implementación local verificada; instalación y ensayo físico pendientes.
+2026-09-10 — XML instalado y hash verificado; Motion no disponible tras E-stop.
+Ensayo físico de open_v2 pendiente. Operador confirma brazos en PICO, estables
+y sin contacto; no usar un reinicio para forzar HOME desde esta postura.
+
+La recarga aislada no restablece Motion después del paro. Se corrigieron sus
+mensajes y la propagación de errores del preflight. Una fecha de proceso
+posterior al task_list sólo prueba el orden de arranque, no que exista servidor
+de acciones: ahora se muestran `TASK_PROCESS_ORDER` y `RUNTIME_STATE` separados.
+La versión anterior podía imprimir `RUNTIME_STATE=loaded` con cero servidores.
+Diecisiete pruebas locales pasan, cinco nuevas sobre este incidente.
 
 El operador informó contacto entre abrazadera y cuerpo durante la tarea anterior
 `cruzr/pico_to_home_owner`. Su primer movimiento llevaba simultáneamente los
@@ -63,19 +72,39 @@ El archivo de salida debe ser nuevo. Los datos de evidencia permanecen fuera
 de Git. Véase la entrada de esta revisión en PROJECT_SOURCE_OF_TRUTH.md para
 el directorio de resultados y las copias previas a la modificación.
 
-## Puesta en servicio pendiente
+## Puesta en servicio
 
 Después de resolver el contacto y comprobar físicamente el montaje, con robot
-estable y E-stop accionado, `--install` y `--reload` preparan **esta revisión**.
+estable, **brazos abajo/vacíos antes de pasar a PICO** y E-stop accionado,
+`--install` y `--reload` preparan **esta revisión**.
 Ambos mantienen sus comprobaciones y confirmación local. No deben ejecutarse
 durante un apagado ni con alimentación parcial. El reinicio supervisado posterior
 al E-stop debe seguir la guía de arranque de esta unidad.
+
+**No basta con liberar el E-stop después de `--reload`.** El paro puede detener
+el proceso hw; manipulación espera entonces ListControllers y no ofrece acciones.
+La recarga no inicia hw, no llama StartMotion y no confirma postura ni HOME.
+El mensaje antiguo que indicaba liberar y pasar directamente a preflight se
+retiró el 10-09. Si la instalación y el orden del proceso ya están verificados,
+repetir `--install` o `--reload` no soluciona este estado.
+
+Si los brazos ya están elevados en PICO, detenerse en diagnóstico y preparar
+la recuperación física antes de reiniciar: el HOME interno del arranque no
+es la ruta open_v2. No forzar los brazos ni improvisar liberación de frenos.
+La espera de Motion instalada en Control Center corrige una carrera de arranque;
+no inhibe su HOME interno ni recupera automáticamente el robot después de un paro.
 
 Con el sistema recuperado y la escena comprobada, `--preflight` sólo lee.
 `--run` solicita la confirmación humana existente, vuelve a medir la postura
 después de la confirmación y ejecuta una sola vez. Una interrupción no se reanuda
 desde un punto intermedio: detiene el flujo y exige revisar el estado real.
 No se publica HOME directo ni se intenta hacer simétricos los brazos al fallar.
+
+El wrapper conserva explícitamente el código no cero del auditor y rechaza
+cualquier marcador requerido ausente o incorrecto, incluso dentro de una
+sustitución de comandos Bash. Se corrigió que el `printf` final pudiera ocultar
+fallos del auditor o de `grep`. El flujo sale antes de consultar/ejecutar la ruta;
+no se han relajado los límites ni cambiado el XML remoto durante esta corrección.
 
 La zona a comprobar incluye **toda la apertura lateral**, además del descenso.
 Las abrazaderas deben estar vacías; no usar esta ruta para soltar una caja ni

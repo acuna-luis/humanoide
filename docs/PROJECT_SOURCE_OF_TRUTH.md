@@ -1,5 +1,63 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**2026-09-10 — PICO→HOME instalado, pero Motion detenido tras E-stop (VERIFICADO):**
+El operador instaló/recargó open_v2; XML remoto hash6b8309f3…6999 exacto,
+una entrada y proceso posterior al task_list. Después de entrar/salir de PICO,
+principal pulsado15:18:50 UTC+8 coincide con reinicio hw (RestartCount1), que
+espera /mc/rosa_control/start; manipulación recargada07:20:47Z espera ListControllers.
+Liberar a15:24:16 no produjo nuevo StartMotion. Acción0 y actuadores sin muestra
+(timeout7s); fault_current vacío no demuestra disponibilidad. CC conserva la
+prevención de arranque y última transición AutoTaskMode, no WaitStartMotion.
+Usuario confirma «en PICO, estable sin contacto»; abrazaderas vacías por confirmar.
+No reutilizar HOME medido anterior ni reiniciar para probar: HOME interno no es open_v2.
+Corregido wrapper LOCAL: propaga fallos dentro de sustituciones Bash, conserva
+diagnóstico, distingue orden temporal/servidor disponible y retira indicación
+de liberar paro inmediatamente tras recarga. Preparación exige brazos abajo/vacíos.
+17 pruebas locales pasan; --preflight vivo corregido falla1 con PREFLIGHT_FAILED
+antes de consultar runtime, sin objetivos. Ninguna escritura/reinicio en robot
+desde el agente durante este diagnóstico. Recuperación física y ensayo pendientes.
+Detalle, backup y reanudación: docs/incidents/2026-09-10_PICO_RECARGA_SIN_MOTION.md.
+Evidencia: ../Humanoide-vla-evidence/20260910T072711Z_PICO-RELOAD-NO-ACTION/.
+
+**2026-09-10 — Arranque recuperado tras liberar E-stop (VERIFICADO):**
+El usuario comunica que parece terminado; nuevas consultas confirman principal0,
+servo0, cargador0 y fault_current vacío. CC registró selfcheck passed=true/error0,
+StartMotion succ y transición a AutoTaskMode a las 15:08:17 del reloj robot
+(UTC+8). Muestra fresca20D válida: MEASURED_HOME=1, máximo absoluto0,002972 rad,
+brazos0,000959 rad, velocidad0 y delta consigna0,002972 rad; actuadores habilitados
+y sin error. Servidor de manipulación1, writers RobotCommand0, ambos contenedores
+VLA exited/restart=no. Baterías97,1%/72,8%. Sólo consultas de lectura tras liberar;
+sin objetivos de movimiento adicionales. Prevención de arranque instalada y
+recuperación software verificadas. Pendientes confirmación visual del anillo
+y repetición posterior de un arranque completo en frío. La trayectoria open_v2
+no se instaló ni ejecutó. Sustituye la espera de liberación indicada abajo.
+Evidencia: ../Humanoide-vla-evidence/20260910T064413Z_BOOT-READONLY/after-release/.
+Detalle y reversión: docs/incidents/2026-09-10_ARRANQUE_CONTROL_CENTER_MOTION.md.
+
+**2026-09-10 — VERIFICADO: carrera de arranque corregida en Vision; liberación pendiente:**
+CC empezó self-check unos 51 s antes de arrancar el servicio x86 de Motion.
+Fallaron archivos/sistema por servicio ausente y reloj/latencia por IP no
+disponible; energía, cámaras y sobrecorriente pasaron. No es el fallo EtherCAT
+del 08-09. Operador confirmó E-stop principal pulsado, brazos abajo, vacíos y
+estables/sin contacto. Reinicio único de CC recuperó WaitEStopRelease.
+Prevención instalada: /etc/walker/boot/cruzr_cc_start_when_ready.py espera tres
+respuestas reales de Motion antes de ejecutar el comando original de CC.
+Se cambió sólo el comando de system.control_center en compose y se recreó sólo
+ese contenedor bajo nueva lectura principal1. Imagen, entorno, entrypoint y
+montajes conservados; otros contenedores sin cambios. Registro nuevo confirma
+3/3 respuestas, arranque vendor y WaitEStopRelease. Guard antiguo disabled/inactive.
+Ocho pruebas locales y --check dentro del robot correctos. Nueva comprobación
+previa rc0: tres respuestas x86, seis cámaras en dos rondas, v0.2.0,
+WaitEStopRelease, paros/cargador1/0/0. Se indica liberar el principal bajo la
+supervisión ya confirmada y se espera confirmación del operador. No se enviaron
+objetivos de brazos/chasis; liberar el paro puede iniciar HOME interno vendor.
+Backup: /home/walker/.config/udoke/walker/compose.yml.before-cc-ready-20260910T065831Z.
+Reversión, hashes y alcance: docs/incidents/2026-09-10_ARRANQUE_CONTROL_CENTER_MOTION.md.
+Evidencia: ../Humanoide-vla-evidence/20260910T064413Z_BOOT-READONLY/.
+PENDIENTE: liberación supervisada, self-check y
+StartMotion, HOME medido/anillo y repetición de arranque completo en frío.
+La trayectoria PICO→HOME open_v2 continúa sin instalar/ejecutar en esta intervención.
+
 **2026-09-09 — Corrección local PICO→HOME open_v2 (VERIFICADO offline; NO instalada/ejecutada):**
 Se retira del wrapper la tarea directa `cruzr/pico_to_home_owner` tras contacto
 comunicado por el operador. Nueva tarea independiente `cruzr/pico_to_home_open_v2`:

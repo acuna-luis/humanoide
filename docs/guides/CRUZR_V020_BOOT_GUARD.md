@@ -1,5 +1,39 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+**2026-09-10 — Incidente posterior, distinto de la carrera de arranque:**
+Tras pasar a PICO y accionar E-stop para instalar la trayectoria, hw se reinició
+y quedó esperando arranque; manipulación espera ListControllers. Liberar el
+paro no recuperó las acciones. Usuario confirma brazos PICO estables/sin
+contacto. La espera instalada en CC se conserva y no es un recuperador después
+de cualquier paro. No reiniciar CC para probar desde PICO: puede lanzar HOME
+interno. [Diagnóstico y preparación pendiente](../incidents/2026-09-10_PICO_RECARGA_SIN_MOTION.md).
+
+**2026-09-10 — VERIFICADO: self-check, StartMotion y HOME tras liberar el paro.**
+La nueva instancia pasó selfcheck=true/error0 y StartMotion succ; estado final
+AutoTaskMode (15:08:17 UTC+8). Lectura fresca: paros0/0, cargador0, fault_current
+vacío; HOME20D máximo0,002972 rad, brazos0,000959 rad, velocidad0, actuadores
+habilitados/sin fallos. Servidor de acciones1 y writers RobotCommand0; VLA
+detenido. El usuario cree terminado el arranque. No se enviaron movimientos
+adicionales durante la comprobación. Recuperación software cerrada; confirmación
+visual del anillo y repetición de arranque en frío pendientes. La prevención
+nueva permanece instalada; el guard antiguo sigue deshabilitado.
+Evidencia: `../Humanoide-vla-evidence/20260910T064413Z_BOOT-READONLY/after-release/`.
+
+**2026-09-10 — Prevención de arranque instalada; E-stop aún pulsado.**
+La nueva intervención confirma la carrera: CC hizo self-check unos 51 s antes
+de arrancar el servicio de Motion. [Diagnóstico, instalación, validación y
+rollback](../incidents/2026-09-10_ARRANQUE_CONTROL_CENTER_MOTION.md).
+Ahora el comando de arranque de CC espera tres respuestas reales de Motion y
+después ejecuta el comando original de UBTECH. Mantiene su autodiagnóstico y
+HOME interno. Cambió sólo ese comando en compose; se recreó sólo CC bajo paro
+confirmado. El registro nuevo demuestra respuestas3/3 y WaitEStopRelease.
+El guard systemd antiguo permanece **disabled/inactive**; su comportamiento
+descrito más abajo es histórico y no debe confundirse con la prevención nueva.
+Comprobación previa terminada rc0: tres respuestas x86, seis cámaras en dos
+rondas, versión v0.2.0 y seguridad1/0/0. Se indica al operador liberar el paro
+bajo la supervisión ya confirmada. Pendientes confirmación de liberación,
+self-check/StartMotion, postura, anillo y repetición de arranque en frío.
+
 **2026-09-09 11:11 UTC — VERIFICADO: anillo blanco y recuperación operativa tras liberar E-stop:**
 el propietario confirmó paro liberado y anillo blanco. Lectura nueva: principal0,
 fault_current vacío; instancia nueva de CC muestra selfcheck passed=true/error0,

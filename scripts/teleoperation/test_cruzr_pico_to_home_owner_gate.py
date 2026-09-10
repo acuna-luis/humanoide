@@ -1,5 +1,8 @@
 import sys
+import os
 from pathlib import Path
+import subprocess
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -13,6 +16,84 @@ def sample(positions, velocities=None):
         "position": list(positions),
         "velocity": list(velocities or [0.0] * 20),
     }
+
+
+class PreflightShellTests(unittest.TestCase):
+    """Exercise actual Bash functions inside substitutions, with no SSH or ROS."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.source = (ROOT/'scripts/teleoperation/cruzr_pico_to_home_owner.sh').read_text()
+        cls.functions = cls.source.split('active_estop_preflight() {',1)[1].split('remote_state() {',1)[0]
+        cls.functions = 'active_estop_preflight() {'+cls.functions
+        cls.released = ['ESTOP_KEY=0','SERVO_ESTOP_KEY=0','CHARGER=0',
+                        'COMMAND_PATH_SAFE=publishers:0',
+                        'CANONICAL_MANIPULATION_PREFLIGHT=passed-read-only']
+        cls.active = ['ESTOP_KEY=1','SERVO_ESTOP_KEY=0','CHARGER=0',
+                      'COMMAND_PATH_SAFE=publishers:0']
+
+    def run_gate(self, mode, lines, returncode=0):
+        with tempfile.TemporaryDirectory() as directory:
+            auditor=Path(directory)/'auditor'
+            auditor.write_text('#!/bin/bash\nprintf "%s\\n" "$MOCK_OUTPUT"\nexit "$MOCK_STATUS"\n')
+            auditor.chmod(0o755)
+            script='set -Eeuo pipefail\n'+self.functions+'\n'
+            script+='value="$('+mode+'_preflight)"\nprintf "CONTINUED\\n%s\\n" "$value"\n'
+            return subprocess.run(['bash','-s'],input=script,text=True,capture_output=True,
+                env=dict(os.environ,LIVE_AUDITOR=str(auditor),MOCK_OUTPUT='\n'.join(lines),
+                         MOCK_STATUS=str(returncode)))
+
+    def test_auditor_failure_blocks_even_with_all_success_markers(self):
+        for mode,lines in [('active_estop',self.active),('released',self.released)]:
+            with self.subTest(mode=mode):
+                result=self.run_gate(mode,lines,returncode=23)
+                self.assertEqual(result.returncode,23,result.stderr)
+                self.assertNotIn('CONTINUED',result.stdout)
+
+    def test_missing_or_malformed_required_marker_blocks(self):
+        for mode,lines in [('active_estop',self.active),('released',self.released)]:
+            # A released servo-stop line is informational for the active gate.
+            required=range(len(lines)) if mode=='released' else (0,2,3)
+            for index in required:
+                for replacement in ('','prefix '+lines[index],lines[index]+' invalid'):
+                    with self.subTest(mode=mode,index=index,replacement=replacement):
+                        changed=lines.copy();changed[index]=replacement
+                        result=self.run_gate(mode,changed)
+                        self.assertNotEqual(result.returncode,0)
+                        self.assertNotIn('CONTINUED',result.stdout)
+
+    def test_complete_valid_audits_pass_both_supported_stop_inputs(self):
+        servo=self.active.copy();servo[:2]=['ESTOP_KEY=0','SERVO_ESTOP_KEY=1']
+        for mode,lines in [('active_estop',self.active),('active_estop',servo),('released',self.released)]:
+            result=self.run_gate(mode,lines)
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertIn('CONTINUED',result.stdout)
+
+    def test_actual_dispatch_stops_before_runtime_query_and_preserves_failure(self):
+        # Run the real preflight dispatch after replacing only its ROS auditor.
+        dispatch=self.source.split('preflight="$(released_preflight)"',1)[1]
+        dispatch='preflight="$(released_preflight)"'+dispatch.split('runtime="$(remote_state)"',1)[0]
+        with tempfile.TemporaryDirectory() as directory:
+            script='set -Eeuo pipefail\nreleased_preflight() { echo CANONICAL_FAILURE; return 29; }\n'
+            script+='MODE=preflight\nwork_dir="$TEST_WORK_DIR"\n'+dispatch+'\necho RUNTIME_WOULD_RUN\n'
+            result=subprocess.run(['bash','-s'],input=script,text=True,capture_output=True,
+                env=dict(os.environ,TEST_WORK_DIR=directory))
+            self.assertEqual(result.returncode,29,result.stderr)
+            self.assertIn('CANONICAL_FAILURE',result.stdout)
+            self.assertNotIn('RUNTIME_WOULD_RUN',result.stdout)
+            self.assertEqual((Path(directory)/'preflight-before.log').read_text(),'CANONICAL_FAILURE\n')
+
+    def test_process_timestamp_does_not_claim_action_server_is_loaded(self):
+        branch=self.source.split('elif [[ "$count" == 1 && "$present" == 1 && "$xml_sha" == "$expected_xml" ]]; then',1)[1]
+        branch=branch.split('\nelse\n  printf \'INSTALL_STATE=conflict',1)[0]
+        for started,mtime,servers,order,state in [(20,10,0,'after-task-list','action-server-unavailable'),
+                (20,10,1,'after-task-list','action-server-ready'),(5,10,1,'reload-required','action-server-ready')]:
+            script=f'set -Eeuo pipefail\nstarted={started}; mtime={mtime}; servers={servers}\n'+branch
+            result=subprocess.run(['bash','-s'],input=script,text=True,capture_output=True)
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertIn('TASK_PROCESS_ORDER='+order,result.stdout)
+            self.assertIn('RUNTIME_STATE='+state,result.stdout)
+            self.assertNotIn('RUNTIME_STATE=loaded',result.stdout)
 
 
 class GateTests(unittest.TestCase):
