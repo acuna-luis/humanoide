@@ -42,6 +42,19 @@ if not pathlib.Path(gr00t.__file__).resolve().is_relative_to(VENDOR_OVERRIDE_ROO
 STATE_FALLBACK_TOPIC = "/mc/whole_joint_states"
 
 
+def message_text(value) -> str:
+    """Decode ROS/SHM text using its declared size, excluding buffer garbage."""
+    if isinstance(value, str):
+        return value
+    data = value.data
+    if isinstance(data, str):
+        return data
+    size = value.size
+    if not isinstance(size, int) or not 0 <= size <= len(data):
+        raise ValueError("invalid SHM string size")
+    return bytes(data[:size]).decode("utf-8", errors="strict")
+
+
 class CruzrS2InferenceShadowNode(gr00t_inference.Gr00tControllerROS2Node):
     def __init__(self) -> None:
         super().__init__()
@@ -141,10 +154,10 @@ class CruzrS2InferenceShadowNode(gr00t_inference.Gr00tControllerROS2Node):
             "image": {
                 "topic": gr00t_inference.SUB_TOPIC_MAP["rgb_image"],
                 "source_timestamp_unix": image_timestamp,
-                "frame_id": image_message.header.frame_id,
+                "frame_id": message_text(image_message.header.frame_id),
                 "source_width": int(image_message.width),
                 "source_height": int(image_message.height),
-                "source_encoding": image_message.encoding,
+                "source_encoding": message_text(image_message.encoding),
                 "decoded_shape": list(image.shape),
                 "png_file": final_png.name,
                 "png_sha256": self._sha256(temporary_png),

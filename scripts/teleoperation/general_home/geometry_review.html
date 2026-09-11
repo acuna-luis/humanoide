@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOME · Revisión de geometría</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#142333;color:#e9f1f8;font:16px system-ui}main{display:grid;grid-template-columns:360px 1fr;height:100vh}aside{padding:22px;overflow:auto;background:#1d3144}h1{font-size:23px;margin:0 0 16px}h2{font-size:17px}p{line-height:1.5}label{display:block;margin:18px 0 6px}select,button{width:100%;background:#29465f;color:inherit;border:1px solid #6a8397;padding:9px;border-radius:6px}button{cursor:pointer;margin-top:12px}input{accent-color:#53cece}canvas{display:block;width:100%;height:100%;touch-action:none}.warning{color:#ffd88b}.legend{display:flex;gap:16px}.red{color:#ff9677}.blue{color:#68d7fc}#details{overflow-wrap:anywhere;font-size:14px}#status{font-size:13px;color:#b4cadc}section{position:relative;min-width:0}#hint{position:absolute;bottom:14px;left:18px;pointer-events:none;background:#142333cf;padding:8px;border-radius:5px}@media(max-width:700px){main{grid-template-columns:1fr;grid-template-rows:auto 60vh;height:auto}aside{max-height:42vh}}
+</style>
+<main><aside><h1>HOME: geometría bajo revisión</h1>
+<p class="warning">Posturas sintéticas. Esta vista no representa el estado actual del robot ni autoriza movimiento.</p>
+<label for="reference">Postura del modelo</label><select id="reference"></select>
+<label for="pair">Par con conflicto de geometría o margen</label><select id="pair"></select>
+<label><input id="enclosure" type="checkbox"> Ver geometría usada en el cálculo</label>
+<p id="representation">Vista inicial: superficies originales del CAD. Algunas envolventes del cálculo rellenan huecos.</p>
+<label><input id="context" type="checkbox"> Mostrar el resto del robot</label>
+<button id="fit">Centrar piezas seleccionadas</button><button id="full">Ver robot completo</button>
+<p class="legend"><span class="red">■ Primera pieza</span><span class="blue">■ Segunda pieza</span></p>
+<div id="details"></div><p id="status"></p>
+<p>Arrastra para girar. Rueda para acercar. Un valor de 0 mm puede indicar intersección o contención; no demuestra contacto físico. Los pares invariantes se conservan en el chequeo.</p>
+</aside><section><canvas id="view" aria-label="Vista 3D giratoria del modelo y del par seleccionado"></canvas><div id="hint">X, Y, Z del modelo en metros · vista CAD, no cámara del robot</div></section></main>
+<script id="model-data" type="application/json">__MODEL_DATA__</script>
+<script>
+'use strict';
+const data=JSON.parse(document.getElementById('model-data').textContent);
+const $=id=>document.getElementById(id),canvas=$('view'),gl=canvas.getContext('webgl2');
+if(!gl){$('status').textContent='WebGL 2 no está disponible en este navegador.';throw Error('WebGL2 unavailable');}
+const vs=`#version 300 es
+in vec3 position;in vec3 normal;uniform mat4 pose;uniform vec3 center;uniform vec3 right;uniform vec3 up;uniform vec3 back;uniform float span;uniform float aspect;out vec3 n;
+void main(){vec3 p=(pose*vec4(position,1)).xyz-center;n=mat3(pose)*normal;gl_Position=vec4(dot(right,p)/span/aspect,dot(up,p)/span,-dot(back,p)/(span*20.),1.);}`;
+const fs=`#version 300 es
+precision highp float;in vec3 n;uniform vec3 color;uniform vec3 back;out vec4 pixel;
+void main(){float light=.35+.65*abs(dot(normalize(n),normalize(back+vec3(.2,.1,.6))));pixel=vec4(color*light,1);}`;
+function shader(type,source){let s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}
+const program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,vs));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fs));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));gl.useProgram(program);
+const uniforms=Object.fromEntries(['pose','center','right','up','back','span','aspect','color'].map(n=>[n,gl.getUniformLocation(program,n)]));
+function decode(s,Type){let b=atob(s),bytes=new Uint8Array(b.length);for(let i=0;i<b.length;i++)bytes[i]=b.charCodeAt(i);return new Type(bytes.buffer);}
+function upload(mesh){let vao=gl.createVertexArray();gl.bindVertexArray(vao);for(const [field,attr] of [['vertices','position'],['normals','normal']]){const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,decode(mesh[field],Float32Array),gl.STATIC_DRAW);let a=gl.getAttribLocation(program,attr);gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,3,gl.FLOAT,false,0,0);}const indices=decode(mesh.faces,Uint32Array),b=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,b);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);return {vao,count:indices.length};}
+const meshes=data.shapes.map(s=>({source:upload(s.source),checked:s.checked?upload(s.checked):null}));
+let yaw=.8,pitch=.3,center=[0,0,.9],span=1,selected=[],frame,whole=false;
+const refs=$('reference'),pairs=$('pair');for(const name of Object.keys(data.references)){let o=new Option(name,name);refs.add(o);}refs.value='pico_body_zero';
+function conflicts(){return data.references[refs.value].conflicts;}
+function world(p,m){return [0,1,2].map(i=>m[i]*p[0]+m[4+i]*p[1]+m[8+i]*p[2]+m[12+i]);}
+function fit(all=false){whole=all;const points=[];data.shapes.forEach((s,i)=>{if(!all&&!selected.includes(i))return;let m=data.references[refs.value].poses[s.link];for(let a=0;a<2;a++)for(let b=0;b<2;b++)for(let c=0;c<2;c++)points.push(world([s.bounds[a][0],s.bounds[b][1],s.bounds[c][2]],m));});if(!points.length)return;let lo=[0,1,2].map(i=>Math.min(...points.map(p=>p[i]))),hi=[0,1,2].map(i=>Math.max(...points.map(p=>p[i])));center=lo.map((v,i)=>(v+hi[i])/2);span=Math.max(...hi.map((v,i)=>v-lo[i]))*.75;draw();}
+function select(){let c=conflicts()[Number(pairs.value)];selected=c?c.pair.map(n=>data.shapes.findIndex(s=>s.name===n)):[];const details=$('details');details.replaceChildren();if(c){for(const text of [c.pair.join(' ↔ '),'Cota de separación: '+(c.separation_lower_bound_m*1000).toFixed(3)+' mm. Margen requerido: '+(c.required_margin_m*1000).toFixed(1)+' mm.',c.scope==='invariant_for_fixed_auxiliary_and_base'?'Relación invariable si chasis y ruedas permanecen fijos.':'Articulaciones que cambian la separación: '+c.controlling_joints.join(', '),'Representaciones: '+c.representations.join(' / '),'Error numérico descontado: '+(c.numeric_geometry_error_m*1e9).toFixed(2)+' nm.']){let p=document.createElement('p');p.textContent=text;details.append(p);}}fit(false);}
+function reference(){pairs.replaceChildren();conflicts().forEach((c,i)=>pairs.add(new Option((c.scope.startsWith('invariant')?'Fijo · ':'Móvil · ')+c.pair.join(' ↔ '),String(i))));let first=conflicts().findIndex(c=>c.scope.startsWith('changes'));pairs.value=String(Math.max(0,first));$('status').textContent=conflicts().length+' conflictos registrados; '+data.model.convex_enclosures.length+' envolventes completas. No se han excluido uniones móviles.';select();}
+function draw(){cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{const dpr=Math.min(devicePixelRatio,2),w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);canvas.width=w*dpr;canvas.height=h*dpr;gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(.065,.105,.16,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);let right=[-Math.sin(yaw),Math.cos(yaw),0],up=[-Math.cos(yaw)*Math.sin(pitch),-Math.sin(yaw)*Math.sin(pitch),Math.cos(pitch)],back=[Math.cos(yaw)*Math.cos(pitch),Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch)];for(const [n,v] of Object.entries({center,right,up,back}))gl.uniform3fv(uniforms[n],v);gl.uniform1f(uniforms.span,span/Math.min(1,w/h));gl.uniform1f(uniforms.aspect,w/h);data.shapes.forEach((s,i)=>{let rank=selected.indexOf(i);if(rank<0&&!$('context').checked&&!whole)return;let mesh=$('enclosure').checked&&meshes[i].checked?meshes[i].checked:meshes[i].source;gl.bindVertexArray(mesh.vao);gl.uniformMatrix4fv(uniforms.pose,false,data.references[refs.value].poses[s.link]);gl.uniform3fv(uniforms.color,rank===0?[1,.42,.28]:rank===1?[.18,.75,1]:[.34,.4,.46]);gl.drawElements(gl.TRIANGLES,mesh.count,gl.UNSIGNED_INT,0);});document.body.dataset.rendered='true';});}
+let drag=null;canvas.onpointerdown=e=>{drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId);};canvas.onpointermove=e=>{if(!drag)return;yaw-=(e.clientX-drag[0])*.008;pitch=Math.max(-1.5,Math.min(1.5,pitch+(e.clientY-drag[1])*.008));drag=[e.clientX,e.clientY];draw();};canvas.onpointerup=()=>drag=null;canvas.onpointercancel=()=>drag=null;canvas.addEventListener('wheel',e=>{e.preventDefault();span=Math.max(.01,Math.min(10,span*Math.exp(e.deltaY*.001)));draw();},{passive:false});refs.onchange=reference;pairs.onchange=select;$('enclosure').onchange=()=>{$('representation').textContent=$('enclosure').checked?'Mostrando sólidos del cálculo, incluidas envolventes conservadoras.':'Mostrando superficies originales del CAD.';draw();};$('context').onchange=draw;$('fit').onclick=()=>fit(false);$('full').onclick=()=>fit(true);new ResizeObserver(draw).observe(canvas);reference();
+</script></html>

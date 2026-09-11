@@ -1,0 +1,47 @@
+{
+  "schema": "cruzr-general-home-scene-v1",
+  "captured_at": "2026-09-10T00:00:00+00:00",
+  "source": "SYNTHETIC_WORLD_EXAMPLE_NOT_CURRENT_WORKSHOP",
+  "frame_id": "base_link",
+  "complete": true,
+  "objects": [
+    {
+      "id": "example_floor",
+      "type": "box",
+      "size_m": [
+        10.0,
+        10.0,
+        0.05
+      ],
+      "center_m": [
+        0.0,
+        0.0,
+        -0.05
+      ],
+      "rpy_rad": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "example_tabletop",
+      "type": "box",
+      "size_m": [
+        0.7,
+        1.0,
+        0.05
+      ],
+      "center_m": [
+        1.8,
+        0.0,
+        0.73
+      ],
+      "rpy_rad": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ]
+}

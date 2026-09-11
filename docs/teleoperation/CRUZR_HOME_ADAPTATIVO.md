@@ -1,5 +1,11 @@
 # HOME con apertura según la postura
 
+**Ampliación posterior del 10-09:** el [planificador para posturas generales](CRUZR_HOME_DESDE_POSTURA_GENERAL.md)
+añade cobertura del robot completo, estudio de contraejemplos y búsqueda offline
+desde estado archivado. Su integración física sigue pendiente. El planificador
+de este documento sigue limitado
+a sus familias PICO/brazos abajo; no se amplió su autorización ni se instaló.
+
 ## Estado del 10-09-2026
 
 **VERIFICADO LOCALMENTE; reducción de apertura/tiempos NO ACTIVADA en Motion.**

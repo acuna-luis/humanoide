@@ -1,5 +1,40 @@
 # Integración segura del VLA suministrado para Cruzr S2
 
+**2026-09-11 — Petición de agarre VLA en15min: avance offline; agarre NO ejecutado.**
+Quince inferencias nuevas (episodios40/430/438, frame0, cinco semillas) pasan
+continuidad inicial de14brazos en sus escenas originales: máximos0,033086,
+0,031726 y0,032916rad. No son shadow actuales ni éxito físico.
+Modelos completos de extremos conservan54avisos con margen canónico, sin
+nuevos pares respecto a HOME; no se han eximido. Runner E6.1C retirado sigue
+bloqueando antes de movimiento. Estimación exploratoria de soporte430/438
+≈89,6/90,4cm bajo premisas explícitas, sin incertidumbre total acotada; no
+queda demostrada la equivalencia con80cm ni se ordena cambiar la mesa.
+Tres herramientas PC nuevas; contenedor CUDA temporal network=none, exit0,
+retirado junto a staging después de exportar resultados. Sin cambio remoto
+persistente, movimiento ni arranque de los VLA persistentes. Shadow calificado
+0/5 y tareas físicas0/4. Validación de acceso/recuperación/escena pendiente.
+[Detalle, reproducción y reanudación](../vla/DECISION_ENTRY_VLA_20260911.md).
+
+**2026-09-11 — VLA task0 probado en shadow con mesa80:2 propuestas rechazadas.**
+Se corrigió e instaló sólo el adaptador de evidencia en Vision: Image2m usa
+shm_msgs/String en frame_id/encoding; ahora se serializan según size.
+SHA173b55da…cce67b81, backup remoto y receta selectiva en VLA-01;9 tests pasan.
+Primer intento0chunks por ese fallo; segundo2chunks/10,009s y capturas RGB+20D
+verificadas. Ambos rechazados por salto inicial en12ejes: máximo1,414390rad
+(81,039°), límite0,1rad. No se ejecutó el flujo físico ni se ampliaron límites.
+Estado observado final igual al inicial: brazos/cuerpo HOME numérico y cabeza
+−0,430857rad, velocidad0; VLA exited/restart=no y RobotCommand publishers0.
+Es diagnóstico desde postura actual, no validación ENTRY ni de altura80cm.
+Pruebas calificadas0/5, tareas físicas0/4; acceso/recuperación/ENTRY pendientes.
+La petición del usuario ya autoriza avanzar al cumplir los controles técnicos.
+[Resultado, reproducción y reversión](../vla/PRUEBA_VLA_MESA80_20260911.md).
+
+**11-09 — E6.1 retomado sin robot:** [revisión ENTRY](../vla/REVISION_ENTRY_ERGUIDA_20260911.md).
+150 entradas task0 comparadas:113 cumplen filtro exploratorio≤5° y límites
+articulares; ENTRY40 da31,196°. Candidatos438/430, sin cambiar contrato/XML
+ni fixture. Faltan RGB/fixture y trayectorias del candidato; cinco shadow0/5,
+VLA físico0/4. Ocho tests pasan. Estados del08-09 inferiores son históricos.
+
 **08-09, HOME tras finalizar el ensayo ENTRY:** [registro](../incidents/2026-09-08_HOME_TRAS_ENTRY.md).
 READY→HOME SUCCEED/status=4; HOME 20D máximo 0,002780 rad, velocidad cero,
 actuadores sanos. Último estado medido HOME sustituye READY; confirmación visual

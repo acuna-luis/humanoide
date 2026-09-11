@@ -1,5 +1,32 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+**2026-09-11 — Liberación observada y arranque completado, VERIFICADO por software.**
+Tras confirmar las condiciones físicas y pasar el check, se indicó liberar.
+Lectura fresca principal0; misma instancia CC pasó selfcheck=true/error0,
+StartMotion succ y AutoTaskMode. Servidor de manipulación1; muestra completa
+20D sana/habilitada, HOME máximo0,003068rad, brazos0,001055rad, velocidad0.
+El agente no llamó StartMotion ni envió HOME/rearme/reinicio. El retorno se
+produjo dentro del arranque de CC. Confirmación visual de recorrido sin problemas
+y estabilidad/sin contacto posterior PENDIENTE al registrar. No califica HOME
+desde todas las posturas ni frenado. Captura continua corregida y probada
+después en reposo; detalle en la guía de captura y ANL-01.
+Evidencia y backup:
+`../Humanoide-vla-evidence/20260911T062619Z_BOOT-AFTER-CONFIRMATION/`.
+
+**2026-09-11 06:21–06:22 UTC — Comprobación previa de arranque VERIFICADA.**
+`scripts/cruzr_boot_ready.sh --check` terminó rc0: Motion3/3, seis cámaras con
+marcas crecientes en dos rondas, `RELEASE_TECHNICAL_CHECK=passed`. Se verificó
+igualdad de fuentes voice/gate instaladas y locales. La rama comprobada exige
+identidad de proceso estable, espera inicial `WaitEStopRelease`, principal1,
+servo0 y cargador0. HOME instalado conserva SHA05174d2b…8cbe (20s/apertura);
+hardwarecruzr_s2_v1, baterías95,8%/93,7%. Sin cambios remotos ni movimiento.
+El usuario todavía no había contestado la comprobación física actual al
+registrar: brazos abajo, abrazaderas vacías, zona libre, ruedas bloqueadas,
+mandos detenidos y persona junto al paro. Liberación y estado posterior quedan
+PENDIENTES; no confundir el check de arranque con validación del HOME general.
+Evidencia/backups:
+`../Humanoide-vla-evidence/20260911T061956Z_BOOT-RELEASE-READONLY/`.
+
 **Política de mantenimiento 2026-09-10:** las adaptaciones vigentes de espera,
 voz y pantalla son BOOT-01/02/03 en el
 [registro del sistema](../SYSTEM_CUSTOMIZATIONS.md). Su respaldo y receta de

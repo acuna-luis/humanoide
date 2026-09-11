@@ -1,5 +1,98 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**2026-09-11 — Petición de agarre VLA en15min: avance offline; agarre NO ejecutado.**
+Quince inferencias nuevas (episodios40/430/438, frame0, cinco semillas) pasan
+continuidad inicial de14brazos en sus escenas originales: máximos0,033086,
+0,031726 y0,032916rad. No son shadow actuales ni éxito físico.
+Modelos completos de extremos conservan54avisos con margen canónico, sin
+nuevos pares respecto a HOME; no se han eximido. Runner E6.1C retirado sigue
+bloqueando antes de movimiento. Estimación exploratoria de soporte430/438
+≈89,6/90,4cm bajo premisas explícitas, sin incertidumbre total acotada; no
+queda demostrada la equivalencia con80cm ni se ordena cambiar la mesa.
+Tres herramientas PC nuevas; contenedor CUDA temporal network=none, exit0,
+retirado junto a staging después de exportar resultados. Sin cambio remoto
+persistente, movimiento ni arranque de los VLA persistentes. Shadow calificado
+0/5 y tareas físicas0/4. Validación de acceso/recuperación/escena pendiente.
+[Detalle, reproducción y reanudación](DECISION_ENTRY_VLA_20260911.md).
+
+**2026-09-11 — VLA task0 probado en shadow con mesa80:2 propuestas rechazadas.**
+Se corrigió e instaló sólo el adaptador de evidencia en Vision: Image2m usa
+shm_msgs/String en frame_id/encoding; ahora se serializan según size.
+SHA173b55da…cce67b81, backup remoto y receta selectiva en VLA-01;9 tests pasan.
+Primer intento0chunks por ese fallo; segundo2chunks/10,009s y capturas RGB+20D
+verificadas. Ambos rechazados por salto inicial en12ejes: máximo1,414390rad
+(81,039°), límite0,1rad. No se ejecutó el flujo físico ni se ampliaron límites.
+Estado observado final igual al inicial: brazos/cuerpo HOME numérico y cabeza
+−0,430857rad, velocidad0; VLA exited/restart=no y RobotCommand publishers0.
+Es diagnóstico desde postura actual, no validación ENTRY ni de altura80cm.
+Pruebas calificadas0/5, tareas físicas0/4; acceso/recuperación/ENTRY pendientes.
+La petición del usuario ya autoriza avanzar al cumplir los controles técnicos.
+[Resultado, reproducción y reversión](PRUEBA_VLA_MESA80_20260911.md).
+
+**2026-09-11 — ENTRY frente a mesa recolocada: revisión parcial, sin movimiento.**
+RGB/parquets430 y438 cotejados contra E6.0Z; ENTRY40 sigue fija a31,196°,
+430 da0,022° y438 da4,362°. Tras mover el operador la mesa, detector+TF
+sitúan la caja aproximadamente5,3cm a la derecha, antes12,0cm. Se capturaron
+RGB, nube y articulaciones nuevos: brazos/cuerpo HOME numérico, cabeza
+−0,430569rad, velocidad0. Bajo traslación conjunta inferida de mesa/caja,
+desaparece el aviso abrazadera–caja por READY; torso/elevador–tablero da
+32,8–40,9mm en muestras refinadas. La ruta directa mantiene avisos.
+No es aprobación física: faltan registro completo de escena y validación de
+transición/recuperación; no se cambió ENTRY ni se envió movimiento. Shadow0/5.
+PC: dos analizadores offline y `.venv/vla-scene` (PyAV18.1.0, PyArrow25.0.1).
+Ficha VLA-01; evidencia `../Humanoide-vla-evidence/20260911T114330Z_VLA-ENTRY-SCENE/`.
+[Resultado, alcance y reproducción](REVISION_ENTRY_CON_MESA_20260911.md).
+
+**2026-09-11 — Observación VLA preparada físicamente: sólo cabeza.**
+Con autorización «adelante» y confirmación actual de ruedas/control/zona/paro,
+se ejecutó una vez `cruzr_blue_workbin_cycle.sh --prepare-vision --yes`.
+XML instalado `cruzr/move_head_lower`, SHA f3a73626…ea46c1, objetivo yaw0,
+pitch−0,43rad en2s. Motion SUCCEED/status4, goal e3b8037b-c5bd-469a-8eab-4a127431446e.
+Final pitch−0,430473rad/yaw0,000383rad, velocidad0, cambio de los restantes
+ángulos entre extremos0. No se ordenó base ni brazos, instalación, reload o
+restart. Brazos/cuerpo continúan en HOME numérico, **cabeza en observación:
+no es HOME20D completo**. RGB VLA960×576 muestra caja completa.
+Detector tradicional en modo lectura, dos muestras estables, devuelve
+BOX_POSE_CAMERA=0.153552 0.378902 0.919998 -2.489191; x/z son posición
+lateral/profundidad en cámara, no distancia de avance del chasis ni gate de
+agarre. El VLA no se arrancó; shadow0/5. Se conserva esta postura para revisar
+ENTRY/fixture; no se publica HOME para restaurar con la mesa delante.
+MOT-04/VLA-01; fuentes, logs, estados antes/después y fotos:
+`../Humanoide-vla-evidence/20260911T111951Z_VLA-OBSERVATION-HEAD/`.
+
+**2026-09-11 — Mesa acercada por operador; cámaras verificadas sin movimiento automático.**
+Se reutilizan cotas previas del tablero83,8×84cm y grosor3,8cm por indicación
+expresa del operador; altura actual declarada80cm. No volver a pedir esas cotas.
+Operador acercó el robot durante la consulta: la primera captura queda histórica.
+Capturas posteriores de cintura RGB8+profundidad16UC1(640×360) y cabeza cruda
+UYVY(1920×1536) disponibles. RGB exacto VLA estéreo BGR8(960×576) confirma
+caja visible pero recortada por el borde inferior en esta postura. CameraInfo
+cintura obtenido con QoS transient-local; nube estéreo con377 puntos muestreados.
+No se infiere distancia de avance a partir de profundidad óptica sin registro al
+chasis/mesa y margen. Mantener base para estudiar encuadre/ENTRY; no se ha
+ordenado movimiento de cabeza/brazos/base ni arrancado VLA. No existe aprobación
+nueva de aproximación. Shadow0/5. El decode inicial de UYVY como imagen comprimida
+falló localmente; convertido después según orden UYVY del proveedor; sin impacto
+remoto. Evidencia/fuentes de captura y PNG:
+`../Humanoide-vla-evidence/20260911T110041Z_VLA-DISTANCE-READONLY/`.
+
+**2026-09-11 — Mesa de 80 cm presentada para VLA; comprobación de lectura.**
+Operador confirma altura suelo–tablero 0,80 m, HOME y caja vacía apoyada.
+Lectura canónica: HOME máximo 0,002589 rad, velocidad 0; baterías 60/59,8 %,
+paros 0/0, cargador desconectado, RobotCommand writers 0 y VLA exited en ambos
+hosts. La consulta walker_mode agotó timeout; no se infiere modo automático.
+Pendientes dimensiones del tablero, posición relativa y colocación/identidad de
+caja para revisar ENTRY/fixture. No se califica la escena sólo por su altura.
+Sin movimiento, reinicio, modificación remota o inferencia; shadow sigue 0/5.
+Evidencia: `../Humanoide-vla-evidence/20260911T104937Z_VLA-TABLE80-READONLY/`.
+
+**11-09 — Reanudación E6.1, ENTRY erguida:** [resultado](REVISION_ENTRY_ERGUIDA_20260911.md).
+Se revisan150 entradas task0 del reporte congelado:113 con inclinación≤5° por
+FK y límites articulares válidos; anterior31,196°, alternativas438=4,362° y
+430=0,022°. Se conserva cada frame20D íntegro. Ocho pruebas pasan. No se
+modifican dataset/checkpoint/contrato/robot. Pendientes RGB/fixture/acceso y
+recuperación del candidato antes de cinco shadow(0/5). VLA físico0/4.
+
 > Versión documental 1.6 — 3 de septiembre de 2026. Estado: guía técnica del
 > proyecto basada en evidencias locales; los puntos marcados «Pendiente DSA»
 > requieren confirmación del proveedor.

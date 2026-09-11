@@ -1,5 +1,358 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**2026-09-11 — Petición de agarre VLA en15min: avance offline; agarre NO ejecutado.**
+Quince inferencias nuevas (episodios40/430/438, frame0, cinco semillas) pasan
+continuidad inicial de14brazos en sus escenas originales: máximos0,033086,
+0,031726 y0,032916rad. No son shadow actuales ni éxito físico.
+Modelos completos de extremos conservan54avisos con margen canónico, sin
+nuevos pares respecto a HOME; no se han eximido. Runner E6.1C retirado sigue
+bloqueando antes de movimiento. Estimación exploratoria de soporte430/438
+≈89,6/90,4cm bajo premisas explícitas, sin incertidumbre total acotada; no
+queda demostrada la equivalencia con80cm ni se ordena cambiar la mesa.
+Tres herramientas PC nuevas; contenedor CUDA temporal network=none, exit0,
+retirado junto a staging después de exportar resultados. Sin cambio remoto
+persistente, movimiento ni arranque de los VLA persistentes. Shadow calificado
+0/5 y tareas físicas0/4. Validación de acceso/recuperación/escena pendiente.
+[Detalle, reproducción y reanudación](vla/DECISION_ENTRY_VLA_20260911.md).
+
+**2026-09-11 — VLA task0 probado en shadow con mesa80:2 propuestas rechazadas.**
+Se corrigió e instaló sólo el adaptador de evidencia en Vision: Image2m usa
+shm_msgs/String en frame_id/encoding; ahora se serializan según size.
+SHA173b55da…cce67b81, backup remoto y receta selectiva en VLA-01;9 tests pasan.
+Primer intento0chunks por ese fallo; segundo2chunks/10,009s y capturas RGB+20D
+verificadas. Ambos rechazados por salto inicial en12ejes: máximo1,414390rad
+(81,039°), límite0,1rad. No se ejecutó el flujo físico ni se ampliaron límites.
+Estado observado final igual al inicial: brazos/cuerpo HOME numérico y cabeza
+−0,430857rad, velocidad0; VLA exited/restart=no y RobotCommand publishers0.
+Es diagnóstico desde postura actual, no validación ENTRY ni de altura80cm.
+Pruebas calificadas0/5, tareas físicas0/4; acceso/recuperación/ENTRY pendientes.
+La petición del usuario ya autoriza avanzar al cumplir los controles técnicos.
+[Resultado, reproducción y reversión](vla/PRUEBA_VLA_MESA80_20260911.md).
+
+**2026-09-11 — ENTRY frente a mesa recolocada: revisión parcial, sin movimiento.**
+RGB/parquets430 y438 cotejados contra E6.0Z; ENTRY40 sigue fija a31,196°,
+430 da0,022° y438 da4,362°. Tras mover el operador la mesa, detector+TF
+sitúan la caja aproximadamente5,3cm a la derecha, antes12,0cm. Se capturaron
+RGB, nube y articulaciones nuevos: brazos/cuerpo HOME numérico, cabeza
+−0,430569rad, velocidad0. Bajo traslación conjunta inferida de mesa/caja,
+desaparece el aviso abrazadera–caja por READY; torso/elevador–tablero da
+32,8–40,9mm en muestras refinadas. La ruta directa mantiene avisos.
+No es aprobación física: faltan registro completo de escena y validación de
+transición/recuperación; no se cambió ENTRY ni se envió movimiento. Shadow0/5.
+PC: dos analizadores offline y `.venv/vla-scene` (PyAV18.1.0, PyArrow25.0.1).
+Ficha VLA-01; evidencia `../Humanoide-vla-evidence/20260911T114330Z_VLA-ENTRY-SCENE/`.
+[Resultado, alcance y reproducción](vla/REVISION_ENTRY_CON_MESA_20260911.md).
+
+**2026-09-11 — Observación VLA preparada físicamente: sólo cabeza.**
+Con autorización «adelante» y confirmación actual de ruedas/control/zona/paro,
+se ejecutó una vez `cruzr_blue_workbin_cycle.sh --prepare-vision --yes`.
+XML instalado `cruzr/move_head_lower`, SHA f3a73626…ea46c1, objetivo yaw0,
+pitch−0,43rad en2s. Motion SUCCEED/status4, goal e3b8037b-c5bd-469a-8eab-4a127431446e.
+Final pitch−0,430473rad/yaw0,000383rad, velocidad0, cambio de los restantes
+ángulos entre extremos0. No se ordenó base ni brazos, instalación, reload o
+restart. Brazos/cuerpo continúan en HOME numérico, **cabeza en observación:
+no es HOME20D completo**. RGB VLA960×576 muestra caja completa.
+Detector tradicional en modo lectura, dos muestras estables, devuelve
+BOX_POSE_CAMERA=0.153552 0.378902 0.919998 -2.489191; x/z son posición
+lateral/profundidad en cámara, no distancia de avance del chasis ni gate de
+agarre. El VLA no se arrancó; shadow0/5. Se conserva esta postura para revisar
+ENTRY/fixture; no se publica HOME para restaurar con la mesa delante.
+MOT-04/VLA-01; fuentes, logs, estados antes/después y fotos:
+`../Humanoide-vla-evidence/20260911T111951Z_VLA-OBSERVATION-HEAD/`.
+
+**2026-09-11 — Mesa acercada por operador; cámaras verificadas sin movimiento automático.**
+Se reutilizan cotas previas del tablero83,8×84cm y grosor3,8cm por indicación
+expresa del operador; altura actual declarada80cm. No volver a pedir esas cotas.
+Operador acercó el robot durante la consulta: la primera captura queda histórica.
+Capturas posteriores de cintura RGB8+profundidad16UC1(640×360) y cabeza cruda
+UYVY(1920×1536) disponibles. RGB exacto VLA estéreo BGR8(960×576) confirma
+caja visible pero recortada por el borde inferior en esta postura. CameraInfo
+cintura obtenido con QoS transient-local; nube estéreo con377 puntos muestreados.
+No se infiere distancia de avance a partir de profundidad óptica sin registro al
+chasis/mesa y margen. Mantener base para estudiar encuadre/ENTRY; no se ha
+ordenado movimiento de cabeza/brazos/base ni arrancado VLA. No existe aprobación
+nueva de aproximación. Shadow0/5. El decode inicial de UYVY como imagen comprimida
+falló localmente; convertido después según orden UYVY del proveedor; sin impacto
+remoto. Evidencia/fuentes de captura y PNG:
+`../Humanoide-vla-evidence/20260911T110041Z_VLA-DISTANCE-READONLY/`.
+
+**2026-09-11 — Mesa de 80 cm presentada para VLA; comprobación de lectura.**
+Operador confirma altura suelo–tablero 0,80 m, HOME y caja vacía apoyada.
+Lectura canónica: HOME máximo 0,002589 rad, velocidad 0; baterías 60/59,8 %,
+paros 0/0, cargador desconectado, RobotCommand writers 0 y VLA exited en ambos
+hosts. La consulta walker_mode agotó timeout; no se infiere modo automático.
+Pendientes dimensiones del tablero, posición relativa y colocación/identidad de
+caja para revisar ENTRY/fixture. No se califica la escena sólo por su altura.
+Sin movimiento, reinicio, modificación remota o inferencia; shadow sigue 0/5.
+Evidencia: `../Humanoide-vla-evidence/20260911T104937Z_VLA-TABLE80-READONLY/`.
+
+**2026-09-11 — VLA retomado: alternativas ENTRY erguidas, VERIFICADO offline.**
+150 entradas task0 revisadas con reporte E6.0Z de hash congelado y FK splint.
+ENTRY40 da31,196°;113 vectores completos cumplen filtro≤5° y límites de
+posición. Alternativas438=4,362° y430=0,022°; muñecas14–16cm más altas,
+por lo que no se hereda el fixture. Ocho pruebas pasan. Nuevo comparador PC,
+sin ROS/red/inferencia ni XML ejecutable. Contrato, checkpoint y robot intactos.
+Pendientes RGB/fixture/acceso/recuperación y cinco shadow(0/5); VLA físico0/4.
+VLA-01; backups/fuentes: `../Humanoide-vla-evidence/20260911T103734Z_VLA-ENTRY-UPRIGHT/`.
+[Resultado y reanudación](vla/REVISION_ENTRY_ERGUIDA_20260911.md).
+
+**2026-09-11 — Recuperación sin teleoperación: preparación integrada; ejecución NO resuelta.**
+El usuario indicó teleoperación no disponible: se retira la petición de volver
+manualmente a PICO como siguiente paso. Nuevo `cruzr_prepare_recovery.py` lee
+estado actual, salud/control y planifica sin sustituir los brazos asimétricos.
+Corregido el primer prototipo: posiciones motor y JointState usan signos
+distintos; sólo se planifica con dos JointState canónicos nuevos. El falso
+START_OUTSIDE_LIMITS inicial queda DESCARTADO como diagnóstico físico.
+Prueba corregida:101muestras válidas, paros0/0 y control libre; el modelo devuelve
+START_GEOMETRY_REJECTED/54avisos, no54contactos reales. Diez pruebas pasan.
+El script es sólo preparación, sin --run ni instalación/publicación/reinicio;
+HOME desde H03 sigue sin ejecutarse ni aprobarse. No se reduce margen ni se
+cambian tolerancias/protecciones. ANL-01; fuentes/backups/evidencia:
+`../Humanoide-vla-evidence/20260911T092355Z_RECOVERY-FROM-CURRENT/`.
+[Uso, resultado y límites](teleoperation/CRUZR_RECUPERACION_SIN_TELEOPERACION.md).
+
+**2026-09-11 — H03 asimétrico capturado; no se ejecutó retorno.**
+Usuario autorizó ensayo supervisado. Telemetría sana/inmóvil, control libre;
+la postura no coincide con PICO (error0,842922rad frente a tolerancia0,02rad).
+Candidato HOME interno estudiado sólo offline: cota nominal mínima36,599mm
+abrazadera derecha–codo; descontando el escenario declarado5° queda−8,330mm,
+sin demostrar separación ni contacto real. Modelo completo rechaza la entrada
+con54avisos; no son54colisiones físicas. Cero órdenes, instalaciones, recargas,
+reinicios, cambios de modo o protecciones. No se amplió la tolerancia PICO.
+Para volver por el perfil H02 se pidió al operador preparar PICO con torso recto
+y detener teleoperación; esa nueva postura y retorno todavía PENDIENTES.
+ANL-01; evidencia `../Humanoide-vla-evidence/20260911T085902Z_H03-ASYMMETRIC-READONLY/`.
+[Detalle y reanudación](teleoperation/CRUZR_HOME_ENSAYOS_SUPERVISADOS.md).
+
+**2026-09-11 — H02 PICO con torso recto → HOME 4×, ensayo cerrado.**
+Preflight exacto y referencia `pico_body_zero` reconocida; una acción supervisada
+`cruzr/pico_to_home_open_v2_4x`, XML SHA `6dd482a7…`, 20s nominales.
+Motion SUCCEED/4, 2.103 muestras válidas, cero fallos/deshabilitados; velocidad
+máxima observada0,243997rad/s y HOME final0,00297209rad máximo, velocidad0.
+El operador confirma «resultado ok, suave y sin contacto, libres, sigamos».
+Se valida este caso observado; no retorno general, cuerpo flexionado, carga,
+posturas asimétricas ni frenado. No se instaló, recargó, reinició o cambió modo
+ni protección. Próximo paso: captura de una postura asimétrica habitual, sin
+mandar un retorno hasta revisarla. Ejecutores intactos; confirmación por chat
+para esta acción supervisada, sin simular la confirmación de terminal.
+ANL-01/MOT-02; evidencia `../Humanoide-vla-evidence/20260911T084247Z_H02-PICO-SUPERVISED/`.
+[Resultados y receta](teleoperation/CRUZR_HOME_ENSAYOS_SUPERVISADOS.md).
+
+**2026-09-11 — Ensayo H01 desde HOME ejecutado bajo supervisión.**
+Con preparación física confirmada y preflight aprobado se envió una sola
+acción `cruzr/home`, XML instalado open_v3_20s SHA `05174d2b…`, desde HOME
+medido: apertura lateral de brazos bajos y cierre. Motion `SUCCEED/status=4`;
+2.103 muestras válidas, sin fallos de servo ni deshabilitados, velocidad máxima
+observada 0,247139 rad/s. Lectura final HOME máximo 0,00278034 rad y velocidad0.
+Paros0/0 sin transición: no se midió frenado. El operador confirmó después «suave sin contacto»: H01 cerrado para el caso
+ensayado. No se aprueba retorno general ni nuevas velocidades.
+Sin instalación, recarga, reinicio, modo o protección modificados. La primera
+preparación abortó por formato YAML antes del envío y se conservó; después de
+corregir el lector se repitieron los controles, sin reintentar movimiento.
+ANL-01; evidencia `../Humanoide-vla-evidence/20260911T082510Z_SUPERVISED-HOME-PREPARATION/`.
+[Caso, receta y alcance](teleoperation/CRUZR_HOME_ENSAYOS_SUPERVISADOS.md).
+
+**2026-09-11 — Interfaces HOME: diagnóstico corregido; cierre NO DEMOSTRADO.**
+Se encontró y corrigió el uso de `FCL contact.pos` como si estuviera sobre ambas
+superficies: puede ser un punto de una sola cara fuera de su intersección.
+El auditor reconstruye testigos y verifica ambas caras originales a 10 nm.
+Barridos sintéticos: 8 parejas con contacto CAD fuera de las zonas de las tres
+referencias, 4 al restringir los ejes a ±0,5 rad. Son testigos numéricos, no
+contactos físicos. Los recuentos preliminares 13/9 sin verificar se descartan.
+Se trazó offline un bucle de parejas de grupos en `librobot.so` con hash fijado;
+distancia sustituida y grupos sintéticos, no una lectura de la política activa
+ni una matriz que permita excluir links del CAD. 64 pruebas pasan, sin omitidas.
+El planificador conserva 45 formas/982 pares, margen de 2 mm y los 54 rechazos
+por referencia. Falta definir regiones mecánicas permitidas y su dominio, o un
+modelo de colisión validado equivalente. No autorizar HOME general mediante
+exclusiones completas ni repetir el mismo recuento como supuesto cierre.
+Sólo copias remotas de lectura y fuentes PC; sin movimiento, instalación,
+recarga, reinicio ni cambios de modo. Rutas operativas intactas. ANL-01.
+[Resultado y punto de reanudación](teleoperation/CRUZR_HOME_GEOMETRIA_Y_MOTION.md#resultado-de-la-revisión-de-interfaces-11-09-2026).
+Evidencia/backups/fuentes: `../Humanoide-vla-evidence/20260911T075508Z_HOME-INTERFACE-CLOSURE/`.
+
+**2026-09-11 — Elevador refinado e interfaces diagnosticadas; VERIFICADO offline.**
+Cinco paredes prismáticas completas sin tapas en `lifter_pitch_3_link` permitían
+reconstruir sólidos locales conservadores. Integrado en `general_home/geometry.py`:
+conserva todos los componentes y rechaza cualquier lámina residual no reconocida.
+Las envolventes generales bajan de11a10;45formas,982pares y margen2mm intactos.
+Auditor nuevo compara cada aviso con las superficies originales y guarda testigos.
+En HOME:10cruces de superficies CAD,24casos de volumen/contención a revisar,
+20separaciones positivas inferiores al margen. Siguen54avisos en HOME y ambos
+PICO (30invariantes y24móviles); ninguno se ha omitido. No son54contactos reales.
+52pruebas pasan. No se aprueba HOME general ni mayor velocidad; falta resolver
+material/holguras de las interfaces y ejecución/parada. Sin conexión ni cambios
+remotos, instalaciones o movimientos; rutas operativas20s intactas.
+[Detalle y recetas](teleoperation/CRUZR_HOME_GEOMETRIA_Y_MOTION.md#refinamiento-del-elevador-y-diagnóstico-de-interfaces-11-09-2026).
+ANL-01; evidencia/backups/fuentes/hashes:
+`../Humanoide-vla-evidence/20260911T073642Z_HOME-INTERFACE-REFINEMENT/`.
+
+**2026-09-11 — Cobertura local muñeca+abrazadera VERIFICADA en CAD.**
+La unión nativa WristRoll+S2Clamp deja2.245vértices originales fuera por brazo,
+con exceso observado hasta8,64mm; añadir WristPitch en HOME/PICO no elimina ese
+exceso. Se generó un complemento conservador local y se certificó cobertura de
+todas las caras de la envolvente exterior y su volumen, en ambos lados.
+Anclajes contrastados mediante configuración, código nativo emulado y DH/URDF;
+modelo calibrado activo/registro físico no demostrados. Ocho pruebas nuevas
+pasan; visor autónomo comprobado en ambos lados y tamaños de pantalla.
+El complemento es amplio: no acredita mayor velocidad, no está integrado en
+el planificador ni instalado en Motion. No se cambiaron pares, márgenes,
+trayectorias o configuración remota; no se enviaron movimientos. HOME general
+sigue pendiente por el resto del modelo y ejecución/seguimiento/parada.
+[Resultado, visor y receta](teleoperation/CRUZR_HOME_GEOMETRIA_Y_MOTION.md#unión-muñeca-y-abrazadera-11-09-2026).
+ANL-01; fuentes/backups/hashes/evidencia privada:
+`../Humanoide-vla-evidence/20260911T070352Z_WRIST-CLAMP-UNION/`.
+
+**2026-09-11 — Geometría nativa extraída; sustitución del CAD DESCARTADA por ahora.**
+Nuevo auditor PC reproduce los argumentos de inicialización de tres bibliotecas
+S2 mediante emulación aislada y llamadas sustituidas por operaciones de datos;
+no carga bibliotecas del robot en el proceso ni invoca ROS. Hashes fijados,
+presupuestos y cinco pruebas aprobadas, incluida extracción real de los archivos.
+OBSERVADO: cuatro cápsulas por brazo; cabeza elipsoidal. La biblioteca `s2_leg`
+corresponde a seis ejes de pierna, no al elevador `cruzr_s2_lifter` de esta unidad.
+Los defaults S2Clamp coinciden en las tres bibliotecas. Bajo la correspondencia
+de marcos URDF archivada y suponiendo anclaje al marco útil, su forma aislada
+deja vértices del CAD fuera hasta44,396mm izquierda/44,395mm derecha.
+Esto no demuestra falta de cobertura en la unión completa muñeca+abrazadera;
+esa cobertura y la selección/anclaje reales siguen PENDIENTES. No se eliminaron
+pares, redujeron márgenes ni cambiaron trayectorias o configuración remota.
+HOME general no queda aprobado. [Auditoría y reproducción](teleoperation/CRUZR_HOME_GEOMETRIA_Y_MOTION.md#extracción-de-las-formas-nativas-11-09-2026).
+Registro ANL-01; evidencia privada con backups, fuentes y hashes:
+`../Humanoide-vla-evidence/20260911T063949Z_NATIVE-COLLISION-INTERFACES/`.
+
+**2026-09-11 — Arranque completado y HOME medido tras confirmación física.**
+El usuario confirmó brazos abajo, abrazaderas vacías/sin contacto, zona libre,
+ruedas bloqueadas, mandos detenidos y persona junto al paro. Se indicó liberar
+el E-stop después del check técnico aprobado; la lectura posterior fue `0`.
+Misma instancia CC: selfcheck passed=true/error0, StartMotion succ y AutoTaskMode.
+Servidor de manipulación1; veinte actuadores sanos/habilitados, HOME máximo
+0,003068rad (brazos0,001055), velocidad0 y delta consigna0,003068rad. El agente
+no envió HOME ni otro movimiento/rearme/restart: el arranque lo ejecutó CC.
+Confirmación visual posterior del recorrido/contacto PENDIENTE al registrar.
+El lector continuo falló porque `rosa --print-compact` no produce JSON; corregido
+a JSON nativo por bloques completos, con cierre acotado de objeto en curso.
+15 pruebas del lector pasan, incluido timeout de stream truncado; lectura real
+posterior en reposo:252 muestras, paros0/0, sin errores, hueco máximo22,875ms.
+No se recuperó la traza de movimiento perdida ni se acredita frenado/seguimiento
+dinámico. HOME general permanece pendiente por geometría/contrato/parada.
+Cambio sólo de lector/pruebas/docs PC, registrado en ANL-01; sin instalaciones
+remotas. Evidencia, fuentes y backup:
+`../Humanoide-vla-evidence/20260911T062619Z_BOOT-AFTER-CONFIRMATION/`.
+
+**2026-09-11 06:21–06:22 UTC — Preparación técnica del arranque VERIFICADA;
+confirmación física y liberación PENDIENTES.** Ante «¿ahora?», se ejecutó únicamente
+`cruzr_boot_ready.sh --check`: rc0, Motion 3/3, seis cámaras con marcas crecientes
+en dos rondas y comprobación final de espera inicial/paros/cargador aprobada
+(principal1/servo0/cargador0). Las dos fuentes instaladas de readiness coinciden
+con el repositorio. `HW_TYPE=cruzr_s2_v1`, baterías95,8%/93,7%; HOME instalado
+SHA05174d2b…8cbe, perfil vigente de20s con apertura. RobotCommand no se encontró
+en ROS2 y ROSA devolvió salida vacía: no se declara exclusividad a partir de ello.
+La consulta física de brazos abajo/abrazaderas vacías/zona/mandos/supervisión
+seguía sin respuesta al registrar. No se indicó liberación incondicional ni se
+envió movimiento, restart, rearme, instalación, sonido o cambio de pantalla.
+Este resultado prepara el arranque habitual; no aprueba el HOME general 20D.
+Evidencia y backup documental:
+`../Humanoide-vla-evidence/20260911T061956Z_BOOT-RELEASE-READONLY/`.
+Reanudación: confirmación física actual; después de una liberación supervisada,
+verificar self-check/StartMotion y postura final, sin reenviar HOME.
+
+**2026-09-11 — HOME general: progreso independiente y captura pasiva VERIFICADOS;
+ejecución física PENDIENTE.** Nuevo certificado de toda la caja de intervalos
+articulares: detecta colisiones posibles con desfase entre ejes que una diagonal
+afín libre no detectaría. Se aplica a candidatas con el escenario de error
+declarado; no acredita sobrepasos, dinámica ni parada. Nuevos scripts PC de
+captura pasiva y análisis, sin instalar en el robot: recuperan ambos paros por
+ROS 2 y escuchan actuadores por ROSA; timeouts dentro de contenedores limitan
+lectores incluso si cae SSH. Análisis de veinte ejes, marcas progresivas,
+errores y recorrido observado tras paro, sin convertirlo en cota de frenado.
+90 pruebas offline pasan; auditoría completa conserva los 54 conflictos por
+referencia y once envolventes. No se recortaron mallas ni ignoraron pares nuevos.
+OBSERVADO en este arranque por Wi-Fi: Control Center llegó a `WaitEStopRelease`,
+paro principal `1` y servo `0`; cero muestras articulares bajo paro. El usuario
+confirmó E-stop todavía pulsado; no confirmó postura actual en esta respuesta.
+El perfil genérico JSON/MetaClamp nativo deshabilita autocolisión y detección de
+anomalías: se descartó como adaptador HOME. No hay cancelación/supervisor local
+calificados; `rosa action` no ofrece subcomando cancel en su ayuda.
+No se movió, reinició, rearmó o recargó el robot ni se modificó su configuración.
+No hay ejecutor general físico; perfiles operativos de 20 s intactos.
+[Recetas, límites y reanudación](teleoperation/CRUZR_HOME_CAPTURA_Y_PROGRESO_INDEPENDIENTE.md).
+Registro/rollback ANL-01, sin nuevas dependencias. Evidencia/backup/hashes:
+`../Humanoide-vla-evidence/20260911T054510Z_GENERAL-HOME-COMPLETION/`.
+Reanudación: cerrar interfaces/cobertura, verificar despacho y parada locales y
+preparar un ensayo concreto. No liberar E-stop sólo para obtener un check verde.
+
+**2026-09-10 — Geometría HOME y contrato numérico de Motion: ampliación VERIFICADA;
+ejecución física PENDIENTE.** Se recuperaron siete mallas conservando sus triángulos:
+dos mediante separación exacta de sólidos y cinco cerrando grietas numéricas de
+3,73–8,33 nm, con error descontado de las distancias. Quedan once envolventes y
+54 conflictos por referencia HOME/PICO: 30 invariantes con base/ruedas fijas y
+24 de uniones móviles. Se conservan en el chequeo. Nuevo visor 3D comparativo.
+La rutina numérica del binario de Motion usa cúbica Hermite; 1.312 emulaciones
+coinciden con error máximo 2,67e-15 rad. `--timing-law cubic-rest` reproduce esa
+fórmula sólo offline; no certifica despacho/sincronía/seguimiento/parada. Se
+auditaron límites de configuración positivos y conversiones explícitas de
+marcos CAD/herramienta nativa, sin aplicarlas al robot. 37 pruebas nuevas/del
+paquete y 38 regresiones operativas pasan (75 en total).
+OBSERVADO mediante Wi-Fi: contenedores v0.2.0; paro principal `1`; el topic de
+actuadores anunciado no entregó muestras en siete segundos. Las consultas
+posteriores SSH a Motion agotaron el tiempo de conexión. No inferir estado
+actual de estas lecturas. Cero movimientos, escrituras remotas, cambios de modo,
+instalaciones o recargas; perfiles operativos de 20 s intactos.
+PC: `unicorn==2.1.4` añadido al venv aislado; nueve dependencias fijadas.
+[Resultados, comandos y pendientes concretos](teleoperation/CRUZR_HOME_GEOMETRIA_Y_MOTION.md).
+Registro/rollback ANL-01. Evidencia con copias runtime, hashes, HTML y backups:
+`../Humanoide-vla-evidence/20260910T142312Z_HOME-GEOMETRY-MOTION-QUALIFICATION/`.
+Reanudación: cerrar interfaces de montaje/cobertura; restablecer lectura fresca,
+contrastar despacho completo y preparar un ensayo acotado de seguimiento/parada.
+No se ha habilitado HOME general físico ni se ha resuelto todo el dominio 20D.
+
+**2026-09-10 — Planificador HOME general implementado offline; integración física PENDIENTE.**
+Nuevo [`cruzr_plan_home.py`](../scripts/teleoperation/cruzr_plan_home.py) y paquete
+`general_home`: recibe veinte ángulos archivados y escena en base_link; conserva
+asimetrías, comprueba camino directo/corredores y busca alternativas RRT-Connect.
+Valida el segmento continuo con distancias 3D/cotas de desplazamiento y subdivisión;
+no acepta por muestreo sólo. Acorta rutas verificadas y calcula tiempos quintic
+comunes con límites de diseño explícitos, sin acreditarlos como límites de Motion.
+VERIFICADO: 28 pruebas funcionales nuevas y 38 regresiones previas pasan offline.
+Modelo real: 45 geometrías/982 pares
+internos comprobados, ocho pares internos rígidos omitidos, 18 envolventes para
+mallas abiertas y 54 conflictos de modelo/margen en cada referencia HOME/PICO.
+El ejemplo sintético PICO con escena se rechaza (`START_GEOMETRY_REJECTED`).
+Estos avisos no equivalen a contactos físicos. Una sonda de superficies sin
+envolventes encontró además 12 pares de mallas intersectadas en PICO sintético;
+no se han autorizado exenciones para articulaciones móviles.
+**No hay ejecutor general físico, XML exportado ni aprobación de trayectoria.**
+Falta resolver geometría/registro, contrato de interpolación/supervisión de Motion,
+parada/dinámica/estabilidad y HOME interno del arranque. Perfiles operativos20s
+intactos; cero conexiones, movimientos, instalaciones o recargas en el robot.
+Cambio PC: entorno aislado `.venv/general-home`, Python3.12 y ocho dependencias
+fijadas en `requirements.txt`; receta/rollback en ANL-01 y
+[uso del planificador](../scripts/teleoperation/general_home/README.md).
+Evidencia, hashes y backup documental previo:
+`../Humanoide-vla-evidence/20260910T134348Z_GENERAL-HOME-IMPLEMENTATION/`.
+Reanudación técnica: resolver pares CAD e interfaz de curva; el informe offline
+no habilita `--run` desde posturas generales.
+
+**2026-09-10 — HOME desde posturas generales: revisión 3D y diseño (VERIFICADO offline; implementación PENDIENTE).**
+Se estudió el modelo splint completo y 4.000 posturas sintéticas de brazos.
+La apertura relativa fija no es universal: roll −1,60→−2,00 rad excede el
+límite −1,885 rad. Entre 1.845 entradas con más de 10 mm de separación OBB
+en pares no locales de abrazadera, 391 aperturas exceden límites y siete
+objetivos dentro de límites terminan en solapamiento potencial. No equivalen
+a colisiones físicas ni acreditan validez de todos los otros pares del robot.
+Cobertura: 42 enlaces collision; otros tres con visual utilizable provisionalmente,
+45 volúmenes/990 pares posibles; estudio limitado a 87 pares de abrazaderas.
+Muñeca final/sensor/abrazadera son un conjunto rígido; wrist_pitch queda separado
+por una articulación móvil y su par no debe excluirse globalmente.
+Propuesta: modelo completo refinado, escena, búsqueda desde estado medido,
+validación continua, tiempos por límites/separación y adaptador Motion con
+supervisión y contrato de parada. Incluye resolver el HOME interno de arranque,
+que no queda cubierto al mejorar sólo el script PC. No se alteraron rutas,
+instaladores, límites ni exenciones. Cero red/actuadores y cero instalaciones.
+Contraste FK/SAT escalar en diez estados correcto. [Revisión y desarrollo concreto](teleoperation/CRUZR_HOME_DESDE_POSTURA_GENERAL.md).
+Backup, estudio, semilla, ejemplos y hashes:
+`../Humanoide-vla-evidence/20260910T124156Z_GENERAL-HOME-3D-REVIEW/`.
+
 **2026-09-10 — Limpieza del índice y credenciales locales (VERIFICADO offline).**
 Por petición del propietario se prepara un commit de los cambios pendientes.
 Se retiran del índice los dos paquetes 3D originales del proveedor: 130 archivos,
