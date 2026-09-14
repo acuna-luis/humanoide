@@ -55,9 +55,28 @@ def message_text(value) -> str:
     return bytes(data[:size]).decode("utf-8", errors="strict")
 
 
+def timed_call(stage, function, *args, **kwargs):
+    """CPU wall time including waits; not a GPU-kernel-only measurement."""
+    started = time.perf_counter()
+    succeeded = False
+    try:
+        result = function(*args, **kwargs)
+        succeeded = True
+        return result
+    finally:
+        logger.info("VLA_TIMING {}", json.dumps({
+            "stage": stage, "elapsed_seconds": time.perf_counter()-started,
+            "succeeded": succeeded, "observed_at_unix": time.time(),
+        }, allow_nan=False))
+
+
 class CruzrS2InferenceShadowNode(gr00t_inference.Gr00tControllerROS2Node):
     def __init__(self) -> None:
-        super().__init__()
+        timed_call("node_model_initialization", super().__init__)
+        original_inference = self.model.inference
+        self.model.inference = lambda *a, **kw: timed_call("model_inference", original_inference, *a, **kw)
+        original_get_action = self.model.policy.get_action
+        self.model.policy.get_action = lambda *a, **kw: timed_call("policy_get_action", original_get_action, *a, **kw)
         self.fallback_state_count = 0
         self.shadow_input_dir = pathlib.Path(
             os.environ.get(
@@ -183,10 +202,13 @@ class CruzrS2InferenceShadowNode(gr00t_inference.Gr00tControllerROS2Node):
             len(positions),
         )
 
+    def _run_single_inference(self):
+        return timed_call("single_inference_total", super()._run_single_inference)
+
     def get_synchronized_data(self):
-        input_data = super().get_synchronized_data()
+        input_data = timed_call("synchronize_inputs", super().get_synchronized_data)
         if input_data is not None:
-            self._record_synchronized_input(input_data)
+            timed_call("record_input_evidence", self._record_synchronized_input, input_data)
         return input_data
 
 

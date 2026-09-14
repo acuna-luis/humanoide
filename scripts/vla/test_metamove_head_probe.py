@@ -6,8 +6,8 @@ class HeadProbeTests(unittest.TestCase):
     def test_single_stop_sample_does_not_qualify(self):
         self.assertFalse(check_stop_cadence([100.]))
 
-    def test_five_second_cadence_rejected(self):
-        with self.assertRaises(RuntimeError):check_stop_cadence([100.,105.])
+    def test_five_second_cadence_accepted(self):
+        self.assertTrue(check_stop_cadence([100.,105.]))
 
     def test_compatible_cadence(self):
         self.assertTrue(check_stop_cadence([100.,101.,102.]))

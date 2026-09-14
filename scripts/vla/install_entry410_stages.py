@@ -25,8 +25,8 @@ def ssh(code, args=()):
     return json.loads(result.stdout)
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+def main(stage_loader=None, profile=None, extra_sources=(), description=__doc__):
+    parser = argparse.ArgumentParser(description=description)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument('--plan', action='store_true', help='Read remote registry and prepare local plan; no remote writes')
     mode.add_argument('--install-on-disk', action='store_true', help='Install only with main E-stop active; never reload')
@@ -34,16 +34,22 @@ def main():
     parser.add_argument('--plan-file', type=Path, required=True)
     parser.add_argument('--evidence-dir', type=Path)
     args = parser.parse_args()
-    stages = [load_stage(args.review, i, d) for i in range(1, 6) for d in ('forward', 'reverse')]
+    def stages_now():
+        if stage_loader is not None:
+            return stage_loader(args.review)
+        return [load_stage(args.review, i, d) for i in range(1, 6) for d in ('forward', 'reverse')]
+    stages = stages_now()
     files = {s['task'].split('/')[-1]+'.xml': dict(sha256=s['xml_sha256'],
              base64=base64.b64encode(Path(s['xml']).read_bytes()).decode()) for s in stages}
     helper = ROOT/'scripts/vla/runtime/entry410_install_disk.py'
     bindings = {str(f.resolve()):digest(f) for f in (Path(__file__), helper,
-                ROOT/'scripts/vla/entry410_stage_contract.py')}
+                ROOT/'scripts/vla/entry410_stage_contract.py',
+                ROOT/'scripts/vla/audit_vla_live_preflight_e6_0g.sh', *extra_sources)}
     if args.plan:
         if args.plan_file.exists(): parser.error('Plan output must be new')
         snapshot = ssh('import hashlib,json;from pathlib import Path; p=Path("/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/task_list.yaml");print(json.dumps({"hash":hashlib.sha256(p.read_bytes()).hexdigest()}))')
         package = dict(expected_registry_sha256=snapshot['hash'], files=files)
+        if profile is not None: package['profile'] = profile
         remote_plan = ssh(helper.read_text(), [base64.b64encode(json.dumps(package).encode()).decode(), 'plan'])
         record = dict(schema='entry410-disk-install-plan-v1', package=package,
                       review=str(args.review.resolve()), review_sha256=digest(args.review),
@@ -52,7 +58,8 @@ def main():
         print(json.dumps(remote_plan)); return
     record = json.loads(args.plan_file.read_text())
     if (record['schema'] != 'entry410-disk-install-plan-v1' or record['package']['files'] != files
-            or record['review_sha256'] != digest(args.review) or record['source_sha256'] != bindings):
+            or record['review_sha256'] != digest(args.review) or record['source_sha256'] != bindings
+            or record['package'].get('profile') != profile):
         raise ValueError('Plan, reviewed XML or installer sources changed')
     if not args.evidence_dir or args.evidence_dir.exists(): parser.error('Evidence directory must be new')
     args.evidence_dir.mkdir(parents=True)
@@ -64,8 +71,7 @@ def main():
     if result.returncode or 'ESTOP_KEY=1' not in lines or 'CHARGER=0' not in lines:
         raise RuntimeError('Main E-stop active preflight failed; no installation sent; see '+str(log))
     # Revalidate local package after the live check. Remote transaction checks registry again.
-    for s in stages:
-        if load_stage(args.review, s['step'], s['direction']) != s: raise RuntimeError('Stage changed')
+    if stages_now() != stages: raise RuntimeError('Stage changed')
     if any(digest(Path(p)) != h for p, h in bindings.items()): raise RuntimeError('Installer changed')
     (args.evidence_dir/'plan.json').write_text(json.dumps(record, indent=2)+'\n')
     (args.evidence_dir/'install-intent.json').write_text('{"reload":false,"main_estop_must_remain_active":true}\n')

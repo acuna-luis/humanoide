@@ -52,11 +52,23 @@ def load_stage(review_path, step, direction):
                 direction=direction, task=f's2_bio_vla/entry410_stage_{step:02d}_{direction}',
                 xml=str(xml), xml_sha256=digest(xml), start=start, end=end,
                 duration_seconds=stage['duration_seconds'], joint_order=JOINT_ORDER,
-                group_joint_order=stage['joint_names'], physical_approval=False)
+                group_joint_order=stage['joint_names'],
+                geometry_joint_error_rad=audit.get('joint_error_scenario_rad'), physical_approval=False)
 
 
 REQUIRED_EVIDENCE = ('group_mapping', 'loaded_task_identity', 'scene_and_interfaces',
                      'commissioning_motion_and_stop_protocol')
+
+
+def check_position_tolerances(record, stage):
+    geometric_error = stage.get('geometry_joint_error_rad')
+    if (type(geometric_error) not in (int, float) or not math.isfinite(geometric_error)
+            or geometric_error <= 0):
+        raise ValueError('Missing reviewed geometric error bound')
+    for key in ('position_tolerance_rad', 'stationary_joint_tolerance_rad'):
+        value = record.get(key)
+        if type(value) not in (int, float) or not math.isfinite(value) or not 0 < value <= geometric_error:
+            raise ValueError('Position tolerance exceeds or lacks the reviewed geometric corridor')
 
 
 def qualify(path, stage):
@@ -86,6 +98,7 @@ def qualify(path, stage):
         value = record.get(key)
         if type(value) not in (int, float) or not math.isfinite(value) or not 0 < value <= .02:
             raise ValueError('Invalid qualified tolerance: '+key)
+    check_position_tolerances(record, stage)
     if stage['task'] not in record['loaded_tasks'] or record['loaded_tasks'][stage['task']] != stage['xml_sha256']:
         raise ValueError('Selected task is not qualified as loaded')
     return record

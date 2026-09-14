@@ -33,9 +33,39 @@ def measured_start(trace, analysis):
     return positions[-1]
 
 
+def measured_named_start(capture):
+    from runtime.entry410_single_stage_remote import named_values
+    if capture.get('schema') != 'cruzr-entry-named-state-capture-v1' or capture.get('robot_commands') != 0:
+        raise ValueError('Expected passive named-state capture')
+    positions = []; previous = {}; previous_receive = None
+    for record in capture['samples']:
+        received = record['received_monotonic']
+        if not np.isfinite(received) or (previous_receive is not None and not 0 < received-previous_receive <= .5):
+            raise ValueError('Invalid receive cadence')
+        previous_receive = received
+        messages = record['messages']
+        for topic, message in messages.items():
+            stamp = message['header']['stamp']; stamp = stamp['sec']*10**9+stamp['nanosec']
+            if topic in previous and stamp <= previous[topic]:
+                raise ValueError('Source stamp not advancing')
+            previous[topic] = stamp
+        if abs(previous['/mc/whole_joint_states']-previous['/mc/actuator_state']) > 500_000_000:
+            raise ValueError('Unpaired named state and actuator health')
+        health = decode_actuators(messages['/mc/actuator_state'])[1]
+        if any(abs(v['velocity']) > .001 or v['error_code'] or v['status'] & 8 or v['status'] & 7 != 7 for v in health.values()):
+            raise ValueError('Moving, faulted or disabled actuator')
+        values = named_values(messages['/mc/whole_joint_states'], JOINT_ORDER)
+        if any(abs(v[1]) > .001 for v in values.values()):
+            raise ValueError('Named joints moving')
+        positions.append([values[n][0] for n in JOINT_ORDER])
+    if len(positions) < 2 or np.max(np.ptp(positions, axis=0)) > .002:
+        raise ValueError('Insufficient or drifting named state')
+    return positions[-1]
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    for name in ('reference', 'trace', 'trace-analysis', 'output-dir'):
+    for name in ('reference', 'named-capture', 'output-dir'):
         p.add_argument('--'+name, type=Path, required=True)
     a = p.parse_args()
     if a.output_dir.exists():
@@ -44,7 +74,7 @@ def main():
     if (ref['joint_order'] != JOINT_ORDER or ref['candidate'] != 'episode_000410'
             or len(ref['scenarios']) != 1):
         p.error('Expected exact ENTRY410 reference')
-    start = measured_start(a.trace, json.loads(a.trace_analysis.read_text()))
+    start = measured_named_start(strict_json(a.named_capture.read_text()))
     scene = ref['scenarios'][0]
     ready = scene['routes']['access']['waypoints_20d_rad'][1]
     points, stages = staged_path(start, ready)
@@ -53,7 +83,8 @@ def main():
                          dict(frame_id='base_link', complete=True, objects=scene['scene_objects']))
     if base.manifest != ref['model_sources']:
         raise ValueError('Model changed')
-    sources = [a.reference, a.trace, a.trace_analysis, Path(__file__),
+    sources = [a.reference, a.named_capture, Path(__file__),
+               ROOT/'scripts/vla/runtime/entry410_single_stage_remote.py',
                *sorted((ROOT/'scripts/vla').glob('*.py')),
                *sorted((ROOT/'scripts/teleoperation/general_home').glob('*.py'))]
     hashes = {str(f.resolve()): digest(f) for f in sources}
@@ -63,7 +94,8 @@ def main():
                           joint_error_rad=scene['routes']['access']['audit']['joint_error_scenario_rad'])
     result = dict(schema='cruzr-measured-start-ready-access-offline-v1',
                   physical_approval=False, robot_commands=0, installable=False,
-                  start_is_measured_not_assumed_home=True, joint_order=JOINT_ORDER,
+                  start_is_measured_not_assumed_home=True, position_source='/mc/whole_joint_states:name',
+                  actuator_coordinates_used_for_geometry=False, joint_order=JOINT_ORDER,
                   stages=stages, geometry_audit=audit, model_sources=base.manifest,
                   sources_sha256=hashes, nominal_seconds=sum(s['duration_seconds'] for s in stages),
                   runtime_mapping_verified=False, dynamic_limits_checked=False,

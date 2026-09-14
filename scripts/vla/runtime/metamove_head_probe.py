@@ -12,9 +12,23 @@ def check_envelope(q, initial, names):
         raise RuntimeError('Other joint moved outside stationary envelope')
 
 
-def check_stop_cadence(samples, maximum_gap=3.):
+# Application communication timeout, NOT a physical stopping-time bound.
+# v0.2.0 repeats unchanged E-stop values about every 4.5 s; changes are events.
+STOP_STATE_TIMEOUT_S = 6.0
+
+
+def check_stop_sample(received, value, now):
+    # A reported stop always rejects immediately, independently of its age.
+    if value != 0:
+        raise RuntimeError('E-stop active or invalid')
+    age = now - received
+    if not math.isfinite(age) or not 0 <= age <= STOP_STATE_TIMEOUT_S:
+        raise RuntimeError('Missing/stale E-stop communication')
+
+
+def check_stop_cadence(samples, maximum_gap=STOP_STATE_TIMEOUT_S):
     if len(samples)<2:return False
-    if any(b-a>maximum_gap for a,b in zip(samples,samples[1:])):
+    if any(not math.isfinite(b-a) or not 0 <= b-a <= maximum_gap for a,b in zip(samples,samples[1:])):
         raise RuntimeError('E-stop telemetry cadence exceeds monitor requirement; no dispatch')
     return True
 
@@ -41,9 +55,10 @@ def main(run):
     def checked():
         now=time.monotonic()
         for t in topics:
-            if t not in state or now-state[t][0]>(3 if t in topics[2:] else .5):
+            if t not in state or (t not in topics[2:] and not 0 <= now-state[t][0] <= .5):
                 raise RuntimeError('Missing/stale telemetry: '+t)
-        if any(state[t][1]['data']!=0 for t in topics[2:]):raise RuntimeError('E-stop active')
+        for t in topics[2:]:
+            check_stop_sample(state[t][0], state[t][1]['data'], now)
         raw=state[topics[1]][1]
         selected=[x for x in raw['act_item'] if x['id'] in [1001,1002,11001,11002,11003,11004,2001,2002,2003,3001,*range(4001,4008),*range(5001,5008)]]
         if len(selected)!=20 or any(x['error_code'] or x['status']&8 or x['status']&7!=7 for x in selected):
@@ -66,7 +81,7 @@ def main(run):
         else:raise RuntimeError('Required topics unavailable')
         for t in topics:
             subs.append(node.create_subscription(get_message(graph[t][0]),t,lambda m,t=t:receive(t,m),qos_profile_sensor_data))
-        deadline=time.monotonic()+10;since=None;last_reason='No usable state'
+        deadline=time.monotonic()+2*STOP_STATE_TIMEOUT_S+2;since=None;last_reason='No usable state'
         while time.monotonic()<deadline:
             rclpy.spin_once(node,timeout_sec=.02)
             # Do not mistake one fresh initial sample for a viable heartbeat.

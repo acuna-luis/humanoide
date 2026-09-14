@@ -23,8 +23,8 @@ def command(argv, log, *, timeout=120, env=None):
     return log.read_text()
 
 
-def main():
-    p = argparse.ArgumentParser(description=__doc__)
+def main(loader=load_stage, qualifier=qualify, description=__doc__, label='ENTRY410'):
+    p = argparse.ArgumentParser(description=description)
     mode = p.add_mutually_exclusive_group(required=True)
     mode.add_argument('--check', action='store_true', help='Local bundle verification; no network')
     mode.add_argument('--preflight', action='store_true', help='Read-only live preflight and release verification')
@@ -37,11 +37,11 @@ def main():
     p.add_argument('--qualification', type=Path)
     p.add_argument('--evidence-dir', type=Path)
     args = p.parse_args()
-    stage = load_stage(args.review, args.step, args.direction)
+    stage = loader(args.review, args.step, args.direction)
     if args.prepare_installation:
         destination = args.prepare_installation
         if destination.exists(): p.error('Installation package directory must be new')
-        stages = [load_stage(args.review, step, direction) for step in range(1, 6) for direction in ('forward', 'reverse')]
+        stages = [loader(args.review, step, direction) for step in range(1, 6) for direction in ('forward', 'reverse')]
         destination.mkdir(parents=True)
         registry = []
         for selected in stages:
@@ -57,7 +57,7 @@ def main():
         print(json.dumps(dict(status='LOCAL_STAGE_INTEGRITY_OK_NOT_MOVEMENT_APPROVAL', **stage), indent=2)); return
     if not args.qualification:
         p.error('--qualification is required; existing stage drafts are not execution authorization')
-    release = qualify(args.qualification, stage)
+    release = qualifier(args.qualification, stage)
     if not args.evidence_dir or args.evidence_dir.exists():
         p.error('Choose a new --evidence-dir')
     args.evidence_dir.mkdir(parents=True)
@@ -70,16 +70,16 @@ def main():
             evidence/'preflight.log', timeout=150)
     if args.preflight:
         print('READ_ONLY_PREFLIGHT_OK; remote stage admission still required immediately before motion'); return
-    phrase = f'ENSAYO ENTRY410 ETAPA {args.step} {args.direction}: VACIO, ZONA LIBRE, CONTROL EXCLUSIVO Y PERSONA EN E-STOP'
+    phrase = f'ENSAYO {label} ETAPA {args.step} {args.direction}: VACIO, ZONA LIBRE, CONTROL EXCLUSIVO Y PERSONA EN E-STOP'
     print(phrase, flush=True)
     if not sys.stdin.isatty() or input('Escriba la frase para esta etapa: ').strip() != phrase:
         raise RuntimeError('Current single-stage operator confirmation missing; no motion sent')
     # Recheck after the operator prompt; do not use the earlier snapshot as a motion permit.
     command(['bash', str(ROOT/'scripts/vla/audit_vla_live_preflight_e6_0g.sh'), '--check', '--expect-released'],
             evidence/'preflight-after-confirmation.log', timeout=150)
-    if load_stage(args.review, args.step, args.direction) != stage:
+    if loader(args.review, args.step, args.direction) != stage:
         raise RuntimeError('Bundle changed')
-    if qualify(args.qualification, stage) != release:
+    if qualifier(args.qualification, stage) != release:
         raise RuntimeError('Qualification changed')
     helper = ROOT/'scripts/vla/runtime/entry410_single_stage_remote.py'
     payload = dict(stage=stage, release=release, actuator_names=ACTUATORS)

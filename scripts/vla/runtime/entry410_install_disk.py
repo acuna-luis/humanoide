@@ -1,4 +1,4 @@
-"""Add only the ten reviewed ENTRY410 task files; never load or execute them."""
+"""Add a fixed reviewed task-file set; never load or execute it."""
 import base64
 import hashlib
 import json
@@ -15,7 +15,14 @@ def sha(data): return hashlib.sha256(data).hexdigest()
 
 def verify_package(package):
     files = package['files']
-    expected = {f'entry410_stage_{i:02d}_{d}.xml' for i in range(1, 6) for d in ('forward', 'reverse')}
+    profile = package.get('profile', 'entry410')
+    if profile == 'entry410':
+        expected = {f'entry410_stage_{i:02d}_{d}.xml' for i in range(1, 6) for d in ('forward', 'reverse')}
+    elif profile == 'ready410_head063':
+        expected = {f'ready410_h63_{part}_{i:02d}_{d}.xml'
+                    for part in ('access', 'entry') for i in range(1, 6) for d in ('forward', 'reverse')}
+    else:
+        raise ValueError('Unknown fixed installation profile')
     if set(files) != expected: raise ValueError('Unexpected file set')
     for name, value in files.items():
         data = base64.b64decode(value['base64'], validate=True)

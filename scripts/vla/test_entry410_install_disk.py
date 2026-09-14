@@ -57,4 +57,32 @@ class DiskInstallTests(unittest.TestCase):
         self.assertEqual(list((self.root/'s2_bio_vla').glob('*.xml')), [])
 
 
+class CorrectedReadyInstallTests(DiskInstallTests):
+    def setUp(self):
+        super().setUp()
+        value=next(iter(self.package['files'].values()))
+        self.package['profile']='ready410_head063'
+        self.package['files']={f'ready410_h63_{part}_{i:02d}_{d}.xml':dict(value)
+            for part in ('access','entry') for i in range(1,6) for d in ('forward','reverse')}
+
+    def test_install_preserves_registry_and_backs_up(self):
+        result=install(self.root,self.package,Path(self.temp.name)/'backup')
+        self.assertEqual(len(result['installed_files']),20)
+        self.assertFalse(result['motion_command_sent']);self.assertFalse(result['reloaded'])
+        self.assertEqual((Path(result['backup'])/'task_list.yaml').read_bytes(),self.before)
+        self.assertTrue((self.root/'task_list.yaml').read_bytes().startswith(self.before))
+
+    def test_quoted_duplicate_key_rejected(self):
+        key=next(iter(self.package['files']))[:-4]
+        before=self.before+f'"{key}": {{}}\n'.encode()
+        (self.root/'task_list.yaml').write_bytes(before);self.package['expected_registry_sha256']=sha(before)
+        with self.assertRaises(ValueError):plan(self.root,self.package)
+
+    def test_incomplete_or_unknown_profile_rejected(self):
+        altered=copy.deepcopy(self.package);altered['files'].pop(next(iter(altered['files'])))
+        with self.assertRaises(ValueError):plan(self.root,altered)
+        altered=copy.deepcopy(self.package);altered['profile']='arbitrary'
+        with self.assertRaises(ValueError):plan(self.root,altered)
+
+
 if __name__ == '__main__': unittest.main()
