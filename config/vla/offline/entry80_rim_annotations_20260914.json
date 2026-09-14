@@ -1,0 +1,138 @@
+{
+  "schema": "cruzr-vla-manual-rim-annotations-v1",
+  "status": "VISUAL_ANNOTATIONS_ASSUMPTIONS_NOT_PHYSICAL_CALIBRATION",
+  "assumed_box_width_m": 0.603,
+  "assumed_box_height_m": 0.217,
+  "assumed_floor_below_base_m": 0.15,
+  "target_table_height_m": 0.8,
+  "pixel_variation_px": 4,
+  "rim_pixels_uv": {
+    "episode_000040": [
+      [
+        220,
+        113
+      ],
+      [
+        797,
+        129
+      ]
+    ],
+    "episode_000042": [
+      [
+        303,
+        318
+      ],
+      [
+        740,
+        321
+      ]
+    ],
+    "episode_000044": [
+      [
+        297,
+        312
+      ],
+      [
+        735,
+        312
+      ]
+    ],
+    "episode_000046": [
+      [
+        301,
+        294
+      ],
+      [
+        745,
+        299
+      ]
+    ],
+    "episode_000048": [
+      [
+        264,
+        318
+      ],
+      [
+        697,
+        286
+      ]
+    ],
+    "episode_000050": [
+      [
+        353,
+        274
+      ],
+      [
+        808,
+        315
+      ]
+    ],
+    "episode_000430": [
+      [
+        296,
+        283
+      ],
+      [
+        720,
+        284
+      ]
+    ],
+    "episode_000438": [
+      [
+        307,
+        259
+      ],
+      [
+        749,
+        260
+      ]
+    ],
+    "episode_000360": [
+      [
+        307,
+        311
+      ],
+      [
+        708,
+        313
+      ]
+    ],
+    "episode_000364": [
+      [
+        309,
+        285
+      ],
+      [
+        718,
+        287
+      ]
+    ],
+    "episode_000372": [
+      [
+        312,
+        280
+      ],
+      [
+        718,
+        282
+      ]
+    ],
+    "episode_000374": [
+      [
+        310,
+        280
+      ],
+      [
+        722,
+        284
+      ]
+    ]
+  },
+  "source": "Visual annotations on decoded frame zero of episodes 40/42/44/46/48/50/430/438; images and video/parquet hashes in selection.json.",
+  "limitations": [
+    "Assumed dimensions of the grey dataset box are not measured dimensions.",
+    "Archived camera intrinsics and derived mounting transform are not a verified calibration for every dataset episode.",
+    "Pixel variation is not total uncertainty and cannot approve a table height.",
+    "Annotations select the outer back rim as visible; edge choice can cause systematic differences."
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "status": "VISUAL_ANNOTATIONS_FOR_COMPARISON_ONLY",
+  "assumed_box_width_m": 0.603,
+  "assumed_box_height_m": 0.217,
+  "assumed_floor_below_base_m": 0.15,
+  "target_table_height_m": 0.725,
+  "pixel_variation_px": 4,
+  "rim_pixels_uv": {
+    "episode_000360": [
+      [
+        311,
+        318
+      ],
+      [
+        638,
+        310
+      ]
+    ],
+    "episode_000380": [
+      [
+        310,
+        317
+      ],
+      [
+        639,
+        314
+      ]
+    ],
+    "episode_000410": [
+      [
+        331,
+        304
+      ],
+      [
+        727,
+        325
+      ]
+    ]
+  },
+  "reference": "Outer back rim endpoints manually inspected on original verified frame-zero images, 960x576 pixels.",
+  "limitations": [
+    "Assumed common box dimensions and archived camera mounting are not verified per episode.",
+    "Pixel variation does not bound total error; do not use it as physical calibration.",
+    "Current tabletop height reported by the operator is 72.5 cm, floor to top surface, on 2026-09-14. This is not a camera accuracy calibration."
+  ]
+}

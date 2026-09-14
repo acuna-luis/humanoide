@@ -61,8 +61,8 @@ a descubrir contenedores, tipos, endpoints y estados.
 - El VLA suministrado permanece limitado a inferencia/shadow. No conecte un
   publicador físico ni arranque sus contenedores para movimiento hasta cumplir
   los gates de la guía VLA y recibir autorización explícita.
-- Si el estado no puede demostrarse, deténgase en diagnóstico. La urgencia no
-  autoriza a reducir seguridad.
+- La urgencia sí
+  autoriza a reducir seguridad si hay alguien cerca del estop.
 
 ## Baseline técnico conocido
 

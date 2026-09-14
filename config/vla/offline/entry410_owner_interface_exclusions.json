@@ -1,0 +1,109 @@
+{
+  "scope": "OWNER_REQUESTED_OFFLINE_CAD_REVIEW_EXCLUSIONS_ONLY",
+  "pairs": [
+    [
+      "lifter_pitch_2_link#0",
+      "lifter_pitch_3_link#0"
+    ],
+    [
+      "lifter_pitch_2_link#0",
+      "waist_yaw_link#0"
+    ],
+    [
+      "lifter_pitch_3_link#0",
+      "waist_yaw_link#0"
+    ],
+    [
+      "lifter_pitch_3_link#0",
+      "torso_link#0"
+    ],
+    [
+      "torso_link#0",
+      "head_pitch_link#0"
+    ],
+    [
+      "L_shoulder_pitch_link#0",
+      "L_shoulder_roll_link#0"
+    ],
+    [
+      "L_elbow_roll_link#0",
+      "L_elbow_yaw_link#0"
+    ],
+    [
+      "L_elbow_yaw_link#0",
+      "L_wrist_pitch_link#0"
+    ],
+    [
+      "L_wrist_pitch_link#0",
+      "L_wrist_roll_link#0"
+    ],
+    [
+      "R_shoulder_pitch_link#0",
+      "R_shoulder_roll_link#0"
+    ],
+    [
+      "R_elbow_roll_link#0",
+      "R_elbow_yaw_link#0"
+    ],
+    [
+      "R_elbow_yaw_link#0",
+      "R_wrist_pitch_link#0"
+    ],
+    [
+      "R_wrist_pitch_link#0",
+      "R_wrist_roll_link#0"
+    ]
+  ],
+  "model_sources": {
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/urdf/cruzr_s2_v1/cruzr_s2_v1.urdf": "e1f2633a4d4c06d36c18f6a86895d8a645827ad0171b2700159035f7db242e63",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/base_link.STL": "c1b3059da49136f8f30614dac7f63e289f10e9bc5c10ad6cbd7d89d6d3817488",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/driven_wheel_left_front_yaw_link.STL": "e7f1624f1d7b90ff935127b8d56485cfd0ed4f02f047fb9fa246a1713c0e3b18",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/driven_wheel_left_front_roll_left_link.STL": "29873fe81b33f88e6e26de1914fae88e2999e04aadf4cbc50605ccc380157a04",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/driven_wheel_left_front_roll_right_link.STL": "29873fe81b33f88e6e26de1914fae88e2999e04aadf4cbc50605ccc380157a04",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/driven_wheel_left_rear_yaw_link.STL": "25c158e772de061cd83d2829ef7a6ba64a0e3863d2b5a0d59fe3c0c017b9c43c",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/driven_wheel_left_rear_roll_left_link.STL": "da13d671e01278abc8bcd8846addf73ca8150c4dfc7ce28b5d0d1abc0a9d350b",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/driven_wheel_left_rear_roll_right_link.STL": "da13d671e01278abc8bcd8846addf73ca8150c4dfc7ce28b5d0d1abc0a9d350b",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/driven_wheel_right_front_yaw_link.STL": "cce080e8b37cad5c4b5adbf675699f0284a5329ea33f5fdeb5d123214df91fcb",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/driven_wheel_right_front_roll_left_link.STL": "29873fe81b33f88e6e26de1914fae88e2999e04aadf4cbc50605ccc380157a04",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/driven_wheel_right_front_roll_right_link.STL": "8527be08e84b5d74c3a02b90a2641bf6a82440bbe0019e1d26b828b58d737245",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/driven_wheel_right_rear_yaw_link.STL": "6f5421a274d42218dd7f3027209308e54861895c4e01aa8f7470e0f0f9875cd4",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/driven_wheel_right_rear_roll_left_link.STL": "29873fe81b33f88e6e26de1914fae88e2999e04aadf4cbc50605ccc380157a04",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/driven_wheel_right_rear_roll_right_link.STL": "29873fe81b33f88e6e26de1914fae88e2999e04aadf4cbc50605ccc380157a04",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/protection_left_front_link.STL": "42a53f4b1be163fd4bfccf00d1037481c6afe5d151e31e9326cad9c35b019498",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/protection_left_rear_link.STL": "a2a2ff684b4118a314ba27875a04f1276470185fbb689bbb6bafe6f0d7392dfb",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/protection_right_front_link.STL": "27a13cbff131901426ec7b130b28790d9d2da68d8af9afb32630a7b94e3c9990",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/protection_right_rear_link.STL": "ecc1ebf14f01154663f76f99a545557ff0caf64c3af4ee2e2f92bda544eac666",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/driving_wheel_left_link.STL": "c8bfff8652cecbe087751d809fa660bf9e37ccb7617b148db7219482e09fd5a8",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/driving_wheel_right_link.STL": "7d1f7b6dbe4f227c5ca425b4443f61810fa223382a0fbc05b7d79694963b5c38",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/lifter_base_link.STL": "3bf13beba20b456a63d77b93d967d4148fb0efe3afe71bbba0409009c171940f",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/lifter_pitch_1_link.STL": "e281165c9d05fc39b3236369fce82e23fd68dbc3e9e6546bdfa0eba9b01d45e3",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/lifter_pitch_2_link.STL": "0782320cb6d36a83836a65b9ae4da0f775c7aecd8366046da9852de8dc4afeb3",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/lifter_pitch_3_link.STL": "8ff5cae3176823b2991322bc9919c984f3957497d142fe30fb92ea388445b2a0",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/waist_yaw_link.STL": "d1a9924bbfc7b65e9d711d43429f397fd40e32168d78d8b57fa9148d37908231",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/torso_link.STL": "4afac0ca9e6a630c91c786faf295da128d317b9aabf8573e576b11cc87c219d0",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/head_yaw_link.STL": "35563d372fe17c01610c14a48527ce48e51c1af9e23e3c36845226cc365a55dd",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/head_pitch_link.STL": "81e82c4808891a53781a302063b3bb7250813d33e1de1e2d82b764b64a3abc93",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/L_shoulder_pitch_link.STL": "451a709fc1eeb3e4a7247d9f8d62265db08bf4bc9b40229c31be70019be08f96",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/L_shoulder_roll_link.STL": "b927b671340b42dfbc215208c4ba6fb35c063248a9b57ebde882903e35953881",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/L_shoulder_yaw_link.STL": "b2c96bf9834415f2535b835a4a97475eb20535f0c3f9fcc5e99e0d35b7beaa2e",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/L_elbow_roll_link.STL": "cb073cd592700691b06d689f22d3df7170c2297191b6df5ff8995bc0c4c5ee3d",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/L_elbow_yaw_link.STL": "e489cad65459556c892268421e0f1229d6ad71d9113fa0fd71c5d9c2e6228853",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/L_wrist_pitch_link.STL": "34688a15d20464c97c406c85743ee9402050eee7e460c2c3a4979d2d40dbaa20",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/L_wrist_roll_link.STL": "63f4de8d71d25c7f82bfee2e020a654d444b0937c5d0b7572302b272dae33bc1",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/L_sixforce_link.STL": "6ab68333683667adc8c05f26b6832ff9c7fb84ef9a56c6cd91463f4b524c40f5",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/L_hand_link.STL": "dbc43bec0d4273a1be113edcd4667e6928f353b6b2cc22b8566f4977d567bb7f",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/R_shoulder_pitch_link.STL": "c690651483cec0926130729a67c7c630d680d9824e4edeeeb49037c8829ff087",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/R_shoulder_roll_link.STL": "ab2c5f16a80a14f2bc6a082fe98420b185d660965ba111a6bf2389fd271f8784",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/R_shoulder_yaw_link.STL": "6821c2110615de2ebb9a7d99c428f8e35a03ce77362bb47ba03d417f3a6645b4",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/R_elbow_roll_link.STL": "45c5fa9cb49677c39433357eb9a1f194be4aa33b9c3f0abb40c97196172b1fca",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/R_elbow_yaw_link.STL": "3cec40096452ddce4b22efb4addce6803f5cfe9f053dce5e7763fb62e2afe3a9",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/R_wrist_pitch_link.STL": "36eeb3f3f0a0c0c12c49469d068bc0d44901c42bf391ab093a503def31c05712",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/R_wrist_roll_link.STL": "beed5088dafc0347eea3e6975567c8c05b4af4951b7dd6ac9384a908b8e13b75",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/R_sixforce_link.STL": "7b73eac4068a54c2e503bd3a96a01fbfe692933ef26875afaf847fe5e3a2155b",
+    "/home/lacuna/proyectos/Robots/Humanoide/cruzr_s2_description_splint/cruzr_s2_description/meshes/cruzr_s2_v1/R_hand_link.STL": "51057edda84aa5180e72d4497ff2633588f1dcfa6eab742ee5ceb19b2ba48f61"
+  },
+  "request": "Owner instructs omit these 13 internal CAD overlaps as spurious",
+  "physical_false_positive_proved": false,
+  "runtime_collision_filters_modified": false,
+  "physical_approval": false
+}

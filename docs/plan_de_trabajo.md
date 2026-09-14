@@ -1,5 +1,243 @@
 # Plan de trabajo: recoger, transportar, vaciar y depositar una caja
 
+**Relevo para la próxima sesión — 2026-09-14:** leer primero el [estado consolidado y secuencia de reanudación](vla/RELEVO_VLA_20260914.md). HOME→READY→ENTRY está probado por el operador; shadow funciona. TRIAL_02 abortó por timeout al cambiar a SDK, con cero frames y sin acuse; el controlador final es desconocido. Prioridad: consultar controlador y logs antes de reintentar. No repetir ensayos ni asumir estado físico a partir del historial.
+
+
+**2026-09-14 — Ensayo mínimo VLA preparado, aún no ejecutado.**
+Replay parcial del primer punto del chunk2 desde ENTRY410: ambos brazos,
+25 % de la transición, máximo 1,396°, 4 s; no agarre ni chunk completo.
+El punto completo mantiene un par mano derecha/mesa sin resolver; el prefijo
+conserva 1018 pares certificados y los 54 avisos internos históricos, sin nuevos
+fallos geométricos. Trece tests y --check pasan. Ejecutor SDK con lectura de
+salud/paros/cargador/postura, seguimiento y llegada; sin reintentos ni HOME.
+No requiere instalar XML, recargar o reiniciar. Scripts del operador intactos.
+[Comando, límites, reproducción y estado pendiente](vla/ENSAYO_MINIMO_PUNTO_VLA_ENTRY410.md).
+
+
+**Continuación vigente — 2026-09-14: ENTRY medido y shadow task 0 completado.**
+98 muestras inmóviles, error final máximo 0,1593° respecto a ENTRY410. Seis
+propuestas y seis aceptaciones por el perfil shadow existente de 14 ejes de
+brazos; primer cambio máximo 6,1643° (umbral shadow 0,35 rad), sin envío físico.
+Inferencia caliente mediana 0,436 s; arranque exterior 79,394 s. Caja completa
+visible en la cámara. Sesión cerrada: ambos contenedores VLA exited y cero
+publicadores de movimiento. No se cambiaron tareas ni umbrales. Siguiente:
+adaptar el ejecutor físico a ENTRY410 y resolver entrada al primer punto;
+no repetir HOME/READY/ENTRY ni confundir aceptación shadow con agarre probado.
+[Ensayo, tiempos, reproducción y evidencia](vla/ENSAYO_READY_ENTRY410_20260914.md).
+
+
+**Actualización vigente — 2026-09-14: READY→ENTRY410 probado físicamente,
+5/5 etapas con éxito según el operador y sus cinco resultados Motion SUCCEED.**
+HOME→READY nuevo y READY→ENTRY410 quedan completados para los ensayos comunicados.
+Se conserva `force_entry.sh` del operador. Siguiente: lectura fresca y propuestas
+VLA task 0 en shadow desde ENTRY; el agarre VLA aún no se ha probado.
+[Registro del ensayo, Goal ID y evidencia](vla/ENSAYO_READY_ENTRY410_20260914.md).
+
+
+**Actualización vigente — 2026-09-14: HOME→READY nuevo probado físicamente,
+5/5 etapas con éxito.** El propietario aporta los cinco resultados Motion
+`SUCCEED` (state 1101001, status 4) y confirma el ensayo exitoso desde HOME.
+Se cierra el pendiente de primera ejecución del acceso
+`ready410_h63_access_01..05_forward` para este ensayo. Se registra lentitud:
+122 s nominales; duración real no cronometrada. La ejecución fue mediante ROSA
+directo con un `force_ready.sh` modificado por el operador; el agente conserva
+ese archivo. ENTRY/VLA y el monitor Python no quedan probados por este ensayo.
+Esta actualización prevalece sobre los estados históricos de READY pendiente.
+[Resultados, cinco Goal ID, alcance y evidencia](vla/ENSAYO_HOME_READY_NUEVO_20260914.md).
+
+
+**2026-09-14 — ENTRY410 recalculada para la escena de 72,5 cm.**
+Acceso y retorno: 1018 intervalos certificados y 54 infracciones del margen del
+modelo, sin intervalos pendientes. Once separaciones continuas de superficies
+CAD demostradas en el dominio410; 13 interfaces móviles con intersecciones aún
+sin justificación mecánica. Preparadas cinco etapas (75 s READY→ENTRY) y sus
+inversas, sólo borradores. Nueva lectura inmóvil y hashes Motion contrastados.
+RGB y profundidad discrepan 25,70 mm de mediana en el tablero: registro físico,
+cobertura completa y ejecución/parada siguen pendientes. 16 tests pasan.
+Sin movimiento, instalación, recarga ni VLA físico. VLA-01.
+[Resultados, reproducción y pendientes](vla/REVISION_ENTRY410_MESA725_20260914.md).
+
+**2026-09-14 — Mesa ajustada por el operador a 72,5 cm; ENTRY410 se conserva.**
+Confirmación «72,5, hecho»: dimensión suelo–superficie del tablero, precisión no
+aportada. Perfiles offline actualizados y selección repetida para 0,725 m.
+Nueva captura pasiva en Vision: RGB completo de caja/mesa y nube de 9179 puntos,
+marcas imagen/nube coincidentes. No demuestra zona libre ni postura articular.
+La escena cambió: revisiones geométricas con mesa de 80 cm quedan históricas;
+registro y revisión de la nueva escena pendientes. No se ha movido, instalado,
+recargado o cambiado ninguna protección del robot. VLA-01.
+[Registro del ajuste](vla/SELECCION_ENTRY410_20260914.md#actualización-mesa-confirmada-a-725-cm).
+
+**2026-09-14 — ENTRY410 seleccionada como base de adaptación para mesa de 80 cm.**
+Comparadas 360/380/410 con sus parquets y primeros fotogramas originales.
+Posturas prácticamente equivalentes: diferencia máxima de muñeca 0,701 mm.
+Apoyo de entrenamiento inferido: 64,18 / 64,17 / 72,65 cm; 410 queda más cerca
+bajo hipótesis comunes, sin certificar alturas. Las tres conservan acceso y
+retorno con 1018 pares certificados y 54 avisos. Selección sólo offline:
+config/vla/offline/selected_entry_adaptation.json; ENTRY runtime sin cambios.
+Conservar trabajo de360 como referencia, sin heredar automáticamente su validación.
+Sin consulta o movimiento del robot, instalación o cambio del checkpoint. VLA-01.
+[Comparación y decisión](vla/SELECCION_ENTRY410_20260914.md).
+
+**2026-09-14 — ENTRY360 por etapas y once fronteras CAD resueltas de forma continua.**
+Nuevo método de órbitas resuelve lifter2/torso; las otras diez parejas sin cruce
+se prueban por subdivisión angular. Permanecen trece interfaces con cruces CAD,
+sin exenciones. Propuesta offline READY→360 en cinco etapas, 75 s nominales:
+1018 pares certificados, mismos 54 avisos, sin timeout; incluye 90/90 contra escena.
+Hashes actuales de YAML/URDF/cúbica coinciden; seis límites de cabeza/cuerpo
+comprobados con ±1°. Comparar suelo/tablero en una captura da 75,47–82,11 cm:
+no establece cota metrológica ni justifica recolocar la mesa. Borradores no
+instalados; seguimiento, parada y correspondencia mecánica siguen pendientes.
+18 tests pasan. Sin movimiento, instalación, recarga ni cambio de protecciones. VLA-01.
+[Resultados, límites y reproducción](vla/ENTRY360_ETAPAS_E_INTERFACES_20260914.md).
+
+**2026-09-14 — ENTRY360 revisado para ensayo; todavía no habilitado físicamente.**
+Vector original task0/frame0 verificado. Acceso/retorno recalculados desde la
+captura actual: 1018 pares certificados, mismos 54 avisos, 0 pendientes; 90/90
+contra escena con hipótesis 50 mm y ±1°. Interfaces360: 30 invariantes y 24
+móviles, 696 muestras, sin contactos CAD nuevos fuera de cajas de referencia;
+no prueba continua. Captura pasiva354 mensajes, velocidad0, sin fallos,
+paros0/0; RGB/nube nuevos con marcas iguales. Ejemplo360: altura inferida
+64,18 cm (62,25–66,03 cm sólo por variación de píxeles), compatibilidad80 cm
+no demostrada. Propuesta READY→360 de65 s, no instalada/validada en Motion.
+Auditor antiguo040 retirado, salida78. Faltan registro físico/interfaces y
+contrato de ejecución/seguimiento/parada; separar del agarre VLA. 15 tests pasan.
+Sin movimientos, instalaciones o recargas. VLA-01.
+[Revisión, evidencia y reproducción](vla/REVISION_PRUEBA_ENTRY360_20260914.md).
+
+**2026-09-14 — ENTRY440 con escena ampliada 50 mm: contraejemplo demostrado.**
+El par pendiente abrazadera derecha–caja intersecta el modelo al 98,83 % del
+acceso y también en el extremo, con perturbaciones menores de 1° y dentro de
+límites. Ambos testigos se recomputaron. En el extremo: separación sin ampliar
+71,39 mm nominal y 49,90 mm perturbada; una traslación hipotética de 49,95 mm
+produce contacto del modelo. No es contacto físico ni error real observado.
+Se examinan 113 extremos alternativos: ENTRY360/380/410 pasan acceso y retorno
+con 1018 pares certificados, los mismos 54 avisos y 0 pendientes. Los 90 pares
+contra escena pasan en las seis rutas. Cambian altura/alcance: compatibilidad
+con mesa de 80 cm e imagen VLA pendiente; no se cambia el ejecutor.
+Buscador, verificador, selector y vista 3D offline; 11 tests pasan. Cero consultas
+u órdenes al robot; VLA físico pendiente. VLA-01.
+[Demostración, límites y reproducción](vla/CONTRAEJEMPLO_ENTRY50_20260914.md).
+
+**2026-09-14 — Error de escena separado del margen geométrico; perfil de 50 mm.**
+Por petición del usuario se añade hipótesis offline de registro traslacional
+50 mm, ampliando sólidos; los 2 mm siguen siendo separación geométrica mínima,
+no exactitud exigida/demostrada de cámara. No es un óptimo ni una cota validada.
+ENTRY440 acceso/retorno con ajuste visual+50 mm: 1017 certificados, 54 avisos,
+1 par derecho–caja sin demostrar. Captura pasiva actual válida: 356 muestras,
+velocidad 0, sin faults, paros 0/0; no parada observada. RGB/nube nuevos con
+marca coincidente y TF de ese instante: discrepancia de plano mediana33,9 mm.
+Elevador2–torso sigue pendiente tras ampliar cálculo; no se eximen interfaces.
+11 tests y 192 comparaciones FCL pasan. Sin órdenes de movimiento, instalación,
+recarga o cambio remoto persistente. [Ficha y reproducción](vla/CIERRE_Y_TOLERANCIAS_ENTRY_20260914.md). VLA-01.
+
+**2026-09-14 — Los 54 avisos internos de ENTRY440 se desglosan.**
+30 pares invariantes con base/auxiliares fijos; 10 pares con fronteras CAD
+continuamente separadas; 13 con cruces ya presentes en referencias HOME/PICO;
+1 (elevador2–torso) separado en muestras, prueba continua pendiente por presupuesto.
+Ninguno incluye abrazaderas. En 696 configuraciones no se encontró contacto CAD
+validado fuera de las cajas de referencia; es muestreo, no prueba de ausencia.
+No deben interpretarse los 54 avisos como 54 choques físicos. Sin eximir pares,
+reducir márgenes, aprobar movimiento o modificar el robot. Seis tests pasan.
+VLA-01: [diagnóstico, límites y reproducción](vla/INTERFACES_ENTRY440_20260914.md).
+
+**2026-09-14 — ENTRY440: separación de acceso y retorno validada offline.**
+La subdivisión de la caja articular resuelve el par derecho–caja pendiente:
+1018 pares certificados (90 contra escena, 928 internos), 54 avisos nominales,
+0 sin demostrar, sin timeout. También pasan el acceso desde la captura con
+cabeza bajada y el retorno vacío hasta HOME20D. Escena original, ±1° y margen
+2 mm conservados. Treinta tests pasan. Esto sustituye el pendiente numérico de
+ENTRY440 del informe anterior, no aprueba movimiento físico: registro de escena,
+54 interfaces y seguimiento/parada continúan pendientes. Cero órdenes remotas.
+VLA-01: [alcance, evidencia y reproducción](vla/VALIDACION_ENTRY440_20260914.md).
+
+**2026-09-14 — Revisión ampliada de ENTRY; aprobación física pendiente.**
+Contraejemplo recomputado: ENTRY372 intersecta la mesa del modelo al 88,17 % de
+READY→ENTRY con perturbación máxima 0,9932°, dentro de límites. No es contacto
+físico observado. ENTRY440 original verificado evita ese par, pero conserva
+un par sin demostrar contra la caja: 1017 certificados, 54 avisos nominales,
+1 pendiente, sin timeout. El ajuste visual experimental pasa la separación
+con escena ampliada 20 mm, pero su registro difiere de la nube varios centímetros
+y no se ha adoptado. Nuevas cotas direccionales sin recortar sólidos/márgenes;
+28 tests y 3216 comparaciones pasan. Sin consultas o comandos remotos nuevos.
+VLA-01: [resultados, reproducción y límites externos](vla/CIERRE_GEOMETRICO_ENTRY_20260914.md).
+
+**2026-09-14 — Interpretación de los2,11mm corregida con evidencia geométrica.**
+El ejemplo corresponde a separación horizontal contra el frente del proxy de mesa,
+no holgura vertical real. Ajuste de117puntos observados: el proxy llega49,9mm por
+encima del centro de la zona y46,8mm por delante del punto más cercano; no implica
+esos excesos en todo el perímetro. Cotas83,8×84×3,8cm ya registradas. Tres tests
+nuevos pasan. Sin recortar geometría, aprobar ENTRY ni nuevas órdenes remotas.
+[Datos, límites y receta](vla/REGISTRO_MESA_ENTRY_20260914.md). VLA-01.
+
+**2026-09-14 — Cabeza en observación, movimiento limitado completado.**
+`--prepare-vision --yes`, tarea existente `cruzr/move_head_lower`, SUCCEED/status4.
+Final pitch−0,430665rad/yaw−0,000383rad, velocidades0; restantes ángulos sin
+variación entre extremos. Brazos/cuerpo HOME, **no HOME20D completo**. RGB y
+nube nueva10231puntos muestran caja completa y borde cercano del tablero;
+mediciones regionales exploratorias no sustituyen contornos/error completos.
+Sin ENTRY, agarre, VLA físico, instalación o recarga. MOT-04/VLA-01.
+[Acción, postestado, evidencia y pendientes](vla/OBSERVACION_ENTRY_20260914.md).
+
+**2026-09-14 — Simulada mesa/caja−20mm; ENTRY continúa pendiente.**
+Misma ruta372,±1°/2mm:1016certificados,54avisos y2pendientes intactos.
+En la postura derecha antes hallada, distancia modelo2,107→3,408mm: mejora1,301mm,
+no20mm. Opción PC `--scene-z-offset-mm` conserva procedencia y distingue escenarios;
+20tests pasan. Sin consulta/cambio/movimiento remoto ni modificación física de mesa.
+[Resultados, receta y reversión](vla/ENTRY_MESA_MENOS20MM_20260914.md). VLA-01.
+
+**2026-09-14 — ENTRY, cotas locales y alternativas; sin aprobación física.**
+A ±1°/2 mm, ruta372: 1016 certificados del modelo, 54 avisos nominales retenidos
+y dos pendientes abrazadera–mesa en 11,527 s (antes21). Ninguno de los69 extremos
+erguidos queda completamente resuelto;430 empeora a ocho pendientes. Búsqueda
+numérica encuentra 2,107 mm abrazadera derecha–tablero en372 dentro de±1°;
+no es cota global ni contacto físico.25 tests pasan y regresión con geometría real.
+Lecturas remotas: HOME inmóvil, baterías≈90%, paros liberados, VLA detenido;
+captura pasiva con caja recortada. Sin movimiento/instalación remota. VLA-01.
+[Resultados, fuentes, receta, rollback y pendientes](vla/ENTRY_COTAS_LOCALES_20260914.md).
+
+**2026-09-14 — Escenario±1° afinado sólo offline:** distancias de sólidos en
+pares pendientes dejan997certificados,54avisos nominales intactos y21pendientes
+(10resolución/11incertidumbre), frente a23. Sin reducir±1°/2mm ni excluir pares.
+Dieciséis tests pasan; sin consulta remota, movimiento o cambio de límites.
+[Receta, evidencia y pendientes](vla/ERROR_ARTICULAR_TRAZAS_20260914.md#afinado-posterior-del-escenario-1). VLA-01.
+
+**2026-09-14 — Trazas y escenarios de error revisados, sólo offline.**
+Diez capturas inventariadas con hashes correctos; seis comparables, dos móviles.
+H01/H02: máximos de discrepancia consigna solicitada–posición0,444207°/0,433667°;
+no consigna aplicada ni cota de parada. Sólo ocho ejes con movimiento significativo.
+Escenarios±0,1/0,5/1/5° dejan3/11/23/325pares sin resolver y54avisos nominales
+retenidos. ±0,1° no contiene lo observado; ±1° prioritario para estudio, sin
+cambiar límites ni aprobar ejecución. Cinco tests nuevos pasan. Sin consulta,
+instalación o movimiento remoto; VLA físico0/4, shadow calificado0/5. VLA-01.
+[Datos, cobertura, comparación y reproducción](vla/ERROR_ARTICULAR_TRAZAS_20260914.md).
+
+**2026-09-14 — Error5° de acceso ENTRY372: causas separadas, sin movimiento.**
+Corregida repetición de cálculo en pares ya no certificables; permanecen
+rechazados. Nuevo revisor de una ruta archivada, sin IO del robot. Profundidad6
+termina en26,490s:693pares certificados,54avisos nominales,280sin demostrar
+por cota de incertidumbre y45por resolución. No hay aprobación física ni
+reducción de error5°/margen2mm. La cota global acumulada exige≈1,015m en algunos
+pares de abrazadera: es una cota conservadora, no movimiento observado.
+Once tests pasan. No repetir sólo más tiempo: ajustar rigurosamente la cota,
+resolver interfaces y escena/compatibilidad antes de activar. VLA-01.
+[Detalle, receta y reversión](vla/ENTRY_Y_RECUPERACION_20260914.md#segunda-revisión-separar-tiempo-resolución-e-incertidumbre).
+
+**2026-09-14 — ENTRY y acceso revisados sin movimiento; aprobación física pendiente.**
+Censo completo:150 entradas task0;69 erguidas sin avisos adicionales respecto a
+HOME ni avisos con los dos obstáculos archivados en el extremo. Tras descartar
+ENTRY46 por interferencias del modelo con el tablero, candidata ENTRY372
+(2,845°), cotejada con parquet/RGB original. Tres rutas nominales por intervalos:
+1.018 pares certificados y54 avisos retenidos, sin pares nuevos; no aprobación
+completa. Escenario5° sin certificar por presupuesto agotado. Recuperación vacía
+incluye tramo final a HOME20D, no sólo cabeza en observación. Altura de soporte
+inferida≈75,3cm sin incertidumbre total acotada: compatibilidad80cm pendiente.
+Lectura nueva: HOME máximo0,002876214rad, velocidades0, RobotCommand writers0,
+ambos VLA detenidos. K estéreo coincide con el archivo; caja parcialmente
+recortada en RGB. Consultas solamente, sin instalación/reinicio/movimiento.
+Dos herramientas PC, diez tests nuevos y ocho de ranking aprobados; sin nuevas
+dependencias. No se cambian ENTRY activa ni gates; shadow calificado0/5.
+[Resultados, reproducción y pendientes](vla/ENTRY_Y_RECUPERACION_20260914.md).
+
 **2026-09-11 — Petición de agarre VLA en15min: avance offline; agarre NO ejecutado.**
 Quince inferencias nuevas (episodios40/430/438, frame0, cinco semillas) pasan
 continuidad inicial de14brazos en sus escenas originales: máximos0,033086,

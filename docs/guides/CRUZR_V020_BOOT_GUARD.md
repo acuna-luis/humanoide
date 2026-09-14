@@ -1,5 +1,15 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+**2026-09-14 13:50 UTC — Nuevo ciclo completo comunicado; comprobación técnica de liberación correcta.**
+`cruzr_boot_ready.sh --check` devuelve0, Motion3/3, cámaras2/2 en seis topics
+con marcas crecientes y RELEASE_TECHNICAL_CHECK=passed. Cero comandos de movimiento.
+Sustituye WaitStartMotion como último resultado técnico de arranque. Liberación
+condicionada a brazos abajo/vacíos/estables y zona libre con persona junto al paro;
+puede iniciar HOME interno. Liberación y fin de arranque aún no observados.
+No aprueba ENTRY410 ni verifica todavía su ejecución. Evidencia:
+`../Humanoide-vla-evidence/20260914T135018Z_ENTRY410-BOOT-RELEASE/`. BOOT-01/VLA-01.
+
+
 **2026-09-11 — Liberación observada y arranque completado, VERIFICADO por software.**
 Tras confirmar las condiciones físicas y pasar el check, se indicó liberar.
 Lectura fresca principal0; misma instancia CC pasó selfcheck=true/error0,
@@ -413,3 +423,81 @@ sudo systemctl daemon-reload
 
 Disable and review this workaround before applying a future UBTECH system
 upgrade. Versions other than v0.2.0 are skipped automatically.
+
+
+## 2026-09-14 18:47 Europe/Madrid — paro reconocido y fallo de hardware (VLA-01 / BOOT-01)
+
+**OBSERVADO.** El operador confirmó el paro principal pulsado durante el ensayo
+pasivo, sin órdenes de movimiento. A las 16:40:43.395 UTC Control Center registró
+`EstopPressed`, `Ready -> WaitStartMotion` y `disableAllMotionAbility`.
+El registro del hardware también recibió el paro y, a las 16:40:43.732 UTC,
+terminó con `terminate called without an active exception`, `SIGABRT`, con
+`std::thread::~thread()` en la pila. Esto documenta un fallo del proceso;
+la causa exacta en el código del proveedor sigue PENDIENTE.
+Docker muestra un reinicio de `walker-motion.hw-1` (16:40:44.028 UTC) y otro de
+`walker-motion.manipulation_robot_app-1` (16:40:48.723 UTC). No se ordenaron
+reinicios desde esta intervención. El hardware espera `/mc/rosa_control/start`;
+Motion espera ListControllers; no hay servidor de manipulación ni estados
+articulares actuales. Los logs del proveedor imprimen UTC+8: su fecha local
+2026-09-15 00:40 corresponde al 2026-09-14 16:40 UTC.
+
+La captura terminó: 26 mensajes de cada paro, principal=1 y segundo=0,
+ninguna muestra de actuadores, `usable_capture=false` y una suscripción
+interrumpida con exit=137. El registro del monitor no contiene el flanco 0->1;
+no mide latencia desde el botón ni distancia de parada. Queda comprobada la
+recepción funcional del paro en Control Center y hardware, sin aprobar por ello
+el seguimiento/parada de brazos ni ENTRY/VLA físico. No repetir una pulsación
+sólo para recuperar el flanco que faltó en esta captura.
+
+Estado de reanudación: mantener el paro pulsado; recuperación mediante el ciclo
+completo supervisado de la guía v0.2.0, sin improvisar StartMotion ni liberar
+ahora para intentar recuperar el servidor. Después del ciclo, redescubrir
+procesos, endpoints y estados; no reutilizar identidades de carga anteriores.
+No se instalaron cambios remotos ni se modificaron límites o watchdogs.
+Evidencia privada: `../Humanoide-vla-evidence/20260914_ENTRY_NAMED_STATE/`
+(`stop-transition/capture.json`, `stop-transition/trace.jsonl`,
+`after-estop/cc.json`, `inspect.json`, `hwlog.json`, `motionlog.json`,
+`actions.json`, `joints.json`). Copia documental previa en
+`before-stop-documentation/`; manifiesto `after-estop/SHA256SUMS`.
+
+
+## 2026-09-14 18:58 Europe/Madrid — recuperación tras ciclo completo (BOOT-01 / VLA-01)
+
+**VERIFICADO por lectura; ciclo realizado por el operador.** Tras confirmar el
+usuario el nuevo encendido y HOME, Control Center registra SelfCheck y
+StartMotion completados, entrada en JoystickMode a las 16:55:13 UTC. A las
+16:57 UTC vuelven el servidor de manipulación (1) y los estados articulares:
+20 ejes de cuerpo/brazos/cabeza próximos a cero (máximo 0,002877 rad),
+velocidades medidas cero; ambos paros=0, cargador=0, baterías 53,2/54,4 %.
+VLA control e inferencia siguen detenidos con restart=no; publicadores de
+/mc/sdk/robot_command=0. No se enviaron movimientos ni reinicios.
+La recuperación operativa está verificada; no demuestra corregida la caída
+SIGABRT al pulsar el paro ni aprueba ENTRY/VLA físico. No hace falta repetir
+el ensayo de pulsación para comprobar recepción. Antes de ejecutar, renovar
+la identidad de tareas/procesos y las condiciones de la prueba tras el arranque.
+Evidencia: ../Humanoide-vla-evidence/20260914T165743Z_ESTOP-AVAILABLE/
+(results.json y evidence.sha256); copia documental previa en before-docs/.
+
+
+## 2026-09-14 — BOOT-01/VLA-01: nuevo arranque y XML del proveedor
+
+VERIFICADO SÓLO LECTURA. Tras ciclo completo comunicado por el operador,
+cruzr_boot_ready.sh --check termina0: Motion3/3, cámaras2/2 en seis topics con
+marcas crecientes, RELEASE_TECHNICAL_CHECK=passed. Se verifican los20 XML
+ready410_h63 y registro9d40ede9…5440fa después del nuevo arranque;
+Motion StartedAt2026-09-14T18:07:30.421188Z. Archivos íntegros y proceso nuevo
+no equivalen a prueba de despacho. Se indicó liberar E-stop con las condiciones
+físicas confirmadas conservadas; liberación, HOME y resultado posterior aún
+PENDIENTES. No se enviaron movimientos, recargas o reinicios.
+
+XML recibido utars_task_zhucheng_env_20260428_start.xml analizado sin instalar:
+flujo get1→put2/get2→put1, boxSize[0.4,0.3,0.22], targetPos z0.7/1.2,
+putHeight0.7/1.2, tareas zhucheng/clamp_cruzr, put_cruzr_low/high y auxiliares.
+Incluye dos subárboles no adjuntos; no contiene enlace explícito al checkpoint
+ni prueba qué backend usa. El proveedor afirma VLA integrado; la descripción
+local dice acción generalizada de Motion: contrastar las dependencias, no asumir.
+No incluye dumping (proveedor ya indicó desarrollarlo). Resumen y preguntas
+actualizadas en docs/vla/UBTECH_PROCEDIMIENTO_CAJAS_20260914.md.
+Evidencia, copia fuente, hashes y backups documentales:
+../Humanoide-vla-evidence/20260914_READY410_BOOT_AND_VENDOR/.
+Cambios persistentes sólo documentación PC; cero cambios remotos.

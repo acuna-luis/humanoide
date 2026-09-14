@@ -1,0 +1,9 @@
+{
+  "chassis_tip_to_table_projection_m": 0.16,
+  "reported_table_height_m": 0.725,
+  "measurement_uncertainty_m": null,
+  "source": "Operator report 2026-09-14",
+  "orientation_source": "existing camera estimate authorized by owner",
+  "interpretation": "Along robot forward axis to projected front tabletop edge; model chassis tip correspondence assumed",
+  "physical_approval": false
+}

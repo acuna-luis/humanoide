@@ -1,0 +1,13 @@
+{
+  "schema": "cruzr-entry-scene-uncertainty-review-v1",
+  "scope": "OFFLINE_HYPOTHESIS_NOT_EXECUTION_CONFIGURATION",
+  "scene_translation_allowance_mm": 50.0,
+  "minimum_geometric_clearance_mm": 2.0,
+  "uncertainty_bound_qualified": false,
+  "angular_registration_error_bound_degrees": null,
+  "stopping_distance_bound_mm": null,
+  "physical_approval": false,
+  "reason": "Exploratory allowance rounded above the observed 43.565 mm maximum table-plane discrepancy. This is not a sensor accuracy guarantee, stopping allowance, manufacturer recommendation or universal optimum.",
+  "application": "Expand each fitted scene box by 50 mm on every face; do not subtract this allowance from collision distances or allow penetration.",
+  "evidence": "docs/vla/CIERRE_Y_TOLERANCIAS_ENTRY_20260914.md"
+}
