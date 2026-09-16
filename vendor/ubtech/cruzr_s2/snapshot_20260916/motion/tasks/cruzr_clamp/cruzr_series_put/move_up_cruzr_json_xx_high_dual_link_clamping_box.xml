@@ -1,0 +1,7 @@
+<root main_tree_to_execute="MainTree">
+	<BehaviorTree ID="MainTree">
+		<Sequence name="root_sequence">
+			<Action ID="MetaClamp" name="cruzr_clamp/put_series_action/move_up_cruzr_json_xx_high_dual_link_clamping_box" />
+		</Sequence>
+	</BehaviorTree>
+</root>

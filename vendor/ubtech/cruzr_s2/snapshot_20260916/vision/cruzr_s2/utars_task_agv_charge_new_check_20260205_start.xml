@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <include path="subtrees/Navigation/navigation.xml"/>
+
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <Sequence>
+        <TtsClient tts="充电桩服务正在启动"
+                   _description="agv_pole_down_erro_num:失败重试次数&#10;is_on_charging_pile:是否在充电桩上：1是，0否(桩上包含充电，和导航上桩判断)"
+                   _onSuccess="agv_pole_down_erro_num:=0;is_on_charging_pile:=0"/>
+        <Repeat num_cycles="-1">
+          <Delay delay_msec="3000">
+            <Sequence>
+              <Sequence _description="1.运控服务，启动与否">
+                <McRunningCondition machine_state="{machine_state}"
+                                    _description="machine_state_num:机器是否启动：0，未启动；1.启动&#10;task_status_num:任务是否启动：0，未启动；1.启动&#10;task_status_jduge_num:是否有任务判断：1是，0 否&#10;battery_status_num:电量是否达到阈值：0，低于15%；1.高于80%&#10;nav_status_num:导航是否启动:0，未启动；1.启动&#10;charging_weight_num:充电权重，权重超过3认为在充电&#10;agv_pole_erro_num:充电桩是否正常,0正常，1.异常&#10;"
+                                    _onSuccess="machine_state_num:=0;task_status_num:=0;charging_weight_num:=0;nav_status_num:=0;nav_code_str=&quot;0&quot;;agv_pole_erro_num:=0;task_status_jduge_num:=0"/>
+                <Sequence _description="任务节点判断">
+                  <Repeat num_cycles="6">
+                    <Sequence>
+                      <TaskStateCheckerCondition task_state="{task_state}"/>
+                      <Sequence _skipIf="task_state != &quot;1&quot;">
+                        <Script code="task_status_jduge_num=task_status_jduge_num+1"
+                                _description="机器任务"/>
+                      </Sequence>
+                    </Sequence>
+                  </Repeat>
+                  <Sequence _skipIf="task_status_jduge_num&lt;3">
+                    <Script code="task_status_num=1"
+                            _description="有任务"/>
+                  </Sequence>
+                  <Sequence _skipIf="task_status_jduge_num&gt;=3">
+                    <Script code="task_status_num=0"
+                            _description="机器任务空闲"/>
+                  </Sequence>
+                </Sequence>
+                <Sequence _skipIf="machine_state != &quot;1&quot;">
+                  <Script code="machine_state_num=machine_state_num+1"
+                          _description="机器要启动"/>
+                  <Script code="map_self_str:=&quot;0&quot;"/>
+                  <Sequence _description="导航重定位判断节点"
+                            _skipIf="task_status_num!=0">
+                    <ForceSuccess>
+                      <MappingNameGain command="get_map_name"
+                                       map_name="utars_charge_map"
+                                       map_self="{map_self_str}"
+                                       _description="检测地图是否存在"/>
+                    </ForceSuccess>
+                    <Sequence>
+                      <Sequence _description="检测是否设置了这个地图:1.已设置该地图"
+                                _skipIf="map_self_str!=&quot;1&quot;">
+                        <ForceSuccess>
+                          <NavigationCheck command="check_state"
+                                           nav_code="{nav_code_str}"
+                                           map_self="{map_self_str}"
+                                           _description="获取地图code"/>
+                        </ForceSuccess>
+                      </Sequence>
+                      <Sequence _description="表示没有设置这个地图,0.未设置该地图"
+                                _skipIf="map_self_str!=&quot;0&quot;">
+                        <RunOnce then_skip="true">
+                          <ForceSuccess>
+                            <TtsClient tts="设置地图"/>
+                          </ForceSuccess>
+                        </RunOnce>
+                        <ForceSuccess>
+                          <MappingOperations command="map_set"
+                                             map_name="utars_charge_map"
+                                             nav_error="{map_set_error_msg}"/>
+                        </ForceSuccess>
+                        <ForceSuccess>
+                          <Fallback>
+                            <Sequence>
+                              <RelocationActuator command="relocation_start"
+                                                  mode="global"
+                                                  relocation_x="0"
+                                                  relocation_y="0"
+                                                  relocation_z="0"
+                                                  nav_error="{relocation_error_msg}"/>
+                              <NavigationCheck command="check_state"
+                                               nav_code="{nav_code_str}"
+                                               map_self="{map_self_str}"
+                                               _description="获取地图code"/>
+                            </Sequence>
+                            <ForceFailure>
+                              <TtsClient tts="{relocation_error_msg}"/>
+                            </ForceFailure>
+                          </Fallback>
+                        </ForceSuccess>
+                      </Sequence>
+                    </Sequence>
+                    <Sequence _skipIf="nav_code_str!=&quot;1200006&quot; &amp;&amp; nav_code_str!=&quot;1200007&quot; ">
+                      <Script code="nav_status_num=nav_status_num+1"
+                              _description="机器要启动"/>
+                      <RunOnce then_skip="true">
+                        <ForceSuccess>
+                          <TtsClient tts="导航定位成功"/>
+                        </ForceSuccess>
+                      </RunOnce>
+                    </Sequence>
+                    <Sequence _skipIf="nav_status_num!=0">
+                      <Delay delay_msec="3500">
+                        <ForceSuccess>
+                          <TtsClient tts="导航未开始"/>
+                        </ForceSuccess>
+                      </Delay>
+                    </Sequence>
+                  </Sequence>
+                </Sequence>
+                <Sequence>
+                  <GlobalVarCondition set_global_str=""
+                                      current_global_str="{current_global_str}"/>
+                  <Sequence _skipIf="current_global_str!=&quot;0&quot;">
+                    <Script code="is_on_charging_pile=0"
+                            _description="is_on_charging_pile:充电桩是否处于上桩状态：1是，0否"/>
+                  </Sequence>
+                  <Sequence _skipIf="current_global_str!=&quot;1&quot;">
+                    <Script code="is_on_charging_pile=1"
+                            _description="is_on_charging_pile:充电桩是否处于上桩状态：1是，0否"/>
+                  </Sequence>
+                </Sequence>
+              </Sequence>
+              <Sequence>
+                <Sequence _skipIf="machine_state_num!=0">
+                  <Delay delay_msec="3500">
+                    <ForceSuccess>
+                      <TtsClient tts="机器未启动"/>
+                    </ForceSuccess>
+                  </Delay>
+                </Sequence>
+                <Sequence _description="双保险，及时检测是否正在充电状态">
+                  <Repeat num_cycles="5">
+                    <Sequence>
+                      <Delay delay_msec="3000">
+                        <AgvChargeBatteryPowerStatusCondition battery_power="{battery_low_power}"
+                                                              battery_charge_state="{battery_charge_state}"
+                                                              _description="battery_charge_state #充电桩工作状态  #空闲 0  充电中 1"/>
+                      </Delay>
+                      <Sequence _skipIf="battery_charge_state!=&quot;1&quot;">
+                        <Script code="charging_weight_num=charging_weight_num+1"
+                                _description="充电权重"/>
+                      </Sequence>
+                      <Sequence _skipIf="battery_charge_state!=&quot;0&quot;">
+                        <Script code="charging_weight_num=charging_weight_num-1"
+                                _description="充电权重"/>
+                      </Sequence>
+                    </Sequence>
+                  </Repeat>
+                </Sequence>
+                <Sequence _description="is_on_charging_pile:充电桩是否处于上桩状态：1是，0否"
+                          _skipIf="is_on_charging_pile!=0">
+                  <Sequence _description="任务中"
+                            _skipIf="task_status_num!=1">
+                    <RunOnce then_skip="true">
+                      <ForceSuccess>
+                        <TtsClient tts="有任务正在执行"/>
+                      </ForceSuccess>
+                    </RunOnce>
+                  </Sequence>
+                  <Sequence _description="无任务空闲状态"
+                            _skipIf="task_status_num!=0">
+                    <Sequence _description="上桩动作"
+                              _skipIf="machine_state_num!=1 || nav_status_num!=1 || is_on_charging_pile!=0">
+                      <Sequence _description="开始上桩">
+                        <AgvChargeBatteryPowerStatusCondition battery_power="{battery_low_power}"
+                                                              battery_charge_state="{battery_charge_state}"
+                                                              _description="battery_charge_state #充电桩工作状态  #空闲 0  充电中 1"/>
+                        <Sequence _description="上桩前检测，防止手动充电情况发生">
+                          <Sequence _skipIf="battery_charge_state!=&quot;1&quot;">
+                            <ForceSuccess>
+                              <TtsClient tts="机器正在充电"/>
+                            </ForceSuccess>
+                            <GlobalVarCondition set_global_str="1"
+                                                current_global_str="{current_global_str}"
+                                                _description="充电桩是处于上桩状态"/>
+                          </Sequence>
+                          <TaskStateCheckerCondition task_state="{task_state}"/>
+                          <Sequence _skipIf="battery_charge_state!=&quot;0&quot; || task_state!=&quot;0&quot;">
+                            <Sequence _description="上桩操作">
+                              <TaskStateCheckerCondition task_state="{task_state}"/>
+                              <Sequence _description="为什么这一步，因为桩上分充电，和导航上桩判断"
+                                        _skipIf="is_on_charging_pile!=1">
+                                <ForceSuccess>
+                                  <TtsClient tts="我要先下桩了"/>
+                                </ForceSuccess>
+                                <SubTree ID="logo_nav_get_off"/>
+                              </Sequence>
+                              <Sequence _skipIf="task_state!=&quot;0&quot;">
+                                <SubTree ID="logo_nav_charge0"/>
+                              </Sequence>
+                            </Sequence>
+                            <TaskStateCheckerCondition task_state="{task_state}"/>
+                            <Sequence _skipIf="battery_low_power&lt;=80">
+                              <RunOnce then_skip="true">
+                                <ForceSuccess>
+                                  <TtsClient tts="当前电池电量高于百分之八十，等待任务"/>
+                                </ForceSuccess>
+                              </RunOnce>
+                            </Sequence>
+                            <Sequence _description="低于阈值,并且满足可以充电的条件,才去做充电操作"
+                                      _skipIf="battery_low_power&gt;80 || agv_pole_erro_num!=0  || task_state!=&quot;0&quot;">
+                              <Sequence _description="搬上面层大箱子操作">
+                                <ForceSuccess>
+                                  <TtsClient tts="我要开始上桩充电了"/>
+                                </ForceSuccess>
+                                <ParallelAll max_failures="1">
+                                  <SubTree ID="logo_nav_get_on"/>
+                                  <Sequence _skipIf="battery_charge_state!=&quot;1&quot;">
+                                    <ForceSuccess>
+                                      <Fallback>
+                                        <NavigationActuator command="navigation_stop"
+                                                            mode=""
+                                                            target_id=""
+                                                            nav_error="{stop_navigation_error_msg}"/>
+                                        <ForceFailure>
+                                          <Sequence>
+                                            <Delay delay_msec="1500">
+                                              <TtsClient tts="{stop_navigation_error_msg}"/>
+                                            </Delay>
+                                          </Sequence>
+                                        </ForceFailure>
+                                      </Fallback>
+                                    </ForceSuccess>
+                                  </Sequence>
+                                </ParallelAll>
+                              </Sequence>
+                              <Sequence _description="下桩重试操作">
+                                <Sequence _description="11111">
+                                  <ForceSuccess>
+                                    <RetryUntilSuccessful num_attempts="6">
+                                      <Sequence>
+                                        <Delay delay_msec="3000">
+                                          <AgvChargeBatteryPowerStatusCondition battery_power="{battery_low_power}"
+                                                                                battery_charge_state="{battery_charge_state}"
+                                                                                _description="battery_charge_state #充电桩工作状态  #空闲 0  充电中 1"/>
+                                        </Delay>
+                                        <Sequence _skipIf="battery_charge_state!=&quot;0&quot;">
+                                          <ForceFailure>
+                                            <Delay delay_msec="1500">
+                                              <TtsClient tts="充电检测"/>
+                                            </Delay>
+                                          </ForceFailure>
+                                        </Sequence>
+                                        <Sequence _skipIf="battery_charge_state!=&quot;1&quot;">
+                                          <ForceSuccess>
+                                            <TtsClient tts="正在充电"/>
+                                          </ForceSuccess>
+                                        </Sequence>
+                                      </Sequence>
+                                    </RetryUntilSuccessful>
+                                  </ForceSuccess>
+                                </Sequence>
+                                <Sequence _description="还没有充到电情况"
+                                          _skipIf="battery_charge_state!=&quot;0&quot;">
+                                  <Sequence>
+                                    <ForceSuccess>
+                                      <TtsClient tts="我要开始下桩了"/>
+                                    </ForceSuccess>
+                                    <SubTree ID="logo_nav_get_off"/>
+                                    <SubTree ID="logo_nav_charge0"/>
+                                  </Sequence>
+                                </Sequence>
+                              </Sequence>
+                            </Sequence>
+                          </Sequence>
+                        </Sequence>
+                      </Sequence>
+                    </Sequence>
+                  </Sequence>
+                </Sequence>
+                <Sequence _description="is_on_charging_pile:充电桩是否处于上桩状态：1是，0否&#10;current_global_str,上下桩的时候统一设置"
+                          _skipIf="is_on_charging_pile!=1">
+                  <AgvChargeBatteryPowerStatusCondition battery_power="{battery_low_power}"
+                                                        battery_charge_state="{battery_charge_state}"
+                                                        _description="battery_charge_state #充电桩工作状态  #空闲 0  充电中 1"/>
+                  <Sequence _description="权重高于3认为充电"
+                            _skipIf="battery_charge_state!=&quot;1&quot;">
+                    <AgvChargeBatteryPowerStatusCondition battery_power="{battery_40_power}"
+                                                          battery_charge_state="{battery_charge_state}"/>
+                    <Sequence _description="禁止执行任务"
+                              _skipIf="battery_40_power&gt;40 || task_status_num!=1">
+                      <ForceSuccess>
+                        <TtsClient tts="当前电池电量低于百分之40，拒绝执行任务"/>
+                      </ForceSuccess>
+                    </Sequence>
+                    <Sequence _description="开始执行任务,先下桩"
+                              _skipIf="battery_40_power&lt;=40 || task_status_num!=1">
+                      <Sequence _description="下桩动作"
+                                _skipIf="machine_state_num!=1 || nav_status_num!=1 || is_on_charging_pile!=1">
+                        <Sequence _description="开始下桩">
+                          <Delay delay_msec="15000">
+                            <ForceSuccess>
+                              <TtsClient tts="我要开始下桩了"/>
+                            </ForceSuccess>
+                          </Delay>
+                          <SubTree ID="logo_nav_get_off"/>
+                        </Sequence>
+                      </Sequence>
+                    </Sequence>
+                  </Sequence>
+                  <Sequence _description="在桩上，但是没有充电，则下桩"
+                            _skipIf="battery_charge_state!=&quot;0&quot; || task_status_num!=0">
+                    <Delay delay_msec="15000">
+                      <ForceSuccess>
+                        <TtsClient tts="未充电我要开始下桩了1"/>
+                      </ForceSuccess>
+                    </Delay>
+                    <SubTree ID="logo_nav_get_off"/>
+                  </Sequence>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+          </Delay>
+        </Repeat>
+      </Sequence>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="AgvChargeBatteryPowerStatusCondition"
+            editable="true">
+      <inout_port name="battery_power">当前机器电池电量值</inout_port>
+      <inout_port name="battery_charge_state">当前机器电池是否在充电（1为是，0为否）</inout_port>
+    </Action>
+    <Condition ID="GlobalVarCondition"
+               editable="true">
+      <input_port name="set_global_str"/>
+      <output_port name="current_global_str"/>
+    </Condition>
+    <Action ID="MappingNameGain"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="map_name"/>
+      <output_port name="map_self"/>
+    </Action>
+    <Action ID="MappingOperations"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="map_name"/>
+      <inout_port name="nav_error"/>
+    </Action>
+    <Action ID="McRunningCondition"
+            editable="true">
+      <inout_port name="machine_state"/>
+    </Action>
+    <Action ID="NavigationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="target_id"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="NavigationCheck"
+            editable="true">
+      <input_port name="command"/>
+      <output_port name="nav_code"/>
+      <output_port name="map_self"/>
+    </Action>
+    <Action ID="RelocationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="relocation_x"/>
+      <input_port name="relocation_y"/>
+      <input_port name="relocation_z"/>
+      <inout_port name="nav_error"/>
+    </Action>
+    <Action ID="TaskStateCheckerCondition"
+            editable="true">
+      <inout_port name="task_state"/>
+    </Action>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

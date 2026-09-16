@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <include path="subtrees/Navigation/navigation.xml"/>
+
+  <include path="subtrees/Manipulation/manipulation.xml"/>
+
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <TtsClient tts="我要开始工作啦"/>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <TaskSequenceNode taskControl="{taskControl}"
+                        finish="false">
+        <Sequence>
+          <ForceSuccess>
+            <TtsClient tts="开始执行循环任务"
+                       _onSuccess="rept_num:=0"/>
+          </ForceSuccess>
+          <Repeat num_cycles="-1">
+            <Sequence>
+              <Sequence>
+                <ForceSuccess>
+                  <TtsClient tts="开始执行第"/>
+                </ForceSuccess>
+                <Script code="rept_num=rept_num+1"/>
+                <Delay delay_msec="1000">
+                  <ForceSuccess>
+                    <TtsClient tts="{rept_num}"/>
+                  </ForceSuccess>
+                </Delay>
+                <Delay delay_msec="1000">
+                  <ForceSuccess>
+                    <TtsClient tts="轮"/>
+                  </ForceSuccess>
+                </Delay>
+              </Sequence>
+              <Sequence>
+                <SubTree ID="NavigationLocation"/>
+              </Sequence>
+              <Sequence _description="上面层操作">
+                <Sequence _description="上面层大箱子操作111">
+                  <Sequence _description="搬上面层大箱子操作">
+                    <ParallelAll max_failures="1">
+                      <SubTree ID="logo_nav_get1"/>
+                      <ManipulationAction task_name="factory_cruzr/clamp_plain_40_to_80_ready"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                    </ParallelAll>
+                    <SubTree ID="ManipulationSubTreeGrabBox"
+                             TaskName="factory_cruzr/clamp_plain_40_to_80"
+                             boxSize="[0.6,0.4,0.23]"
+                             grabHeight=""
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             _description="运控泛化动作"/>
+                  </Sequence>
+                  <Sequence _description="到计算点">
+                    <ParallelAll max_failures="1">
+                      <SubTree ID="LogoNavParameter"
+                               logo_nav_par="put2"
+                               _description="拿着箱子到停泊点"/>
+                      <Sequence>
+                        <ManipulationAction task_name="factory_cruzr/bodyback"
+                                            yaml_args=""
+                                            arm_error=""
+                                            status_code=""/>
+                        <SubTree ID="ManipulationSubTreePutBox"
+                                 TaskName="cruzr_clamp/cruzr_series_put/move_up_cruzr_json_xx_high_dual_link_elbow"
+                                 boxSize="[0.6,0.4,0.23]"
+                                 port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                                 putHeight="0.7"/>
+                      </Sequence>
+                    </ParallelAll>
+                  </Sequence>
+                  <Sequence _description="放上面层大箱子操作">
+                    <ManipulationAction task_name="factory_cruzr/put_shelf_box_80_no_vision"
+                                        yaml_args=""
+                                        arm_error=""
+                                        status_code=""/>
+                    <ManipulationAction task_name="cruzr/mobot_back_60"
+                                        yaml_args=""
+                                        arm_error=""
+                                        status_code=""/>
+                  </Sequence>
+                </Sequence>
+                <Sequence _description="上面层小箱子操作2">
+                  <Sequence _description="到计算点去取箱子">
+                    <ParallelAll max_failures="1">
+                      <SubTree ID="LogoNavParameter"
+                               logo_nav_par="put2"
+                               _description="拿着箱子到停泊点"/>
+                      <ManipulationAction task_name="factory_cruzr/clamp_rack_120_to_150_ready"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                    </ParallelAll>
+                    <SubTree ID="ManipulationSubTreeGrabBox"
+                             TaskName="factory_cruzr/clamp_rack_120_to_150"
+                             boxSize="[0.6,0.4,0.23]"
+                             grabHeight="1.25"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             _description="运控泛化动作"/>
+                    <ManipulationAction task_name="cruzr/mobot_back_60"
+                                        yaml_args=""
+                                        arm_error=""
+                                        status_code=""/>
+                  </Sequence>
+                  <Sequence _description="放上面层小箱子操作">
+                    <ParallelAll max_failures="1">
+                      <Sequence>
+                        <ManipulationAction task_name="factory_cruzr/bodyback_nullspace_opt"
+                                            yaml_args=""
+                                            arm_error=""
+                                            status_code=""/>
+                        <SubTree ID="ManipulationSubTreePutBox"
+                                 TaskName="cruzr_clamp/cruzr_series_put/move_up_cruzr_json_xx_high_dual_link_elbow"
+                                 boxSize="[0.6,0.4,0.23]"
+                                 port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                                 putHeight="1.50"/>
+                      </Sequence>
+                      <SubTree ID="logo_nav_put1"/>
+                    </ParallelAll>
+                    <Sequence>
+                      <ManipulationAction task_name="factory_cruzr/put_shelf_box_130_no_vision"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                      <ManipulationAction task_name="factory_cruzr/push_shelf_box_xx_height"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                      <ManipulationAction task_name="cruzr/mobot_back_60"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                    </Sequence>
+                  </Sequence>
+                </Sequence>
+                <Sequence _description="上面层小箱子操作3">
+                  <Sequence _description="到计算点">
+                    <ParallelAll max_failures="1">
+                      <ManipulationAction task_name="factory_cruzr/clamp_rack_90_to_120_ready"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                      <SubTree ID="LogoNavParameter"
+                               logo_nav_par="get2"
+                               _description="拿着箱子到停泊点"/>
+                    </ParallelAll>
+                  </Sequence>
+                  <Sequence _description="搬上面层小箱子操作">
+                    <SubTree ID="ManipulationSubTreeGrabBox"
+                             TaskName="factory_cruzr/clamp_rack_90_to_120"
+                             boxSize="[0.6,0.4,0.23]"
+                             grabHeight="1.0"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             _description="运控泛化动作"/>
+                    <ManipulationAction task_name="cruzr/mobot_back_60"
+                                        yaml_args=""
+                                        arm_error=""
+                                        status_code=""/>
+                  </Sequence>
+                  <Sequence _description="放上面层小箱子操作">
+                    <ParallelAll max_failures="1">
+                      <ManipulationAction task_name="factory_cruzr/bodyback"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                      <SubTree ID="logo_nav_put3"
+                               _autoremap="false"/>
+                    </ParallelAll>
+                    <Sequence>
+                      <SubTree ID="ManipulationSubTreePutBox"
+                               TaskName="factory_cruzr/put_cruzr_floor"
+                               boxSize="[0.6,0.4,0.23]"
+                               port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                               putHeight="0.37"/>
+                    </Sequence>
+                  </Sequence>
+                </Sequence>
+                <Sequence _description="上面层大箱子操作4">
+                  <Sequence _description="搬上面层大箱子操作">
+                    <ParallelAll max_failures="1">
+                      <ManipulationAction task_name="factory_cruzr/clamp_plain_40_to_80_ready"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                      <SubTree ID="logo_nav_get4"/>
+                    </ParallelAll>
+                    <SubTree ID="ManipulationSubTreeGrabBox"
+                             TaskName="factory_cruzr/clamp_plain_40_to_80"
+                             boxSize="[0.6,0.4,0.23]"
+                             grabHeight=""
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             _description="运控泛化动作"/>
+                    <ManipulationAction task_name="cruzr/mobot_back_60"
+                                        yaml_args=""
+                                        arm_error=""
+                                        status_code=""/>
+                  </Sequence>
+                </Sequence>
+                <Sequence _description="上面层小箱子操作5">
+                  <Sequence _description="放上面层大箱子操作">
+                    <Sequence>
+                      <ParallelAll max_failures="1">
+                        <Sequence>
+                          <ManipulationAction task_name="factory_cruzr/bodyback"
+                                              yaml_args=""
+                                              arm_error=""
+                                              status_code=""/>
+                          <SubTree ID="ManipulationSubTreePutBox"
+                                   TaskName="cruzr_clamp/cruzr_series_put/move_up_cruzr_json_xx_high_dual_link_elbow"
+                                   boxSize="[0.6,0.4,0.23]"
+                                   port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                                   putHeight="1.20"/>
+                        </Sequence>
+                        <SubTree ID="logo_nav_put2"/>
+                      </ParallelAll>
+                      <ManipulationAction task_name="factory_cruzr/put_shelf_box_80_no_vision"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                      <ManipulationAction task_name="cruzr/mobot_back_60"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                    </Sequence>
+                  </Sequence>
+                  <Sequence _description="搬上面层小箱子操作">
+                    <ParallelAll max_failures="1">
+                      <ManipulationAction task_name="factory_cruzr/clamp_rack_45_to_70_ready"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                      <SubTree ID="LogoNavParameter"
+                               logo_nav_par="put2"
+                               _description="拿着箱子到停泊点"/>
+                    </ParallelAll>
+                    <SubTree ID="ManipulationSubTreeGrabBox"
+                             TaskName="factory_cruzr/clamp_rack_45_to_70"
+                             boxSize="[0.6,0.4,0.23]"
+                             grabHeight="0.7"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             _description="运控泛化动作"/>
+                    <ManipulationAction task_name="cruzr/mobot_back_60"
+                                        yaml_args=""
+                                        arm_error=""
+                                        status_code=""/>
+                  </Sequence>
+                  <Sequence _description="放上面层小箱子操作">
+                    <ParallelAll max_failures="1">
+                      <Sequence>
+                        <ManipulationAction task_name="factory_cruzr/bodyback"
+                                            yaml_args=""
+                                            arm_error=""
+                                            status_code=""/>
+                        <SubTree ID="ManipulationSubTreePutBox"
+                                 TaskName="cruzr_clamp/cruzr_series_put/move_up_cruzr_json_xx_high_dual_link_elbow"
+                                 boxSize="[0.6,0.4,0.23]"
+                                 port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                                 putHeight="1.05"/>
+                      </Sequence>
+                      <SubTree ID="logo_nav_put1"/>
+                    </ParallelAll>
+                    <Sequence>
+                      <ManipulationAction task_name="factory_cruzr/put_shelf_box_80_no_vision"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                      <ManipulationAction task_name="factory_cruzr/push_shelf_box_xx_height"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                      <ManipulationAction task_name="cruzr/mobot_back_60"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                    </Sequence>
+                  </Sequence>
+                </Sequence>
+                <Sequence _description="上面层小箱子操作6">
+                  <Sequence _description="到计算点">
+                    <ParallelAll max_failures="1">
+                      <ManipulationAction task_name="factory_cruzr/clamp_rack_120_to_150_ready"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                      <SubTree ID="LogoNavParameter"
+                               logo_nav_par="get2"
+                               _description="拿着箱子到停泊点"/>
+                    </ParallelAll>
+                  </Sequence>
+                  <Sequence _description="搬上面层小箱子操作">
+                    <SubTree ID="ManipulationSubTreeGrabBox"
+                             TaskName="factory_cruzr/clamp_rack_120_to_150"
+                             boxSize="[0.6,0.4,0.23]"
+                             grabHeight="1.50"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             _description="运控泛化动作"/>
+                    <ManipulationAction task_name="cruzr/mobot_back_60"
+                                        yaml_args=""
+                                        arm_error=""
+                                        status_code=""/>
+                  </Sequence>
+                  <Sequence _description="放上面层小箱子操作">
+                    <ParallelAll max_failures="1">
+                      <ManipulationAction task_name="factory_cruzr/bodyback_nullspace_opt"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                      <SubTree ID="logo_nav_put4"/>
+                    </ParallelAll>
+                    <Sequence>
+                      <SubTree ID="ManipulationSubTreePutBox"
+                               TaskName="factory_cruzr/put_cruzr_floor"
+                               boxSize="[0.6,0.4,0.23]"
+                               port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                               putHeight="0.37"/>
+                      <ManipulationAction task_name="factory_cruzr/home_after_put"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                    </Sequence>
+                  </Sequence>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+          </Repeat>
+        </Sequence>
+      </TaskSequenceNode>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <SubTree ID="LogoNavParameter"
+             editable="true">
+      <input_port name="logo_nav_par"/>
+    </SubTree>
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+      <output_port name="arm_error"/>
+      <output_port name="status_code"/>
+    </Action>
+    <Action ID="RemoteControlNode">
+      <output_port name="taskControl"
+                   type="std::string"/>
+    </Action>
+    <Control ID="TaskSequenceNode"
+             editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Control>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

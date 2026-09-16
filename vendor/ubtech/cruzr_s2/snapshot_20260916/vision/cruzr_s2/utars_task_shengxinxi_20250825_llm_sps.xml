@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <BehaviorTree ID="test">
+    <Parallel name="root"
+              success_count="-1">
+      <TtsClient tts="我要开始工作啦"/>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <TaskSequenceNode taskControl="{taskControl}"
+                        finish="false">
+        <SequenceWithMemory>
+          <Sequence>
+            <TtsClient tts="我要开始抓取了"/>
+            <ManipulationAction task_name="LLM_grasp_v3/sps_ready"
+                                yaml_args=""/>
+          </Sequence>
+          <Sequence>
+            <Sequence>
+              <TtsClient tts="我要开始抓取苹果"/>
+              <Repeat num_cycles="2">
+
+                <RetryUntilSuccessful num_attempts="3">
+                  <Fallback>
+                    <ManipulationAction task_name="LLM_grasp_v3/LLM_Apple_left"
+                                        yaml_args=""/>
+                    <ForceFailure>
+                      <Sequence>
+                        <Delay delay_msec="1000">
+                          <TtsClient tts="重抓"/>
+                        </Delay>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+
+              </Repeat>
+            </Sequence>
+            <Sequence>
+              <TtsClient tts="我要开始抓取橙子"/>
+              <Repeat num_cycles="2">
+
+                <RetryUntilSuccessful num_attempts="3">
+                  <Fallback>
+                    <ManipulationAction task_name="LLM_grasp_v3/LLM_Orange_right"
+                                        yaml_args=""/>
+                    <ForceFailure>
+                      <Sequence>
+                        <Delay delay_msec="1000">
+                          <TtsClient tts="重抓"/>
+                        </Delay>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+
+              </Repeat>
+            </Sequence>
+            <Sequence>
+              <ManipulationAction task_name="LLM_grasp_v3/sps_backready"
+                                  yaml_args=""/>
+              <ManipulationAction task_name="LLM_grasp_v3/sps_backhome"
+                                  yaml_args=""/>
+            </Sequence>
+          </Sequence>
+        </SequenceWithMemory>
+      </TaskSequenceNode>
+    </Parallel>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+    </Action>
+    <Action ID="RemoteControlNode"
+            editable="true">
+      <input_port name="taskControl"/>
+    </Action>
+    <Decorator ID="TaskSequenceNode"
+               editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Decorator>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

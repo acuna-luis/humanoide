@@ -1,0 +1,15 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <Parallel threshold="3">
+                <Action ID="MetaMove" type="head" location="single" joint_angles="0; -0.43" duration="3" />
+                <Action ID="MetaMove" type="arm" location="right"
+                    joint_angles="0.315; -0.484; 1.910; -1.503; 0.697; 0.362; 0.142" duration="3" />
+                <Action ID="MetaMove" type="arm" location="left"
+                    joint_angles="-0.315; -0.484; -1.910; -1.503;-0.697; -0.362; 0.142" duration="3" />
+            </Parallel>
+            <Action ID="MetaClamp" name="wrc/separate_right_cruzr" />
+            <Action ID="MetaClamp" name="wrc/separate_bodyback_cruzr" />
+        </Sequence>
+    </BehaviorTree>
+</root>

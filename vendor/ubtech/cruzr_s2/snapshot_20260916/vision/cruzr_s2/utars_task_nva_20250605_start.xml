@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <Parallel name="root"
+              success_count="-1">
+      <ForceSuccess>
+        <TtsClient tts="我要开始工作啦"/>
+      </ForceSuccess>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <KeepRunningUntilFailure>
+        <Sequence>
+          <TaskSequenceNode taskControl="{taskControl}"
+                            finish="true">
+            <Sequence>
+              <ManipulationAction task_name="move_head_home"
+                                  yaml_args=""/>
+              <TtsClient tts="设置地图"/>
+              <Fallback>
+                <MappingOperations command="map_set"
+                                   map_name="utars_map"
+                                   nav_error="{map_set_error_msg}"/>
+                <ForceFailure>
+                  <Sequence>
+                    <TtsClient tts="{map_set_error_msg}"/>
+                  </Sequence>
+                </ForceFailure>
+              </Fallback>
+              <Fallback>
+                <RelocationActuator command="relocation_start"
+                                    mode="global"
+                                    relocation_x="0"
+                                    relocation_y="0"
+                                    relocation_z="0"
+                                    nav_error="{relocation_error_msg}"/>
+                <ForceFailure>
+                  <Sequence>
+                    <TtsClient tts="{relocation_error_msg}"/>
+                  </Sequence>
+                </ForceFailure>
+              </Fallback>
+              <ForceSuccess>
+                <Sequence>
+                  <TtsClient tts="导航定位成功"/>
+                </Sequence>
+              </ForceSuccess>
+            </Sequence>
+          </TaskSequenceNode>
+          <TaskSequenceNode taskControl="{taskControl}"
+                            finish="false">
+            <SequenceWithMemory>
+              <ManipulationAction task_name="cruzr/home"
+                                  yaml_args=""/>
+              <ManipulationAction task_name="cruzr/back_sit"
+                                  yaml_args=""/>
+              <Fallback>
+                <NavigationActuator command="navigation_start"
+                                    mode="logo_nav"
+                                    target_id="PutA"
+                                    nav_error="{to_put_error_msg}"/>
+                <ForceFailure>
+                  <TtsClient tts="{to_put_error_msg}"/>
+                </ForceFailure>
+              </Fallback>
+              <TtsClient tts="您好，我是科鲁泽二号机，欢迎来到优必选智能机器人展厅"/>
+              <Fallback>
+                <NavigationActuator command="navigation_start"
+                                    mode="logo_nav"
+                                    target_id="PutB"
+                                    nav_error="{to_put_error_msg}"/>
+                <ForceFailure>
+                  <TtsClient tts="{to_put_error_msg}"/>
+                </ForceFailure>
+              </Fallback>
+              <ManipulationAction task_name="cruzr/half_back_sit"
+                                  yaml_args=""/>
+              <ParallelAll max_failures="1">
+                <TtsClient tts="现在我们到了桌面机器人展位，悟空机器人，你的第一个智能小伙伴"/>
+                <ManipulationAction task_name="cruzr/wave_arm"
+                                    yaml_args=""/>
+              </ParallelAll>
+              <ManipulationAction task_name="cruzr/back_sit"
+                                  yaml_args=""/>
+              <Fallback>
+                <NavigationActuator command="navigation_start"
+                                    mode="logo_nav"
+                                    target_id="PutC"
+                                    nav_error="{to_put_error_msg}"/>
+                <ForceFailure>
+                  <TtsClient tts="{to_put_error_msg}"/>
+                </ForceFailure>
+              </Fallback>
+              <ManipulationAction task_name="cruzr/half_back_sit"
+                                  yaml_args=""/>
+              <Delay delay_msec="1500">
+                <ManipulationAction task_name="cruzr/waist_move"
+                                    yaml_args=""/>
+              </Delay>
+              <Delay delay_msec="1500">
+                <ParallelAll max_failures="1">
+                  <TtsClient tts="现在看到的是Walk系列机器人，他正在做物品识别的演示"/>
+                  <ManipulationAction task_name="cruzr/salute"
+                                      yaml_args=""/>
+                </ParallelAll>
+              </Delay>
+              <ManipulationAction task_name="cruzr/home"
+                                  yaml_args=""/>
+              <ManipulationAction task_name="cruzr/back_sit"
+                                  yaml_args=""/>
+              <Fallback>
+                <NavigationActuator command="navigation_start"
+                                    mode="logo_nav"
+                                    target_id="PutA"
+                                    nav_error="{to_put_error_msg}"/>
+                <ForceFailure>
+                  <TtsClient tts="{to_put_error_msg}"/>
+                </ForceFailure>
+              </Fallback>
+              <ManipulationAction task_name="cruzr/home"
+                                  yaml_args=""/>
+            </SequenceWithMemory>
+          </TaskSequenceNode>
+        </Sequence>
+      </KeepRunningUntilFailure>
+    </Parallel>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+    </Action>
+    <Action ID="MappingOperations"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="map_name"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="NavigationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="target_id"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="RelocationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="relocation_x"/>
+      <input_port name="relocation_y"/>
+      <input_port name="relocation_z"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="RemoteControlNode"
+            editable="true">
+      <input_port name="taskControl"/>
+    </Action>
+    <Decorator ID="TaskSequenceNode"
+               editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Decorator>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

@@ -1,0 +1,876 @@
+{
+  "captured_at": "2026-09-16T08:22:38.627455+02:00",
+  "scope": "read-only installed snapshot, not deployment or physical qualification",
+  "robot_mutations": 0,
+  "movement_commands": 0,
+  "files": [
+    {
+      "path": "vision/cruzr_s2/default_task_config.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/default_task_config.xml",
+      "sha256": "00a26b6d45383c4d93359368b122123b372f01f87effa12bffe2d39598fe0dab",
+      "bytes": 1756,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/default_task_config.yaml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/default_task_config.yaml",
+      "sha256": "92e48cc4a2c5c04b7e43b8cede313d3ab818342bb7e7503d67297637bdddee27",
+      "bytes": 71,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/subtrees/Manipulation/manipulation.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/subtrees/Manipulation/manipulation.xml",
+      "sha256": "0a58e183a252d1d75c011e318d6720b51a9e57e8790e1d50e9b739cec7518278",
+      "bytes": 8511,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "sha256": "5ec601e482da842556f0ad0a1f56351f22caeb52a49c88974514fe169c67b8d8",
+      "bytes": 35269,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/subtrees/Navigation/navigationCollection.xml",
+      "sha256": "88bca871bd42f17491c139377203ddc1ac17e4e90cf32674e8b077ef9225d51a",
+      "bytes": 26040,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_20250515_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_20250515_start.xml",
+      "sha256": "f03da303d7be2f3c219ddfe33e649a4ee43ff4d728d30165d25e9f6b1c352859",
+      "bytes": 3546,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "sha256": "0e29a7f5cfd1d376b17006bd0fcf3e7fdf72c308cd0efb034e253ac814ea11e8",
+      "bytes": 13245,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_agv_charge_20250820_start_test.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_agv_charge_20250820_start_test.xml",
+      "sha256": "af3a6e9c3284ffee1d6528e9caf60b1c2b388bbb02235d4a4008459334aa5a67",
+      "bytes": 4345,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "sha256": "20e6df859a0fa22264dd77aafabb13ff3b751988a4d7b6b7ff04934c6c38c616",
+      "bytes": 30133,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml",
+      "sha256": "333511d0cbfc82f4571f9d1f5fd56ef61ef520b98a2b210045eda85ffe41989c",
+      "bytes": 21584,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml",
+      "sha256": "05bc2be060ee68336dc69d17dee18e7c33d3ea802f2c6719dd06d6ca82654778",
+      "bytes": 12729,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_agv_running_start_test.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_agv_running_start_test.xml",
+      "sha256": "f2a40a3c392a5f1b2284b0447b3445c7cc6849b7af3c65d8a6478e1e113bfbf6",
+      "bytes": 6958,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_bo_20251226_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_bo_20251226_start.xml",
+      "sha256": "177c820a965089a6f16ea48a5d0104e242d327e7681b079524fdf2b926c4ae04",
+      "bytes": 12130,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_bo_20260326_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_bo_20260326_start.xml",
+      "sha256": "cca172e206718895f95f7b912fa7cfbd760c94bb949cb616899ee85689eaccf9",
+      "bytes": 12141,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_byd_20250630_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_byd_20250630_start.xml",
+      "sha256": "8fe91dfae477029271114814a605d062107867d5f501ec6cdea9e233009c489c",
+      "bytes": 15189,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_byd_model_star.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_byd_model_star.xml",
+      "sha256": "5dd80794391e207d00182e1d8aa784ab1b80ee69848f71ba03e4e65e4b00acb5",
+      "bytes": 15470,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_canada_wrc_20250930_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_canada_wrc_20250930_start.xml",
+      "sha256": "72c80d3b4da60d5d1e2c93ca6772ede7b8958559b1400183029ff8c68ffb4902",
+      "bytes": 5744,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_demon_repeat_20260312_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_demon_repeat_20260312_start.xml",
+      "sha256": "76b7afdecf44fcccdd4e8b2cb3acb5d960a9a8e68a969298a3d50cd243f39343",
+      "bytes": 20343,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_facial_chassis_20251125_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_facial_chassis_20251125_start.xml",
+      "sha256": "aeb4ad0a704af6fc9b858fef0ba5828b63209bb6dbe7b29a8b98e154488d06eb",
+      "bytes": 12300,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_fsk_tray_20251115_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_fsk_tray_20251115_start.xml",
+      "sha256": "e27939c4dfa6e0659f92693ad5a0e17b677f0aa4f2ded569aa3b86265bb89a2f",
+      "bytes": 4758,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_gongchang_nav_20250918_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_gongchang_nav_20250918_start.xml",
+      "sha256": "92bee0dffdbf7d102b4318f342d75a0209804787033c1d2be1ad525a523fc470",
+      "bytes": 5003,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_gongchang_nav_agv_20251210_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_gongchang_nav_agv_20251210_start.xml",
+      "sha256": "6cb05504a41fddf9be443861dec1a87d5f7ae238a6bb8e56b0307629a837eae6",
+      "bytes": 5776,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_gongchang_nav_short_20250918_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_gongchang_nav_short_20250918_start.xml",
+      "sha256": "64b2f2eaa9aa016295c14e08817925606d6f9491fbb18769fce481233531bc77",
+      "bytes": 5136,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_gongchang_nav_short_agv_20251210_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_gongchang_nav_short_agv_20251210_start.xml",
+      "sha256": "72c7db9c57d3ab6078221c658e7b34dc891e982dff9bdf09ea73469553d75954",
+      "bytes": 5910,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_gongchang_repeat_free_big_charge_20260316_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_gongchang_repeat_free_big_charge_20260316_start.xml",
+      "sha256": "16ad449761d824482b58850904c8b70d9d3855670d3365a521fd5540054d3403",
+      "bytes": 9419,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_20260318_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_20260318_start.xml",
+      "sha256": "c95166655b559ba64f2bcb2045e8369595d948e2aaf3d8d0ea9a6d8d6529eaa4",
+      "bytes": 13379,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_nav_pose_20260328_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_nav_pose_20260328_start.xml",
+      "sha256": "23998403ccd1ca71f60485f56770c075e228009d99a976d89d8276709e7304a0",
+      "bytes": 18510,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_nav_pose_20260520_speed_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_nav_pose_20260520_speed_start.xml",
+      "sha256": "9507c55467f6394378d8f02693a104513fb627f1d8f00653caf03bd1861ddd6e",
+      "bytes": 23575,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_no_nav_pose_20260520_speed_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_no_nav_pose_20260520_speed_start.xml",
+      "sha256": "da4ea2c57615bea6abdb0983318af16a462eed7807d052ee8ee5098b3cdebf44",
+      "bytes": 19343,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_gongchang_repeat_free_small_20260315_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_gongchang_repeat_free_small_20260315_start.xml",
+      "sha256": "85aa2529b9176168fa80525bc414ef65b42b5aa9f2b3ae883408574119f80862",
+      "bytes": 8799,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_gongchang_repeat_two_20260407_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_gongchang_repeat_two_20260407_start.xml",
+      "sha256": "73c2dc9d405454fc08c0a40810458fff5c3e9fdd1440166a28f9f86bd6e0c55d",
+      "bytes": 7529,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_guangzhou_free_nav_20250815_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_guangzhou_free_nav_20250815_start.xml",
+      "sha256": "39fad398b390547ff596f37127dc760a602919d134e1439dea5feebcbd038938",
+      "bytes": 10950,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_jiepu_20251229_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_jiepu_20251229_start.xml",
+      "sha256": "144b7f81f4da35e7f111e3a04738076fdce645dbcf3ecaca4c1aa824042f7660",
+      "bytes": 7237,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_jiepu_tray_20260130_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_jiepu_tray_20260130_start.xml",
+      "sha256": "1b4170dbe28f7652f17891714fe24d22b36d6d283062584c1accee1f4785a946",
+      "bytes": 3643,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_jiujiang_20251216_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_jiujiang_20251216_start.xml",
+      "sha256": "18b7e25a9715f288d8bb341c1ed733c2850ce6dccbc24665177a8e4053668965",
+      "bytes": 12217,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_jiujiang_ctu_test.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_jiujiang_ctu_test.xml",
+      "sha256": "bf0fa9362d2ac12a834be5eb9d90ffefe14c5fe790918fb262f4ea9024116a09",
+      "bytes": 1631,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_jiujiang_plc_ctu_20251215_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_jiujiang_plc_ctu_20251215_start.xml",
+      "sha256": "b192bf4468e68cbed60609179cc9093f881398d613069a0f9ab05223ee0ad8ab",
+      "bytes": 18569,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_jiujiang_plc_ctu_test.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_jiujiang_plc_ctu_test.xml",
+      "sha256": "b957a54190b34662609780c30b2d768d8050e09686cc08839590f4bbe464e626",
+      "bytes": 6217,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_nav_desk_repeat_free_small_20260317_test.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_nav_desk_repeat_free_small_20260317_test.xml",
+      "sha256": "dd285af23e8b5b4507c8f8745d9b0951ea9e8c8c185becb049dd7759db1b536a",
+      "bytes": 6922,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_nva_20250515_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_nva_20250515_start.xml",
+      "sha256": "f5c29ef2c0382ee1f4ac23fd561be56150ea1acda025c0a144dbe4876ed12a8d",
+      "bytes": 5084,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_nva_20250605_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_nva_20250605_start.xml",
+      "sha256": "2e948c31869c46c71adca98f8eced0e04d187702e02995b1e9ca4ecbc9d3eb9d",
+      "bytes": 7075,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_palletizing_env_20260513_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_palletizing_env_20260513_start.xml",
+      "sha256": "d0311653fca5221e8210ca87096371ad4f42c57c3372cf45540014154891c9e6",
+      "bytes": 24703,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_shengxinxi_20250825_llm_sps.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_shengxinxi_20250825_llm_sps.xml",
+      "sha256": "4368d702aaad7615999bd64f73c417b4a349b1ee956b47df80cf14fac9b8d793",
+      "bytes": 3227,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_test_carry.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_test_carry.xml",
+      "sha256": "87ed4eadbeb6145067716c0c9daf8ee09a9077522045d25c2c7fc0aec34f540a",
+      "bytes": 10536,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_tsl_20251126_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_tsl_20251126_start.xml",
+      "sha256": "2b3a24494ade649311373fd3150e8158b522227571f5e20be6049b508bc383bc",
+      "bytes": 17380,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_tsl_water_20251201_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_tsl_water_20251201_start.xml",
+      "sha256": "dfff52438a4526da8b7ff6115907160123adb0d554cdd22fd6df67a4510f75f2",
+      "bytes": 9095,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_uqi_20250710_star.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_uqi_20250710_star.xml",
+      "sha256": "233a4c376d1c1e9a536f63101e2dde0a610b1ee429146aa9f61a72b215098480",
+      "bytes": 16347,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_voice_test.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_voice_test.xml",
+      "sha256": "de12eb0eb01da57df617e057aacdc4be135f64ab292e073655cffabdf125de06",
+      "bytes": 6390,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_zhucheng_20250815_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_zhucheng_20250815_start.xml",
+      "sha256": "b1fab7f7c3692745c9b9756a60e4af0c60f04d416db34281a037c15f5131ae9b",
+      "bytes": 5479,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_zhucheng_agv_20250815_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_zhucheng_agv_20250815_start.xml",
+      "sha256": "9f7fe85a58a0da8db08e297a0b1b1b53b581caf8cf8e5fd5c110e1a306a6b723",
+      "bytes": 5706,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_zhucheng_agv_nav_new_20260303_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_zhucheng_agv_nav_new_20260303_start.xml",
+      "sha256": "bb895ed71aa7ec68896771bae78f91179a009c5079f030c6103f41416373f117",
+      "bytes": 5685,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_zhucheng_agv_new_20260303_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_zhucheng_agv_new_20260303_start.xml",
+      "sha256": "56a49c92037f49308f24e35bfcdc15a50542549d713ad07e481c722ba25e2171",
+      "bytes": 5709,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_zhucheng_env_20260428_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_zhucheng_env_20260428_start.xml",
+      "sha256": "98d12aafcedfc5d08f064574e0714eb88ebcfeff70cd25515a919a5ca7fea5bf",
+      "bytes": 7917,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_zhucheng_free_nav_20250815_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_zhucheng_free_nav_20250815_start.xml",
+      "sha256": "f36985b90f73552c677ec92ad1bf591b2eb8b3bcc75ce32ccccfcec5555de16c",
+      "bytes": 5467,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_zhucheng_free_nav_agv_20250815_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_zhucheng_free_nav_agv_20250815_start.xml",
+      "sha256": "4169def14f3bf543ef7ba63d6d2c47d30b4eb72e18d41753ffa67ddb629ca86c",
+      "bytes": 5637,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_zhucheng_nav_test_20250815_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_zhucheng_nav_test_20250815_start.xml",
+      "sha256": "3f4b5fd7f3f7df5b0408bc19d72fe765312d1c5034fb3f515ed11af2fb8a1286",
+      "bytes": 5857,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_zhucheng_repeat_free_nav_20251226_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_zhucheng_repeat_free_nav_20251226_start.xml",
+      "sha256": "e6ff6427be246d3927f4f18444fbaa445499ff84613d859878e798fc936fcb48",
+      "bytes": 9316,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "vision/cruzr_s2/utars_task_zhucheng_universal_20260115_start.xml",
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "original_path": "/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_zhucheng_universal_20260115_start.xml",
+      "sha256": "8d6a28088af501eb3d6589cd1dcd02d766d536dab3d873cc85cf2e9920692b4e",
+      "bytes": 5476,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/tasks/Singapore/clamp_cruzr.xml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/Singapore/clamp_cruzr.xml",
+      "sha256": "6061fe88c17e0a6744805898b693445792fa5e00a758d065dddb38282d38b1f0",
+      "bytes": 960,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/tasks/Singapore/separate_right_cruzr.xml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/Singapore/separate_right_cruzr.xml",
+      "sha256": "4ba2515ba030f7f1483eed704ce68e0d888ac29754bef1645908fb9f96345e0b",
+      "bytes": 808,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/tasks/cruzr/back_sit.xml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/cruzr/back_sit.xml",
+      "sha256": "2e5ee6f6ecf32c174e8d1d3a9744d67b876a988b53c8f565f1643110daa054c7",
+      "bytes": 245,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/tasks/cruzr/half_back_sit.xml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/cruzr/half_back_sit.xml",
+      "sha256": "4542f8db9db3cd0ea00b8d52a5b8e34ebd329889bbbb6f184eb004b33d85f3d9",
+      "bytes": 243,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/tasks/cruzr/home.xml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/cruzr/home.xml",
+      "sha256": "05174d2b4cf003b9b1c5274cd445b0d4faefe4276c5fbe8e59e68e6b64ee8cbe",
+      "bytes": 1583,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/tasks/cruzr/mobot_back_20.xml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/cruzr/mobot_back_20.xml",
+      "sha256": "5496c736051e85b09bcff3398f43bcb54ac0adab6726eda55a4d7b576084ed8c",
+      "bytes": 365,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/tasks/cruzr_clamp/cruzr_series_put/move_up_cruzr_json_xx_high_dual_link_clamping_box.xml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/cruzr_clamp/cruzr_series_put/move_up_cruzr_json_xx_high_dual_link_clamping_box.xml",
+      "sha256": "efc9a4f688bb7ef6ae358b4bef338348faaab34f8c7d6b3c0c68a4a420f055f6",
+      "bytes": 258,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/tasks/wrc_cruzr/clamp_cruzr_wrc_high.xml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/wrc_cruzr/clamp_cruzr_wrc_high.xml",
+      "sha256": "cc9d4d0a5f152ff385bb4252ce644ba189068dabf371a3560a5eb76c0584ee3a",
+      "bytes": 1248,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/tasks/wrc_cruzr/put_cruzr_wrc_chitu.xml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/wrc_cruzr/put_cruzr_wrc_chitu.xml",
+      "sha256": "d01fd5d2a24b575b7725bc2c31e6434123c77da33c40db6c7f2b3114e8b540d4",
+      "bytes": 441,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/tasks/wrc_cruzr/put_cruzr_wrc_low.xml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/wrc_cruzr/put_cruzr_wrc_low.xml",
+      "sha256": "579b862962e0ee07a423c92517c29b5ecad80b4929961aac2fae6a0240fa0f78",
+      "bytes": 290,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/tasks/zhucheng/clamp_cruzr.xml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/zhucheng/clamp_cruzr.xml",
+      "sha256": "3e309bd018a40753477ffde40a9298b03b1846724b818189018bdb081fc32d93",
+      "bytes": 2232,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/tasks/zhucheng/put_cruzr_high.xml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/zhucheng/put_cruzr_high.xml",
+      "sha256": "26a2cf7a220f63e773964298e911dc517f207fc30f425363d5ddb06aeae29bcc",
+      "bytes": 1100,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/tasks/zhucheng/put_cruzr_low.xml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/zhucheng/put_cruzr_low.xml",
+      "sha256": "431cc31120af6f7297d647c6cf3113df0469cc5d1874dbdf30ea7f4730b0ae85",
+      "bytes": 1099,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/meta_clamp/bodyback_cruzr.yaml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/bodyback_cruzr.yaml",
+      "sha256": "62e0ed4ccfddcb24daefed98a07b69fa353d52637ac80bd9dcfb5adf26c42e7a",
+      "bytes": 5527,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/meta_clamp/clamp_cruzr.yaml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/clamp_cruzr.yaml",
+      "sha256": "e3543a75ccfdfce9b56a74adb0348125488ac0f7450472abd7f177ca812bf15f",
+      "bytes": 6518,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/meta_clamp/cruzr_clamp/force_init.yaml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/cruzr_clamp/force_init.yaml",
+      "sha256": "afa7c5e73969811ad142db32f35a8e0c2cddf81ac4abdad58121ecf915116e51",
+      "bytes": 1389,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/meta_clamp/cruzr_clamp/put_series_action/move_up_cruzr_json_xx_high_dual_link_clamping_box.yaml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/cruzr_clamp/put_series_action/move_up_cruzr_json_xx_high_dual_link_clamping_box.yaml",
+      "sha256": "f5505c32ab289e7670d9c71af8da2b650f120dca4cac9f438bc92a0d862f0fc2",
+      "bytes": 7071,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/meta_clamp/wrc/clamp_cruzr_wrc_high.yaml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/clamp_cruzr_wrc_high.yaml",
+      "sha256": "16a6616ae840eaf35cc83b534ef357094a97dd8f7d7c78845c13d3852afe7a82",
+      "bytes": 7396,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/meta_clamp/wrc/open_arm_cruzr.yaml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/open_arm_cruzr.yaml",
+      "sha256": "c41bd1d88379c2012ee44639142fb5b55c1d58decd6a75851c8e17763778e37b",
+      "bytes": 1514,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/meta_clamp/wrc/put_cruzr_wrc_chitu.yaml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/put_cruzr_wrc_chitu.yaml",
+      "sha256": "4d333202c5de2af7d4fc39e63788c06d653de963d70e16bb3e14251e3e99d95f",
+      "bytes": 6475,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/meta_clamp/wrc/put_cruzr_wrc_low.yaml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/put_cruzr_wrc_low.yaml",
+      "sha256": "8aeb0a24a3149c7676f481219299ec85bb872d6b17ad93605a6e461776909ff5",
+      "bytes": 6230,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/meta_clamp/wrc/separate_bodyback_cruzr.yaml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/separate_bodyback_cruzr.yaml",
+      "sha256": "a3b25e1cfd0abbd4fa179e09cd161ebb9b1d46786bacf06192cc5c434af34dc6",
+      "bytes": 5529,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/meta_clamp/wrc/separate_right_cruzr.yaml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/separate_right_cruzr.yaml",
+      "sha256": "648c713e286b1602dabcb538b755fe780bdbe9513618b3cc5133955c6eaec2ec",
+      "bytes": 6899,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/meta_clamp/zhucheng/bodyback_cruzr_zc.yaml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/zhucheng/bodyback_cruzr_zc.yaml",
+      "sha256": "f841304d41a62fcf07e3b17ac1b9ae3dbef8480a75dbdadfbd075d0b62204880",
+      "bytes": 5417,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/meta_clamp/zhucheng/clamp_cruzr_zc.yaml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/zhucheng/clamp_cruzr_zc.yaml",
+      "sha256": "0d83abc6c82f70cd95d2f27e43159d93fa7bf4c9473d10a6b9bd2bad78f195ea",
+      "bytes": 7115,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/meta_clamp/zhucheng/put_cruzr_zc_high.yaml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/zhucheng/put_cruzr_zc_high.yaml",
+      "sha256": "19d8f85d34ed1d1a919da4bb58c47950d596f8583682b58b071a2fbff2ea00b8",
+      "bytes": 6479,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    },
+    {
+      "path": "motion/meta_clamp/zhucheng/put_cruzr_zc_low.yaml",
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "original_path": "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/zhucheng/put_cruzr_zc_low.yaml",
+      "sha256": "67c3a6d97a33fb981e6fe74832a26c1337da3ad561d6ba425f02e0dfc7f805d3",
+      "bytes": 6479,
+      "source": "installed_on_robot; may include local customizations",
+      "modified": false
+    }
+  ],
+  "unresolved": [],
+  "xml_parse_errors": [],
+  "runtime_images": [
+    {
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "image": "glcr.rd.ubtrobot.com/runtime/cruzr-s2/utars-integration:zs2_vision-v0.2.0",
+      "image_id": "sha256:302d2d6a012f3bef89d126dfe8aa1dee5b5c419043f01192284dac1bb1e798dd"
+    },
+    {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "image": "glcr.rd.ubtrobot.com/runtime/cruzr-s2/utars-integration:zs2_motion-v0.2.0",
+      "image_id": "sha256:9f7acf4bdefde90d330f13cdc249d169865b1777bbcf31fca3642827f5be7e75"
+    }
+  ],
+  "collector_path": "scripts/vendor/import_ubtech_box_workflows.py",
+  "collector_sha256": "533350cf2313ebd5099f0fc06a44c5ffa32b52f072605e563d0d0a417c7cd424"
+}

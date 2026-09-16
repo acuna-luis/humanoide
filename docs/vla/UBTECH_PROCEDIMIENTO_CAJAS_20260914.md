@@ -1,5 +1,14 @@
 # Procedimiento de cajas recibido de UBTECH — 14-09-2026
 
+**Archivo en el repositorio — 2026-09-16:** ya no es necesario depender de
+Descargas o del chat para consultar estos materiales. Ambos escenarios, otros
+XML de Cruzr S2 y las dependencias seleccionadas están en el
+[catálogo local](../../vendor/ubtech/cruzr_s2/README.md). Los DOCX español/chino,
+con credenciales omitidas, figuras y extracción de texto están en
+[docs/vendor/ubtech/box_handling](../vendor/ubtech/box_handling/README.md).
+Las copias no activan tareas ni sustituyen la comprobación de parámetros.
+
+
 Estado: AFIRMACIÓN DEL PROVEEDOR, no ensayo en nuestra unidad. Se revisaron
 el texto y las ocho imágenes del DOCX. No indica versión de firmware,
 checkpoint, algoritmo, script ni configuración exacta. No demuestra que sea
@@ -173,3 +182,43 @@ y referencias geométricas. No reenviar la solicitud de archivos ya encontrados.
 Copias y hashes: ../Humanoide-vla-evidence/20260914_READY410_HEAD_PREP/
 (vendor-files/, vendor-dependencies.json, vendor-motion-tasks.json,
 metaclamp-configs.json). Sólo lectura; ningún despliegue del ejemplo.
+
+## Escenario 1 localizado en robot, pero no seleccionado — 2026-09-16
+
+VERIFICADO EN LECTURA, 08:17 Europe/Madrid. La revisión local anterior no incluía
+este XML: ahora se encontró en Vision, contenedor walker-system.task_manager-1:
+`/opt/walker/task_manager/share/task_manager/config/cruzr_s2/utars_task_canada_wrc_20250930_start.xml`.
+Su secuencia coincide con el escenario 1 del SOP:
+
+- get1 → Singapore/separate_right_cruzr → cruzr/mobot_back_20 → put1 →
+  wrc_cruzr/put_cruzr_wrc_low → cruzr/home.
+- get2 → Singapore/clamp_cruzr → cruzr/mobot_back_20 → put2 →
+  wrc_cruzr/put_cruzr_wrc_low → cruzr/home.
+- get3 → wrc_cruzr/clamp_cruzr_wrc_high → put3 →
+  wrc_cruzr/put_cruzr_wrc_chitu → cruzr/home.
+
+Incluye NavigationLocation, RemoteControlNode y TaskSequenceNode; no basta
+con tener puntos en el mapa. Contiene reintentos de agarre (10/5/5), por lo que
+no debe confundirse con un ensayo de un solo movimiento. Las seis tareas
+específicas y de retroceso consultadas existen como XML en Motion; eso no prueba
+su registro/carga ni que las cotas internas coincidan con nuestra instalación.
+
+**Selección efectiva actual: NO es este escenario.**
+`/etc/walker/system/task_manager/config/task_config.yaml` contiene
+`config_file: default_task_config.xml`. El log del arranque actual confirma la
+carga desde `/opt/walker/task_manager/share/task_manager/config/cruzr_s2/default_task_config.xml`.
+Ese árbol sólo anuncia en chino: «No se ha especificado una tarea; selecciónela
+en la web y reinicie el gestor de tareas». El log conserva esa llamada TTS;
+no se afirma que se oyera ni que completara bien. Las fechas de los logs del
+robot usan otro reloj/zona; la consulta se realizó el 16-09 a las 08:17 local.
+
+Por tanto: flujo compatible presente, pero no seleccionado/activado. No se
+inspeccionaron los seis puntos del mapa ni la disposición física en esta consulta.
+Falta seleccionar el árbol, verificar parámetros/dependencias y mapa/escena antes
+de ejecutar. No se cambió ningún archivo remoto, no se reinició ningún servicio,
+no se accionaron botones ni se enviaron objetivos o movimientos.
+
+Evidencia: ../Humanoide-vla-evidence/20260916_SCENARIO1_DISCOVERY/:
+scenario-candidates.json, active-config.json, log-config.json, motion-tasks.json,
+copia del XML y SHA256SUMS. Esto sustituye únicamente la ausencia del XML en las
+copias locales: el hallazgo remoto no demuestra que el flujo se haya probado.

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+            <TtsClient tts="我要开始工作啦" />
+            <Script code=" taskControl:=&apos;void&apos;" />
+            <Script code=" flysky:=1" />
+            <RemoteControlNode taskControl="{taskControl}" />
+            <TaskSequenceNode taskControl="{taskControl}" finish="true">
+
+            <Sequence>
+                <Sequence>
+                    <ManipulationAction task_name="move_head_home" yaml_args="" />
+                </Sequence>
+                <Sequence>
+                    <TtsClient tts="我要回零动作"/>
+                    <Delay delay_msec="1500">
+                        <ManipulationAction task_name="cruzr/home" yaml_args="" />
+                    </Delay>
+                </Sequence>
+                <TtsClient tts="我要做个后蹲动作"/>
+                <Delay delay_msec="1000">
+                        <ManipulationAction task_name="cruzr/back_sit" yaml_args="" />
+                </Delay>
+                <TtsClient tts="我要回零动作"/>
+                <Delay delay_msec="1500">
+                        <ManipulationAction task_name="cruzr/home" yaml_args="" />
+                </Delay>
+                <Delay delay_msec="1500">
+                    <TtsClient tts="我要做个打招呼动作"/>
+                </Delay>
+                <Delay delay_msec="1500">
+                    <ManipulationAction task_name="cruzr/wave_arm" yaml_args="" />
+                </Delay>
+                <!-- <Delay delay_msec="1500">
+                    <TtsClient tts="我要做个敬礼动作"/>
+                </Delay> -->
+                <!-- <Delay delay_msec="1500">
+                    <ManipulationAction task_name="cruzr/cruzr_salute" yaml_args="" />
+                </Delay> -->
+                <TtsClient tts="我要做个前坐动作"/>
+                <Delay delay_msec="1000">
+                        <ManipulationAction task_name="cruzr/front_sit" yaml_args="" />
+                </Delay>
+                <ManipulationAction task_name="cruzr/home" yaml_args="" />
+                <TtsClient tts="我要做个半蹲动作"/>
+                <Delay delay_msec="1500">
+                        <ManipulationAction task_name="cruzr/half_back_sit" yaml_args="" />
+                </Delay>
+                <TtsClient tts="我要动腰动作"/>
+                <Delay delay_msec="1500">
+                        <ManipulationAction task_name="cruzr/waist_move" yaml_args="" />
+                </Delay>
+                <TtsClient tts="我要回零动作"/>
+                <Delay delay_msec="1500">
+                        <ManipulationAction task_name="cruzr/home" yaml_args="" />
+                </Delay>
+                <TtsClient tts="我要前置抓箱子动作"/>
+                <Delay delay_msec="1500">
+                        <ManipulationAction task_name="cruzr/front_carry_box" yaml_args="" />
+                </Delay>
+                <TtsClient tts="我要后置抓箱子动作"/>
+                <Delay delay_msec="1500">
+                        <ManipulationAction task_name="cruzr/back_carry_box" yaml_args="" />
+                </Delay>
+                <Delay delay_msec="1500">
+                    <ManipulationAction task_name="cruzr/home" yaml_args="" />
+                </Delay>
+
+            </Sequence>
+                </TaskSequenceNode>
+        </ParallelAll>
+    </BehaviorTree>
+</root>
+

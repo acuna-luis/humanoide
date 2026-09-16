@@ -1,0 +1,9 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <!-- <Action ID="MetaMove" type="mobile_base" location="single" mobile_velocity_move="-0.1;0"
+                duration="2" /> -->
+            <Action ID="MetaCruzrMove" delta_pose="-0.2;0;0"/>
+        </Sequence>
+    </BehaviorTree>
+</root>

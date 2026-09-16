@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <include path="subtrees/Navigation/navigation.xml"/>
+  <include path="subtrees/Manipulation/manipulation.xml"/>
+
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <ForceSuccess>
+        <TtsClient tts="我要开始工作啦"/>
+      </ForceSuccess>
+      <Sequence name="导航方式选择">
+        <Sequence>
+          <Script code="navi_type:=&quot;logo_nav&quot;"/>
+        </Sequence>
+        <Sequence _skipIf="true">
+          <Script code="navi_type:=&quot;logo_track_nav&quot;"/>
+        </Sequence>
+      </Sequence>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <TaskSequenceNode taskControl="{taskControl}"
+                        finish="false">
+        <SequenceWithMemory>
+          <SubTree ID="NavigationLocation"/>
+          <ElapsedTimeDecorator timer_name="彼欧任务"
+                                elapsed_s="{task_time_s}">
+            <SequenceWithMemory>
+              <Sequence _description="上面层大箱子操作">
+                <Sequence _description="搬上面层大箱子操作">
+                  <SubTree ID="logo_navi"
+                           mode="{navi_type}"
+                           target_id="get1"/>
+                  <SubTree ID="ManipulationSubTreeGrabBox"
+                           name="搬高层预备动作"
+                           TaskName="damon/clamp_cruzr_flow_rack_ready_1330mm"
+                           boxSize="[0.6,0.4,0.27]"
+                           grabHeight="1.53"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"/>
+                  <SubTree ID="ManipulationSubTreeGrabBox"
+                           name="搬起高层动作"
+                           TaskName="damon/clamp_cruzr_flow_rack_1330mm"
+                           boxSize="[0.6,0.4,0.27]"
+                           grabHeight="1.53"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"/>
+                  <ParallelAll max_failures="1">
+                    <SubTree ID="ManipulationSubTreeGrabBox"
+                             name="搬运回正动作"
+                             TaskName="jiujiang/bodyback_cruzr_flow_rack_1530mm"
+                             boxSize="[0.6,0.4,0.27]"
+                             grabHeight="1.53"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             _description="运控泛化动作"/>
+                    <SubTree ID="logo_navi"
+                             mode="{navi_type}"
+                             target_id="put1"/>
+                  </ParallelAll>
+                </Sequence>
+                <Sequence _description="放上面层大箱子操作">
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="damon/move_up_cruzr_json_xx_high_dual_link"
+                           boxSize="[0.6,0.4,0.27]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="1.38"/>
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="damon/put_shelf_box_130_no_vision"
+                           boxSize="[0.6,0.4,0.27]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="1.38"/>
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="damon/push_shelf_box_xx_height"
+                           boxSize="[0.6, 0.4, 0.26]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="1.33"/>
+                  <ManipulationAction task_name="damon/cruzr_only_back_torso_x"
+                                      yaml_args=""
+                                      arm_error=""
+                                      status_code=""/>
+                  <ParallelAll max_failures="1">
+                    <Sequence>
+                      <Sequence>
+                        <ManipulationAction task_name="cruzr/open_arm_before_home"
+                                            yaml_args=""
+                                            arm_error=""
+                                            status_code=""/>
+                      </Sequence>
+                      <ManipulationAction name="搬运二层预备动作"
+                                          task_name="damon/clamp_cruzr_flow_rack_ready_830mm"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                    </Sequence>
+                    <SubTree ID="logo_navi"
+                             mode="{navi_type}"
+                             target_id="get1"/>
+                  </ParallelAll>
+                </Sequence>
+              </Sequence>
+              <Sequence _description="中层箱子操作">
+                <Sequence _description="搬上二层箱子操作">
+                  <SubTree ID="ManipulationSubTreeGrabBox"
+                           TaskName="damon/clamp_cruzr_flow_rack_830mm"
+                           boxSize="[0.6,0.4,0.27]"
+                           grabHeight="1.03"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           _description="运控泛化动作"/>
+                  <ParallelAll max_failures="1">
+                    <SubTree ID="ManipulationSubTreeGrabBox"
+                             TaskName="jiujiang/bodyback_cruzr_flow_rack_530_1030mm"
+                             boxSize="[0.6,0.4,0.27]"
+                             grabHeight="1.03"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             _description="运控泛化动作"/>
+                    <SubTree ID="logo_navi"
+                             mode="{navi_type}"
+                             target_id="put1"/>
+                  </ParallelAll>
+                </Sequence>
+                <Sequence _description="放二层箱子操作">
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="damon/move_up_cruzr_json_xx_high_dual_link"
+                           boxSize="[0.6, 0.4, 0.26]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="0.81"/>
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="damon/put_shelf_box_80_no_vision"
+                           boxSize="[0.4,0.3,0.22]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="0.81"/>
+                  <ManipulationAction task_name="damon/cruzr_only_back_torso_x"
+                                      yaml_args=""
+                                      arm_error=""
+                                      status_code=""/>
+                  <ParallelAll max_failures="1">
+                    <Sequence>
+                      <Sequence>
+                        <ManipulationAction task_name="cruzr/open_arm_before_home"
+                                            yaml_args=""
+                                            arm_error=""
+                                            status_code=""/>
+                      </Sequence>
+                      <ManipulationAction task_name="damon/clamp_cruzr_flow_rack_ready_330mm"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                    </Sequence>
+                    <SubTree ID="logo_navi"
+                             mode="{navi_type}"
+                             target_id="get1"/>
+                  </ParallelAll>
+                </Sequence>
+              </Sequence>
+              <Sequence _description="底层箱子操作">
+                <Sequence _description="搬底层箱子">
+                  <SubTree ID="ManipulationSubTreeGrabBox"
+                           TaskName="damon/clamp_cruzr_flow_rack_330mm"
+                           boxSize="[0.6,0.4,0.27]"
+                           grabHeight="0.33"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           _description="运控泛化动作"/>
+                  <ParallelAll max_failures="1">
+                    <SubTree ID="ManipulationSubTreeGrabBox"
+                             TaskName="jiujiang/bodyback_cruzr_flow_rack_530_1030mm"
+                             boxSize="[0.6,0.4,0.27]"
+                             grabHeight="0.7"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             _description="运控泛化动作"/>
+                    <SubTree ID="logo_navi"
+                             mode="{navi_type}"
+                             target_id="put1"/>
+                  </ParallelAll>
+                </Sequence>
+                <Sequence _description="放二层箱子操作">
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="damon/move_up_cruzr_json_xx_high_dual_link"
+                           boxSize="[0.6, 0.4, 0.26]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="0.81"/>
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="damon/put_shelf_box_80_no_vision"
+                           boxSize="[0.4,0.3,0.22]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="0.81"/>
+                  <ManipulationAction task_name="damon/cruzr_only_back_torso_x"
+                                      yaml_args=""
+                                      arm_error=""
+                                      status_code=""/>
+                  <ManipulationAction task_name="cruzr/open_arm_before_home"
+                                      yaml_args=""
+                                      arm_error=""
+                                      status_code=""/>
+                </Sequence>
+              </Sequence>
+            </SequenceWithMemory>
+          </ElapsedTimeDecorator>
+        </SequenceWithMemory>
+      </TaskSequenceNode>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Decorator ID="ElapsedTimeDecorator"
+               editable="true">
+      <input_port name="timer_name"
+                  type="std::string">计时器名称，用于日志标识</input_port>
+      <output_port name="elapsed_s"
+                   type="std::string">子节点耗时（秒）</output_port>
+    </Decorator>
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+      <output_port name="arm_error"/>
+      <output_port name="status_code"/>
+    </Action>
+    <Action ID="RemoteControlNode"
+            editable="true">
+      <input_port name="taskControl"/>
+    </Action>
+    <Control ID="TaskSequenceNode"
+             editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Control>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+    <SubTree ID="logo_navi"
+             editable="true">
+      <input_port name="mode"
+                  type="std::string"/>
+      <input_port name="target_id"
+                  type="std::string"/>
+    </SubTree>
+  </TreeNodesModel>
+
+</root>

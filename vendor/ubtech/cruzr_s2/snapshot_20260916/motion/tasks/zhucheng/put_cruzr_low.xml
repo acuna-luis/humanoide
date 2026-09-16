@@ -1,0 +1,25 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <Action ID="MetaClamp" name="zhucheng/put_cruzr_zc_low" />
+            <!-- <Parallel threshold="2">
+                <Action ID="MetaMove" type="arm" location="right"
+                    delta_translation="0;-0.0;-0.04"
+                    duration="2" />
+                <Action ID="MetaMove" type="arm" location="left"
+                    delta_translation="0;0.0;-0.04"
+                    duration="2" />
+            </Parallel>
+            <Parallel threshold="2">
+                <Action ID="MetaMove" type="arm" location="right"
+                    delta_translation="0;-0.05;0"
+                    duration="2" />
+                <Action ID="MetaMove" type="arm" location="left"
+                    delta_translation="0;0.05;0"
+                    duration="2" />
+            </Parallel> -->
+            <Action ID="MetaClamp" name="wrc/open_arm_cruzr" />
+            <Action ID="MetaCruzrMove" delta_pose="-0.4;0;0"/>
+        </Sequence>
+    </BehaviorTree>
+</root>

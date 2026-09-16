@@ -1,5 +1,24 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**2026-09-16 — Archivo local de flujos y documentos UBTECH (VENDOR-01).**
+Por petición del propietario se incorporaron 54 XML principales de Cruzr S2
+(incluido el placeholder), tres subárboles y un YAML; para los dos escenarios
+identificados, 13 tareas Motion y 14 YAML MetaClamp. Total: 85 archivos textuales
+idénticos a los leídos del robot, con procedencia/hashes e imágenes Docker.
+Los dos DOCX se conservan en copias sin credenciales y con figuras intactas;
+texto español/chino también en Markdown. No se activó ni instaló ningún flujo.
+[XML y dependencias](../vendor/ubtech/cruzr_s2/README.md) ·
+[Documentos e interpretación de escenarios](vendor/ubtech/box_handling/README.md).
+
+
+**2026-09-16 — Escenario 1 del SOP encontrado, no activado.** Consulta en lectura:
+Vision contiene utars_task_canada_wrc_20250930_start.xml, con secuencia
+get1→put1→get2→put2→get3→put3; las tareas específicas consultadas existen en
+Motion. El selector y log actual cargan default_task_config.xml, que sólo anuncia
+que no hay tarea seleccionada. No se cambió configuración ni se ejecutó nada.
+[Hallazgo y evidencia](vla/UBTECH_PROCEDIMIENTO_CAJAS_20260914.md#escenario-1-localizado-en-robot-pero-no-seleccionado--2026-09-16).
+
+
 **Relevo para la próxima sesión — 2026-09-14:** leer primero el [estado consolidado y secuencia de reanudación](vla/RELEVO_VLA_20260914.md). HOME→READY→ENTRY está probado por el operador; shadow funciona. TRIAL_02 abortó por timeout al cambiar a SDK, con cero frames y sin acuse; el controlador final es desconocido. Prioridad: consultar controlador y logs antes de reintentar. No repetir ensayos ni asumir estado físico a partir del historial.
 
 

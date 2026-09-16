@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <Sequence>
+        <TtsClient tts="动画表情服务正在启动"
+                   _description="agv_pole_up_status_num:充电桩是否处于上桩状态：1是，0否&#10;agv_pole_down_erro_num:失败重试次数"/>
+        <Repeat num_cycles="-1">
+          <Delay delay_msec="3000">
+            <Sequence _description="1.运控服务，启动与否">
+              <McRunningCondition machine_state="{machine_state}"
+                                  _description="machine_state_num:机器是否启动：0，未启动；1.启动&#10;task_status_num:任务是否启动：0，未启动；1.启动&#10;task_status_jduge_num:是否有任务判断：1是，0 否&#10;battery_status_num:电量是否达到阈值：0，低于15%；1.高于80%&#10;1.启动&#10;charging_weight_num:充电权重，权重超过3认为在充电&#10;agv_pole_erro_num:充电桩是否正常,0正常，1.异常"/>
+              <Sequence _description="电量节点判断">
+                <AgvChargeBatteryPowerStatusCondition battery_power="{battery_low_power}"
+                                                      battery_charge_state="{battery_charge_state}"
+                                                      _description="battery_charge_state #充电桩工作状态  #空闲 0  充电中 1"/>
+                <Sequence _description="满电"
+                          _skipIf="battery_low_power!=100">
+                  <RunOnce then_skip="true">
+                    <ForceSuccess>
+                      <TtsClient tts="充电完成"/>
+                    </ForceSuccess>
+                  </RunOnce>
+                  <FacialExpressionClient expression="power"/>
+                  <ForceSuccess>
+                    <RunOnce then_skip="true">
+                      <TtsClient tts="底盘绿色常亮灯"/>
+                    </RunOnce>
+                  </ForceSuccess>
+                  <SetDockLightClient light_effect="13"
+                                      brightness="150"
+                                      rate="0"
+                                      r_value="0"
+                                      g_value="0"
+                                      b_value="0"/>
+                </Sequence>
+                <Sequence _description="充电中"
+                          _skipIf="battery_charge_state!=&quot;1&quot;">
+                  <Sequence _description="脸屏灯效">
+                    <Sequence _description="电量高于百分之三十，低于满电状态，正在充电"
+                              _skipIf="battery_low_power&lt;=30 || battery_low_power&gt;=100">
+                      <RunOnce then_skip="true">
+                        <ForceSuccess>
+                          <TtsClient tts="充电中表情"/>
+                        </ForceSuccess>
+                      </RunOnce>
+                      <ForceSuccess>
+                        <FacialExpressionClient expression="restore-power"/>
+                      </ForceSuccess>
+                      <RunOnce then_skip="true">
+                        <ForceSuccess>
+                          <TtsClient tts="底盘绿色闪烁"/>
+                        </ForceSuccess>
+                      </RunOnce>
+                      <SetDockLightClient light_effect="7"
+                                          brightness="200"
+                                          rate="40"
+                                          r_value="0"
+                                          g_value="0"
+                                          b_value="0"/>
+                    </Sequence>
+                    <Sequence _description="20%-30%"
+                              _skipIf="battery_low_power&lt;=20 || battery_low_power&gt;30 ">
+                      <ForceSuccess>
+                        <FacialExpressionClient expression="no-power"/>
+                      </ForceSuccess>
+                      <RunOnce then_skip="true">
+                        <ForceSuccess>
+                          <TtsClient tts="剩余电量百分之三十，请尽快充电"/>
+                        </ForceSuccess>
+                      </RunOnce>
+                      <SetDockLightClient light_effect="11"
+                                          brightness="150"
+                                          rate="40"
+                                          r_value="0"
+                                          g_value="0"
+                                          b_value="0"/>
+                    </Sequence>
+                    <Sequence _description="10%-20%"
+                              _skipIf="battery_low_power&gt;20 || battery_low_power&lt;=10">
+                      <ForceSuccess>
+                        <FacialExpressionClient expression="no-power"/>
+                      </ForceSuccess>
+                      <RunOnce then_skip="true">
+                        <ForceSuccess>
+                          <TtsClient tts="底盘绿色闪烁"/>
+                        </ForceSuccess>
+                      </RunOnce>
+                      <Delay delay_msec="10000">
+                        <ForceSuccess>
+                          <TtsClient tts="电量低，请尽快充电"/>
+                        </ForceSuccess>
+                      </Delay>
+                      <SetDockLightClient light_effect="772"
+                                          brightness="150"
+                                          rate="20"
+                                          r_value="0"
+                                          g_value="0"
+                                          b_value="0"/>
+                    </Sequence>
+                    <Sequence _description="低电量"
+                              _skipIf="battery_low_power&gt;10">
+                      <ForceSuccess>
+                        <FacialExpressionClient expression="no-power"/>
+                      </ForceSuccess>
+                      <Delay delay_msec="5000">
+                        <ForceSuccess>
+                          <TtsClient tts="电量极低，请尽快充电"/>
+                        </ForceSuccess>
+                      </Delay>
+                      <SetDockLightClient light_effect="772"
+                                          brightness="150"
+                                          rate="10"
+                                          r_value="0"
+                                          g_value="0"
+                                          b_value="0"/>
+                    </Sequence>
+                  </Sequence>
+                </Sequence>
+                <Sequence _description="未充电"
+                          _skipIf="battery_charge_state!=&quot;0&quot;">
+                  <Sequence _description="电量高于百分之三十，低于满电状态，正在充电"
+                            _skipIf="battery_low_power&lt;=30 || battery_low_power&gt;=100">
+                    <TaskStateCheckerCondition task_state="{task_state}"/>
+                    <Sequence _description="任务中"
+                              _skipIf="task_state!=&quot;1&quot;">
+                      <ForceSuccess>
+                        <FacialExpressionClient expression="breath"/>
+                      </ForceSuccess>
+                      <SetDockLightClient light_effect="3"
+                                          brightness="100"
+                                          rate="10"
+                                          r_value="0"
+                                          g_value="0"
+                                          b_value="0"/>
+                    </Sequence>
+                    <Sequence _description="无任务空闲状态"
+                              _skipIf="task_state!=&quot;0&quot;">
+                      <SetDockLightClient light_effect="18"
+                                          brightness="100"
+                                          rate="10"
+                                          r_value="0"
+                                          g_value="0"
+                                          b_value="0"/>
+                      <ForceSuccess>
+                        <FacialExpressionClient expression="logo"/>
+                      </ForceSuccess>
+                    </Sequence>
+                  </Sequence>
+                  <Sequence _description="20%-30%"
+                            _skipIf="battery_low_power&lt;=20 || battery_low_power&gt;30 ">
+                    <ForceSuccess>
+                      <FacialExpressionClient expression="no-power"/>
+                    </ForceSuccess>
+                    <RunOnce then_skip="true">
+                      <ForceSuccess>
+                        <TtsClient tts="剩余电量百分之三十，请尽快充电"/>
+                      </ForceSuccess>
+                    </RunOnce>
+                    <SetDockLightClient light_effect="11"
+                                        brightness="150"
+                                        rate="40"
+                                        r_value="0"
+                                        g_value="0"
+                                        b_value="0"/>
+                  </Sequence>
+                  <Sequence _description="10%-20%"
+                            _skipIf="battery_low_power&gt;20 || battery_low_power&lt;=10">
+                    <ForceSuccess>
+                      <FacialExpressionClient expression="no-power"/>
+                    </ForceSuccess>
+                    <Delay delay_msec="10000">
+                      <ForceSuccess>
+                        <TtsClient tts="电量低，请尽快充电"/>
+                      </ForceSuccess>
+                    </Delay>
+                    <SetDockLightClient light_effect="772"
+                                        brightness="150"
+                                        rate="20"
+                                        r_value="0"
+                                        g_value="0"
+                                        b_value="0"/>
+                  </Sequence>
+                  <Sequence _description="低电量"
+                            _skipIf="battery_low_power&gt;10">
+                    <ForceSuccess>
+                      <FacialExpressionClient expression="no-power"/>
+                    </ForceSuccess>
+                    <Delay delay_msec="5000">
+                      <ForceSuccess>
+                        <TtsClient tts="电量极低，请尽快充电"/>
+                      </ForceSuccess>
+                    </Delay>
+                    <SetDockLightClient light_effect="772"
+                                        brightness="150"
+                                        rate="10"
+                                        r_value="0"
+                                        g_value="0"
+                                        b_value="0"/>
+                  </Sequence>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+          </Delay>
+        </Repeat>
+      </Sequence>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="AgvChargeBatteryPowerStatusCondition"
+            editable="true">
+      <inout_port name="battery_power">当前机器电池电量值</inout_port>
+      <inout_port name="battery_charge_state">当前机器电池是否在充电（1为是，0为否）</inout_port>
+    </Action>
+    <Action ID="FacialExpressionClient"
+            editable="true">
+      <inout_port name="expression"/>
+    </Action>
+    <Action ID="McRunningCondition"
+            editable="true">
+      <inout_port name="machine_state"/>
+    </Action>
+    <Action ID="SetDockLightClient"
+            editable="true">
+      <inout_port name="light_effect"/>
+      <inout_port name="brightness"/>
+      <inout_port name="rate"/>
+      <inout_port name="r_value"/>
+      <inout_port name="g_value"/>
+      <inout_port name="b_value"/>
+    </Action>
+    <Action ID="TaskStateCheckerCondition"
+            editable="true">
+      <inout_port name="task_state"/>
+    </Action>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

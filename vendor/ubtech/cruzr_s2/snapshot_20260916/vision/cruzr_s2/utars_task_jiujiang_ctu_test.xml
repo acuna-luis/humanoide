@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <ForceSuccess>
+        <TtsClient tts="我要开始工作啦"/>
+      </ForceSuccess>
+      <Sequence>
+        <Repeat num_cycles="3">
+          <Sequence>
+            <Sequence _description="333">
+              <Delay delay_msec="1000">
+                <CtuCommunicationCondition cmd="point3_pick_arrived"
+                                           send_success="{send_success}"/>
+              </Delay>
+              <Sequence>
+                <Delay delay_msec="3000">
+                  <ForceSuccess>
+                    <TtsClient tts="当前point3_pick_arrive的值是："/>
+                  </ForceSuccess>
+                </Delay>
+                <TtsClient tts="{send_success}"/>
+              </Sequence>
+              <Sequence>
+                <Delay delay_msec="3000">
+                  <ForceSuccess>
+                    <TtsClient tts="号点"/>
+                  </ForceSuccess>
+                </Delay>
+              </Sequence>
+            </Sequence>
+
+          </Sequence>
+        </Repeat>
+      </Sequence>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Condition ID="CtuCommunicationCondition"
+               editable="true">
+      <input_port name="cmd"/>
+      <inout_port name="send_success"/>
+    </Condition>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

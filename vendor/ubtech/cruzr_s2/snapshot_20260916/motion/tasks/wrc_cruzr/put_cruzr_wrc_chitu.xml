@@ -1,0 +1,11 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <Action ID="MetaClamp" name="wrc/put_cruzr_wrc_chitu" />
+            <Action ID="MetaClamp" name="wrc/open_arm_cruzr" />
+            <Action ID="MetaMove" type="mobile_base" location="single"
+                mobile_velocity_move="-0.1;0"
+                duration="4" />
+        </Sequence>
+    </BehaviorTree>
+</root>

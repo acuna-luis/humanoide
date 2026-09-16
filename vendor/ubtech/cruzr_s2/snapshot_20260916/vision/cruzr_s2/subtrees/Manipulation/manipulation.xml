@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4">
+  <BehaviorTree ID="MManipulationNavPoseCheck">
+    <Sequence>
+      <Script code="grab_box_status:=0;grab_box_error:=&quot;&quot;"/>
+      <Fallback>
+        <ManipulationAction task_name="{TaskName}"
+                            yaml_args=""
+                            arm_error="{grab_box_error}"
+                            status_code="{grab_box_status}"/>
+        <Sequence>
+          <Sequence _description="异常是视觉问题:&#10;grab_box_status:7101100,超出操作空间&#10;grab_box_status:7101003,视觉未看到&#10;&#10;"
+                    _skipIf="grab_box_status!=7101100 &amp;&amp; grab_box_status!=7101003">
+            <TtsClient tts="{grab_box_error}"/>
+            <RetryUntilSuccessful num_attempts="5">
+              <Fallback>
+                <Delay delay_msec="300">
+                  <ManipulationAction task_name="{TaskName}"
+                                      yaml_args=""
+                                      arm_error="{grab_box_error}"
+                                      status_code="{grab_box_status}"/>
+                </Delay>
+                <ForceFailure>
+                  <Sequence>
+                    <Delay delay_msec="300">
+                      <TtsClient tts="{grab_box_error}"/>
+                    </Delay>
+                  </Sequence>
+                </ForceFailure>
+              </Fallback>
+            </RetryUntilSuccessful>
+          </Sequence>
+          <Sequence _description="异常是视觉问题:&#10;grab_box_status:7101100,超出操作空间&#10;grab_box_status:7101003,视觉未看到&#10;grab_box_status: 1101001,返回正常&#10;&#10;"
+                    _skipIf="grab_box_status==1101001">
+            <ForceFailure>
+              <Sequence>
+                <TtsClient tts="{grab_box_error}"/>
+              </Sequence>
+            </ForceFailure>
+          </Sequence>
+        </Sequence>
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="MManipulationSubTreeTest">
+    <Sequence>
+      <TtsClient tts="运控控制暂时预留"/>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="ManipulationSubTreeGrabBox">
+    <Sequence>
+      <Script code="grab_box_status:=0;grab_box_error:=&quot;&quot;"/>
+      <Script code="grap_full_str:=&apos;&quot;boxInfo&quot;:{&quot;size&quot;:&apos; + boxSize + &apos;},&quot;height&quot;:&apos; + grabHeight + &apos;&apos;"/>
+      <Fallback>
+        <ManipulationAction task_name="{TaskName}"
+                            yaml_args="{grap_full_str}"
+                            arm_error="{grab_box_error}"
+                            status_code="{grab_box_status}"/>
+        <Sequence>
+          <Sequence _description="异常是视觉问题:&#10;grab_box_status:7101100,超出操作空间&#10;grab_box_status:7101003,视觉未看到&#10;&#10;"
+                    _skipIf="grab_box_status!=7101100 &amp;&amp; grab_box_status!=7101003">
+            <TtsClient tts="{grab_box_error}"/>
+            <RetryUntilSuccessful num_attempts="5">
+              <Fallback>
+                <Delay delay_msec="300">
+                  <ManipulationAction task_name="{TaskName}"
+                                      yaml_args="{grap_full_str}"
+                                      arm_error="{grab_box_error}"
+                                      status_code="{grab_box_status}"/>
+                </Delay>
+                <ForceFailure>
+                  <Sequence>
+                    <Delay delay_msec="300">
+                      <TtsClient tts="{grab_box_error}"/>
+                    </Delay>
+                  </Sequence>
+                </ForceFailure>
+              </Fallback>
+            </RetryUntilSuccessful>
+          </Sequence>
+          <Sequence _description="异常是视觉问题:&#10;grab_box_status:7101100,超出操作空间&#10;grab_box_status:7101003,视觉未看到&#10;grab_box_status: 1101001,返回正常&#10;&#10;"
+                    _skipIf="grab_box_status==1101001">
+            <ForceFailure>
+              <Sequence>
+                <TtsClient tts="{grab_box_error}"/>
+              </Sequence>
+            </ForceFailure>
+          </Sequence>
+        </Sequence>
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="ManipulationSubTreeGrabBoxByTargetPos">
+    <Sequence>
+      <Script code="grab_box_status:=0;grab_box_error:=&quot;&quot;"/>
+      <!-- <Script code="grap_full_str:=&apos;&quot;boxInfo&quot;:{&quot;size&quot;:&apos; + boxSize + &apos;},&quot;targetPos&quot;:&apos; + targetPos + &apos;&apos;"/> -->
+      <Script code="grap_full_str:=&apos;&quot;boxInfo&quot;:{&quot;size&quot;:&apos; + boxSize + &apos;,&quot;targetPos&quot;:&apos; + targetPos + &apos;}&apos;"/>
+      <Fallback>
+        <ManipulationAction task_name="{TaskName}"
+                            yaml_args="{grap_full_str}"
+                            arm_error="{grab_box_error}"
+                            status_code="{grab_box_status}"/>
+        <Sequence>
+          <Sequence _description="异常是视觉问题:&#10;grab_box_status:7101100,超出操作空间&#10;grab_box_status:7101003,视觉未看到&#10;&#10;"
+                    _skipIf="grab_box_status!=7101100 &amp;&amp; grab_box_status!=7101003">
+            <TtsClient tts="{grab_box_error}"/>
+            <RetryUntilSuccessful num_attempts="5">
+              <Fallback>
+                <Delay delay_msec="300">
+                  <ManipulationAction task_name="{TaskName}"
+                                      yaml_args="{grap_full_str}"
+                                      arm_error="{grab_box_error}"
+                                      status_code="{grab_box_status}"/>
+                </Delay>
+                <ForceFailure>
+                  <Sequence>
+                    <Delay delay_msec="300">
+                      <TtsClient tts="{grab_box_error}"/>
+                    </Delay>
+                  </Sequence>
+                </ForceFailure>
+              </Fallback>
+            </RetryUntilSuccessful>
+          </Sequence>
+          <Sequence _description="异常是视觉问题:&#10;grab_box_status:7101100,超出操作空间&#10;grab_box_status:7101003,视觉未看到&#10;grab_box_status: 1101001,返回正常&#10;&#10;"
+                    _skipIf="grab_box_status==1101001">
+            <ForceFailure>
+              <Sequence>
+                <TtsClient tts="{grab_box_error}"/>
+              </Sequence>
+            </ForceFailure>
+          </Sequence>
+        </Sequence>
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="ManipulationSubTreeGrabBoxQrCode">
+    <Sequence>
+      <Script code="grab_box_status:=0;grab_box_error:=&quot;&quot;"/>
+      <Script code="grap_full_qr_str:=&apos;height:&apos; + grabHeight + &apos;,&quot;apriltag&quot;:{&quot;camera&quot;:&quot;head&quot;,&quot;place&quot;:&quot;vertical&quot;,&quot;codeList&quot;:&apos; + codeList + &apos;,&quot;size&quot;:&apos; + size + &apos;,&quot;positionOffset&quot;:&apos; + positionOffset + &apos;,&quot;orientationOffset&quot;:&apos; + orientationOffset + &apos;}&apos;"/>
+      <ManipulationAction task_name="{TaskName}"
+                          yaml_args="{grap_full_qr_str}"
+                          arm_error="{grab_box_error}"
+                          status_code="{grab_box_status}"/>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="ManipulationSubTreePutBox">
+    <Sequence>
+      <Script code="grab_box_status:=0;grab_box_error:=&quot;&quot;"/>
+      <Script code="put_full_str:=&apos;&quot;boxInfo&quot;:{&quot;size&quot;:&apos; + boxSize + &apos;},&quot;height&quot;:&apos; + putHeight + &apos;&apos;"/>
+      <Fallback>
+        <ManipulationAction task_name="{TaskName}"
+                            yaml_args="{put_full_str}"
+                            arm_error="{grab_box_error}"
+                            status_code="{grab_box_status}"/>
+        <ForceFailure>
+          <Sequence>
+            <TtsClient tts="{grab_box_error}"/>
+          </Sequence>
+        </ForceFailure>
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+      <output_port name="arm_error"/>
+      <output_port name="status_code"/>
+    </Action>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

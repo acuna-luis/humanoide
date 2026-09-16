@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <include path="subtrees/Navigation/navigation.xml"/>
+
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <ForceSuccess>
+        <TtsClient tts="我要开始工作啦"/>
+      </ForceSuccess>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <TaskSequenceNode taskControl="{taskControl}"
+                        finish="false">
+        <SequenceWithMemory>
+          <SubTree ID="NavigationLocation"/>
+          <Repeat num_cycles="3">
+            <Sequence _description="上面层操作">
+              <Sequence _description="上面层大箱子操作">
+                <Sequence _description="搬上面层大箱子操作">
+                  <SubTree ID="logo_nav_get1"/>
+
+                  <RetryUntilSuccessful num_attempts="5">
+                    <Fallback>
+                      <ManipulationAction task_name="cruzr_clamp/right_separate_40_to_80"
+                                          yaml_args=""/>
+                      <ForceFailure>
+                        <Sequence>
+                          <ForceSuccess>
+                            <TtsClient tts="需要帮助移动一下箱子"/>
+                          </ForceSuccess>
+                        </Sequence>
+                      </ForceFailure>
+                    </Fallback>
+                  </RetryUntilSuccessful>
+
+                  <ForceSuccess>
+                    <ManipulationAction task_name="cruzr/mobot_back_40"
+                                        yaml_args=""/>
+                  </ForceSuccess>
+                </Sequence>
+                <Sequence _description="放上面层大箱子操作">
+                  <SubTree ID="logo_nav_put1"/>
+                  <Delay delay_msec="200">
+                    <ManipulationAction task_name="piou/put_cruzr_floor"
+                                        yaml_args=""/>
+                  </Delay>
+                </Sequence>
+              </Sequence>
+              <Sequence _description="上面层小箱子操作2">
+                <Sequence _description="搬上面层小箱子操作">
+                  <SubTree ID="logo_nav_get2"/>
+
+                  <RetryUntilSuccessful num_attempts="5">
+                    <Fallback>
+                      <ManipulationAction task_name="cruzr_clamp/clamp_plain_40_to_80"
+                                          yaml_args=""/>
+                      <ForceFailure>
+                        <Sequence>
+                          <ForceSuccess>
+                            <TtsClient tts="需要帮助移动一下箱子"/>
+                          </ForceSuccess>
+                        </Sequence>
+                      </ForceFailure>
+                    </Fallback>
+                  </RetryUntilSuccessful>
+
+                  <ForceSuccess>
+                    <ManipulationAction task_name="cruzr/mobot_back_40"
+                                        yaml_args=""/>
+                  </ForceSuccess>
+                </Sequence>
+                <Sequence _description="放上面层小箱子操作">
+                  <SubTree ID="logo_nav_put1"/>
+                  <Sequence>
+                    <ManipulationAction task_name="piou/put_cruzr_floor"
+                                        yaml_args=""/>
+                  </Sequence>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+          </Repeat>
+          <Sequence>
+            <Sequence _description="上面层小箱子操作444">
+              <Sequence _description="搬上面层小箱子操作">
+                <SubTree ID="logo_nav_get1"
+                         _autoremap="false"/>
+
+                <RetryUntilSuccessful num_attempts="5">
+                  <Fallback>
+                    <ManipulationAction task_name="cruzr_clamp/right_separate_0_to_40"
+                                        yaml_args=""/>
+                    <ForceFailure>
+                      <Sequence>
+                        <ForceSuccess>
+                          <TtsClient tts="需要帮助移动一下箱子"/>
+                        </ForceSuccess>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+
+                <ForceSuccess>
+                  <ManipulationAction task_name="cruzr/mobot_back_40"
+                                      yaml_args=""/>
+                </ForceSuccess>
+              </Sequence>
+              <Sequence _description="放上面层小箱子操作">
+                <SubTree ID="logo_nav_put1"/>
+                <Sequence>
+                  <ManipulationAction task_name="piou/put_cruzr_floor"
+                                      yaml_args=""/>
+                  <ManipulationAction task_name="cruzr/home"
+                                      yaml_args=""/>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+            <Sequence _description="上面层小箱子操作5">
+              <Sequence _description="搬上面层小箱子操作">
+                <SubTree ID="logo_nav_get2"/>
+
+                <RetryUntilSuccessful num_attempts="5">
+                  <Fallback>
+                    <ManipulationAction task_name="cruzr_clamp/clamp_plain_0_to_40"
+                                        yaml_args=""/>
+                    <ForceFailure>
+                      <Sequence>
+                        <ForceSuccess>
+                          <TtsClient tts="需要帮助移动一下箱子"/>
+                        </ForceSuccess>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+
+                <ForceSuccess>
+                  <ManipulationAction task_name="cruzr/mobot_back_40"
+                                      yaml_args=""/>
+                </ForceSuccess>
+              </Sequence>
+              <Sequence _description="放上面层小箱子操作">
+                <SubTree ID="logo_nav_put1"/>
+                <Sequence>
+                  <ManipulationAction task_name="piou/put_cruzr_floor"
+                                      yaml_args=""/>
+                  <ManipulationAction task_name="cruzr/home"
+                                      yaml_args=""/>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+          </Sequence>
+        </SequenceWithMemory>
+      </TaskSequenceNode>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+    </Action>
+    <Action ID="RemoteControlNode"
+            editable="true">
+      <input_port name="taskControl"/>
+    </Action>
+    <Control ID="TaskSequenceNode"
+             editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Control>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

@@ -1,0 +1,90 @@
+<root BTCPP_format="4">
+
+    <BehaviorTree ID="MainTree">
+        <ParallelAll name="root">
+            <TtsClient tts="我要开始工作啦"/>
+            <Script code=" taskControl:='void'" />
+            <Script code=" flysky:=1" />
+            <RemoteControlNode taskControl="{taskControl}"/>
+            <TaskSequenceNode taskControl="{taskControl}" finish="false">
+                <Sequence>
+                    <ManipulationAction task_name="move_head_home" yaml_args="" />
+                    <TtsClient tts="正在导航定位可能需要一会儿哦" />
+                    <Fallback>
+                        <RetryUntilSuccessful num_attempts="3">
+                            <Sequence>
+                                <VnavCommandActionClient command="set_map" mode="2" map_name="utars_map" end_point="" level="" speed="" target_id="" vnav_error="{set_map_error_msg}" />
+                            </Sequence>
+                        </RetryUntilSuccessful>
+                        <ForceFailure>
+                            <Sequence>
+                                <TtsClient tts="导航定位失败" />
+                            </Sequence>
+                        </ForceFailure>
+                    </Fallback>
+                    <ForceSuccess>
+                        <TtsClient tts="导航定位成功"/>
+                    </ForceSuccess>
+                </Sequence>
+
+                <SequenceWithMemory>
+                    <ManipulationAction task_name="cruzr/home" yaml_args="" />
+                    <ManipulationAction task_name="vision/enable_transport_vision_switch" yaml_args=""/>
+                    <!-- <TtsClient tts="我要做个后蹲动作"/> -->
+                    <ManipulationAction task_name="cruzr/back_sit" yaml_args="" />
+                    <!-- 导航到A点 -->
+                    <Fallback>
+                        <VnavCommandActionClient command="start_navigation" mode="2" map_name="utars_map" end_point="" level="3" speed="0.225" target_id="PutA" vnav_error="{to_put_error_msg}"/>
+                        <ForceFailure>
+                            <TtsClient tts="{to_put_error_msg}"/>
+                        </ForceFailure>
+                    </Fallback>
+                    <!-- 导航到B点 -->
+                    <Fallback>
+                        <VnavCommandActionClient command="start_navigation" mode="2" map_name="utars_map" end_point="" level="3" speed="0.225" target_id="PutB" vnav_error="{to_put_error_msg}"/>
+                        <ForceFailure>
+                            <TtsClient tts="{to_put_error_msg}"/>
+                        </ForceFailure>
+                    </Fallback>
+                    <ManipulationAction task_name="cruzr/half_back_sit" yaml_args="" />
+                    <!-- 打招呼 -->
+                    <ParallelAll>
+                        <TtsClient tts="大家好，科鲁泽一号机，为您服务"/>
+                        <ManipulationAction task_name="cruzr/wave_arm" yaml_args="" />
+                    </ParallelAll>
+                    <ManipulationAction task_name="cruzr/back_sit" yaml_args="" />
+                    <!-- 导航到C点 -->
+                    <Fallback>
+                        <VnavCommandActionClient command="start_navigation" mode="2" map_name="utars_map" end_point="" level="3" speed="0.225" target_id="PutC" vnav_error="{to_put_error_msg}"/>
+                        <ForceFailure>
+                            <TtsClient tts="{to_put_error_msg}"/>
+                        </ForceFailure>
+                    </Fallback>
+                    <!-- sit 到 squat半蹲状态 ,扭腰-->
+                    <ManipulationAction task_name="cruzr/half_back_sit" yaml_args="" />
+                    <Delay delay_msec="1500">
+                        <ManipulationAction task_name="cruzr/waist_move" yaml_args="" />
+                    </Delay>
+                    <Delay delay_msec="1500">
+                        <ParallelAll>
+                            <TtsClient tts="科鲁泽一号机，为您服务"/>
+                            <ManipulationAction task_name="cruzr/salute" yaml_args="" />
+                        </ParallelAll>
+                    </Delay>
+                    <Delay delay_msec="1500">
+                        <ManipulationAction task_name="cruzr/home" yaml_args="" />
+                    </Delay>
+                    <ManipulationAction task_name="cruzr/back_sit" yaml_args="" />
+                    <!-- 导航到A点 -->
+                    <Fallback>
+                        <VnavCommandActionClient command="start_navigation" mode="2" map_name="utars_map" end_point="" level="3" speed="0.225" target_id="PutA" vnav_error="{to_put_error_msg}"/>
+                        <ForceFailure>
+                            <TtsClient tts="{to_put_error_msg}"/>
+                        </ForceFailure>
+                    </Fallback>
+                    <ManipulationAction task_name="cruzr/home" yaml_args="" />
+                </SequenceWithMemory>
+            </TaskSequenceNode>
+        </ParallelAll>
+    </BehaviorTree>
+</root>

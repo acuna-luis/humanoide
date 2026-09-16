@@ -1,0 +1,47 @@
+meta_name: MetaClamp
+#hqp_params
+var_damping:
+  [99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99]
+right_hand: [1, 1, 1, 0.3, 0.3, 0.3]
+left_hand: [1, 1, 1, 0.3, 0.3, 0.3]
+torso: [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+com_constrain: []
+# com: [0, 0, 0]
+left_hand_manipulability: [0.001]
+right_hand_manipulability: [0.001]
+#task_request
+request:
+  duration: 2.0
+  frequency: 500
+  urdf_name: "cruzr_s2"
+  biped_quit: true
+  box_size: [0.6, 0.4, 0.28]
+  position_rotation_limit_data:
+    - position_rotation_limit_low: [0.2, -0.1, -0.1, -0.5, -0.5, -0.4]
+      position_rotation_limit_up: [1.0, 0.1, 0.0, 0.5, 0.4]
+
+  component_disable_time:
+    - [0.0, 0.0]
+  task_type: "clamp_box"
+  task_stack: task_stack_cruzr_clamp_manipulability.yaml
+  robot_trajectory_data:
+    - body_name: "left_hand"
+      data:
+        - timestamp: 2.0
+          position: [0, 0.1, -0.05] # x y z
+          orientation: [0.7933533, 0.6087614, 0.0, 0.0] # w x y z
+          # orientation: [1.0, 0.0, 0.0, 0.0] # w x y z
+          tranform_mode: "RELATIVE"
+    - body_name: "right_hand"
+      data:
+        - timestamp: 2.0
+          position: [0, -0.1, -0.05] # x y z
+          orientation: [0.7933533, -0.6087614, 0.0, 0.0] # w x y z
+          # orientation: [1.0, 0.0, 0.0, 0.0] # w x y z
+          tranform_mode: "RELATIVE"
+    - body_name: "torso"
+      data:
+        - timestamp: 2.0
+          position: [0.0, 0.0, -0.0] # x y z
+          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z
+          tranform_mode: "RELATIVE"

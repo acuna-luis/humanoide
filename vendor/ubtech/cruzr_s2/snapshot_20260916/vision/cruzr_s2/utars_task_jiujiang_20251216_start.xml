@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <ForceSuccess>
+        <TtsClient tts="我要开始工作啦"/>
+      </ForceSuccess>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <TaskSequenceNode taskControl="{taskControl}"
+                        finish="false">
+        <SequenceWithMemory>
+          <Sequence>
+            <Sequence _description="导航重定位判断节点">
+              <MappingNameGain command="get_map_name"
+                               map_name="utars_jiujiang_map"
+                               map_self="{map_self_str}"
+                               _description="检测地图是否存在"/>
+              <Sequence>
+                <Sequence _description="检测是否设置了这个地图:1.已设置该地图"
+                          _skipIf="map_self_str!=&quot;1&quot;">
+                  <ForceSuccess>
+                    <TtsClient tts="检测地图"/>
+                  </ForceSuccess>
+                  <Sequence>
+                    <NavigationCheck command="check_state"
+                                     nav_code="{nav_code_str}"
+                                     map_self="{map_self_str}"
+                                     _description="获取地图code"/>
+                  </Sequence>
+                </Sequence>
+                <Sequence _description="表示没有设置这个地图,0.未设置该地图"
+                          _skipIf="map_self_str!=&quot;0&quot;">
+                  <ForceSuccess>
+                    <TtsClient tts="设置地图"/>
+                  </ForceSuccess>
+                  <Fallback>
+                    <MappingOperations command="map_set"
+                                       map_name="utars_jiujiang_map"
+                                       nav_error="{map_set_error_msg}"/>
+                    <ForceFailure>
+                      <Sequence>
+                        <ForceSuccess>
+                          <TtsClient tts="{map_set_error_msg}"/>
+                        </ForceSuccess>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                  <RetryUntilSuccessful num_attempts="3">
+                    <Fallback>
+                      <Sequence>
+                        <RelocationActuator command="relocation_start"
+                                            mode="global"
+                                            relocation_x="0"
+                                            relocation_y="0"
+                                            relocation_z="0"
+                                            nav_error="{relocation_error_msg}"/>
+                      </Sequence>
+                      <ForceFailure>
+                        <Sequence>
+                          <ForceSuccess>
+                            <TtsClient tts="{relocation_error_msg}"/>
+                          </ForceSuccess>
+                        </Sequence>
+                      </ForceFailure>
+                    </Fallback>
+                  </RetryUntilSuccessful>
+                </Sequence>
+              </Sequence>
+              <ForceSuccess>
+                <TtsClient tts="导航定位成功"/>
+              </ForceSuccess>
+            </Sequence>
+            <ManipulationAction task_name="cruzr/home"
+                                yaml_args=""/>
+            <ManipulationAction task_name="vision/enable_transport_vision_switch"
+                                yaml_args=""/>
+          </Sequence>
+          <Sequence _description="上面层操作">
+            <Sequence _description="上面层大箱子操作">
+              <Sequence _description="搬上面层大箱子操作">
+                <RetryUntilSuccessful num_attempts="5">
+                  <Fallback>
+                    <NavigationActuator command="navigation_start"
+                                        mode="logo_nav"
+                                        target_id="get1"
+                                        nav_error="{to_put_error_msg}"/>
+                    <ForceFailure>
+                      <Sequence>
+                        <ForceSuccess>
+                          <TtsClient tts="{to_put_error_msg}"/>
+                        </ForceSuccess>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+
+                <RetryUntilSuccessful num_attempts="5">
+                  <Fallback>
+                    <ManipulationAction task_name="jiujiang/clamp_table_box_80"
+                                        yaml_args=""/>
+                    <ForceFailure>
+                      <Sequence>
+                        <ForceSuccess>
+                          <TtsClient tts="需要帮助移动一下箱子"/>
+                        </ForceSuccess>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+                <ForceSuccess>
+                  <ManipulationAction task_name="cruzr/mobot_back_40"
+                                      yaml_args=""/>
+                </ForceSuccess>
+              </Sequence>
+              <Sequence _description="放上面层大箱子操作">
+                <RetryUntilSuccessful num_attempts="5">
+                  <Fallback>
+                    <NavigationActuator command="navigation_start"
+                                        mode="logo_nav"
+                                        target_id="put2"
+                                        nav_error="{to_put_error_msg}"/>
+                    <ForceFailure>
+                      <Sequence>
+                        <ForceSuccess>
+                          <TtsClient tts="{to_put_error_msg}"/>
+                        </ForceSuccess>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+                <Delay delay_msec="200">
+                  <ManipulationAction task_name="jiujiang/move_up_box_80"
+                                      yaml_args=""/>
+                </Delay>
+                <Sequence>
+                  <ManipulationAction task_name="jiujiang/put_shelf_box_80"
+                                      yaml_args=""/>
+                  <Delay delay_msec="200">
+                    <ManipulationAction task_name="jiujiang/push_shelf_box_80"
+                                        yaml_args=""/>
+                  </Delay>
+                  <Delay delay_msec="200">
+                    <ForceSuccess>
+                      <ManipulationAction task_name="cruzr/mobot_back_40"
+                                          yaml_args=""/>
+                    </ForceSuccess>
+                  </Delay>
+                  <ManipulationAction task_name="cruzr/home"
+                                      yaml_args=""/>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+            <Sequence _description="上面层小箱子操作">
+              <Sequence _description="搬上面层小箱子操作">
+                <RetryUntilSuccessful num_attempts="5">
+                  <Fallback>
+                    <NavigationActuator command="navigation_start"
+                                        mode="logo_nav"
+                                        target_id="get2"
+                                        nav_error="{to_put_error_msg}"/>
+                    <ForceFailure>
+                      <Sequence>
+                        <ForceSuccess>
+                          <TtsClient tts="{to_put_error_msg}"/>
+                        </ForceSuccess>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+
+                <RetryUntilSuccessful num_attempts="5">
+                  <Fallback>
+                    <ManipulationAction task_name="jiujiang/clamp_table_box_130"
+                                        yaml_args=""/>
+                    <ForceFailure>
+                      <Sequence>
+                        <ForceSuccess>
+                          <TtsClient tts="需要帮助移动一下箱子"/>
+                        </ForceSuccess>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+                <ForceSuccess>
+                  <ManipulationAction task_name="cruzr/mobot_back_40"
+                                      yaml_args=""/>
+                </ForceSuccess>
+              </Sequence>
+              <Sequence _description="放上面层小箱子操作">
+                <RetryUntilSuccessful num_attempts="5">
+                  <Fallback>
+                    <NavigationActuator command="navigation_start"
+                                        mode="logo_nav"
+                                        target_id="put1"
+                                        nav_error="{to_put_error_msg}"/>
+                    <ForceFailure>
+                      <Sequence>
+                        <ForceSuccess>
+                          <TtsClient tts="{to_put_error_msg}"/>
+                        </ForceSuccess>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+                <Sequence>
+                  <ManipulationAction task_name="jiujiang/move_up_box_130"
+                                      yaml_args=""/>
+                  <Delay delay_msec="200">
+                    <ManipulationAction task_name="jiujiang/put_shelf_box_130"
+                                        yaml_args=""/>
+                  </Delay>
+                  <ManipulationAction task_name="jiujiang/push_shelf_box_130"
+                                      yaml_args=""/>
+                  <ForceSuccess>
+                    <ManipulationAction task_name="cruzr/mobot_back_40"
+                                        yaml_args=""/>
+                  </ForceSuccess>
+                  <ManipulationAction task_name="cruzr/home"
+                                      yaml_args=""/>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+          </Sequence>
+        </SequenceWithMemory>
+      </TaskSequenceNode>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+    </Action>
+    <Action ID="MappingNameGain"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="map_name"/>
+      <input_port name="map_self"/>
+    </Action>
+    <Action ID="MappingOperations"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="map_name"/>
+      <inout_port name="nav_error"/>
+    </Action>
+    <Action ID="NavigationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="target_id"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="NavigationCheck"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="nav_code"/>
+      <input_port name="map_self"/>
+    </Action>
+    <Action ID="RelocationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="relocation_x"/>
+      <input_port name="relocation_y"/>
+      <input_port name="relocation_z"/>
+      <inout_port name="nav_error"/>
+    </Action>
+    <Action ID="RemoteControlNode"
+            editable="true">
+      <input_port name="taskControl"/>
+    </Action>
+    <Control ID="TaskSequenceNode"
+             editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Control>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

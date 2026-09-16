@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <TtsClient tts="我要开始工作啦"/>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <Sequence>
+        <TaskSequenceNode taskControl="{taskControl}"
+                          finish="false">
+          <Sequence>
+            <Sequence>
+              <TtsClient tts="导航定位成功"
+                         _description="sequence_num;抓放次数&#10;cyclic_oper_num;每个货架搬运第几个（比如byd，每个货架不会超过两次最大2）&#10;row_oper_num;每个货架总共操作次数（比如byd，搬一大一小每个2次）&#10;shelf_oper_num;放置货架个数（比如：byd，3个）&#10;get_target_id;抓取点导航id&#10;put_target_id;放置点导航id&#10;odd_enev_num;每行的奇偶判断"
+                         _onSuccess="sequence_num:=0;cyclic_oper_num:=0;row_oper_num:=0;shelf_oper_num:=0;get_target_id:=&quot;get&quot;;put_target_id:=&quot;put&quot;;odd_enev_num:=&quot;0&quot;"/>
+            </Sequence>
+            <Sequence>
+              <Repeat num_cycles="3">
+                <Sequence>
+                  <Script code="shelf_oper_num=shelf_oper_num+1"/>
+                  <Sequence>
+                    <Repeat num_cycles="2">
+                      <Sequence>
+                        <Script code="row_oper_num=row_oper_num+1;cyclic_oper_num=0"/>
+                        <Repeat num_cycles="2">
+                          <Sequence>
+                            <Script code="cyclic_oper_num=cyclic_oper_num+1"/>
+                            <TtsClient tts="{row_oper_num}"/>
+                            <TtsClient tts="row是："/>
+                            <TtsClient tts="{row_oper_num}"/>
+                            <OddAndEvenCondition req_number="{row_oper_num}"
+                                                 odd_enev_num="{odd_enev_num}"/>
+                            <TtsClient tts="奇偶数是："/>
+                            <TtsClient tts="{odd_enev_num}"/>
+                            <Sequence _skipIf="cyclic_oper_num!=1">
+                              <Sequence>
+                                <Script code="sequence_num=sequence_num+1"/>
+                                <StrConcatenation subString="{get_target_id}"
+                                                  number="{row_oper_num}"
+                                                  result="{result}"/>
+                                <TtsClient tts="我要导航到："/>
+                                <TtsClient tts="{row_oper_num}"/>
+                                <TtsClient tts="号点"/>
+                                <TtsClient tts="奇偶数是："/>
+                                <TtsClient tts="{odd_enev_num}"/>
+                                <Sequence>
+                                  <Sequence _description="奇数"
+                                            _skipIf="odd_enev_num!=&quot;1&quot;">
+                                    <TtsClient tts="我在大箱子点，我要开始搬大箱子了"/>
+                                  </Sequence>
+                                  <Sequence _description="偶数"
+                                            _skipIf="odd_enev_num!=&quot;0&quot;">
+                                    <TtsClient tts="我在小箱子点，我要开始搬小箱子了"/>
+                                  </Sequence>
+                                </Sequence>
+                              </Sequence>
+                            </Sequence>
+                            <Sequence _skipIf="cyclic_oper_num!=2">
+                              <Sequence>
+                                <Script code="sequence_num=sequence_num+1"/>
+                                <StrConcatenation subString="{put_target_id}"
+                                                  number="{row_oper_num}"
+                                                  result="{result}"/>
+                                <TtsClient tts="我要导航到："/>
+                                <TtsClient tts="{row_oper_num}"/>
+                                <TtsClient tts="号点"/>
+                                <TtsClient tts="奇偶数是："/>
+                                <TtsClient tts="{odd_enev_num}"/>
+                                <Sequence>
+                                  <Sequence _description="奇数"
+                                            _skipIf="odd_enev_num!=&quot;1&quot;">
+                                    <TtsClient tts="我在大箱子点，我要开始放大箱子了"/>
+                                  </Sequence>
+                                  <Sequence _description="偶数"
+                                            _skipIf="odd_enev_num!=&quot;0&quot;">
+                                    <TtsClient tts="我在小箱子点，我要开始放小箱子了"/>
+                                  </Sequence>
+                                </Sequence>
+                              </Sequence>
+                            </Sequence>
+                          </Sequence>
+                        </Repeat>
+                      </Sequence>
+                    </Repeat>
+                  </Sequence>
+                </Sequence>
+              </Repeat>
+            </Sequence>
+          </Sequence>
+        </TaskSequenceNode>
+      </Sequence>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="OddAndEvenCondition"
+            editable="true">
+      <input_port name="req_number"/>
+      <output_port name="odd_enev_num"/>
+    </Action>
+    <Action ID="RemoteControlNode"
+            editable="true">
+      <input_port name="taskControl"/>
+    </Action>
+    <Action ID="StrConcatenation"
+            editable="true">
+      <input_port name="subString"/>
+      <input_port name="number"/>
+      <input_port name="result"/>
+    </Action>
+    <Decorator ID="TaskSequenceNode"
+               editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Decorator>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

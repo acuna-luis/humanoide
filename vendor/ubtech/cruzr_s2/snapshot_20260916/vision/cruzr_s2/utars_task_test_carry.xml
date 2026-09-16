@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <TtsClient tts="我要开始工作啦"/>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <TaskSequenceNode taskControl="{taskControl}"
+                        finish="false">
+        <SequenceWithMemory>
+          <Sequence>
+            <ManipulationAction task_name="move_head_home"
+                                yaml_args=""/>
+            <TtsClient tts="设置地图"/>
+            <Fallback>
+              <MappingOperations command="map_set"
+                                 map_name="utars_abc_map"
+                                 nav_error="{map_set_error_msg}"/>
+              <ForceFailure>
+                <Sequence>
+                  <TtsClient tts="{map_set_error_msg}"/>
+                </Sequence>
+              </ForceFailure>
+            </Fallback>
+            <Fallback>
+              <RetryUntilSuccessful num_attempts="3">
+                <Sequence>
+                  <RelocationActuator command="relocation_start"
+                                      mode="global"
+                                      relocation_x="0"
+                                      relocation_y="0"
+                                      relocation_z="0"
+                                      nav_error="{relocation_error_msg}"/>
+                </Sequence>
+              </RetryUntilSuccessful>
+              <ForceFailure>
+                <Sequence>
+                  <TtsClient tts="{relocation_error_msg}"/>
+                </Sequence>
+              </ForceFailure>
+            </Fallback>
+            <TtsClient tts="导航定位成功"/>
+            <ManipulationAction task_name="cruzr/home"
+                                yaml_args=""/>
+            <ManipulationAction task_name="vision/enable_transport_vision_switch"
+                                yaml_args=""/>
+          </Sequence>
+          <Sequence _description="上面层操作">
+            <Sequence _description="上面层大箱子操作">
+              <Sequence _description="搬上面层大箱子操作">
+                <RetryUntilSuccessful num_attempts="5">
+                  <Fallback>
+                    <NavigationActuator command="navigation_start"
+                                        mode="logo_nav"
+                                        target_id="get1"
+                                        nav_error="{to_put_error_msg}"/>
+                    <ForceFailure>
+                      <Sequence>
+                        <Delay delay_msec="1000">
+                          <TtsClient tts="{to_put_error_msg}"/>
+                        </Delay>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+                <Delay delay_msec="200">
+                  <ManipulationAction task_name="cruzr/half_back_sit"
+                                      yaml_args=""/>
+                </Delay>
+                <Delay delay_msec="200">
+                  <ManipulationAction task_name="cruzr/clamp_cruzr_byd_large"
+                                      yaml_args=""/>
+                </Delay>
+              </Sequence>
+              <Sequence _description="放上面层大箱子操作">
+                <RetryUntilSuccessful num_attempts="5">
+                  <Fallback>
+                    <NavigationActuator command="navigation_start"
+                                        mode="logo_nav"
+                                        target_id="put2"
+                                        nav_error="{to_put_error_msg}"/>
+                    <ForceFailure>
+                      <Sequence>
+                        <Delay delay_msec="1000">
+                          <TtsClient tts="{to_put_error_msg}"/>
+                        </Delay>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+                <Sequence>
+                  <ManipulationAction task_name="cruzr/put_cruzr_byd_small"
+                                      yaml_args=""/>
+                  <ManipulationAction task_name="cruzr/home"
+                                      yaml_args=""/>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+            <Sequence _description="上面层小箱子操作">
+              <Sequence _description="搬上面层小箱子操作">
+                <RetryUntilSuccessful num_attempts="5">
+                  <Fallback>
+                    <NavigationActuator command="navigation_start"
+                                        mode="logo_nav"
+                                        target_id="get3"
+                                        nav_error="{to_put_error_msg}"/>
+                    <ForceFailure>
+                      <Sequence>
+                        <Delay delay_msec="1000">
+                          <TtsClient tts="{to_put_error_msg}"/>
+                        </Delay>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+                <Delay delay_msec="200">
+                  <ManipulationAction task_name="cruzr/half_back_sit"
+                                      yaml_args=""/>
+                </Delay>
+                <Delay delay_msec="200">
+                  <ManipulationAction task_name="cruzr/clamp_cruzr_byd_large"
+                                      yaml_args=""/>
+                </Delay>
+              </Sequence>
+              <Sequence _description="放上面层小箱子操作">
+                <RetryUntilSuccessful num_attempts="5">
+                  <Fallback>
+                    <NavigationActuator command="navigation_start"
+                                        mode="logo_nav"
+                                        target_id="put1"
+                                        nav_error="{to_put_error_msg}"/>
+                    <ForceFailure>
+                      <Sequence>
+                        <Delay delay_msec="1000">
+                          <TtsClient tts="{to_put_error_msg}"/>
+                        </Delay>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+                <Sequence>
+                  <ManipulationAction task_name="cruzr/put_cruzr_byd_small"
+                                      yaml_args=""/>
+                  <ManipulationAction task_name="cruzr/home"
+                                      yaml_args=""/>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+          </Sequence>
+          <Sequence _description="下面层大箱子操作">
+            <Sequence _description="搬上面层大箱子操作">
+              <RetryUntilSuccessful num_attempts="5">
+                <Fallback>
+                  <NavigationActuator command="navigation_start"
+                                      mode="logo_nav"
+                                      target_id="get2"
+                                      nav_error="{to_put_error_msg}"/>
+                  <ForceFailure>
+                    <Sequence>
+                      <Delay delay_msec="1000">
+                        <TtsClient tts="{to_put_error_msg}"/>
+                      </Delay>
+                    </Sequence>
+                  </ForceFailure>
+                </Fallback>
+              </RetryUntilSuccessful>
+              <Delay delay_msec="200">
+                <ManipulationAction task_name="cruzr/half_back_sit"
+                                    yaml_args=""/>
+              </Delay>
+              <Delay delay_msec="200">
+                <ManipulationAction task_name="cruzr/clamp_cruzr_byd_large"
+                                    yaml_args=""/>
+              </Delay>
+            </Sequence>
+            <Sequence _description="放上面层大箱子操作">
+              <RetryUntilSuccessful num_attempts="5">
+                <Fallback>
+                  <NavigationActuator command="navigation_start"
+                                      mode="logo_nav"
+                                      target_id="put3"
+                                      nav_error="{to_put_error_msg}"/>
+                  <ForceFailure>
+                    <Sequence>
+                      <Delay delay_msec="1000">
+                        <TtsClient tts="{to_put_error_msg}"/>
+                      </Delay>
+                    </Sequence>
+                  </ForceFailure>
+                </Fallback>
+              </RetryUntilSuccessful>
+              <Sequence>
+                <ManipulationAction task_name="cruzr/put_cruzr_byd_small"
+                                    yaml_args=""/>
+                <ManipulationAction task_name="cruzr/home"
+                                    yaml_args=""/>
+              </Sequence>
+            </Sequence>
+          </Sequence>
+        </SequenceWithMemory>
+      </TaskSequenceNode>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+    </Action>
+    <Action ID="MappingOperations"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="map_name"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="NavigationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="target_id"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="RelocationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="relocation_x"/>
+      <input_port name="relocation_y"/>
+      <input_port name="relocation_z"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="RemoteControlNode"
+            editable="true">
+      <input_port name="taskControl"/>
+    </Action>
+    <Decorator ID="TaskSequenceNode"
+               editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Decorator>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

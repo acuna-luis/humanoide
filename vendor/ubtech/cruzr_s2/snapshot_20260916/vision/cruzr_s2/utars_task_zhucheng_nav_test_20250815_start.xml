@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <TtsClient tts="我要开始工作啦"/>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <TaskSequenceNode taskControl="{taskControl}"
+                        finish="false">
+        <SequenceWithMemory>
+          <TtsClient tts="获取地图"/>
+          <MappingNameGain command="get_map_name"
+                           map_name="utars_zhucheng_map"
+                           map_self="{map_self_str}"
+                           _description="检测地图是否存在"/>
+          <TtsClient tts="当前map_self的值是："/>
+          <TtsClient tts="{map_self_str}"/>
+          <Sequence>
+            <Sequence _description="检测是否设置了这个地图:1.已设置该地图"
+                      _skipIf="map_self_str!=&quot;1&quot;">
+              <TtsClient tts="检测地图"/>
+              <Fallback>
+                <NavigationCheck command="check_state"
+                                 nav_code="{nav_code_str}"
+                                 _description="获取地图code"/>
+                <Sequence _description="仅在 nav_code_str 既不是120002也不是120003时执行"
+                          _skipIf="nav_code_str == &quot;120001&quot; || nav_code_str == &quot;120002&quot;">
+                  <ForceFailure>
+                    <Sequence>
+                      <TtsClient tts="{map_set_error_msg}"/>
+                    </Sequence>
+                  </ForceFailure>
+                </Sequence>
+              </Fallback>
+              <TtsClient tts="{nav_code_str}"/>
+            </Sequence>
+            <Sequence _description="表示没有设置这个地图,0.未设置该地图"
+                      _skipIf="map_self_str!=&quot;0&quot;">
+              <TtsClient tts="设置地图"/>
+              <Fallback>
+                <MappingOperations command="map_set"
+                                   map_name="utars_zhucheng_map"
+                                   nav_error="{map_set_error_msg}"/>
+                <ForceFailure>
+                  <Sequence>
+                    <TtsClient tts="{map_set_error_msg}"/>
+                  </Sequence>
+                </ForceFailure>
+              </Fallback>
+              <Fallback>
+                <RetryUntilSuccessful num_attempts="3">
+                  <Sequence>
+                    <RelocationActuator command="relocation_start"
+                                        mode="global"
+                                        relocation_x="0"
+                                        relocation_y="0"
+                                        relocation_z="0"
+                                        nav_error="{relocation_error_msg}"/>
+                  </Sequence>
+                </RetryUntilSuccessful>
+                <ForceFailure>
+                  <Sequence>
+                    <TtsClient tts="{relocation_error_msg}"/>
+                  </Sequence>
+                </ForceFailure>
+              </Fallback>
+            </Sequence>
+            <TtsClient tts="导航定位成功"/>
+          </Sequence>
+          <Sequence>
+            <Sequence>
+              <RetryUntilSuccessful num_attempts="5">
+                <Fallback>
+                  <NavigationActuator command="navigation_start"
+                                      mode="logo_nav"
+                                      target_id="get1"
+                                      nav_error="{to_put_error_msg}"/>
+                  <ForceFailure>
+                    <Sequence>
+                      <Delay delay_msec="1000">
+                        <TtsClient tts="{to_put_error_msg}"/>
+                      </Delay>
+                    </Sequence>
+                  </ForceFailure>
+                </Fallback>
+              </RetryUntilSuccessful>
+            </Sequence>
+          </Sequence>
+        </SequenceWithMemory>
+      </TaskSequenceNode>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="MappingNameGain"
+            editable="true">
+      <input_port name="command"
+                  default="get_map_name"/>
+      <input_port name="map_name"
+                  default="{map_name}"/>
+      <inout_port name="map_self"
+                  default="{map_self}"/>
+    </Action>
+    <Action ID="MappingOperations"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="map_name"/>
+      <inout_port name="nav_error"/>
+    </Action>
+    <Action ID="NavigationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="target_id"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="NavigationCheck"
+            editable="true">
+      <input_port name="command"
+                  default="check_state"/>
+      <inout_port name="nav_code"
+                  default="{nav_code}"/>
+    </Action>
+    <Action ID="RelocationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="relocation_x"/>
+      <input_port name="relocation_y"/>
+      <input_port name="relocation_z"/>
+      <inout_port name="nav_error"/>
+    </Action>
+    <Action ID="RemoteControlNode"
+            editable="true">
+      <input_port name="taskControl"/>
+    </Action>
+    <Decorator ID="TaskSequenceNode"
+               editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Decorator>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

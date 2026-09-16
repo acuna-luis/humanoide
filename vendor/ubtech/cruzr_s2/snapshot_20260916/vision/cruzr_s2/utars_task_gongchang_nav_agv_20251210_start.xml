@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <include path="subtrees/Navigation/navigation.xml"/>
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <TtsClient tts="我要开始工作啦"/>
+      <SetTaskStateServer set_running="false"/>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <TaskSequenceNode taskControl="{taskControl}"
+                        finish="false">
+        <SequenceWithMemory>
+          <SubTree ID="NavigationLocationAgv"/>
+          <Sequence _description="上面层操作">
+            <Sequence _description="上面层大箱子操作">
+              <Sequence _description="搬上面层大箱子操作">
+                <TtsClient tts="我要回初始位置了"/>
+                <SubTree ID="logo_track_nav_get0"/>
+              </Sequence>
+              <Sequence _description="搬上面层大箱子操作">
+                <SubTree ID="logo_track_nav_get1"/>
+                <RetryUntilSuccessful num_attempts="5">
+                  <Fallback>
+                    <ManipulationAction task_name="shiyan/separate_right_cruzr"
+                                        yaml_args=""/>
+                    <ForceFailure>
+                      <Sequence>
+                        <TtsClient tts="需要帮助移动一下箱子"/>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+
+                <ManipulationAction task_name="cruzr/back_sit"
+                                    yaml_args=""/>
+              </Sequence>
+              <Sequence _description="放上面层大箱子操作">
+                <SubTree ID="logo_track_nav_put1"/>
+                <ManipulationAction task_name="shiyan/put_cruzr_high"
+                                    yaml_args=""/>
+              </Sequence>
+            </Sequence>
+            <Sequence _description="上面层小箱子操作">
+              <Sequence _description="搬上面层小箱子操作">
+                <SubTree ID="logo_track_nav_get2"/>
+                <RetryUntilSuccessful num_attempts="5">
+                  <Fallback>
+                    <ManipulationAction task_name="shiyan/clamp_cruzr"
+                                        yaml_args=""/>
+                    <ForceFailure>
+                      <Sequence>
+                        <TtsClient tts="需要帮助移动一下箱子"/>
+                      </Sequence>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+
+                <ManipulationAction task_name="cruzr/back_sit"
+                                    yaml_args=""/>
+              </Sequence>
+              <Sequence _description="放上面层小箱子操作">
+                <SubTree ID="logo_track_nav_put2"/>
+                <ManipulationAction task_name="shiyan/put_cruzr_high"
+                                    yaml_args=""/>
+              </Sequence>
+            </Sequence>
+            <Sequence>
+              <SubTree ID="logo_track_nav_get0"/>
+              <SetTaskStateServer set_running="false"/>
+            </Sequence>
+          </Sequence>
+        </SequenceWithMemory>
+      </TaskSequenceNode>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="AgvChargeBatteryPowerStatusCondition"
+            editable="true">
+      <inout_port name="battery_power">当前机器电池电量值</inout_port>
+      <inout_port name="battery_charge_state">当前机器电池是否在充电（1为是，0为否）</inout_port>
+    </Action>
+    <Action ID="AgvChargePoleClient"
+            editable="true">
+      <input_port name="type"
+                  default="1"/>
+      <input_port name="ip"
+                  default="192.168.11.99"/>
+      <output_port name="pole_message"/>
+    </Action>
+
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+    </Action>
+    <Action ID="MappingNameGain"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="map_name"/>
+      <input_port name="map_self"/>
+    </Action>
+    <Action ID="MappingOperations"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="map_name"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="NavigationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="target_id"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="NavigationCheck"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="nav_code"/>
+      <input_port name="map_self"/>
+    </Action>
+    <Action ID="RelocationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="relocation_x"/>
+      <input_port name="relocation_y"/>
+      <input_port name="relocation_z"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="RemoteControlNode"
+            editable="true">
+      <input_port name="taskControl"/>
+    </Action>
+    <Action ID="SetTaskStateServer"
+            editable="true">
+      <input_port name="set_running"/>
+    </Action>
+    <Decorator ID="TaskSequenceNode"
+               editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Decorator>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

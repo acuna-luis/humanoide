@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4" main_tree_to_execute="test">
+    <BehaviorTree ID="test">
+        <SequenceWithMemory>
+            <TtsClient tts="还未指定任务，请从网页指定任务后重启任务管理器" />
+        </SequenceWithMemory>
+    </BehaviorTree>
+
+    <!-- Description of Node Models (used by Groot) -->
+    <TreeNodesModel>
+        <Action ID="CancelMappingServiceServer" editable="true" />
+        <Action ID="CancelNavigationServiceServer" editable="true" />
+        <Action ID="DeleteMapServiceServer" editable="true">
+            <output_port name="map_name" />
+        </Action>
+        <Action ID="GetMapListServiceServer" editable="true" />
+        <Action ID="PauseNavigationServiceServer" editable="true" />
+        <Action ID="ResumeNavigationServiceServer" editable="true" />
+        <Action ID="SaveMappingServiceServer" editable="true" />
+        <Action ID="SetMapServiceServer" editable="true">
+            <output_port name="map_name" />
+        </Action>
+        <Action ID="StartMappingServiceServer" editable="true">
+            <output_port name="map_name" />
+        </Action>
+        <Action ID="StartPlanningServiceServer" editable="true">
+            <output_port name="pose" />
+            <output_port name="mode" />
+            <output_port name="level" />
+            <output_port name="speed" />
+        </Action>
+        <Action ID="VnavCommandActionClient" editable="true">
+            <input_port name="command" />
+            <input_port name="mode" />
+            <input_port name="map_name" />
+            <input_port name="end_point" />
+            <input_port name="level" />
+            <input_port name="speed" />
+        </Action>
+    </TreeNodesModel>
+
+</root>

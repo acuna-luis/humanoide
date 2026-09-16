@@ -1,0 +1,20 @@
+[
+  {
+    "source_name": "Cruzr_S2_Procedimiento_traslado_cajas_ES.docx",
+    "original_sha256": "679b411bad53d0d3847f7e09edb523114dac17ea849f48b93466b70536a5c9ae",
+    "repo_file": "procedimiento_traslado_cajas_es_sin_credenciales.docx",
+    "repo_sha256": "415d4f3876fb1435cce1d8b34faa52492f1b33dc202409ad9b9f3a3ef8c1c9e3",
+    "redacted_paragraphs": 1,
+    "original_location": "/home/lacuna/Descargas/Cruzr_S2_Procedimiento_traslado_cajas_ES.docx",
+    "private_copy": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260916_VENDOR_ARCHIVE/documents/Cruzr_S2_Procedimiento_traslado_cajas_ES.docx"
+  },
+  {
+    "source_name": "Cruzr S2 搬箱子操作流程.docx",
+    "original_sha256": "f43f8b6ea12db16fe322bb2fe0ad9d04d1150486927a47e057e5b4fac08662bc",
+    "repo_file": "procedimiento_traslado_cajas_zh_sin_credenciales.docx",
+    "repo_sha256": "2bf05a154b3ef2608edaa054b4684fc5c22b82c653070cf476eaa5bffbe00efc",
+    "redacted_paragraphs": 1,
+    "original_location": "/home/lacuna/Descargas/Cruzr S2 搬箱子操作流程.docx",
+    "private_copy": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260916_VENDOR_ARCHIVE/documents/Cruzr S2 搬箱子操作流程.docx"
+  }
+]

@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <ForceSuccess>
+        <TtsClient tts="我要开始工作啦"/>
+      </ForceSuccess>
+      <SetTaskStateServer set_running="false"/>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <TaskSequenceNode taskControl="{taskControl}"
+                        finish="false">
+        <SequenceWithMemory>
+          <Sequence _description="11111">
+            <Sequence>
+              <SetTaskStateServer set_running="true"/>
+              <Delay delay_msec="3000">
+                <AgvChargeBatteryPowerStatusCondition battery_power="{battery_low_power}"
+                                                      battery_charge_state="{battery_charge_state}"
+                                                      _description="battery_charge_state #充电桩工作状态  #空闲 0  充电中 1"/>
+              </Delay>
+              <Sequence _skipIf="battery_charge_state!=&quot;0&quot; || battery_low_power&gt;15">
+                <SetTaskStateServer set_running="false"/>
+                <ForceFailure>
+                  <TtsClient tts="当前电池电量低于百分之15，拒绝执行任务"/>
+                </ForceFailure>
+              </Sequence>
+              <Sequence _skipIf="battery_charge_state!=&quot;1&quot; || battery_low_power&gt;40">
+                <SetTaskStateServer set_running="false"/>
+                <ForceFailure>
+                  <TtsClient tts="正在充电,当前电池电量低于百分之40，拒绝执行任务"/>
+                </ForceFailure>
+              </Sequence>
+              <Sequence _description="在充电状态，并且电量大于40%符合工作条件，&#10;发送缩桩操作，如果还通电，则说明是手动充电"
+                        _skipIf="battery_charge_state!=&quot;1&quot; || battery_low_power&lt;=40">
+                <Sequence>
+                  <ForceSuccess>
+                    <RetryUntilSuccessful num_attempts="3">
+                      <Fallback>
+                        <AgvChargePoleClient type="0"
+                                             ip="192.168.42.168"
+                                             pole_message="{pole_message}"/>
+                        <ForceFailure>
+                          <Sequence>
+                            <ForceSuccess>
+                              <Delay delay_msec="1500">
+                                <TtsClient tts="{pole_message}"/>
+                              </Delay>
+                            </ForceSuccess>
+                          </Sequence>
+                        </ForceFailure>
+                      </Fallback>
+                    </RetryUntilSuccessful>
+                  </ForceSuccess>
+                  <Delay delay_msec="10000">
+                    <AgvChargeBatteryPowerStatusCondition battery_power="{battery_low_power}"
+                                                          battery_charge_state="{battery_charge_state}"
+                                                          _description="battery_charge_state #充电桩工作状态  #空闲 0  充电中 1"/>
+                  </Delay>
+                  <Sequence _skipIf="battery_charge_state!=&quot;1&quot;">
+                    <SetTaskStateServer set_running="false"/>
+                    <ForceFailure>
+                      <TtsClient tts="当前机器人连接充电器，拒绝执行任务"/>
+                    </ForceFailure>
+                  </Sequence>
+                  <Sequence _description="由上桩状态转为下桩状态&#10;"
+                            _skipIf="battery_charge_state!=&quot;0&quot;">
+                    <ForceSuccess>
+                      <NavigationActuator command="charging_start"
+                                          mode="get_off"
+                                          target_id=""
+                                          nav_error="{to_put_error_msg}"/>
+                    </ForceSuccess>
+                  </Sequence>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+          </Sequence>
+          <Sequence>
+            <ForceSuccess>
+              <TtsClient tts="设置地图1"/>
+            </ForceSuccess>
+          </Sequence>
+          <Sequence _description="充电操作">
+            <Sequence _description="搬上面层大箱子操作">
+              <ForceSuccess>
+                <TtsClient tts="我要开始上桩充电了2"/>
+              </ForceSuccess>
+            </Sequence>
+            <Sequence _description="开始上桩充电">
+              <Delay delay_msec="15000">
+                <ForceSuccess>
+                  <TtsClient tts="我要开始接收数据了3"/>
+                </ForceSuccess>
+              </Delay>
+              <Delay delay_msec="15000">
+                <ForceSuccess>
+                  <TtsClient tts="我要开始传输数据了4"/>
+                </ForceSuccess>
+              </Delay>
+            </Sequence>
+            <Sequence _description="开始充电">
+              <Delay delay_msec="25000">
+                <ForceSuccess>
+                  <TtsClient tts="我要开始下桩充电了5"/>
+                </ForceSuccess>
+              </Delay>
+            </Sequence>
+            <SetTaskStateServer set_running="false"/>
+          </Sequence>
+        </SequenceWithMemory>
+      </TaskSequenceNode>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="AgvChargeBatteryPowerStatusCondition"
+            editable="true">
+      <inout_port name="battery_power">当前机器电池电量值</inout_port>
+      <inout_port name="battery_charge_state">当前机器电池是否在充电（1为是，0为否）</inout_port>
+    </Action>
+    <Action ID="AgvChargePoleClient"
+            editable="true">
+      <input_port name="type"
+                  default="1"/>
+      <input_port name="ip"
+                  default="192.168.11.99"/>
+      <output_port name="pole_message"/>
+    </Action>
+    <Action ID="NavigationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="target_id"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="RemoteControlNode"
+            editable="true">
+      <input_port name="taskControl"/>
+    </Action>
+    <Action ID="SetTaskStateServer"
+            editable="true">
+      <input_port name="set_running"/>
+    </Action>
+    <Decorator ID="TaskSequenceNode"
+               editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Decorator>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

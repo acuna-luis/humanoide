@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <TtsClient tts="我要开始工作啦"/>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <TaskSequenceNode taskControl="{taskControl}"
+                        finish="false">
+        <SequenceWithMemory>
+          <Sequence>
+            <ManipulationAction task_name="move_head_home"
+                                yaml_args=""/>
+            <TtsClient tts="设置地图"/>
+            <Fallback>
+              <MappingOperations command="map_set"
+                                 map_name="utars_byd_map"
+                                 nav_error="{map_set_error_msg}"/>
+              <ForceFailure>
+                <Sequence>
+                  <TtsClient tts="{map_set_error_msg}"/>
+                </Sequence>
+              </ForceFailure>
+            </Fallback>
+            <Fallback>
+              <RetryUntilSuccessful num_attempts="3">
+                <Sequence>
+                  <RelocationActuator command="relocation_start"
+                                      mode="global"
+                                      relocation_x="0"
+                                      relocation_y="0"
+                                      relocation_z="0"
+                                      nav_error="{relocation_error_msg}"/>
+                </Sequence>
+              </RetryUntilSuccessful>
+              <ForceFailure>
+                <Sequence>
+                  <TtsClient tts="{relocation_error_msg}"/>
+                </Sequence>
+              </ForceFailure>
+            </Fallback>
+            <TtsClient tts="导航定位成功"
+                       _description="sequence_num;抓放次数&#10;cyclic_oper_num;每个货架搬运第几个（比如byd，每个货架不会超过两次最大2）&#10;row_oper_num;每个货架总共操作次数（比如byd，搬一大一小每个2次）&#10;shelf_oper_num;放置货架个数（比如：byd，3个）&#10;get_target_id;抓取点导航id&#10;put_target_id;放置点导航id&#10;odd_enev_num_row;每行的奇偶判断&#10;odd_enev_num_shelf;每列/货架的奇偶判断"
+                       _onSuccess="sequence_num:=0;cyclic_oper_num:=0;row_oper_num:=0;shelf_oper_num:=0;get_target_id:=&quot;get&quot;;put_target_id:=&quot;put&quot;;odd_enev_num_row:=&quot;0&quot;;odd_enev_num_shelf:=&quot;0&quot;"/>
+            <ManipulationAction task_name="cruzr/home"
+                                yaml_args=""/>
+            <ManipulationAction task_name="vision/enable_transport_vision_switch"
+                                yaml_args=""/>
+          </Sequence>
+          <Repeat num_cycles="3">
+            <Sequence>
+              <Script code="shelf_oper_num=shelf_oper_num+1"/>
+              <Sequence>
+                <Repeat num_cycles="2">
+                  <Sequence>
+                    <Script code="row_oper_num=row_oper_num+1;cyclic_oper_num=0"/>
+                    <Repeat num_cycles="2">
+                      <Sequence>
+                        <Script code="cyclic_oper_num=cyclic_oper_num+1"/>
+                        <OddAndEvenCondition req_number="{row_oper_num}"
+                                             odd_enev_num="{odd_enev_num_row}"/>
+                        <OddAndEvenCondition req_number="{shelf_oper_num}"
+                                             odd_enev_num="{odd_enev_num_shelf}"
+                                             _description="第一个和第三个货架搬上面两个大小箱子；第二个货架搬运下面两个大小箱子"/>
+                        <Sequence _skipIf="cyclic_oper_num!=1">
+                          <Sequence>
+                            <Script code="sequence_num=sequence_num+1"/>
+                            <StrConcatenation subString="{get_target_id}"
+                                              number="{row_oper_num}"
+                                              result="{result}"/>
+                            <RetryUntilSuccessful num_attempts="5">
+                              <Fallback>
+                                <NavigationActuator command="navigation_start"
+                                                    mode="logo_nav"
+                                                    target_id="{result}"
+                                                    nav_error="{to_put_error_msg}"/>
+                                <ForceFailure>
+                                  <Sequence>
+                                    <Delay delay_msec="1000">
+                                      <TtsClient tts="{to_put_error_msg}"/>
+                                    </Delay>
+                                  </Sequence>
+                                </ForceFailure>
+                              </Fallback>
+                            </RetryUntilSuccessful>
+                            <Sequence>
+                              <Sequence _description="奇数"
+                                        _skipIf="odd_enev_num_shelf!=&quot;1&quot;">
+                                <Sequence _description="奇数"
+                                          _skipIf="odd_enev_num_row!=&quot;1&quot;">
+                                  <RetryUntilSuccessful num_attempts="10">
+                                    <Fallback>
+                                      <Sequence>
+                                        <Delay delay_msec="200">
+                                          <ManipulationAction task_name="cruzr/clamp_cruzr_byd_large"
+                                                              yaml_args=""/>
+                                        </Delay>
+                                      </Sequence>
+                                      <ForceFailure>
+                                        <Sequence>
+                                          <Delay delay_msec="100">
+                                            <TtsClient tts="需要帮助移动一下箱子"/>
+                                          </Delay>
+                                        </Sequence>
+                                      </ForceFailure>
+                                    </Fallback>
+                                  </RetryUntilSuccessful>
+                                </Sequence>
+                                <Sequence _description="偶数"
+                                          _skipIf="odd_enev_num_row!=&quot;0&quot;">
+                                  <RetryUntilSuccessful num_attempts="10">
+                                    <Fallback>
+                                      <Sequence>
+                                        <Delay delay_msec="200">
+                                          <ManipulationAction task_name="cruzr/clamp_cruzr_byd_small"
+                                                              yaml_args=""/>
+                                        </Delay>
+                                      </Sequence>
+                                      <ForceFailure>
+                                        <Sequence>
+                                          <Delay delay_msec="100">
+                                            <TtsClient tts="需要帮助移动一下箱子"/>
+                                          </Delay>
+                                        </Sequence>
+                                      </ForceFailure>
+                                    </Fallback>
+                                  </RetryUntilSuccessful>
+                                </Sequence>
+                              </Sequence>
+                              <Sequence _description="偶数"
+                                        _skipIf="odd_enev_num_shelf!=&quot;0&quot;">
+                                <Sequence _description="奇数"
+                                          _skipIf="odd_enev_num_row!=&quot;1&quot;">
+                                  <ManipulationAction task_name="cruzr/half_back_sit"
+                                                      yaml_args=""/>
+                                  <RetryUntilSuccessful num_attempts="10">
+                                    <Fallback>
+                                      <Sequence>
+                                        <Delay delay_msec="200">
+                                          <ManipulationAction task_name="cruzr/clamp_cruzr_byd_large"
+                                                              yaml_args=""/>
+                                        </Delay>
+                                      </Sequence>
+                                      <ForceFailure>
+                                        <Sequence>
+                                          <Delay delay_msec="100">
+                                            <TtsClient tts="需要帮助移动一下箱子"/>
+                                          </Delay>
+                                        </Sequence>
+                                      </ForceFailure>
+                                    </Fallback>
+                                  </RetryUntilSuccessful>
+                                </Sequence>
+                                <Sequence _description="偶数:我在小箱子点，我要开始搬小箱子第二层了"
+                                          _skipIf="odd_enev_num_row!=&quot;0&quot;">
+                                  <ManipulationAction task_name="cruzr/half_back_sit"
+                                                      yaml_args=""/>
+                                  <RetryUntilSuccessful num_attempts="10">
+                                    <Fallback>
+                                      <Sequence>
+                                        <Delay delay_msec="200">
+                                          <ManipulationAction task_name="cruzr/clamp_cruzr_byd_small"
+                                                              yaml_args=""/>
+                                        </Delay>
+                                      </Sequence>
+                                      <ForceFailure>
+                                        <Sequence>
+                                          <Delay delay_msec="100">
+                                            <TtsClient tts="需要帮助移动一下箱子"/>
+                                          </Delay>
+                                        </Sequence>
+                                      </ForceFailure>
+                                    </Fallback>
+                                  </RetryUntilSuccessful>
+                                </Sequence>
+                              </Sequence>
+                            </Sequence>
+                          </Sequence>
+                        </Sequence>
+                        <Sequence _skipIf="cyclic_oper_num!=2">
+                          <Sequence>
+                            <Script code="sequence_num=sequence_num+1"/>
+                            <StrConcatenation subString="{put_target_id}"
+                                              number="{row_oper_num}"
+                                              result="{result}"/>
+                            <RetryUntilSuccessful num_attempts="5">
+                              <Fallback>
+                                <NavigationActuator command="navigation_start"
+                                                    mode="logo_nav"
+                                                    target_id="{result}"
+                                                    nav_error="{to_put_error_msg}"/>
+                                <ForceFailure>
+                                  <Sequence>
+                                    <Delay delay_msec="1000">
+                                      <TtsClient tts="{to_put_error_msg}"/>
+                                    </Delay>
+                                  </Sequence>
+                                </ForceFailure>
+                              </Fallback>
+                            </RetryUntilSuccessful>
+                            <Sequence>
+                              <Sequence _description="奇数"
+                                        _skipIf="odd_enev_num_row!=&quot;1&quot;">
+                                <ManipulationAction task_name="cruzr/put_cruzr_byd_large"
+                                                    yaml_args=""/>
+                                <ManipulationAction task_name="cruzr/home"
+                                                    yaml_args=""/>
+                              </Sequence>
+                              <Sequence _description="偶数"
+                                        _skipIf="odd_enev_num_row!=&quot;0&quot;">
+                                <ManipulationAction task_name="cruzr/put_cruzr_byd_small"
+                                                    yaml_args=""/>
+                                <ManipulationAction task_name="cruzr/home"
+                                                    yaml_args=""/>
+                              </Sequence>
+                            </Sequence>
+                          </Sequence>
+                        </Sequence>
+                      </Sequence>
+                    </Repeat>
+                  </Sequence>
+                </Repeat>
+              </Sequence>
+            </Sequence>
+          </Repeat>
+        </SequenceWithMemory>
+      </TaskSequenceNode>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+    </Action>
+    <Action ID="MappingOperations"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="map_name"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="NavigationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="target_id"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="OddAndEvenCondition"
+            editable="true">
+      <input_port name="req_number"/>
+      <output_port name="odd_enev_num"/>
+    </Action>
+    <Action ID="RelocationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="relocation_x"/>
+      <input_port name="relocation_y"/>
+      <input_port name="relocation_z"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="RemoteControlNode"
+            editable="true">
+      <input_port name="taskControl"/>
+    </Action>
+    <Action ID="StrConcatenation"
+            editable="true">
+      <input_port name="subString"/>
+      <input_port name="number"/>
+      <input_port name="result"/>
+    </Action>
+    <Decorator ID="TaskSequenceNode"
+               editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Decorator>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

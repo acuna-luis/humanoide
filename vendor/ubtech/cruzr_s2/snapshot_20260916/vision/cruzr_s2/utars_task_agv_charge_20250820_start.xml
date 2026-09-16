@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <TtsClient tts="我要开始工作啦"/>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <TaskSequenceNode taskControl="{taskControl}"
+                        finish="false">
+        <SequenceWithMemory>
+          <Sequence _description="导航重定位判断节点">
+            <MappingNameGain command="get_map_name"
+                             map_name="utars_charge_map"
+                             map_self="{map_self_str}"
+                             _description="检测地图是否存在"/>
+            <Sequence>
+              <Sequence _description="检测是否设置了这个地图:1.已设置该地图"
+                        _skipIf="map_self_str!=&quot;1&quot;">
+                <TtsClient tts="检测地图"/>
+                <Sequence>
+                  <NavigationCheck command="check_state"
+                                   nav_code="{nav_code_str}"
+                                   map_self="{map_self_str}"
+                                   _description="获取地图code"/>
+                </Sequence>
+              </Sequence>
+              <Sequence _description="表示没有设置这个地图,0.未设置该地图"
+                        _skipIf="map_self_str!=&quot;0&quot;">
+                <TtsClient tts="设置地图"/>
+                <Fallback>
+                  <MappingOperations command="map_set"
+                                     map_name="utars_charge_map"
+                                     nav_error="{map_set_error_msg}"/>
+                  <ForceFailure>
+                    <Sequence>
+                      <ForceSuccess>
+                        <TtsClient tts="{map_set_error_msg}"/>
+                      </ForceSuccess>
+                    </Sequence>
+                  </ForceFailure>
+                </Fallback>
+                <Fallback>
+                  <RetryUntilSuccessful num_attempts="3">
+                    <Sequence>
+                      <RelocationActuator command="relocation_start"
+                                          mode="global"
+                                          relocation_x="0"
+                                          relocation_y="0"
+                                          relocation_z="0"
+                                          nav_error="{relocation_error_msg}"/>
+                    </Sequence>
+                  </RetryUntilSuccessful>
+                  <ForceFailure>
+                    <Sequence>
+                      <ForceSuccess>
+                        <TtsClient tts="{relocation_error_msg}"/>
+                      </ForceSuccess>
+                    </Sequence>
+                  </ForceFailure>
+                </Fallback>
+              </Sequence>
+            </Sequence>
+            <TtsClient tts="导航定位成功"/>
+          </Sequence>
+          <ManipulationAction task_name="cruzr/home"
+                              yaml_args=""/>
+          <Sequence _description="充电操作">
+            <Sequence _description="搬上面层大箱子操作">
+              <RetryUntilSuccessful num_attempts="5">
+                <Fallback>
+                  <NavigationActuator command="navigation_start"
+                                      mode="logo_nav"
+                                      target_id="charge0"
+                                      nav_error="{to_put_error_msg}"/>
+                  <ForceFailure>
+                    <Sequence>
+                      <Delay delay_msec="1000">
+                        <TtsClient tts="{to_put_error_msg}"/>
+                      </Delay>
+                    </Sequence>
+                  </ForceFailure>
+                </Fallback>
+              </RetryUntilSuccessful>
+            </Sequence>
+            <Sequence _description="搬上面层大箱子操作">
+              <TtsClient tts="我要开始上桩充电了"/>
+              <RetryUntilSuccessful num_attempts="5">
+                <Fallback>
+                  <NavigationActuator command="charging_start"
+                                      mode="get_on"
+                                      target_id=""
+                                      nav_error="{to_put_error_msg}"/>
+                  <ForceFailure>
+                    <Sequence>
+                      <Delay delay_msec="1000">
+                        <TtsClient tts="{to_put_error_msg}"/>
+                      </Delay>
+                    </Sequence>
+                  </ForceFailure>
+                </Fallback>
+              </RetryUntilSuccessful>
+              <RetryUntilSuccessful num_attempts="3">
+                <Fallback>
+                  <AgvChargePoleClient type="1"
+                                       ip="192.168.42.168"
+                                       pole_message="{pole_message}"/>
+                  <ForceFailure>
+                    <Sequence>
+                      <Delay delay_msec="1500">
+                        <TtsClient tts="{pole_message}"/>
+                      </Delay>
+                    </Sequence>
+                  </ForceFailure>
+                </Fallback>
+              </RetryUntilSuccessful>
+            </Sequence>
+            <Sequence _description="电流检测">
+              <RetryUntilSuccessful num_attempts="3">
+                <Sequence>
+                  <Sequence>
+                    <RetryUntilSuccessful num_attempts="10">
+                      <Sequence>
+                        <Delay delay_msec="3000">
+                          <AgvChargeBatteryPowerStatusCondition battery_power="{battery_power}"
+                                                                battery_charge_state="{battery_charge_state}"
+                                                                _description="battery_charge_state #充电桩工作状态  #空闲 0  充电中 1"/>
+                        </Delay>
+                        <Sequence _skipIf="battery_charge_state!=&quot;0&quot;">
+                          <ForceFailure>
+                            <Delay delay_msec="1500">
+                              <TtsClient tts="还未充电"/>
+                            </Delay>
+                          </ForceFailure>
+                        </Sequence>
+                        <Sequence _skipIf="battery_charge_state!=&quot;1&quot;">
+                          <ForceSuccess>
+                            <TtsClient tts="正在充电"/>
+                          </ForceSuccess>
+                        </Sequence>
+                      </Sequence>
+                    </RetryUntilSuccessful>
+                  </Sequence>
+                  <Sequence _skipIf="battery_charge_state!=&quot;0&quot;">
+                    <Sequence>
+                      <Fallback>
+                        <AgvChargePoleClient type="0"
+                                             ip="192.168.42.168"
+                                             pole_message="{pole_message}"/>
+                        <ForceFailure>
+                          <Delay delay_msec="1500">
+                            <TtsClient tts="{pole_message}"/>
+                          </Delay>
+                        </ForceFailure>
+                      </Fallback>
+                      <Fallback>
+                        <NavigationActuator command="charging_start"
+                                            mode="get_off"
+                                            target_id=""
+                                            nav_error="{to_put_error_msg}"/>
+                        <ForceFailure>
+                          <TtsClient tts="{to_put_error_msg}"/>
+                        </ForceFailure>
+                      </Fallback>
+                      <Fallback>
+                        <NavigationActuator command="navigation_start"
+                                            mode="logo_nav"
+                                            target_id="get1"
+                                            nav_error="{to_put_error_msg}"/>
+                        <ForceFailure>
+                          <TtsClient tts="{to_put_error_msg}"/>
+                        </ForceFailure>
+                      </Fallback>
+                    </Sequence>
+                    <Sequence>
+                      <Fallback>
+                        <NavigationActuator command="charging_start"
+                                            mode="get_on"
+                                            target_id=""
+                                            nav_error="{to_put_error_msg}"/>
+                        <ForceFailure>
+                          <TtsClient tts="{to_put_error_msg}"/>
+                        </ForceFailure>
+                      </Fallback>
+                      <Fallback>
+                        <AgvChargePoleClient type="1"
+                                             ip="192.168.42.168"
+                                             pole_message="{pole_message}"/>
+                        <ForceFailure>
+                          <Sequence>
+                            <Delay delay_msec="1500">
+                              <TtsClient tts="{pole_message}"/>
+                            </Delay>
+                          </Sequence>
+                        </ForceFailure>
+                      </Fallback>
+                    </Sequence>
+                  </Sequence>
+                </Sequence>
+              </RetryUntilSuccessful>
+            </Sequence>
+            <Sequence _description="开始下桩">
+              <Delay delay_msec="25000">
+                <TtsClient tts="我要开始下桩充电了"/>
+              </Delay>
+              <RetryUntilSuccessful num_attempts="3">
+                <Fallback>
+                  <AgvChargePoleClient type="0"
+                                       ip="192.168.42.168"
+                                       pole_message="{pole_message}"/>
+                  <ForceFailure>
+                    <Delay delay_msec="1500">
+                      <TtsClient tts="{pole_message}"/>
+                    </Delay>
+                  </ForceFailure>
+                </Fallback>
+              </RetryUntilSuccessful>
+              <TtsClient tts="我要开始下桩了"/>
+              <RetryUntilSuccessful num_attempts="3">
+                <Fallback>
+                  <NavigationActuator command="charging_start"
+                                      mode="get_off"
+                                      target_id=""
+                                      nav_error="{to_put_error_msg}"/>
+                  <ForceFailure>
+                    <TtsClient tts="{to_put_error_msg}"/>
+                  </ForceFailure>
+                </Fallback>
+              </RetryUntilSuccessful>
+            </Sequence>
+          </Sequence>
+        </SequenceWithMemory>
+      </TaskSequenceNode>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="AgvChargeBatteryPowerStatusCondition"
+            editable="true">
+      <inout_port name="battery_power">当前机器电池电量值</inout_port>
+      <inout_port name="battery_charge_state">当前机器电池是否在充电（1为是，0为否）</inout_port>
+    </Action>
+    <Action ID="AgvChargePoleClient"
+            editable="true">
+      <input_port name="type"
+                  default="1"/>
+      <input_port name="ip"
+                  default="192.168.11.99"/>
+      <output_port name="pole_message"/>
+    </Action>
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+    </Action>
+    <Action ID="MappingNameGain"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="map_name"/>
+      <input_port name="map_self"/>
+    </Action>
+    <Action ID="MappingOperations"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="map_name"/>
+      <inout_port name="nav_error"/>
+    </Action>
+    <Action ID="NavigationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="target_id"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="NavigationCheck"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="nav_code"/>
+      <input_port name="map_self"/>
+    </Action>
+    <Action ID="RelocationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="relocation_x"/>
+      <input_port name="relocation_y"/>
+      <input_port name="relocation_z"/>
+      <inout_port name="nav_error"/>
+    </Action>
+    <Action ID="RemoteControlNode"
+            editable="true">
+      <input_port name="taskControl"/>
+    </Action>
+    <Decorator ID="TaskSequenceNode"
+               editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Decorator>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>

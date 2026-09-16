@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <include path="subtrees/Navigation/navigationCollection.xml"/>
+
+  <include path="subtrees/Manipulation/manipulation.xml"/>
+
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <Script code="last_time_stamp_str:=&quot;&quot;;navi_type=&quot;&quot;"/>
+      <ForceSuccess>
+        <TtsClient tts="我要开始工作啦"/>
+      </ForceSuccess>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <TaskSequenceNode taskControl="{taskControl}"
+                        finish="false">
+        <Sequence>
+          <EnvValueCondition env_name="NUM_TIMES_ENV"
+                             env_value="{rept_num}"
+                             _onSuccess="voice_rept_num:=0"/>
+          <Repeat num_cycles="{rept_num}">
+            <Sequence>
+              <Sequence _description="3333">
+                <ForceSuccess>
+                  <TtsClient tts="开始执行第"/>
+                </ForceSuccess>
+                <Script code="voice_rept_num=voice_rept_num+1"/>
+                <Delay delay_msec="1000">
+                  <ForceSuccess>
+                    <TtsClient tts="{voice_rept_num}"/>
+                  </ForceSuccess>
+                </Delay>
+                <Delay delay_msec="1000">
+                  <ForceSuccess>
+                    <TtsClient tts="轮"/>
+                  </ForceSuccess>
+                </Delay>
+              </Sequence>
+              <SubTree ID="NavigationModelSelect"
+                       name="导航方式选择"
+                       last_time_stamp_str="{last_time_stamp_str}"
+                       navi_type="{navi_type}"/>
+              <Sequence _description="上面层操作">
+                <Sequence _description="上面层大箱子操作">
+                  <Sequence _description="搬上面层大箱子操作">
+                    <SubTree ID="logo_navi"
+                             mode="{navi_type}"
+                             target_id="get1"/>
+                    <Delay delay_msec="200">
+                      <ManipulationAction task_name="cruzr/half_back_sit"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                    </Delay>
+                    <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             boxSize="[0.4,0.3,0.22]"
+                             targetPos="[0,0.0,0.7]"
+                             TaskName="zhucheng/clamp_cruzr"
+                             _description="运控泛化动作"/>
+                    <ManipulationAction task_name="cruzr/back_sit"
+                                        yaml_args=""
+                                        arm_error=""
+                                        status_code=""/>
+                  </Sequence>
+                  <Sequence _description="放上面层大箱子操作">
+                    <SubTree ID="logo_navi"
+                             mode="{navi_type}"
+                             target_id="put2"/>
+                    <Sequence>
+                      <SubTree ID="ManipulationSubTreePutBox"
+                               TaskName="cruzr_clamp/cruzr_series_put/move_up_cruzr_json_xx_high_dual_link_clamping_box"
+                               boxSize="[0.4,0.3,0.22]"
+                               port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                               putHeight="0.7"/>
+                      <SubTree ID="ManipulationSubTreePutBox"
+                               TaskName="zhucheng/put_cruzr_low"
+                               boxSize="[0.4,0.3,0.22]"
+                               port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                               putHeight="0.7"/>
+                      <ManipulationAction task_name="cruzr/home"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                    </Sequence>
+                  </Sequence>
+                </Sequence>
+                <Sequence _description="上面层小箱子操作">
+                  <Sequence _description="搬上面层小箱子操作">
+                    <SubTree ID="logo_navi"
+                             mode="{navi_type}"
+                             target_id="get2"/>
+                    <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             boxSize="[0.4,0.3,0.22]"
+                             targetPos="[0,0.0,1.2]"
+                             TaskName="zhucheng/clamp_cruzr"
+                             _description="运控泛化动作"/>
+                    <ManipulationAction task_name="cruzr/back_sit"
+                                        yaml_args=""
+                                        arm_error=""
+                                        status_code=""/>
+                  </Sequence>
+                  <Sequence _description="放上面层小箱子操作">
+                    <SubTree ID="logo_navi"
+                             mode="{navi_type}"
+                             target_id="put1"/>
+                    <Sequence>
+                      <SubTree ID="ManipulationSubTreePutBox"
+                               TaskName="cruzr_clamp/cruzr_series_put/move_up_cruzr_json_xx_high_dual_link_clamping_box"
+                               boxSize="[0.4,0.3,0.22]"
+                               port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                               putHeight="1.2"/>
+                      <SubTree ID="ManipulationSubTreePutBox"
+                               TaskName="zhucheng/put_cruzr_high"
+                               boxSize="[0.4,0.3,0.22]"
+                               port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                               putHeight="1.2"/>
+                      <ManipulationAction task_name="cruzr/home"
+                                          yaml_args=""
+                                          arm_error=""
+                                          status_code=""/>
+                    </Sequence>
+                  </Sequence>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+          </Repeat>
+        </Sequence>
+      </TaskSequenceNode>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Condition ID="EnvValueCondition"
+               editable="true">
+      <input_port name="env_name"/>
+      <output_port name="env_value"/>
+    </Condition>
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+      <output_port name="arm_error"/>
+      <output_port name="status_code"/>
+    </Action>
+    <Action ID="RemoteControlNode"
+            editable="true">
+      <input_port name="taskControl"/>
+    </Action>
+    <Decorator ID="TaskSequenceNode"
+               editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Decorator>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+    <SubTree ID="logo_navi"
+             editable="true">
+      <input_port name="mode"
+                  type="std::string"/>
+      <input_port name="target_id"
+                  type="std::string"/>
+    </SubTree>
+  </TreeNodesModel>
+
+</root>

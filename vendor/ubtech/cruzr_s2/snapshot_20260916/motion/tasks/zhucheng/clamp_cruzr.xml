@@ -1,0 +1,44 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <Parallel threshold="3">
+                <Action ID="MetaMove" type="arm" location="right"
+                    joint_angles="0.360812; -0.432024;   1.98805;  -1.97229;  0.763939;  0.133466; -0.217255"
+                    duration="3" />
+                <Action ID="MetaMove" type="arm" location="left"
+                    joint_angles="-0.357248; -0.448983;  -2.00502;  -1.93942; -0.783487;  -0.15456; -0.207367"
+                    duration="3" />
+                <Action ID="MetaMove" type="head" location="single"
+                    joint_angles="0; -0.43" duration="3" />
+            </Parallel>
+            <Parallel threshold="2">
+                <Action ID="MetaMove" type="arm" location="right"
+                    delta_translation="0;0.05;0"
+                    duration="1" />
+                <Action ID="MetaMove" type="arm" location="left"
+                    delta_translation="0;-0.05;0"
+                    duration="1" />
+            </Parallel>
+            <IfThenElse>
+                <BlackboardCheckString value_A="{is_sim}" value_B="true">
+                    <AlwaysSuccess />
+                </BlackboardCheckString>
+                <AlwaysSuccess />
+                <Sequence>
+                    <Action ID="MetaLook" start_vision_mode="transport_vision" />
+                    <Action ID="MetaLook" start_vision_mode="pointclouds_vision" />
+                </Sequence>
+            </IfThenElse>
+            <Action ID="MetaClamp" name="cruzr_clamp/force_init" />
+            <!-- <Action ID="MetaClamp" name="zhucheng/clamp_cruzr_vision_avoid_crash" /> -->
+            <Action ID="MetaClamp" name="zhucheng/clamp_cruzr_zc" />
+            <Parallel threshold="2">
+                <Action ID="MetaCruzrMove" delta_pose="-0.5;0;0"/>
+                <Action ID="MetaMove" type="head" location="single"
+                    joint_angles="0; 0" duration="5" />
+            </Parallel>
+            <Action ID="MetaClamp" name="zhucheng/bodyback_cruzr_zc" />
+            <!-- <Action ID="MetaClamp" name="zhucheng/handsback_cruzr_zc" /> -->
+        </Sequence>
+    </BehaviorTree>
+</root>

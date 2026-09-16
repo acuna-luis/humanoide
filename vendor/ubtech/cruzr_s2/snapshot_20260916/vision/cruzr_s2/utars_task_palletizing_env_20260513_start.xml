@@ -1,0 +1,501 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+  <include path="subtrees/Navigation/navigationCollection.xml"/>
+
+  <include path="subtrees/Manipulation/manipulation.xml"/>
+
+  <BehaviorTree ID="test">
+    <ParallelAll name="root"
+                 max_failures="1">
+      <Script code="last_time_stamp_str:=&quot;&quot;;navi_type=&quot;&quot;"/>
+      <ForceSuccess>
+        <TtsClient tts="我要开始工作啦"/>
+      </ForceSuccess>
+      <Script code=" taskControl:=&apos;void&apos;"/>
+      <Script code=" flysky:=1"/>
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <TaskSequenceNode taskControl="{taskControl}"
+                        finish="false">
+        <SequenceWithMemory>
+          <SubTree ID="NavigationModelSelect"
+                   name="导航方式选择"
+                   last_time_stamp_str="{last_time_stamp_str}"
+                   navi_type="{navi_type}"/>
+          <Sequence _description="第一次循环">
+            <Sequence _description="上面层大箱子操作1">
+              <Sequence _description="搬上面层大箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="get1"/>
+                <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                         port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                         boxSize="[0.4,0.6,0.22]"
+                         targetPos="[0,0.0,0.8]"
+                         TaskName="cruzr_clamp/passive_clamp/clamp_plain"
+                         key_name=""
+                         _description="运控泛化动作"/>
+              </Sequence>
+              <Sequence _description="放上面层大箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="put1"/>
+                <Sequence>
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="cruzr_clamp/passive_clamp/put_collision_pallet"
+                           boxSize="[0.4,0.6,0.22]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="0.36"/>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+            <Sequence _description="上面层小箱子操作2">
+              <Sequence _description="搬上面层小箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="get2"/>
+                <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                         port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                         boxSize="[0.4,0.6,0.22]"
+                         targetPos="[0,0.0,0.8]"
+                         TaskName="cruzr_clamp/passive_clamp/clamp_plain"
+                         key_name=""
+                         _description="运控泛化动作"/>
+              </Sequence>
+              <Sequence _description="放上面层小箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="put2"/>
+                <Sequence>
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="cruzr_clamp/passive_clamp/put_collision_front_long_box"
+                           boxSize="[0.4,0.6,0.22]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="0.36"/>
+                  <ManipulationAction task_name="cruzr/home"
+                                      yaml_args=""
+                                      arm_error=""
+                                      status_code=""/>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+            <Sequence _description="拆第1个">
+              <Sequence _description="搬上面层小箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="get3"/>
+                <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                         port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                         boxSize="[0.6,0.4,0.22]"
+                         targetPos="[0,0.0,0.8]"
+                         TaskName="cruzr_clamp/passive_clamp/right_separate"
+                         key_name=""
+                         _description="运控泛化动作"/>
+              </Sequence>
+              <Sequence _description="放上面层小箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="put4"/>
+                <Sequence>
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="cruzr_clamp/passive_clamp/put_collision_front_short_box"
+                           boxSize="[0.6,0.4,0.22]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="0.36"/>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+            <Sequence _description="拆第2个">
+              <Sequence _description="搬上面层小箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="get4"/>
+                <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                         port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                         boxSize="[0.6,0.4,0.22]"
+                         targetPos="[0,0.0,0.8]"
+                         TaskName="cruzr_clamp/passive_clamp/clamp_plain"
+                         key_name=""
+                         _description="运控泛化动作"/>
+              </Sequence>
+              <Sequence _description="放上面层小箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="put3"/>
+                <Sequence>
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="cruzr_clamp/passive_clamp/put_collision_left_short_box"
+                           boxSize="[0.6,0.4,0.22]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="0.36"/>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+            <Sequence _description="拆第3个">
+              <Sequence _description="搬上面层小箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="get5"/>
+                <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                         port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                         boxSize="[0.6,0.4,0.22]"
+                         targetPos="[0,0.0,0.8]"
+                         TaskName="cruzr_clamp/passive_clamp/right_separate"
+                         key_name=""
+                         _description="运控泛化动作"/>
+              </Sequence>
+              <Sequence _description="放上面层小箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="put6"/>
+                <Sequence>
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="cruzr_clamp/passive_clamp/put_collision_front_short_box"
+                           boxSize="[0.6,0.4,0.22]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="0.36"/>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+            <Sequence _description="拆第4个">
+              <Sequence _description="搬上面层小箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="get6"/>
+                <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                         port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                         boxSize="[0.6,0.4,0.22]"
+                         targetPos="[0,0.0,0.8]"
+                         TaskName="cruzr_clamp/passive_clamp/clamp_plain"
+                         key_name=""
+                         _description="运控泛化动作"/>
+              </Sequence>
+              <Sequence _description="放上面层小箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="put5"/>
+                <Sequence>
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="cruzr_clamp/passive_clamp/put_collision_left_short_box"
+                           boxSize="[0.6,0.4,0.22]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="0.36"/>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+          </Sequence>
+          <ForceSuccess>
+            <TtsClient tts="开始执行循环任务"
+                       _onSuccess="rept_num:=0"/>
+          </ForceSuccess>
+          <Repeat num_cycles="3">
+            <Sequence _description="上面层操作1111">
+              <Sequence>
+                <ForceSuccess>
+                  <TtsClient tts="开始执行第"/>
+                </ForceSuccess>
+                <Script code="rept_num=rept_num+1"/>
+                <Delay delay_msec="1000">
+                  <ForceSuccess>
+                    <TtsClient tts="{rept_num}"/>
+                  </ForceSuccess>
+                </Delay>
+                <Delay delay_msec="1000">
+                  <ForceSuccess>
+                    <TtsClient tts="轮"/>
+                  </ForceSuccess>
+                </Delay>
+                <Script code="target_pos:=&apos;&apos;;put_height:=&quot;0&quot;"/>
+                <Sequence>
+                  <Switch3 case_1="1"
+                           case_2="2"
+                           case_3="3"
+                           variable="{rept_num}">
+                    <Sequence>
+                      <Script code="target_pos:=&quot;[0,0.0,0.8]&quot;; put_height:=&quot;0.36&quot;"/>
+                    </Sequence>
+                    <Sequence>
+                      <Script code="target_pos:=&quot;[0,0.0,0.5]&quot;; put_height:=&quot;0.58&quot;"/>
+                    </Sequence>
+                    <Sequence>
+                      <Script code="target_pos:=&quot;[0,0.0,0.5]&quot;; put_height:=&quot;0.8&quot;"/>
+                    </Sequence>
+                    <ForceSuccess>
+                      <TtsClient tts="参数异常"/>
+                    </ForceSuccess>
+                  </Switch3>
+                  <ForceSuccess>
+                    <TtsClient tts="target_pos的值是："/>
+                  </ForceSuccess>
+                  <Delay delay_msec="1000">
+                    <ForceSuccess>
+                      <TtsClient tts="{target_pos}"/>
+                    </ForceSuccess>
+                  </Delay>
+                  <ForceSuccess>
+                    <TtsClient tts="put_height的值是："/>
+                  </ForceSuccess>
+                  <Delay delay_msec="1000">
+                    <ForceSuccess>
+                      <TtsClient tts="{put_height}"/>
+                    </ForceSuccess>
+                  </Delay>
+                </Sequence>
+              </Sequence>
+              <Sequence _description="上面层大箱子操作1">
+                <Sequence _description="搬上面层大箱子操作">
+                  <SubTree ID="logo_navi"
+                           mode="{navi_type}"
+                           target_id="get1"/>
+                  <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           boxSize="[0.4,0.6,0.22]"
+                           targetPos="{target_pos}"
+                           TaskName="cruzr_clamp/passive_clamp/clamp_plain"
+                           key_name=""
+                           _description="运控泛化动作"/>
+                </Sequence>
+                <Sequence _description="放上面层大箱子操作">
+                  <SubTree ID="logo_navi"
+                           mode="{navi_type}"
+                           target_id="put1"/>
+                  <Sequence>
+                    <SubTree ID="ManipulationSubTreePutBox"
+                             TaskName="cruzr_clamp/passive_clamp/put_collision"
+                             boxSize="[0.4,0.6,0.22]"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             putHeight="{put_height}"/>
+                  </Sequence>
+                </Sequence>
+              </Sequence>
+              <Sequence _description="上面层小箱子操作2">
+                <Sequence _description="搬上面层小箱子操作">
+                  <SubTree ID="logo_navi"
+                           mode="{navi_type}"
+                           target_id="get2"/>
+                  <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           boxSize="[0.4,0.6,0.22]"
+                           targetPos="{target_pos}"
+                           TaskName="cruzr_clamp/passive_clamp/clamp_plain"
+                           key_name=""
+                           _description="运控泛化动作"/>
+                </Sequence>
+                <Sequence _description="放上面层小箱子操作">
+                  <SubTree ID="logo_navi"
+                           mode="{navi_type}"
+                           target_id="put2"/>
+                  <Sequence>
+                    <SubTree ID="ManipulationSubTreePutBox"
+                             TaskName="cruzr_clamp/passive_clamp/put_collision"
+                             boxSize="[0.4,0.6,0.22]"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             putHeight="{put_height}"/>
+                    <ManipulationAction task_name="cruzr/home"
+                                        yaml_args=""
+                                        arm_error=""
+                                        status_code=""/>
+                  </Sequence>
+                </Sequence>
+              </Sequence>
+              <Sequence _description="拆第1个">
+                <Sequence _description="搬上面层小箱子操作">
+                  <SubTree ID="logo_navi"
+                           mode="{navi_type}"
+                           target_id="get3"/>
+                  <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           boxSize="[0.6,0.4,0.22]"
+                           targetPos="{target_pos}"
+                           TaskName="cruzr_clamp/passive_clamp/right_separate"
+                           key_name=""
+                           _description="运控泛化动作"/>
+                </Sequence>
+                <Sequence _description="放上面层小箱子操作">
+                  <SubTree ID="logo_navi"
+                           mode="{navi_type}"
+                           target_id="put4"/>
+                  <Sequence>
+                    <SubTree ID="ManipulationSubTreePutBox"
+                             TaskName="cruzr_clamp/passive_clamp/put_collision"
+                             boxSize="[0.6,0.4,0.22]"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             putHeight="{put_height}"/>
+                  </Sequence>
+                </Sequence>
+              </Sequence>
+              <Sequence _description="拆第2个">
+                <Sequence _description="搬上面层小箱子操作">
+                  <SubTree ID="logo_navi"
+                           mode="{navi_type}"
+                           target_id="get4"/>
+                  <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           boxSize="[0.6,0.4,0.22]"
+                           targetPos="{target_pos}"
+                           TaskName="cruzr_clamp/passive_clamp/clamp_plain"
+                           key_name=""
+                           _description="运控泛化动作"/>
+                </Sequence>
+                <Sequence _description="放上面层小箱子操作">
+                  <SubTree ID="logo_navi"
+                           mode="{navi_type}"
+                           target_id="put3"/>
+                  <Sequence>
+                    <SubTree ID="ManipulationSubTreePutBox"
+                             TaskName="cruzr_clamp/passive_clamp/put_collision_push_right"
+                             boxSize="[0.6,0.4,0.22]"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             putHeight="{put_height}"/>
+                  </Sequence>
+                </Sequence>
+              </Sequence>
+              <Sequence _description="拆第3个">
+                <Sequence _description="搬上面层小箱子操作">
+                  <SubTree ID="logo_navi"
+                           mode="{navi_type}"
+                           target_id="get5"/>
+                  <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           boxSize="[0.6,0.4,0.22]"
+                           targetPos="{target_pos}"
+                           TaskName="cruzr_clamp/passive_clamp/right_separate"
+                           key_name=""
+                           _description="运控泛化动作"/>
+                </Sequence>
+                <Sequence _description="放上面层小箱子操作">
+                  <SubTree ID="logo_navi"
+                           mode="{navi_type}"
+                           target_id="put6"/>
+                  <Sequence>
+                    <SubTree ID="ManipulationSubTreePutBox"
+                             TaskName="cruzr_clamp/passive_clamp/put_collision"
+                             boxSize="[0.6,0.4,0.22]"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             putHeight="{put_height}"/>
+                  </Sequence>
+                </Sequence>
+              </Sequence>
+              <Sequence _description="拆第4个">
+                <Sequence _description="搬上面层小箱子操作">
+                  <SubTree ID="logo_navi"
+                           mode="{navi_type}"
+                           target_id="get6"/>
+                  <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           boxSize="[0.6,0.4,0.22]"
+                           targetPos="{target_pos}"
+                           TaskName="cruzr_clamp/passive_clamp/clamp_plain"
+                           key_name=""
+                           _description="运控泛化动作"/>
+                </Sequence>
+                <Sequence _description="放上面层小箱子操作">
+                  <SubTree ID="logo_navi"
+                           mode="{navi_type}"
+                           target_id="put5"/>
+                  <Sequence>
+                    <SubTree ID="ManipulationSubTreePutBox"
+                             TaskName="cruzr_clamp/passive_clamp/put_collision_push_right"
+                             boxSize="[0.6,0.4,0.22]"
+                             port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                             putHeight="{put_height}"/>
+                  </Sequence>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+          </Repeat>
+          <Sequence _description="上面层操作22222">
+            <Sequence _description="上面层大箱子操作1">
+              <Sequence _description="搬上面层大箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="get1"/>
+                <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                         port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                         boxSize="[0.4,0.6,0.22]"
+                         targetPos="[0,0.0,0.5]"
+                         TaskName="cruzr_clamp/passive_clamp/clamp_plain"
+                         key_name=""
+                         _description="运控泛化动作"/>
+              </Sequence>
+              <Sequence _description="放上面层大箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="put1"/>
+                <Sequence>
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="cruzr_clamp/passive_clamp/put_collision"
+                           boxSize="[0.4,0.6,0.22]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="1.02"/>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+            <Sequence _description="上面层小箱子操作2">
+              <Sequence _description="搬上面层小箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="get2"/>
+                <SubTree ID="ManipulationSubTreeGrabBoxByTargetPos"
+                         port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                         boxSize="[0.4,0.6,0.22]"
+                         targetPos="[0,0.0,0.5]"
+                         TaskName="cruzr_clamp/passive_clamp/clamp_plain"
+                         key_name=""
+                         _description="运控泛化动作"/>
+              </Sequence>
+              <Sequence _description="放上面层小箱子操作">
+                <SubTree ID="logo_navi"
+                         mode="{navi_type}"
+                         target_id="put2"/>
+                <Sequence>
+                  <SubTree ID="ManipulationSubTreePutBox"
+                           TaskName="cruzr_clamp/passive_clamp/put_collision"
+                           boxSize="[0.4,0.6,0.22]"
+                           port_map="grab_box_status:=grab_box_status;grab_box_error:=grab_box_error"
+                           putHeight="1.02"/>
+                  <ManipulationAction task_name="cruzr/home"
+                                      yaml_args=""
+                                      arm_error=""
+                                      status_code=""/>
+                </Sequence>
+              </Sequence>
+            </Sequence>
+          </Sequence>
+        </SequenceWithMemory>
+      </TaskSequenceNode>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+      <output_port name="arm_error"/>
+      <output_port name="status_code"/>
+    </Action>
+    <Action ID="RemoteControlNode">
+      <output_port name="taskControl"
+                   type="std::string"/>
+    </Action>
+    <Control ID="TaskSequenceNode"
+             editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Control>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+    <SubTree ID="logo_navi"
+             editable="true">
+      <input_port name="mode"
+                  type="std::string"/>
+      <input_port name="target_id"
+                  type="std::string"/>
+    </SubTree>
+  </TreeNodesModel>
+
+</root>

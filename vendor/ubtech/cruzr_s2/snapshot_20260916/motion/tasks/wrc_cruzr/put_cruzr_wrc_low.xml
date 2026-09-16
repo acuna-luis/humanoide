@@ -1,0 +1,8 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <Action ID="MetaClamp" name="wrc/put_cruzr_wrc_low" />
+            <Action ID="MetaClamp" name="wrc/open_arm_cruzr" />
+        </Sequence>
+    </BehaviorTree>
+</root>

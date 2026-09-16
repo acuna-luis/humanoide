@@ -1,0 +1,207 @@
+meta_name: MetaClamp
+#hqp_params
+var_damping:
+  [
+    99,
+    99,
+    99,
+    99,
+    99,
+    99,
+    99,
+    99,
+    99,
+    99,
+    99,
+    99,
+    99,
+    99,
+    99,
+    99,
+    99,
+    99,
+  ]
+right_hand: [1, 1, 1, 0.3, 0.3, 0.3]
+left_hand: [1, 1, 1, 0.3, 0.3, 0.3]
+torso: [0.0, 0.0, 0.0, 0.3, 0.3, 0.3]
+com_constrain: []
+left_hand_manipulability: [0.001]
+right_hand_manipulability: [0.001]
+jointmid: [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+com: [1.0, 0, 0]
+#task_request
+request:
+  duration: 3.0
+  frequency: 500
+  urdf_name: "cruzr_s2"
+  biped_quit: true
+  box_size: [0.6, 0.4, 0.28]
+
+  component_disable_time:
+    - [0.0, 0.0]
+  enable_payload_iden: false
+  enable_dual_center_plan: false
+  task_type: "clamp_box"
+  task_stack: task_stack_cruzr_clamp_bodyback.yaml
+  robot_trajectory_data:
+    - body_name: "left_hand"
+      data:
+        - timestamp: 3.0
+          position: [0.3, 0.285, 1.15] # x y z
+          orientation: [0.5, 0.5, 0.5, -0.5] # w x y z
+          tranform_mode: "ABSOLUTE"
+    - body_name: "right_hand"
+      data:
+        - timestamp: 3.0
+          position: [0.3, -0.285, 1.15] # x y z
+          orientation: [0.5, 0.5, 0.5, -0.5] # w x y z
+          tranform_mode: "ABSOLUTE"
+    - body_name: "com"
+      data:
+        - timestamp: 3.0
+          position: [-0, 0.0, 0.8524] # x y z
+          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z
+          tranform_mode: "ABSOLUTE"
+    - body_name: "torso"
+      data:
+        - timestamp: 3.0
+          position: [0.0, 0.0, 0.0] # x y z
+          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z
+          tranform_mode: "ABSOLUTE"
+  admit_param:
+    enable_admit: true
+    use_first_as_init_force: false
+    use_base_coordinate: base #base, body or hand
+    use_fence_force: true
+    select_series: time_series # time_series or traj_series
+    avg_filt_times: 100
+    Init_left_force_sensor_point: [0]
+    Init_right_force_sensor_point: [0]
+    left_admit_enable_time_series:
+      #vector. use in time_series
+      - [0.0, 3.0]
+    right_admit_enable_time_series:
+      #vector. use in time_series
+      - [0.0, 3.0]
+    left_force_mask:
+      #must as long as arm pointlist
+      [[0, 3, 0, 0, 0, 0]] #x y z r p y
+    # pos:0  imped:1  pimped:2  fimped:3
+    right_force_mask:
+      #must as long as arm pointlist
+      [[0, 3, 0, 0, 0, 0]] #x y z r p y
+    # pos:0  imped:1  pimped:2  fimped:3
+    left_desire_force:
+      #must as long as arm pointlist
+      [[1.0, 5.0, 3.0, 0, 0, 0]] #x y z r p y
+    right_desire_force:
+      #must as long as arm pointlist
+      [[1.0, -5, 3.0, 0, 0, 0]] #x y z r p y
+
+    vel_limit: [0.1, 0.1, 0.1, 0.3, 0.3, 0.3] #x y z r p y  单位：m/s rad/s
+    ft_dz_set: [1, 1, 1, 0.1, 0.1, 0.1] #x y z r p y     单位：N Nm
+
+    k_fence: [1000, 1000, 1000]
+    fence_radius: [1.3, 0.37, 1]
+    center_point: [0, 0, 0] #base
+    fence_force_threshold: [45, 45, 45]
+
+    ImpedanceParam:
+      # m b k
+      [
+        [5, 750, 200], #x y z r p y
+        [5, 750, 200],
+        [5, 750, 200],
+        [0.08, 1.2, 5],
+        [0.08, 1.2, 5],
+        [0.08, 1.2, 5],
+      ]
+    forceTrackingParam:
+      # kp ki kd
+      [
+        [0.1, 1, 0.01], #x y z r p y
+        [0.1, 1, 0.01],
+        [0.1, 1, 0.01],
+        [0.1, 1, 0.01],
+        [0.1, 1, 0.01],
+        [0.1, 1, 0.01],
+      ]
+
+  dual_admit_param:
+    enable_admit: false
+    avg_filt_times: 100
+    select_series: time_series # traj_series or time_series
+    Init_force_sensor_point: [0]
+    admit_enable_time_series:
+      #vector. use in time_series
+      - [0.0, 6.0]
+    ext_force_mask: [[0, 0, 0, 0, 0, 0]] #x y z r p y
+    int_force_mask:
+      #must as long as arm pointlist
+      [[0, 3, 0, 0, 0, 0]] #x y z r p y
+    ext_desire_force:
+      #must as long as arm pointlist
+      [[0.0, 0.0, 0.0, 0, 0, 0]] #x y z r p y
+    int_desire_force:
+      #must as long as arm pointlist
+      [[1.0, -2, 10.0, 0, 0, 0]] #x y z r p y
+
+    vel_limit: [0.1, 0.1, 0.01, 0.1, 0.1, 0.1] #x y z r p y  单位：m/s rad/s
+    ext_ft_dz_set: [0.5, 0.5, 0.5, 0.05, 0.05, 0.05] #x y z r p y     单位：N Nm
+    int_ft_dz_set: [1, 1, 1, 0.05, 0.05, 0.05] #x y z r p y     单位：N Nm
+
+    ExtImpedanceParam:
+      # m b k
+      [
+        [5, 150, 0], #x y z r p y
+        [5, 150, 0],
+        [5, 150, 0],
+        [0.08, 1.2, 5],
+        [0.08, 1.2, 5],
+        [0.08, 1.2, 5],
+      ]
+    ExtForceTrackingParam:
+      # kp ki kd
+      [
+        [0.1, 1, 0.01], #x y z r p y
+        [0.1, 1, 0.01],
+        [0.1, 1, 0.01],
+        [0.1, 1, 0.01],
+        [0.1, 1, 0.01],
+        [0.1, 1, 0.01],
+      ]
+    IntImpedanceParam:
+      # m b k
+      [
+        [5, 750, 100], #x y z r p y
+        [5, 750, 100],
+        [5, 750, 100],
+        [0.08, 1.2, 5],
+        [0.08, 1.2, 5],
+        [0.08, 1.2, 5],
+      ]
+    IntForceTrackingParam:
+      # kp ki kd
+      [
+        [0.1, 1, 0.01], #x y z r p y
+        [0.1, 1, 0.01],
+        [0.1, 1, 0.01],
+        [0.1, 1, 0.01],
+        [0.1, 1, 0.01],
+        [0.1, 1, 0.01],
+      ]
+
+  enable_abnormality_determination: [none]
+  enable_self_collision_check: false
+  abnormality_determination:
+    clip_to_upper_edge_offset: 0.05
+    box_len_size_offset: 0.022
+    clip_box_too_behind_offset: -0.01
+    clip_box_too_front_offset: 0.01
+    clip_box_too_side: 0.15
+    eef_tool_transformation: [[0.0, 0.0, 0.095], [0.0, 0.0, -0.095]] #s2
+    one_hand_high_others_low: 0.1
+    one_hand_front_others_behind: 0.1
+    clamp_force_threashold: [0, 10, 0]
+    self_collision_tolerance: 0.02
+    env_collision_tolerance: 0.02

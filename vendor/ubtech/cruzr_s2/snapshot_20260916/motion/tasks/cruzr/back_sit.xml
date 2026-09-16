@@ -1,0 +1,7 @@
+<root main_tree_to_execute="MainTree">
+	<BehaviorTree ID="MainTree">
+		<Sequence name="root_sequence">
+			<Action ID="MetaMove" type="lifter" location="single" joint_angles="1.49;-2.49;1.0" duration="3" />
+		</Sequence>
+	</BehaviorTree>
+</root>

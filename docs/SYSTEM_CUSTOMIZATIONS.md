@@ -2095,3 +2095,48 @@ Reversión selectiva de fuentes desde backup; no se recomienda volver al monitor
 que admite combinaciones fuera del segmento. Estado físico sólo leído: cabeza
 bajada alrededor−0,430665rad, resto próximo a HOME, inmóvil. No VLA físico ni
 READY ejecutado. La parada y la ejecución efectiva nuevas no se declaran probadas.
+
+
+### VENDOR-01 — Archivo de referencia de flujos y procedimientos UBTECH
+
+- **Fecha/estado:** 2026-09-16, Europe/Madrid; ARCHIVADO y VERIFICADO por hashes,
+  sintaxis e integridad documental. No instalado/cargado/probado físicamente
+  como consecuencia de esta incorporación. Petición expresa del propietario.
+- **Motivo:** conservar en Git los dos escenarios del SOP y otros flujos del
+  robot, junto a documentos accesibles, sin depender de Descargas ni del chat.
+- **Destino PC:** `vendor/ubtech/cruzr_s2/snapshot_20260916/` (85 XML/YAML,
+  manifest y catálogo); `docs/vendor/ubtech/box_handling/` (dos DOCX saneados,
+  dos extracciones Markdown, procedencia y tabla de escenarios); índices README.
+- **Origen:** Vision `walker-system.task_manager-1`,
+  `/opt/walker/task_manager/share/task_manager/config/cruzr_s2/`; Motion
+  `walker-motion.manipulation_robot_app-1`, configuración de
+  manipulation_task_manager y MetaClamp de manipulation_meta_tasks.
+  Las rutas completas, hashes e identidades de imágenes v0.2.0 figuran en
+  manifest.json. La copia incluye el HOME instalado, posiblemente adaptado:
+  no tratarla como paquete original de fábrica ni como restauración automática.
+- **Selección:** 54 XML principales (incluido default), tres XML compartidos y
+  un YAML; 13 tareas Motion y 14 parámetros MetaClamp para los dos escenarios.
+  Otros recursos internos, mapas, plugins y modelos no se incluyen. No se
+  afirma compatibilidad con otra versión de firmware ni completitud binaria.
+- **Documentos:** original chino y traducción española recibida; se retiró un
+  párrafo de credenciales por documento. Imágenes, estructura de namespaces y
+  demás partes conservadas byte a byte; originales privados intactos.
+  provenance.json distingue hash original y hash de la copia saneada.
+- **Aplicación reproducible:** `scripts/vendor/import_ubtech_box_workflows.py`,
+  sólo lectura remota; receta en `vendor/ubtech/cruzr_s2/README.md`.
+  Python 3 + lxml y helper SSH existente; usar directorios nuevos. El importador
+  rechaza originales privados dentro del repo y no sobrescribe destinos.
+- **Activación:** ninguna; no contiene despliegue, reinicio ni ejecución de
+  tareas. Último selector remoto observado seguía en default_task_config.xml.
+- **Verificación:** 70 XML bien formados, 15 YAML con sintaxis válida, 85 hashes
+  coincidentes, includes XML presentes, enlaces de índices comprobados;
+  dos DOCX conservan figuras y texto excepto credenciales. Tag vendor !wxyz
+  preservado; se verificó sintaxis YAML sin cargar semántica propietaria.
+  Tres copias descargadas de zhucheng_env son idénticas; no se duplicaron.
+- **Respaldo/evidencia:** `../Humanoide-vla-evidence/20260916_VENDOR_ARCHIVE/`:
+  originales privados, before-docs, verification.json, importador y SHA256SUMS.
+  Hallazgo remoto previo: `20260916_SCENARIO1_DISCOVERY/`.
+- **Reversión:** retirar selectivamente los directorios/índices/importador nuevos
+  y estos enlaces, preservando cambios previos; robot sin cambios que revertir.
+- **Pendiente:** selección y cualificación de flujos para nuestra escena; no se
+  consideran resueltas por archivarlos. No se hizo commit ni push en esta tarea.
