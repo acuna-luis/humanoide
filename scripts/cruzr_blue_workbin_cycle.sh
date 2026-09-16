@@ -38,6 +38,7 @@ readonly HOME_SHA="ec2c187c2217ca2dc1767179fba570677f062527fa7070729e81b05141f89
 readonly DIRECT_HOME_SHA="50d819d6d6190280c6efee1dc275877362c3f7c807ec733fbc3c7ed217daed88"
 # Contrato del overlay MOT-01; mantener sincronizado con su instalador.
 # Reconocer un archivo no equivale a validar su trayectoria desde cualquier postura.
+readonly BODY_FIRST_HOME_SHA="e3d0656424a3611d89262ae645f127d975920fd09c437f9ef9c07725d69dc49c"
 readonly OPEN_HOME_SHA="05174d2b4cf003b9b1c5274cd445b0d4faefe4276c5fbe8e59e68e6b64ee8cbe"
 readonly OPEN_HOME_META_SHA="bfeab1c7a295b58cd96fddd20916fc3f7fe16bd8c8ad1e77720f48aad34ccc69"
 readonly CLAMP_META_SHA="531f02cd9b3922142d66944633d35f717f50b6bd5a9a17c9ac7d770edd010b8f"
@@ -309,7 +310,7 @@ remote_preflight() {
     "$MOTION_CONTAINER" "$ROS_CONTAINER" "$EXPECTED_HW_TYPE" \
     "$EXPECTED_IMAGE_FRAGMENT" "$HEAD_LOWER_SHA" "$ARMS_READY_SHA" \
     "$HOME_SHA" "$DIRECT_HOME_SHA" "$CLAMP_META_SHA" "$DEPOSIT_META_SHA" "$OPEN_META_SHA" \
-    "$MIN_BATTERY_SOC" "$posture_gate_b64" "$OPEN_HOME_SHA" "$OPEN_HOME_META_SHA" <<'REMOTE'
+    "$MIN_BATTERY_SOC" "$posture_gate_b64" "$OPEN_HOME_SHA" "$OPEN_HOME_META_SHA" "$BODY_FIRST_HOME_SHA" <<'REMOTE'
 set -Eeuo pipefail
 motion_container="$1"
 ros_container="$2"
@@ -326,6 +327,7 @@ min_soc="${12}"
 posture_gate_b64="${13}"
 open_home_sha="${14}"
 open_home_meta_sha="${15}"
+body_first_home_sha="${16}"
 
 [[ "$(hostname)" == "motion" ]] || {
   echo "HOST_ERROR=$(hostname)"
@@ -374,6 +376,10 @@ internal_home_path="$task_root/cruzr/home.xml"
 internal_home_sha="$(docker exec "$motion_container" sha256sum "$internal_home_path" | awk '{print $1}')"
 case "$internal_home_sha" in
   "$direct_home_sha") internal_home_variant=vendor-direct-6s ;;
+  "$body_first_home_sha")
+    check_hash "$open_home_meta_sha" /opt/walker/manipulation_meta_tasks/lib/libmeta_move.so
+    internal_home_variant=body-first-v4-20s
+    ;;
   "$open_home_sha")
     check_hash "$open_home_meta_sha" /opt/walker/manipulation_meta_tasks/lib/libmeta_move.so
     internal_home_variant=open-v3-20s
