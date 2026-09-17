@@ -1,5 +1,15 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+**2026-09-16 — HOME-BODY-FIRST-04:** instalado HOME de20 s con cuerpo a cero
+antes de apertura/bajada/cierre de brazos, por petición del propietario y con
+paro confirmado. Hash e3d06564…69dc49c; diez tests locales pasan. Sin acciones
+de movimiento; ensayo físico pendiente. Sustituye open_v3 como archivo vigente.
+Reinicio de manipulación completado y hash verificado; carga funcional pendiente:
+Motion espera ListControllers y CC WaitStartMotion. Mantener paro; recuperación
+por ciclo completo supervisado v0.2.0 antes de ensayo.
+[Receta, respaldo y estado](teleoperation/CRUZR_HOME_CUERPO_PRIMERO.md).
+
+
 **Relevo para la próxima sesión — 2026-09-14:** leer primero el [estado consolidado y secuencia de reanudación](vla/RELEVO_VLA_20260914.md). HOME→READY→ENTRY está probado por el operador; shadow funciona. TRIAL_02 abortó por timeout al cambiar a SDK, con cero frames y sin acuse; el controlador final es desconocido. Prioridad: consultar controlador y logs antes de reintentar. No repetir ensayos ni asumir estado físico a partir del historial.
 
 
@@ -2140,3 +2150,227 @@ READY ejecutado. La parada y la ejecución efectiva nuevas no se declaran probad
   y estos enlaces, preservando cambios previos; robot sin cambios que revertir.
 - **Pendiente:** selección y cualificación de flujos para nuestra escena; no se
   consideran resueltas por archivarlos. No se hizo commit ni push en esta tarea.
+
+## BOX-01 — Variante de caja única a estantería inclinada
+
+**2026-09-16 — BOX-01: variante de una caja a estantería inclinada, sólo diseño offline.**
+Medidas del operador: caja603×397×217 mm, base570 mm, destino1000→830 mm en600 mm,
+hueco1250×500 mm y tope presente. Perfil y cálculo de pendiente/envolvente creados;
+elevación30 mm propuesta, desencaje real pendiente. Sin XML ejecutable, instalación,
+SSH ni movimiento. Registro/IK/barrido y ensayo siguen pendientes.
+[Diseño, reproducción y límites](box_handling/SINGLE_BOX_INCLINED_RACK.md).
+
+Destino PC exclusivamente; fuentes y receta, dependencias Python3, verificación, backup y reversión en la ficha enlazada. Estado: preparado offline; NO instalado/cargado/probado.
+
+**2026-09-16 — BOX-01-EXEC: reparación del ejecutor de agarre derecho, sólo PC.**
+**ESTADO SUSTITUIDO: ejecución suspendida tras el incidente siguiente.**
+Se corrigió `scripts/force_separate_right_cruzr.sh`: carga compatible del setup
+UBTECH con `COLCON_TRACE` opcional, eliminación de un `done` huérfano, timeout
+de 45 s y comprobación explícita de `SUCCEED/status=4`. `bash -n` pasa; no se
+envió movimiento durante esa corrección. En el primer ensayo posterior, la
+preparación articular terminó y MetaClamp devolvió `7101003`: los logs indican
+`Transport vision is not running`, por lo que no hubo agarre. El script añade
+ahora el prerrequisito original `vision/enable_transport_vision_switch`, espera
+un segundo y valida por separado ambos resultados, sin reintentos. Esta segunda
+corrección está verificada sólo localmente; su ejecución física queda pendiente.
+Backup y diff en
+`../Humanoide-vla-evidence/20260916_FORCE_SEPARATE_FIX/`. Reversión: restaurar
+el archivo de `before/`; no hay estado remoto que revertir.
+
+**2026-09-16 — BOX-01-EXEC: suspensión inicial tras postura peligrosa (histórica).**
+El ensayo del operador llegó a flexión peligrosa del torso con E-stop y
+retirada de cajas. La versión que habilita visión NO queda validada.
+Destino exacto PC: `scripts/force_separate_right_cruzr.sh`; salida78 antes de
+SSH/ROSA, sin opción para omitirla. No se modificaron XML/YAML, límites,
+servicios o configuración remota. Después, el operador comunica reinicio y
+HOME; comprobación pasiva confirma HOME inmóvil, paros0/0, cargador0 y sin
+errores de actuadores. El agente no ejecutó ese reinicio ni HOME.
+Fuente/receta reproducible: copiar la versión suspendida del script; activación
+inmediata local sin instalación ni recarga. Verificación con sentinelas de
+clientes remotos y sintaxis Bash. Backup previo, logs y hashes en
+`../Humanoide-vla-evidence/20260916T084847Z_SEPARATE_RIGHT_INCIDENT/`.
+No restaurar operativamente el ejecutor anterior; sólo conservarlo para análisis.
+El bloqueo local no desregistra la tarea del robot: no llamar get1 mediante otro
+cliente. La reanudación requiere revisar coordenadas, torso y barrido corporal.
+[Ficha completa y evidencia](incidents/2026-09-16_SEPARATE_RIGHT_POSTURA_PELIGROSA.md).
+
+**2026-09-16 — BOX-01-EXEC / MOT-04: get1 exitoso tras corregir disposición.**
+Estado vigente: operador confirma base780mm, longitudinal590mm y lateral160mm
+hacia fuera; separate_right goal cf10d446-d7cc-49e7-85fd-6c8329920adc SUCCEED.
+Script modificado por el usuario en fffe749, sin bloqueo anterior; se preserva.
+Antes: agente ejecutó sólo cabeza−0,43rad y habilitó transport vision, ambos con
+SUCCEED; dos detecciones sin agarre. Sin XML/YAML instalado/recargado, sin cambios
+de límites ni movimiento de base. Visión queda habilitada. La postura del ensayo
+posterior no se restablece automáticamente, pues puede haber caja sujeta.
+Perfil PC actualizado a780mm y cálculo offline regenerado; no habilita depósitos.
+Destino exacto, fuentes/hashes, goals, activación, reproducción, verificación,
+backup/reversión y pendientes: [ficha del ensayo](box_handling/GET1_PROVEEDOR_ENSAYO_20260916.md).
+
+**2026-09-16 — BOX-01-EXEC, aclaración documental del mapa:** la dependencia
+original NavigationLocation fija utars_nav_map y abre/inicializa brazos al
+comenzar. Se documenta referencia, mismos puntos/ori­entación y continuación
+después de get1. Sin seleccionar/crear/renombrar mapas, cambiar XML ni ejecutar
+robot. Fuente y receta de adaptación pendiente en la ficha del ensayo.
+
+## MAP-GET1 / BOX-01-EXEC — Punto y ciclo de una caja
+
+**2026-09-16 — MAP-GET1 / BOX-01-EXEC:** `get1` guardado y releído en
+`utars_nav_map`: X0,543184372094m, Y−1,77098915045m, yaw−1,53310485885rad.
+Usuario completó localización; guardado sin movimientos del agente. `put1`
+aún falta. Ejecutor PC ampliado a separación→retroceso20cm→put1→depósito→HOME,
+con `--check` y abortos; sólo validación offline, sin ejecutar el ciclo.
+[Estado, reproducción, respaldo y límites](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md).
+
+## BOX-01-EXEC — Diagnóstico posterior Iceoryx
+
+**2026-09-16 — Incidente posterior: separación abortó con Iceoryx, salida137.**
+Tras navegar a get1, visión detectó la caja; RouDi retiró aplicaciones por
+heartbeats ausentes ~1,5s y Motion abortó con CHUNK_LOCKING_ERROR/SIGABRT.
+Docker reinició manipulación e IMU; no fue timeout45s. Operador confirma caja
+apoyada, robot inmóvil, sin pulsar paro; JointStates posterior con velocidades0.
+X_BaseBox0,810808m excede por10,808mm el límite0,8m, hallazgo distinto sin vínculo
+causal demostrado con el crash. Sólo diagnóstico; no se reinició ni movió nada.
+[Informe y continuación](incidents/2026-09-16_SEPARATE_RIGHT_137_ICEORYX.md).
+
+2026-09-16, actualización posterior: dos intentos get1 devolvieron
+ClampBoxOutOfReach7101100; X ligeramente fuera de0.8m y fallo IK101 conjunto.
+Pose posterior próxima a get1 (7,84mm); HOME intermedio no resolvió alcance.
+put1 ya existe. No hubo cambios remotos; diagnóstico adicional en
+`docs/incidents/2026-09-16_SEPARATE_RIGHT_137_ICEORYX.md`.
+
+## BOX-01-DEPOSIT-HEIGHT — 2026-09-16, diagnóstico sin cambios remotos
+
+**2026-09-16 — VERIFICADO: depósito WRC original no adaptado a superficie de 100 cm.**
+YAML instalado y trayectoria registrada ordenan Z de manos ≈1,10→0,65→0,45 m;
+`1.2` corresponde al torso, no a la estantería. Los 90 cm del documento son
+horizontales desde rueda derecha a parte inferior del mueble, no altura ni la
+misma referencia física que los 59 cm de recogida. No corregirlo acercando el
+mueble. Usuario comunica reinicio; HOME posterior no medido por el agente.
+Diagnóstico sin movimientos ni cambios remotos; variante de depósito pendiente.
+[Análisis y referencias](box_handling/DEPOSITO_WRC_ALTURA_100CM.md).
+
+2026-09-16 11:56 UTC — Tras reinicio completo comunicado por operador,
+comprobación sólo lectura `cruzr_boot_ready.sh --check` rc0: Motion3/3,
+cámaras2/2 en seis topics con marcas crecientes y RELEASE_TECHNICAL_CHECK=passed.
+Preflight del instalador confirma principal1, servo0, cargador0, MetaMove esperado
+y HOME body-first-v4-20s exacto. Se indica liberación supervisada manteniendo
+brazos abajo/vacíos y zona libre. Puede ejecutar HOME interno; liberación,
+fin de arranque y ensayo de trayectoria aún pendientes. Cero movimientos del
+agente. Evidencia: ../Humanoide-vla-evidence/20260916T115604.369673Z_INTERNAL-HOME-CHANGE/.
+
+## 2026-09-16 — BOX-01-AUTO-MAP: preparación automática del mapa
+
+IMPLEMENTADO EN PC; prueba con robot pendiente. Por petición del usuario,
+`scripts/force_separate_right_cruzr.sh` conserva navegación a get1 y añade:
+consulta de mapa/estado, validación de get1 y put1 guardados (orientación finita,
+modo logo_nav), map_set a utars_nav_map si es otro, relocation_start global
+si cambió el mapa o está FSM_WAITRELOCATE, y nueva consulta que exige mapa
+correcto y FSM_WAITNAVIGATE antes de navegar/agarrar. Si ya está listo, no carga
+ni relocaliza. Estados ocupados/desconocidos se rechazan; no se interrumpe una
+navegación ajena. Acciones de preparación limitadas a90s, una vez, sin reintento.
+Timeout o fallo no permite seguir; no se afirma que un timeout detenga el servicio.
+`--check` permanece sólo lectura: informa preparación pendiente con salida55.
+
+Uso normal, desde scripts: `./force_separate_right_cruzr.sh` (inicia el ciclo
+completo). No requiere instalar XML ni reiniciar el robot; el script envía la
+preparación al ejecutarse. Conserva depósito y HOME existentes sin cambiar alturas.
+Mapa fijo del escenario1: utars_nav_map, coherente con Navigation/navigation.xml
+del proveedor; no usa coordenadas manuales para fingir localización.
+No se ha ejecutado el ciclo ni cambiado mapas/estado remoto en esta intervención.
+
+Reversión: restaurar únicamente el script respaldado en /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260916T122654Z_AUTO_MAP,
+conservando cambios posteriores. No revierte modificaciones de mapas de futuras
+ejecuciones. Tests offline simulan ROSA/API; validación física pendiente.
+
+HOME-BODY-FIRST-04: usuario comunica «funciona» tras el reinicio/liberación;
+se registra éxito observado por operador, sin inferir validación desde cualquier
+postura ni nueva telemetría del agente.
+
+Verificación BOX-01-AUTO-MAP: 14 tests offline y bash -n correctos. SHA256 ejecutor: `94ec4bc7747d2fee1a46028bd942bf5ad3be2b56b00dbb86a5fae7001cbd34be`.
+
+## 2026-09-17 — Escenario1: puntos mapping_marker
+
+Consulta viva confirma get1 y put1 tipo mapping_marker, mode vacío. El bloqueo
+«get1 debe tener modo logo_nav» era una restricción del ejecutor, no fallo de
+localización: FSM_WAITNAVIGATE en el log del operador. Corrección PC en
+scripts/force_escenario1.sh: acepta logo_nav por ID, o mapping_marker/mode vacío
+mediante free_nav con point_x/point_y/point_yaw guardados, siguiendo el contrato
+ya implementado en cruzr_blue_workbin_map_route.sh. Ambos puntos se validan antes
+de mover; otros tipos, duplicados y coordenadas no finitas siguen rechazados.
+Velocidad free_nav: x0,18m/s, y0,01m/s, yaw0,20rad/s. Sin cambios a mapa ni puntos.
+Preserva resultado final estricto y parada de navegación ante fallo.
+No se ejecuta ciclo físico en esta revisión. Respaldo ejecutor/tests: /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260917T085737Z_SCENARIO1_MARKERS.
+Reversión selectiva desde ese respaldo; no modifica estado del robot.
+
+Verificación 17-09: 17 tests offline y sintaxis Bash pasan; --check vivo rc0, utars_nav_map/FSM_WAITNAVIGATE y get1/put1 disponibles. Cero navegación o manipulación.
+
+## 17-09 — Recuperación de localización y corrección del diagnóstico
+
+Usuario autoriza recuperar localización con robot confirmado inmóvil. Se envió
+una sola relocation_start global para utars_nav_map: goal
+ccd4e4bb-1e67-4914-81e5-e6f6ce38724f, NAVIGATION_READY/status4. No navegación,
+agarre, HOME, reinicio ni cambios de archivos remotos. Estado volátil de
+localización modificado; no hay reversión automática a una pose antigua.
+
+Dos publicadores TRANSIENT_LOCAL en /nav/robot_pose. Consulta ROS2 por defecto
+recibía muestra retenida antigua cercana a put1. Consulta ROSA nativa y ROS2 con
+--qos-durability volatile reciben poses nuevas coincidentes: x0.095318657,
+y0.666315422; stamps1789635912.933→1789635942.574→1789635945.434.
+Posición actual a≈8,08mm de get1, orientación≈0,39° de diferencia.
+Esto corrige la inferencia anterior de localización totalmente congelada;
+no demuestra que antes de relocalizar no hubiera ya una fuente válida.
+VSLAM auxiliar sigue LOCATION_LOST y la navegación2D había registrado FINISH.
+No aceptar ese resultado contradictorio sin verificar llegada con pose fresca.
+El script conserva rechazo estricto; ajustar interpretación/validación de llegada
+es pendiente separado, no se repitió el ciclo. Evidencia: /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260917T090350Z_RELOCALIZE.
+Receta ejecutada y respuesta completas en relocation.json; consultas de fuentes
+nativa/volátil en native_pose*.json y pose_volatile.json.
+
+## 17-09 — BOX-01-ARRIVAL: éxito condicionado a llegada medida
+
+Modificado force_escenario1.sh a petición del usuario. VSLAM_LOCATION_LOST sólo
+pasa el filtro inicial si status4 y dmsg empieza navigation_start SUCCEEDED;
+no concede continuación por sí solo. Después de toda navegación, incluso con
+resultado normal, se releen mapa/WAITNAVIGATE y dos poses ROSA nuevas mediante
+QoS volatile. Se exige marco map, tiempos posteriores al inicio de lectura
+(tolerancia0,1s), edad≤2s, avance temporal, cuaternión válido, coordenadas finitas,
+error≤0,05m y yaw≤3°. Las dos muestras deben cumplir. Si no, aborta y solicita
+navigation_stop, sin agarre/depósito/HOME ni reintento. Nunca acepta otros errores.
+No certifica despeje físico ni exactitud absoluta de la localización.
+
+Se conservan coordenadas esperadas también para logo_nav; no se envía ese
+metadato interno al servidor. Ambos destinos usan idéntica comprobación.
+19 tests offline pasan, incluidos aviso auxiliar con llegada válida, posición
+antigua, posición incorrecta y orientación incorrecta; Bash sintaxis correcta.
+Ensayo de lectura del verificador real en get1: dos muestras nuevas, error8mm,
+yaw0,388°, LLEGADA_VERIFICADA=get1. No se envió navegación/manipulación ni se
+cambió el mapa. Ejecución del ciclo corregido aún pendiente del operador.
+
+Cambio PC; no requiere instalar ni recargar robot. Respaldo, prueba viva y
+reversión selectiva del script/tests: /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260917T091003Z_ARRIVAL_CHECK. SHA256 ejecutor: 9a212c3b26c750d86cec3a9af9c34d2d55d24677d3d07e2c4ea9366ebaf6bb46.
+
+## 2026-09-17 — BOX-01-WAITSETMAP: carga inicial después del encendido
+
+**OBSERVADO en salida aportada por el operador:** mapa activo vacío y
+FSM_WAITSETMAP; el preflight abortó con54 antes de cargar el mapa. No es
+prueba de navegación ocupada ni del fallo anterior ClampBoxOutOfReach.
+**IMPLEMENTADO en PC:** se admite explícitamente FSM_WAITSETMAP para preparar
+el mapa. En ejecución normal se llama map_set a utars_nav_map también cuando
+el nombre ya coincide pero el FSM espera carga; después relocalización global
+y comprobación independiente de mapa/FSM antes de navegar. Estados ocupados o
+desconocidos siguen rechazados. --check permanece de lectura y devuelve55 si
+requiere preparación. Se conserva HOME comentado por el operador.
+
+Destino/fuente reproducible: scripts/force_escenario1.sh en el PC; se transmite
+por SSH al ejecutarlo, sin instalación remota. SHA256: `6e72819ba953a2556691971c93b673de9c43fc9e0482615f8210960608ba5236`.
+Depende de los endpoints ROSA y API de mapas existentes y de get1/put1 válidos.
+Backup anterior, incluidos cambios pendientes y SHA256SUMS: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260917T104341Z_WAITSETMAP_FIX`.
+Reversión: retirar únicamente FSM_WAITSETMAP de la admisión y de la condición
+map_set, conservando los demás cambios del operador. Tests asociados en
+scripts/test_force_separate_right_flow.py; ejecutar `bash -n scripts/force_escenario1.sh`
+y `python3 -m unittest scripts/test_force_separate_right_flow.py`.
+No se ha conectado al robot ni enviado mapa, localización o movimiento durante
+esta corrección. Instalación/carga/prueba física remota: PENDIENTES; siguiente
+paso, verificar la preparación en la próxima ejecución supervisada.
+
+Validación local: sintaxis Bash correcta y 23 pruebas offline superadas (43,718s), incluidas carga inicial, --check sin escrituras, fallo de carga y estado desconocido. No constituye ensayo físico.

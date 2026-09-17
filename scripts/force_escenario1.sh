@@ -111,7 +111,9 @@ try:
         raise ValueError('Falta un único resultado final exitoso status=4')
     result = ast.literal_eval(matches[0][0])
     desc = result['state']['desc']
-    if not isinstance(desc, str) or re.search(r'ERROR|FAIL|ABORT|CANCEL|LOST|OBSTACLE', desc, re.I):
+    auxiliary_lost = (kind == 'navigation' and desc == 'VSLAM_LOCATION_LOST'
+                      and result.get('dmsg','').startswith('navigation_start SUCCEEDED'))
+    if not isinstance(desc, str) or (re.search(r'ERROR|FAIL|ABORT|CANCEL|LOST|OBSTACLE', desc, re.I) and not auxiliary_lost):
         raise ValueError('Estado de error: ' + str(desc))
     if kind == 'motion' and (desc != 'SUCCEED' or result['state']['state'] != 1101001):
         raise ValueError('Motion no informó SUCCEED/1101001')
@@ -157,11 +159,11 @@ check_map_and_destination() {
     current_state="$(validate_result state_value "$NAV_OUTPUT")"
     # No cambiar mapa ni relocalizar mientras navega, mapea o está en un estado desconocido.
     case "$current_state" in
-        FSM_WAITNAVIGATE|FSM_WAITRELOCATE) ;;
+        FSM_WAITNAVIGATE|FSM_WAITRELOCATE|FSM_WAITSETMAP) ;;
         *) printf 'Navegación ocupada o estado no admitido: %s\n' "$current_state" >&2; return 54 ;;
     esac
-    python3 - <<'PY_POINT'
-import json, math, urllib.request
+    POINT_TARGETS="$(python3 - <<'PY_POINT'
+import json, math, urllib.request, sys
 request = urllib.request.Request(
     'http://192.168.11.3:30023/map/get/utars_nav_map', data=b'{}',
     headers={'Content-Type': 'application/json'}, method='POST')
@@ -169,18 +171,30 @@ response = json.loads(urllib.request.urlopen(request, timeout=8).read())
 if response.get('code') != 200:
     raise SystemExit('No se pudo consultar el mapa: ' + str(response.get('code')))
 points = json.loads(response['message'])['umap']['target_points']
+targets = {}
 for name in ('get1', 'put1'):
     selected = [p for p in points if p.get('id') == name]
     if len(selected) != 1:
         raise SystemExit('Falta un ' + name + ' único en utars_nav_map. Guárdelo antes del agarre.')
     p = selected[0]
-    if p.get('mode') != 'logo_nav':
-        raise SystemExit(name + ' debe tener modo logo_nav')
+    marker = p.get('type') == 'mapping_marker' and p.get('mode') == ''
+    if p.get('mode') != 'logo_nav' and not marker:
+        raise SystemExit(name + ' modo/tipo no permitido: ' + repr((p.get('mode'),p.get('type'))))
     if not all(type(p.get(k)) in (int, float) and math.isfinite(p[k])
                for k in ('point_x', 'point_y', 'point_yaw')):
         raise SystemExit(name + ' tiene coordenadas/orientación inválidas')
-    print(name.upper() + '_DISPONIBLE=' + json.dumps({k: p[k] for k in ('point_x', 'point_y', 'point_yaw')}))
+    print(name.upper() + '_DISPONIBLE=' + json.dumps({k: p[k] for k in ('point_x', 'point_y', 'point_yaw')}), file=sys.stderr)
+    target = {'map_name':'utars_nav_map', 'mode':'logo_nav', 'id':name}
+    if marker:
+        target = dict(map_name='utars_nav_map', mode='free_nav', level=1,
+                      **{k:p[k] for k in ('point_x','point_y','point_yaw')},
+                      speed={'linear':{'x':0.18,'y':0.01,'z':0.0},
+                             'angular':{'x':0.0,'y':0.0,'z':0.20}})
+    target['_expected_pose'] = {k:p[k] for k in ('point_x','point_y','point_yaw')}
+    targets[name] = target
+print(json.dumps(targets))
 PY_POINT
+)" || return
     if [[ "$MODE" == check ]]; then
         [[ "$current_map" == utars_nav_map && "$current_state" == FSM_WAITNAVIGATE ]] || {
             printf 'PREPARACION_REQUERIDA: al ejecutar se cargará utars_nav_map y/o se localizará. --check no cambia estado.\n' >&2
@@ -188,7 +202,7 @@ PY_POINT
         }
         return 0
     fi
-    if [[ "$current_map" != utars_nav_map ]]; then
+    if [[ "$current_map" != utars_nav_map || "$current_state" == FSM_WAITSETMAP ]]; then
         STAGE=map_set
         nav_query map_set '{"map_name":"utars_nav_map"}' 90
         validate_result map_set "$NAV_OUTPUT"
@@ -229,33 +243,79 @@ run_task_once() {
     printf 'Acción finalizada correctamente: %s\n' "$task_name"
 }
 
-navigate_get1() {
-    local output
-    STAGE=navigation_get1
+verify_arrival() {
+    python3 - "$POINT_TARGETS" "$1" <<'PY_ARRIVAL'
+import json, math, subprocess, sys, time
+expected = json.loads(sys.argv[1])[sys.argv[2]]['_expected_pose']
+previous = None
+for sample in range(2):
+    started = time.time()
+    try:
+        r = subprocess.run(['rosa','topic','echo','--once','--no-daemon',
+                            '--qos-durability','volatile','/nav/robot_pose'],
+                           capture_output=True,text=True,timeout=7)
+        if r.returncode: raise ValueError('No se recibió pose actual')
+        pose = json.loads(r.stdout)
+        stamp = pose['header']['stamp']
+        sec, ns = stamp['sec'], stamp['nanosec']
+        if type(sec) is not int or type(ns) is not int or not 0 <= ns < 1000000000:
+            raise ValueError('Marca temporal inválida')
+        timestamp = sec + ns/1e9
+        now = time.time()
+        if not started - 0.1 <= timestamp <= now + 0.5 or now-timestamp > 2:
+            raise ValueError('Pose antigua o reloj incoherente')
+        if previous is not None and timestamp <= previous:
+            raise ValueError('La marca temporal no avanza')
+        previous = timestamp
+        if pose['header']['frame_id'] != 'map': raise ValueError('Marco distinto de map')
+        p,q = pose['pose']['position'],pose['pose']['orientation']
+        values = [p[k] for k in ('x','y','z')] + [q[k] for k in ('x','y','z','w')]
+        if not all(type(v) in (int,float) and math.isfinite(v) for v in values):
+            raise ValueError('Pose no finita')
+        norm = math.sqrt(sum(q[k]**2 for k in ('x','y','z','w')))
+        if abs(norm-1) > 0.01: raise ValueError('Cuaternión inválido')
+        q = {k:v/norm for k,v in q.items()}
+        yaw = math.atan2(2*(q['w']*q['z']+q['x']*q['y']),1-2*(q['y']**2+q['z']**2))
+        distance = math.hypot(p['x']-expected['point_x'],p['y']-expected['point_y'])
+        angle = abs(math.atan2(math.sin(yaw-expected['point_yaw']),math.cos(yaw-expected['point_yaw'])))
+        if distance > 0.05 or angle > math.radians(3):
+            raise ValueError('Fuera del destino: %.4fm / %.3fgrados' % (distance,math.degrees(angle)))
+        print('LLEGADA_%s_MUESTRA_%d=%.4fm,%.3fgrados; stamp=%.9f' %
+              (sys.argv[2],sample+1,distance,math.degrees(angle),timestamp))
+    except (ValueError,KeyError,TypeError,subprocess.TimeoutExpired) as exc:
+        raise SystemExit('LLEGADA_NO_VERIFICADA: '+str(exc))
+print('LLEGADA_VERIFICADA='+sys.argv[2])
+PY_ARRIVAL
+}
+
+navigate_point() {
+    local point="$1" output goal
+    STAGE="navigation_$point"
+    goal="$(python3 - "$POINT_TARGETS" "$point" <<'PY_GOAL'
+import json,sys
+target=json.loads(sys.argv[1])[sys.argv[2]]
+target.pop('_expected_pose')
+print(json.dumps({'command':'navigation_start','arg_json':json.dumps({'target_point':target})}))
+PY_GOAL
+)"
     NAVIGATION_ACTIVE=1
-    printf '\nNavegando a get1 en utars_nav_map...\n'
-    output="$(timeout 180 rosa action send_goal /vnav/task/command unav_task_msgs/action/Task \
-        '{"command":"navigation_start","arg_json":"{\"target_point\":{\"map_name\":\"utars_nav_map\",\"mode\":\"logo_nav\",\"id\":\"get1\"}}"}' 2>&1)" || {
+    printf '\nNavegando a %s en utars_nav_map...\n' "$point"
+    output="$(timeout 180 rosa action send_goal /vnav/task/command unav_task_msgs/action/Task "$goal" 2>&1)" || {
         printf '%s\n' "$output" >&2; return 53;
     }
     printf '%s\n' "$output"
     validate_result navigation "$output"
+    STAGE="verify_arrival_$point"
+    nav_query get_map_name '{}' 12
+    validate_result map "$NAV_OUTPUT"
+    nav_query check_state '{}' 12
+    validate_result state "$NAV_OUTPUT"
+    verify_arrival "$point"
     NAVIGATION_ACTIVE=0
 }
 
-navigate_put1() {
-    local output
-    STAGE=navigation_put1
-    NAVIGATION_ACTIVE=1
-    printf '\nNavegando a put1 en utars_nav_map...\n'
-    output="$(timeout 180 rosa action send_goal /vnav/task/command unav_task_msgs/action/Task \
-        '{"command":"navigation_start","arg_json":"{\"target_point\":{\"map_name\":\"utars_nav_map\",\"mode\":\"logo_nav\",\"id\":\"put1\"}}"}' 2>&1)" || {
-        printf '%s\n' "$output" >&2; return 53;
-    }
-    printf '%s\n' "$output"
-    validate_result navigation "$output"
-    NAVIGATION_ACTIVE=0
-}
+navigate_get1() { navigate_point get1; }
+navigate_put1() { navigate_point put1; }
 
 check_map_and_destination
 if [[ "$MODE" == check ]]; then

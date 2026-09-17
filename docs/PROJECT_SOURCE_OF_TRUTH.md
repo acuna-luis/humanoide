@@ -1,5 +1,122 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**17-09 — Corregida preparación desde FSM_WAITSETMAP:** el estado inicial sin mapa ya llega a map_set y relocalización, con confirmación posterior obligatoria. --check conserva sólo lectura/salida55. HOME comentado del operador preservado. Sólo cambio PC; prueba remota pendiente. [Registro](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md).
+
+**2026-09-17 12:30 Europe/Madrid — BOOT-01, comprobación previa de liberación VERIFICADA.**
+`scripts/cruzr_boot_ready.sh --check` terminó rc0: Motion3/3, seis cámaras
+2/2 con marcas crecientes y `RELEASE_TECHNICAL_CHECK=passed; movement_commands=0`.
+El contrato verifica primera WaitEStopRelease e identidad CC estable, principal1,
+servo0 y cargador0. Operador confirma brazos abajo/estables, abrazaderas vacías,
+sin contacto, recorrido libre, ruedas bloqueadas y persona junto al paro.
+Se indica liberar para continuar el encendido; puede comenzar HOME interno.
+Liberación, autodiagnóstico y fin del arranque PENDIENTES. Sólo lectura remota,
+sin reinicios ni comandos de movimiento; cambios locales exclusivamente documentales.
+Evidencia: salida del check y confirmación presencial en esta sesión.
+
+
+**17-09 — Llegada verificada añadida al ejecutor:** VSLAM_LOCATION_LOST auxiliar requiere status4/dmsg éxito y dos poses frescas en destino (5cm/3°), mapa/FSM confirmados; mismo gate para éxitos normales. 19 tests y lectura real get1 pasan (8mm/0,388°). Sin ejecutar ciclo. [Detalle](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md).
+
+**17-09 — Corrección diagnóstico/localización:** relocalización global autorizada devuelve READY; poses nuevas nativa/volátil coinciden cerca de get1 (8mm). Había dos publicadores y la lectura previa recogía muestra retenida antigua. No demuestra congelación global. Sin navegación/agarre; interpretación de resultado VSLAM auxiliar pendiente en ejecutor. [Detalles](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md).
+
+**17-09 — get1 interrumpido:** FINISH del planificador seguido de LOCATION_LOST auxiliar VSLAM; pose publicada obsoleta >10min y cercana a put1. Llegada no demostrada; no reintento ni movimiento del agente. [Diagnóstico](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md).
+
+**2026-09-17 — Corregido force_escenario1.sh:** get1/put1 reales son mapping_marker con mode vacío; navegación por pose free_nav conservando orientación, sin alterar mapa. Tipos desconocidos rechazados. [Detalle](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md).
+
+**16-09, anillo rojo intermitente:** código02039005 (pocas características coincidentes al localizar), correlacionado con warning-red. Última transición consultada volvió a logo; sin cambios remotos. [Diagnóstico](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md).
+
+**2026-09-16 — BOX-01-AUTO-MAP:** ejecutor prepara utars_nav_map y localización global cuando hace falta antes de get1; --check sólo lectura. Cambio PC, sin ejecutar en robot. [Detalle](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md). Usuario confirma funcionamiento del HOME cuerpo primero tras reinicio.
+
+**Arranque posterior HOME-BODY-FIRST-04: 16-09 11:56 UTC.** Check técnico de liberación superado; hash nuevo y paro pulsado verificados. Liberación supervisada indicada; fin de arranque y prueba física pendientes. Sin movimientos del agente.
+
+**2026-09-16 — HOME-BODY-FIRST-04:** instalado HOME de20 s con cuerpo a cero
+antes de apertura/bajada/cierre de brazos, por petición del propietario y con
+paro confirmado. Hash e3d06564…69dc49c; diez tests locales pasan. Sin acciones
+de movimiento; ensayo físico pendiente. Sustituye open_v3 como archivo vigente.
+Reinicio de manipulación completado y hash verificado; carga funcional pendiente:
+Motion espera ListControllers y CC WaitStartMotion. Mantener paro; recuperación
+por ciclo completo supervisado v0.2.0 antes de ensayo.
+[Receta, respaldo y estado](teleoperation/CRUZR_HOME_CUERPO_PRIMERO.md).
+
+
+**2026-09-16 — VERIFICADO: depósito WRC original no adaptado a superficie de 100 cm.**
+YAML instalado y trayectoria registrada ordenan Z de manos ≈1,10→0,65→0,45 m;
+`1.2` corresponde al torso, no a la estantería. Los 90 cm del documento son
+horizontales desde rueda derecha a parte inferior del mueble, no altura ni la
+misma referencia física que los 59 cm de recogida. No corregirlo acercando el
+mueble. Usuario comunica reinicio; HOME posterior no medido por el agente.
+Diagnóstico sin movimientos ni cambios remotos; variante de depósito pendiente.
+[Análisis y referencias](box_handling/DEPOSITO_WRC_ALTURA_100CM.md).
+
+
+**2026-09-16 — Incidente posterior: separación abortó con Iceoryx, salida137.**
+Tras navegar a get1, visión detectó la caja; RouDi retiró aplicaciones por
+heartbeats ausentes ~1,5s y Motion abortó con CHUNK_LOCKING_ERROR/SIGABRT.
+Docker reinició manipulación e IMU; no fue timeout45s. Operador confirma caja
+apoyada, robot inmóvil, sin pulsar paro; JointStates posterior con velocidades0.
+X_BaseBox0,810808m excede por10,808mm el límite0,8m, hallazgo distinto sin vínculo
+causal demostrado con el crash. Sólo diagnóstico; no se reinició ni movió nada.
+[Informe y continuación](incidents/2026-09-16_SEPARATE_RIGHT_137_ICEORYX.md).
+
+**2026-09-16 — MAP-GET1 / BOX-01-EXEC:** `get1` guardado y releído en
+`utars_nav_map`: X0,543184372094m, Y−1,77098915045m, yaw−1,53310485885rad.
+Usuario completó localización; guardado sin movimientos del agente. `put1`
+aún falta. Ejecutor PC ampliado a separación→retroceso20cm→put1→depósito→HOME,
+con `--check` y abortos; sólo validación offline, sin ejecutar el ciclo.
+[Estado, reproducción, respaldo y límites](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md).
+
+**2026-09-16 — VIGENTE: get1 del proveedor probado con disposición corregida.**
+Operador confirma éxito físico de `Singapore/separate_right_cruzr`, goal
+`cf10d446-d7cc-49e7-85fd-6c8329920adc`, SUCCEED/state1101001/status4.
+Base780mm, longitudinal590mm y lateral160mm hacia fuera de la caja.
+Esto sustituye el estado suspendido para este ensayo concreto. No generaliza
+al ciclo completo ni borra el incidente anterior. El usuario cambió el ejecutor
+(`fffe749`), que ya no contiene el bloqueo; se conserva ese cambio.
+El agente había preparado sólo cabeza y visión, ambos con éxito, sin agarrar.
+Siguiente en XML: mobot_back_20 → navegación put1 → depósito inferior con
+apertura incluida → HOME. No repetir get1 ni arrancar desde cero para continuar.
+[Ensayo, estado y secuencia completa](box_handling/GET1_PROVEEDOR_ENSAYO_20260916.md).
+
+**Mapa del escenario1 (lectura del original):** NavigationLocation fija
+`utars_nav_map` en get_map_name/map_set y al inicio llama open_arm_before_home.
+Guardar get1/put1 en ese mapa o adaptar la referencia para otro nombre; la
+variable PC CRUZR_MAP_NAME no parametriza este XML. No reiniciar el árbol completo
+con caja sujeta. [Detalle](box_handling/GET1_PROVEEDOR_ENSAYO_20260916.md#mapa-y-puntos).
+
+**2026-09-16 — HISTÓRICO: incidente y suspensión inicial de separate_right (BOX-01-EXEC).**
+Tras habilitar visión, `Singapore/separate_right_cruzr` llevó el robot a una
+flexión peligrosa del torso; operador accionó el E-stop y retiró las cajas.
+La cámara guardada identifica la caja superior derecha. Motion generó puntos
+de mano Z≈0,52–0,54 m en su marco y el task stack no incluye una restricción
+explícita de postura del torso. Comprobaciones de colisión desactivadas en la
+configuración leída. El 7101108 aparece ~3,125 s después del E-stop registrado;
+no atribuirle automáticamente la causa previa ni ese tiempo a frenado físico.
+El wrapper se bloqueó inicialmente con código78; esa versión fue sustituida
+posteriormente por el operador. La recomendación anterior de repetir tras activar
+visión queda retirada. **Estado posterior:** operador reinició y confirma HOME,
+E-stop liberado; lectura nueva inmóvil, 20 actuadores sin error, paros0/0 y
+cargador0. Cero movimientos/rearmes/reinicios del agente. Marcas del reloj del
+robot y PC distintas; no mezclarlas.
+[Incidente, evidencia, suspensión y pendientes](incidents/2026-09-16_SEPARATE_RIGHT_POSTURA_PELIGROSA.md).
+
+**2026-09-16 — BOX-01: variante de una caja a estantería inclinada, sólo diseño offline.**
+Medidas del operador: caja603×397×217 mm, base570 mm, destino1000→830 mm en600 mm,
+hueco1250×500 mm y tope presente. Perfil y cálculo de pendiente/envolvente creados;
+elevación30 mm propuesta, desencaje real pendiente. Sin XML ejecutable, instalación,
+SSH ni movimiento. Registro/IK/barrido y ensayo siguen pendientes.
+[Diseño, reproducción y límites](box_handling/SINGLE_BOX_INCLINED_RACK.md).
+
+El ejecutor local `scripts/force_separate_right_cruzr.sh` para la tarea original
+`Singapore/separate_right_cruzr` quedó reparado el 2026-09-16: el setup UBTECH
+se carga sin `nounset`, se eliminó un `done` inválido y se comprueba
+`SUCCEED/status=4` con timeout y sin reintento. El primer ensayo preparó cabeza
+y brazos pero no agarró: MetaClamp devolvió `7101003` porque la visión de
+transporte no estaba iniciada. El flujo completo sí la habilita después de
+navegar. El ejecutor directo llama ahora primero a
+`vision/enable_transport_vision_switch`; el incidente y el ensayo exitoso
+posteriores constan arriba. Detalle y límites en
+`docs/box_handling/SINGLE_BOX_INCLINED_RACK.md`.
+
+
 **2026-09-16 — Archivo local de flujos y documentos UBTECH (VENDOR-01).**
 Por petición del propietario se incorporaron 54 XML principales de Cruzr S2
 (incluido el placeholder), tres subárboles y un YAML; para los dos escenarios
@@ -5234,3 +5351,9 @@ Reversión selectiva de fuentes desde backup; no se recomienda volver al monitor
 que admite combinaciones fuera del segmento. Estado físico sólo leído: cabeza
 bajada alrededor−0,430665rad, resto próximo a HOME, inmóvil. No VLA físico ni
 READY ejecutado. La parada y la ejecución efectiva nuevas no se declaran probadas.
+
+2026-09-16, actualización posterior: dos intentos get1 devolvieron
+ClampBoxOutOfReach7101100; X ligeramente fuera de0.8m y fallo IK101 conjunto.
+Pose posterior próxima a get1 (7,84mm); HOME intermedio no resolvió alcance.
+put1 ya existe. No hubo cambios remotos; diagnóstico adicional en
+`docs/incidents/2026-09-16_SEPARATE_RIGHT_137_ICEORYX.md`.

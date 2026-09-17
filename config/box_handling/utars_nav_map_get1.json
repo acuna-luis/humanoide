@@ -1,0 +1,45 @@
+{
+  "map_name": "utars_nav_map",
+  "frame": "map",
+  "units": {
+    "point_x": "m",
+    "point_y": "m",
+    "point_yaw": "rad"
+  },
+  "map_data_canonical_sha256": "249a2b6b02496d67ac5a2c0bee0e44f1406d42fc593db018aa68994aeef16ec5",
+  "target_point": {
+    "id": "get1",
+    "level": 2,
+    "mark_point": {
+      "accuracy_x": 0.1,
+      "accuracy_y": 0.1,
+      "accuracy_yaw": 2.0,
+      "id": "false",
+      "point_x": 0.0,
+      "point_y": 0.0,
+      "point_yaw": 0.0,
+      "speed_x": 0.3,
+      "speed_y": 0.05,
+      "speed_yaw": 0.3
+    },
+    "mode": "logo_nav",
+    "point_x": 0.543184372094,
+    "point_y": -1.77098915045,
+    "point_yaw": -1.53310485885,
+    "speed_x": 0.3,
+    "speed_y": 0.05,
+    "speed_yaw": 0.3,
+    "type": "hand_marker",
+    "typepoint": {
+      "keyframe_index": -1,
+      "offset_theta": 0.0,
+      "offset_x": 0.0,
+      "offset_y": 0.0
+    }
+  },
+  "task_point": {
+    "id": "get1",
+    "work_type": "work-point"
+  },
+  "status": "saved_readback_verified_navigation_not_tested"
+}

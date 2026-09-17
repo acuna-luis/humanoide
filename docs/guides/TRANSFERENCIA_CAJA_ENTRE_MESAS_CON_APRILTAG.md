@@ -1,5 +1,29 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**2026-09-16 — VIGENTE: get1 exitoso comunicado con montaje corregido.**
+Base780mm, longitudinal590mm, lateral160mm hacia fuera. El usuario ejecutó
+separate_right: SUCCEED/status4 y éxito físico. Siguiente: retroceso20cm,
+navegación put1, depósito/apertura, HOME. Resto del escenario aún no probado.
+[Ensayo y secuencia](../box_handling/GET1_PROVEEDOR_ENSAYO_20260916.md).
+
+**2026-09-16 — HISTÓRICO: suspensión tras postura peligrosa.**
+El ensayo directo de `Singapore/separate_right_cruzr` produjo flexión peligrosa
+del torso. Operador pulsó E-stop y retiró cajas; luego reinició y confirmó HOME.
+Lectura posterior: inmóvil, 20 actuadores sin error, paros0/0 y cargador0.
+El wrapper se bloqueó con código78 y el usuario lo cambió posteriormente;
+ya no conserva ese bloqueo. Los 7101108 del incidente se
+registran después del paro; no prueban la causa inicial. Cero movimientos del
+agente durante el diagnóstico.
+[Incidente y pendientes](../incidents/2026-09-16_SEPARATE_RIGHT_POSTURA_PELIGROSA.md).
+
+**2026-09-16 — BOX-01: variante de una caja a estantería inclinada, sólo diseño offline.**
+Medidas del operador: caja603×397×217 mm, base570 mm, destino1000→830 mm en600 mm,
+hueco1250×500 mm y tope presente. Perfil y cálculo de pendiente/envolvente creados;
+elevación30 mm propuesta, desencaje real pendiente. Sin XML ejecutable, instalación,
+SSH ni movimiento. Registro/IK/barrido y ensayo siguen pendientes.
+[Diseño, reproducción y límites](../box_handling/SINGLE_BOX_INCLINED_RACK.md).
+
+
 **2026-09-09 — VERIFICADO: recuperación tras depósito completada y HOME medido:**
 `cruzr_recover_to_home.sh --run --yes` terminó exit0. Retirada única de
 0,492031 m, lateral -0,002139 m y giro 0,471 grados; después tarea vendor

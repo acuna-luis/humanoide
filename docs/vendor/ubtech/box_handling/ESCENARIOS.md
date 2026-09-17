@@ -31,6 +31,12 @@ XML identificado por secuencia: utars_task_canada_wrc_20250930_start.xml.
 | get3 | Centro rueda derecha a 74 cm de parte inferior de estantería y 57 cm de centro de pata niveladora derecha |
 | put3 | A 56 cm del frente de mesa, centrado; referencia exacta en robot no explicitada |
 
+La figura get1 coloca la rueda derecha **por fuera del lateral derecho de la
+caja**, no16cm hacia su centro. Los59cm son la componente longitudinal desde
+el centro de rueda. Con base780mm y lateral exterior, el operador aportó un
+ensayo get1 exitoso. Los780mm son su medida, no una cota literal del SOP.
+[Ensayo y tareas siguientes](../../../box_handling/GET1_PROVEEDOR_ENSAYO_20260916.md).
+
 Secuencia: extraer lateralmente hacia la derecha la caja superior derecha
 (get1→put1); levantar directamente la caja superior izquierda (get2→put2);
 recoger caja del nivel superior y llevarla a la mesa (get3→put3).
