@@ -1,5 +1,30 @@
 # HOME: cuerpo a cero antes de los brazos
 
+## Vigente: v7 (13,45 s), 2026-09-18
+
+`cruzr/home` = [`cruzr_internal_home_body_first_v7_13s.xml`](../../scripts/teleoperation/tasks/cruzr_internal_home_body_first_v7_13s.xml)
+(SHA `1e6e2fb7…`). Primer tramo (3,75 s): cabeza/elevador/cintura a cero y, en
+paralelo, cada brazo en secuencia codo −0,03 rad (1 s) y apertura de hombro
+−0,2 rad (1,8 s); bajada abiertos a roll −0,3 en 7 s; cierre a cero en 2,7 s.
+Historia, barridos, ensayos y backups: MOT-01 en
+[`SYSTEM_CUSTOMIZATIONS.md`](../SYSTEM_CUSTOMIZATIONS.md) e incidentes del 18-09.
+
+**Instalar/reinstalar** (`cruzr_install_internal_home_body_first.py`):
+
+1. `--check` (local).
+2. Con el robot en HOME y el **E-stop liberado**: `--measure-home` (sólo lectura;
+   con el paro pulsado Motion no publica posiciones).
+3. Sin lanzar ninguna tarea, pulsar el E-stop: `--preflight` → `--install`
+   (exige registro de HOME < 30 min, mismo arranque y ninguna tarea después).
+4. Apagado/encendido con E-stop pulsado; liberar tras «Ready…».
+
+**Límite conocido:** el paso de codos no cubre otras articulaciones. Si una queda
+fuera de su límite blando (p. ej. tras un E-stop en plena tarea), el HOME de
+arranque falla sin mover ese brazo: recuperar con una orden puntual sólo sobre
+esa articulación, verificada y supervisada.
+
+## Histórico: v4 (20 s), 2026-09-16
+
 2026-09-16, Europe/Madrid — HOME-BODY-FIRST-04.
 Petición del propietario: modificar y cargar cruzr/home. Operador confirma
 E-stop pulsado y HOME; lectura previa verifica principal1, servo0, cargador0,

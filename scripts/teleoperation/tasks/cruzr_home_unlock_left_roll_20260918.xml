@@ -1,0 +1,10 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <!-- One-shot recovery for the 2026-09-18 18:52 CST state only: failed boot
+             HOME v7 with L_shoulder_roll 0.1084 rad above its 0.0987 soft limit.
+             Moves only that joint 0.05 rad inward; then run cruzr/home (v7). -->
+        <Sequence name="unlock_left_shoulder_roll">
+            <Action ID="MetaMove" type="arm" location="left" duration="1.500" delta_joint_angles="0; -0.05; 0; 0; 0; 0; 0" />
+        </Sequence>
+    </BehaviorTree>
+</root>

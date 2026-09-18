@@ -108,11 +108,13 @@ no convierte automáticamente los ajustes anteriores en requisitos nuevos.
 | BOOT-01 | Espera preventiva de Control Center | Vision: host + compose | Revisar contrato/binario; aplicar al compose nuevo |
 | BOOT-02 | Voz inglesa una vez por encendido | Vision: host + systemd | Reinstalar fuentes/unidad si siguen compatibles |
 | BOOT-03 | Vídeo `巡检` durante la espera inicial | Vision: host + contenedor web | Revisar página/recurso; preparar indicación apagada |
+| BOOT-04 | Vigilante de self-check bloqueado por caída del monitor | Vision: host + systemd | Revisar firma/contratos CC; reinstalar si sigue la carrera |
 | MOT-01 | HOME interno con brazos abiertos, 20 s | Motion: XML dentro del contenedor | Revisar **antes del primer HOME** |
 | MOT-02 | PICO→HOME abierto; 4× por defecto | PC + tareas de Motion | Reinstalar cada perfil requerido y su registro |
 | ANL-01 | Comparadores y planificador HOME general offline | PC, sólo análisis | Conservar fuentes, dependencias, modelos y evidencia; no se instala en el robot |
 | MOT-03 | PICO sólo brazos | Motion: YAML dentro del contenedor | Comparar original/overlay y carga efectiva |
 | MOT-04 | Tareas READY/recovery adaptadas a S2 | Motion: XML + task_list | Revisar por tarea; no restaurar task_list entero |
+| MOT-05 | HOME original de fábrica como `cruzr/originalhome` | Motion: XML + task_list | Reinstalar si se desea conservar; no sustituye `cruzr/home` |
 | PC-01 | Ethernet y Wi-Fi de robot | PC: NetworkManager | Conservar/exportar; redescubrir interfaces |
 | PC-02 | Controller 4.7, UI 4.1, XR y udev | PC + PICO | Recuperar versiones/configuración sin autoSTART |
 | PC-03 | Credencial SSH privada para los tres scripts migrados | Sólo PC, fuera de Git | Recuperar de copia privada o usar variable de entorno |
@@ -286,7 +288,115 @@ XML o entradas de `task_list.yaml` no están instalados/cargados en Motion.
 - **Backup/evidencia:** `/etc/walker/boot/backups/20260910T102219Z_BOOT-VISUAL/`,
   `../Humanoide-vla-evidence/20260910T102219Z_BOOT-VISUAL/`.
 
+### BOOT-04 — Vigilante de self-check bloqueado
+
+- **2026-09-18 Europe/Madrid — INSTALADO y habilitado para el próximo arranque;
+  detección VERIFICADA en vivo (`--check`: `STUCK=1`) sobre el incidente real.
+  Recuperación completa VERIFICADA el mismo día (arranque manual del servicio
+  sobre el bloqueo real, hora robot CST): 14:58:47 voz pedir E-stop → 14:59:17
+  paro 2/2 → 14:59:30 reinicio sólo CC → 15:00:45 nueva WaitEStopRelease →
+  15:00:52 voz lista → liberación humana 15:01:08 → self-check y StartMotion OK,
+  `JoystickMode` 15:01:54. Cero comandos de movimiento del vigilante.**
+- **Motivo:** [incidente 2026-09-18](incidents/2026-09-18_SELFCHECK_MONITOR_SIGSEGV.md):
+  SIGSEGV del proveedor en `self_check_monitor` durante el self-check deja CC
+  en `SelfChecking` sin timeout ni StartMotion.
+- **Fuentes → destino (Vision):**
+  [`cruzr_selfcheck_watchdog.py`](../scripts/upgrade/cruzr_selfcheck_watchdog.py)
+  (SHA `d9c8652c…acbd78`) → `/etc/walker/boot/`;
+  [`cruzr-selfcheck-watchdog.service`](../scripts/upgrade/cruzr-selfcheck-watchdog.service)
+  (SHA `3ba1836d…aca6a`) → `/etc/systemd/system/`, enabled, User=walker,
+  grupo docker, Restart=no. Tests: [`test_cruzr_selfcheck_watchdog.py`](../scripts/upgrade/test_cruzr_selfcheck_watchdog.py).
+- **Dependencias:** importa BOOT-01/BOOT-02 instalados (`cruzr_cc_start_when_ready.py`
+  `19f06f68…`, `cruzr_boot_voice.py` `a76e57ca…`); la receta los verifica por hash.
+- **Contrato:** actúa sólo si CC (camino de arranque inicial) lleva ≥120 s en
+  `SelfChecking`, sin `selfcheck result` ni `StartMotion`, y
+  `walker-system.self_check_monitor-1` arrancó después de entrar en SelfChecking.
+  Entonces pide por voz pulsar el E-stop, exige principal=1 y cargador=0 dos
+  lecturas seguidas y proceso CC idéntico, reinicia **sólo**
+  `walker-system.control_center-1`, espera la nueva `WaitEStopRelease` inicial
+  (1/0/0) y anuncia por voz. Una vez por arranque del host
+  (`/etc/walker/boot/selfcheck_watchdog_boot_id`, estado transitorio: no copiar).
+  Nunca libera paros, llama StartMotion, cambia modos ni mueve. La liberación
+  y el HOME interno posteriores siguen siendo decisión del operador.
+- **Reaplicar:** [`install_selfcheck_watchdog.sh`](../scripts/upgrade/install_selfcheck_watchdog.sh)
+  (tests locales, hashes de dependencias, backup, `enable` sin `start`).
+- **Verificar:** en Vision `python3 /etc/walker/boot/cruzr_selfcheck_watchdog.py --check`
+  (sólo lectura) y `journalctl -u cruzr-selfcheck-watchdog -b`.
+- **Revertir:** `sudo systemctl disable --now cruzr-selfcheck-watchdog.service`,
+  borrar los dos archivos y `daemon-reload`. Backups:
+  `/etc/walker/boot/backups/20260918T065359Z_BOOT-04/` (instalación inicial,
+  `absent.txt`) y `20260918T065433Z_BOOT-04/` (reinstalación idéntica).
+- **Tras actualizar CC/self_check_manager:** revisar si el proveedor corrigió la
+  carrera o cambió estados/log; si el hash del CC cambia, `--control-snapshot`
+  devuelve error y el vigilante no actúa.
+
 ### MOT-01 — HOME interno abierto, 20 segundos
+
+- **2026-09-18 — body-first v7 (13,45 s) INSTALADO (12:44 Madrid, E-stop pulsado,
+  cargador 0, MetaMove esperado; verificado por hash) por decisión del propietario,
+  con ensayo físico supervisado por él. Primer arranque FALLÓ por postura previa
+  fuera de HOME (hombro izq. fuera de límite; no por la estructura v7). Ensayo
+  supervisado desde brazos al frente/cuerpo flexionado VERIFICADO 19:01 CST: SUCCEED
+  15,06 s, 0 avisos de límite, seguimiento máx. 0,012 rad, sin fallos. Ver
+  [incidente](incidents/2026-09-18_HOME_V7_ARRANQUE_HOMBRO_FUERA_LIMITE.md).
+  Arranque completo con v7 desde HOME VERIFICADO 19:13 CST: self-check OK,
+  StartMotion/LimbMotion succ en 15,1 s, `AutoTaskMode`, 11 MetaMove correctos,
+  final |q| ≤ 0,00288 rad. Captura (3.635 muestras): brazos error ≤ 0,0052 rad,
+  vmax 0,17 rad/s, 0 fallos; muestras deshabilitadas sólo antes de StartMotion.
+  Cabeza: salto desde la postura baja de arranque (−0,694, fuera de límite blando)
+  con 118 consignas rechazadas, error 0,047 rad y pico 1,19 rad/s; mismo tramo
+  que v4/v5, no introducido por v7. Evidencia `../Humanoide-vla-evidence/20260918_V7_BOOT_HOME_TRACE/`.**
+  **Instalador (18-09, 19:18 CST):** `--install` exige además un registro
+  `--measure-home` (E-stop liberado, 20D ≤ 0,02 rad, motores habilitados) del mismo
+  boot y log de `robot_app`, < 30 min y sin `BTree task` posterior
+  (`../Humanoide-vla-evidence/HOME_POSTURE_LATEST.json`, estado transitorio: no
+  restaurar). Procedimiento en [la guía body-first](teleoperation/CRUZR_HOME_CUERPO_PRIMERO.md).
+  Sustituye a v5-18s
+  (`adc24aba…`, backup `/etc/walker/trajectory-overlays/20260918T104358.711252Z_home_body_first_v5/home.before.xml`;
+  evidencia `../Humanoide-vla-evidence/20260918T104425.242019Z_INTERNAL-HOME-CHANGE/`).
+  Fuente [`cruzr_internal_home_body_first_v7_13s.xml`](../scripts/teleoperation/tasks/cruzr_internal_home_body_first_v7_13s.xml)
+  SHA `1e6e2fb7ddc598dc3793d093c283c82063507df0e53b70a18e161cab883a6f03`.
+  Cambios frente a v5-18s: (1) cada brazo ejecuta en secuencia codos −0,03 (1 s) y
+  apertura −0,2 (1,8 s) **en paralelo** con cabeza/elevador/cintura (3,75 s,
+  `Sequence` dentro de `Parallel`, patrón usado por 22 tareas del proveedor);
+  (2) bajada 7 s (antes 10 s). Cierre 2,7 s. El pico de la bajada no supera el pico
+  ya ejecutado desde el mismo inicio por el HOME directo de fábrica o por v4 (test).
+  Barrido `--v7` (cuerpo→brazos, brazos→cuerpo, diagonal): mínimo PICO 133,1 mm
+  (cota 68,9), brazos abajo y `separate_right` 181,6 mm. Evidencia
+  `../Humanoide-vla-evidence/20260918_V7_AUDIT/`. Candidata intermedia v6 (16,45 s,
+  bajada 10 s) sólo en repo: `tasks/cruzr_internal_home_body_first_v6_16s_CANDIDATE.xml`
+  (`1472de86…`). La v5-18s sigue reconocida por el contrato workbin para revertir.
+- **2026-09-18 — body-first v5 (18,25 s) INSTALADO y luego SUSTITUIDO por v7 (12:12 Madrid, E-stop pulsado,
+  cargador 0, MetaMove esperado); verificado por hash. Primer arranque y ensayo
+  físico PENDIENTES.** Sustituye a la v5 de 21,5 s (`212f3ad8…`, instalada 11:52 y
+  nunca ejecutada), que a su vez sustituyó a la v4 (`e3d06564…`).
+  Backups: v4 `/etc/walker/trajectory-overlays/20260918T095221.811178Z_home_body_first_v5/home.before.xml`;
+  v5-21s `/etc/walker/trajectory-overlays/20260918T101211.525540Z_home_body_first_v5/home.before.xml`.
+  Evidencia `../Humanoide-vla-evidence/20260918T095250.040820Z_INTERNAL-HOME-CHANGE/` y
+  `20260918T101234.670337Z_INTERNAL-HOME-CHANGE/`. Revertir: reinstalar el `home.before.xml`
+  elegido bajo E-stop.
+  Motivo: [incidente codo fuera de límite](incidents/2026-09-18_HOME_ARRANQUE_CODO_FUERA_LIMITE.md)
+  y peticiones del propietario (abrir la mitad, acelerar). Cambios frente a v4:
+  (1) ambos codos `delta −0,03 rad` en paralelo con cabeza/elevador/cintura
+  (3,75 s, threshold 5); (2) apertura mitad: `delta` roll −0,2 en 1,8 s (v4 −0,4 en
+  2,5 s); (3) bajada 10 s con roll −0,3 (v4 −0,6); (4) cierre 2,7 s (v4 3,75 s).
+  Total 18,25 s. Velocidad/aceleración pico quintic de los tramos fijos ≤ v4
+  (comprobado en test); la bajada conserva los 10 s de v4.
+  Fuente [`cruzr_internal_home_body_first_v5_18s.xml`](../scripts/teleoperation/tasks/cruzr_internal_home_body_first_v5_18s.xml)
+  SHA `adc24aba387ceb94a229db14d28668a04e7b9a64432ffa9989dd7145cc9cbf4c`,
+  generador `cruzr_internal_home_body_first.py` (v4 byte-idéntico).
+  **Barrido offline** [`audit_body_first_v5_opening.py`](../scripts/teleoperation/audit_body_first_v5_opening.py),
+  501 muestras, abrazadera ↔ enlaces que no son de su brazo: desde PICO mínimo
+  133,1 mm (v4 164,3; cota condicional 68,9 vs 101,9); brazos abajo 171,9 mm;
+  `separate_right` real 181,6 mm. Calibración: HOME directo de fábrica 2,7–10,2 mm
+  desde PICO (coincide con el acercamiento real). Sólo geometría archivada; sin
+  seguimiento, frenado, carga ni obstáculos. Evidencia
+  `../Humanoide-vla-evidence/20260918_V5_18S_AUDIT/` (y `20260918_V5_HALF_OPENING_AUDIT/`, 21,5 s).
+  [`cruzr_install_internal_home_body_first.py`](../scripts/teleoperation/cruzr_install_internal_home_body_first.py)
+  instala v5-18s desde open-v3, v4 o v5-21s; [`cruzr_blue_workbin_cycle.sh`](../scripts/cruzr_blue_workbin_cycle.sh)
+  reconoce `body-first-v5-18s`. Tests body-first y contrato workbin pasan.
+  **Norma operativa:** no pulsar E-stop ni apagar con los brazos fuera de HOME;
+  terminar cada escenario con `cruzr/home`. v5 sólo cubre los codos.
 
 - **VERIFICADO instalado y proceso recargado 2026-09-10; ensayo físico PENDIENTE.**
   Sustituye `cruzr/home`: apertura relativa, bajar abiertos, cuerpo HOME y
@@ -749,6 +859,33 @@ XML o entradas de `task_list.yaml` no están instalados/cargados en Motion.
   copia de ambos directorios de configuración de manipulación en el respaldo.
   Comparar/revertir sólo la tarea afectada. Ni el fichero presente ni una
   prueba antigua autorizan ejecutar todos los árboles recuperados.
+
+### MOT-05 — HOME original de fábrica como `cruzr/originalhome`
+
+- **2026-09-18 Europe/Madrid — PREPARADO en PC; instalación en robot PENDIENTE.**
+  Añade el HOME original UBTECH como tarea adicional; `cruzr/home` sigue siendo
+  el HOME propio (body-first v4, SHA `e3d0656424a3611d89262ae645f127d975920fd09c437f9ef9c07725d69dc49c`,
+  comprobado por lectura el 18-09). No modifica `home.xml`.
+- **Fuente:** [`cruzr_home_original_factory.xml`](../scripts/teleoperation/tasks/cruzr_home_original_factory.xml),
+  SHA `50d819d6d6190280c6efee1dc275877362c3f7c807ec733fbc3c7ed217daed88`, idéntico
+  a `scripts/hands/factory_tasks.sha256` y a
+  `../Humanoide-vla-evidence/20260910T095255Z_HOME-ROUTE-REVIEW/home-original.xml`.
+  Cabeza, elevador, cintura y ambos brazos a cero en paralelo, 6 s: es la
+  trayectoria directa que acercó los brazos al cuerpo (ver MOT-01).
+- **Destino:** Motion, `walker-motion.manipulation_robot_app-1`:
+  `config/cruzr/originalhome.xml` y entrada `cruzr_originalhome` en
+  `config/task_list.yaml` (mismos `json_args` que `cruzr_home`: `TimeRatio 0.5`).
+- **Reaplicación:** [`cruzr_install_original_home.sh`](../scripts/teleoperation/cruzr_install_original_home.sh)
+  `--check` → `--status` → `--install` → `--reload`. Install y reload exigen
+  E-stop accionado, cargador desconectado y confirmación escrita en terminal.
+  El script nunca envía la tarea.
+- **Verificación:** `--status` debe dar `INSTALL_STATE=exact` y
+  `TASK_PROCESS_ORDER=after-task-list`. Ejecución física: no ensayada.
+- **Dependencias:** la recarga cambia el hash de `task_list.yaml` y la identidad
+  del proceso; las etapas `entry410` cualificadas deben volver a cualificarse.
+- **Backup/reversión:** `/home/walker/cruzr-owner-backups/<token>-originalhome/`
+  con `task_list.yaml` anterior. Retirar sólo la entrada `cruzr_originalhome` y
+  el XML, conservando entradas posteriores, y recargar bajo E-stop.
 
 ### PC-01 — Red de trabajo
 

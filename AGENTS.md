@@ -48,6 +48,11 @@ a descubrir contenedores, tipos, endpoints y estados.
   omite una pregunta; nunca omite requisitos físicos.
 - No desactive, puentee ni falsifique watchdogs, paros, bumpers, límites,
   control de fuerza, detección de cargador, localización o anticolisión. A menos que se lo pida el propietario del proyecto idntificándose como tal.
+- Antes de pulsar el E-stop o apagar, termine con `cruzr/home` y compruebe HOME.
+  Una articulación que quede fuera de su límite blando al perder el control hace
+  que Motion rechace todo ese brazo en el HOME de arranque (incidentes 18-09).
+  Un E-stop durante una tarea deja los brazos donde estén: recupere a HOME
+  antes del apagado, no después.
 - No envíe `home` si una caja, mesa, persona o dedo puede quedar dentro de la
   trayectoria. Distinga siempre entre caja **sujeta**, **apoyada** y
   **retirada**. Ante una acción interrumpida, reanude desde el modo específico;
