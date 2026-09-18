@@ -333,7 +333,7 @@ run_task_once "Singapore/separate_right_cruzr" 45
 run_task_once "cruzr/mobot_back_20" 30
 navigate_put1
 run_task_once "wrc_cruzr/put_cruzr_wrc_low" 120
-run_task_once "cruzr/home" 60
+run_task_once "cruzr/originalhome" 60
 printf 'CICLO_GET1_PUT1_HOME_COMPLETADO\n'
 INNER
 
