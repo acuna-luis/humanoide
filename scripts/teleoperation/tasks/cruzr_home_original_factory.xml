@@ -1,0 +1,17 @@
+<root main_tree_to_execute="MainTree">
+	<BehaviorTree ID="MainTree">
+		<Sequence name="root_sequence">
+			<Parallel threshold="5">
+				<Action ID="MetaMove" type="lifter" location="single" joint_angles="0;0;0"
+					duration="6" />
+				<Action ID="MetaMove" type="arm" location="left" joint_angles="0;0;0;0;0;0;0"
+					duration="6" />
+				<Action ID="MetaMove" type="arm" location="right" joint_angles="0;0;0;0;0;0;0"
+					duration="6" />
+				<Action ID="MetaMove" type="waist" location="single" joint_angles="0" duration="6" />
+				<Action ID="MetaMove" type="head" location="single"
+					joint_angles="0; 0" duration="6" />
+			</Parallel>
+		</Sequence>
+	</BehaviorTree>
+</root>
