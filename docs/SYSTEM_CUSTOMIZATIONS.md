@@ -1,5 +1,15 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+**2026-09-16 — HOME-BODY-FIRST-04:** instalado HOME de20 s con cuerpo a cero
+antes de apertura/bajada/cierre de brazos, por petición del propietario y con
+paro confirmado. Hash e3d06564…69dc49c; diez tests locales pasan. Sin acciones
+de movimiento; ensayo físico pendiente. Sustituye open_v3 como archivo vigente.
+Reinicio de manipulación completado y hash verificado; carga funcional pendiente:
+Motion espera ListControllers y CC WaitStartMotion. Mantener paro; recuperación
+por ciclo completo supervisado v0.2.0 antes de ensayo.
+[Receta, respaldo y estado](teleoperation/CRUZR_HOME_CUERPO_PRIMERO.md).
+
+
 **Relevo para la próxima sesión — 2026-09-14:** leer primero el [estado consolidado y secuencia de reanudación](vla/RELEVO_VLA_20260914.md). HOME→READY→ENTRY está probado por el operador; shadow funciona. TRIAL_02 abortó por timeout al cambiar a SDK, con cero frames y sin acuse; el controlador final es desconocido. Prioridad: consultar controlador y logs antes de reintentar. No repetir ensayos ni asumir estado físico a partir del historial.
 
 
@@ -98,11 +108,13 @@ no convierte automáticamente los ajustes anteriores en requisitos nuevos.
 | BOOT-01 | Espera preventiva de Control Center | Vision: host + compose | Revisar contrato/binario; aplicar al compose nuevo |
 | BOOT-02 | Voz inglesa una vez por encendido | Vision: host + systemd | Reinstalar fuentes/unidad si siguen compatibles |
 | BOOT-03 | Vídeo `巡检` durante la espera inicial | Vision: host + contenedor web | Revisar página/recurso; preparar indicación apagada |
+| BOOT-04 | Vigilante de self-check bloqueado por caída del monitor | Vision: host + systemd | Revisar firma/contratos CC; reinstalar si sigue la carrera |
 | MOT-01 | HOME interno con brazos abiertos, 20 s | Motion: XML dentro del contenedor | Revisar **antes del primer HOME** |
 | MOT-02 | PICO→HOME abierto; 4× por defecto | PC + tareas de Motion | Reinstalar cada perfil requerido y su registro |
 | ANL-01 | Comparadores y planificador HOME general offline | PC, sólo análisis | Conservar fuentes, dependencias, modelos y evidencia; no se instala en el robot |
 | MOT-03 | PICO sólo brazos | Motion: YAML dentro del contenedor | Comparar original/overlay y carga efectiva |
 | MOT-04 | Tareas READY/recovery adaptadas a S2 | Motion: XML + task_list | Revisar por tarea; no restaurar task_list entero |
+| MOT-05 | HOME original de fábrica como `cruzr/originalhome` | Motion: XML + task_list | Reinstalar si se desea conservar; no sustituye `cruzr/home` |
 | PC-01 | Ethernet y Wi-Fi de robot | PC: NetworkManager | Conservar/exportar; redescubrir interfaces |
 | PC-02 | Controller 4.7, UI 4.1, XR y udev | PC + PICO | Recuperar versiones/configuración sin autoSTART |
 | PC-03 | Credencial SSH privada para los tres scripts migrados | Sólo PC, fuera de Git | Recuperar de copia privada o usar variable de entorno |
@@ -276,7 +288,115 @@ XML o entradas de `task_list.yaml` no están instalados/cargados en Motion.
 - **Backup/evidencia:** `/etc/walker/boot/backups/20260910T102219Z_BOOT-VISUAL/`,
   `../Humanoide-vla-evidence/20260910T102219Z_BOOT-VISUAL/`.
 
+### BOOT-04 — Vigilante de self-check bloqueado
+
+- **2026-09-18 Europe/Madrid — INSTALADO y habilitado para el próximo arranque;
+  detección VERIFICADA en vivo (`--check`: `STUCK=1`) sobre el incidente real.
+  Recuperación completa VERIFICADA el mismo día (arranque manual del servicio
+  sobre el bloqueo real, hora robot CST): 14:58:47 voz pedir E-stop → 14:59:17
+  paro 2/2 → 14:59:30 reinicio sólo CC → 15:00:45 nueva WaitEStopRelease →
+  15:00:52 voz lista → liberación humana 15:01:08 → self-check y StartMotion OK,
+  `JoystickMode` 15:01:54. Cero comandos de movimiento del vigilante.**
+- **Motivo:** [incidente 2026-09-18](incidents/2026-09-18_SELFCHECK_MONITOR_SIGSEGV.md):
+  SIGSEGV del proveedor en `self_check_monitor` durante el self-check deja CC
+  en `SelfChecking` sin timeout ni StartMotion.
+- **Fuentes → destino (Vision):**
+  [`cruzr_selfcheck_watchdog.py`](../scripts/upgrade/cruzr_selfcheck_watchdog.py)
+  (SHA `d9c8652c…acbd78`) → `/etc/walker/boot/`;
+  [`cruzr-selfcheck-watchdog.service`](../scripts/upgrade/cruzr-selfcheck-watchdog.service)
+  (SHA `3ba1836d…aca6a`) → `/etc/systemd/system/`, enabled, User=walker,
+  grupo docker, Restart=no. Tests: [`test_cruzr_selfcheck_watchdog.py`](../scripts/upgrade/test_cruzr_selfcheck_watchdog.py).
+- **Dependencias:** importa BOOT-01/BOOT-02 instalados (`cruzr_cc_start_when_ready.py`
+  `19f06f68…`, `cruzr_boot_voice.py` `a76e57ca…`); la receta los verifica por hash.
+- **Contrato:** actúa sólo si CC (camino de arranque inicial) lleva ≥120 s en
+  `SelfChecking`, sin `selfcheck result` ni `StartMotion`, y
+  `walker-system.self_check_monitor-1` arrancó después de entrar en SelfChecking.
+  Entonces pide por voz pulsar el E-stop, exige principal=1 y cargador=0 dos
+  lecturas seguidas y proceso CC idéntico, reinicia **sólo**
+  `walker-system.control_center-1`, espera la nueva `WaitEStopRelease` inicial
+  (1/0/0) y anuncia por voz. Una vez por arranque del host
+  (`/etc/walker/boot/selfcheck_watchdog_boot_id`, estado transitorio: no copiar).
+  Nunca libera paros, llama StartMotion, cambia modos ni mueve. La liberación
+  y el HOME interno posteriores siguen siendo decisión del operador.
+- **Reaplicar:** [`install_selfcheck_watchdog.sh`](../scripts/upgrade/install_selfcheck_watchdog.sh)
+  (tests locales, hashes de dependencias, backup, `enable` sin `start`).
+- **Verificar:** en Vision `python3 /etc/walker/boot/cruzr_selfcheck_watchdog.py --check`
+  (sólo lectura) y `journalctl -u cruzr-selfcheck-watchdog -b`.
+- **Revertir:** `sudo systemctl disable --now cruzr-selfcheck-watchdog.service`,
+  borrar los dos archivos y `daemon-reload`. Backups:
+  `/etc/walker/boot/backups/20260918T065359Z_BOOT-04/` (instalación inicial,
+  `absent.txt`) y `20260918T065433Z_BOOT-04/` (reinstalación idéntica).
+- **Tras actualizar CC/self_check_manager:** revisar si el proveedor corrigió la
+  carrera o cambió estados/log; si el hash del CC cambia, `--control-snapshot`
+  devuelve error y el vigilante no actúa.
+
 ### MOT-01 — HOME interno abierto, 20 segundos
+
+- **2026-09-18 — body-first v7 (13,45 s) INSTALADO (12:44 Madrid, E-stop pulsado,
+  cargador 0, MetaMove esperado; verificado por hash) por decisión del propietario,
+  con ensayo físico supervisado por él. Primer arranque FALLÓ por postura previa
+  fuera de HOME (hombro izq. fuera de límite; no por la estructura v7). Ensayo
+  supervisado desde brazos al frente/cuerpo flexionado VERIFICADO 19:01 CST: SUCCEED
+  15,06 s, 0 avisos de límite, seguimiento máx. 0,012 rad, sin fallos. Ver
+  [incidente](incidents/2026-09-18_HOME_V7_ARRANQUE_HOMBRO_FUERA_LIMITE.md).
+  Arranque completo con v7 desde HOME VERIFICADO 19:13 CST: self-check OK,
+  StartMotion/LimbMotion succ en 15,1 s, `AutoTaskMode`, 11 MetaMove correctos,
+  final |q| ≤ 0,00288 rad. Captura (3.635 muestras): brazos error ≤ 0,0052 rad,
+  vmax 0,17 rad/s, 0 fallos; muestras deshabilitadas sólo antes de StartMotion.
+  Cabeza: salto desde la postura baja de arranque (−0,694, fuera de límite blando)
+  con 118 consignas rechazadas, error 0,047 rad y pico 1,19 rad/s; mismo tramo
+  que v4/v5, no introducido por v7. Evidencia `../Humanoide-vla-evidence/20260918_V7_BOOT_HOME_TRACE/`.**
+  **Instalador (18-09, 19:18 CST):** `--install` exige además un registro
+  `--measure-home` (E-stop liberado, 20D ≤ 0,02 rad, motores habilitados) del mismo
+  boot y log de `robot_app`, < 30 min y sin `BTree task` posterior
+  (`../Humanoide-vla-evidence/HOME_POSTURE_LATEST.json`, estado transitorio: no
+  restaurar). Procedimiento en [la guía body-first](teleoperation/CRUZR_HOME_CUERPO_PRIMERO.md).
+  Sustituye a v5-18s
+  (`adc24aba…`, backup `/etc/walker/trajectory-overlays/20260918T104358.711252Z_home_body_first_v5/home.before.xml`;
+  evidencia `../Humanoide-vla-evidence/20260918T104425.242019Z_INTERNAL-HOME-CHANGE/`).
+  Fuente [`cruzr_internal_home_body_first_v7_13s.xml`](../scripts/teleoperation/tasks/cruzr_internal_home_body_first_v7_13s.xml)
+  SHA `1e6e2fb7ddc598dc3793d093c283c82063507df0e53b70a18e161cab883a6f03`.
+  Cambios frente a v5-18s: (1) cada brazo ejecuta en secuencia codos −0,03 (1 s) y
+  apertura −0,2 (1,8 s) **en paralelo** con cabeza/elevador/cintura (3,75 s,
+  `Sequence` dentro de `Parallel`, patrón usado por 22 tareas del proveedor);
+  (2) bajada 7 s (antes 10 s). Cierre 2,7 s. El pico de la bajada no supera el pico
+  ya ejecutado desde el mismo inicio por el HOME directo de fábrica o por v4 (test).
+  Barrido `--v7` (cuerpo→brazos, brazos→cuerpo, diagonal): mínimo PICO 133,1 mm
+  (cota 68,9), brazos abajo y `separate_right` 181,6 mm. Evidencia
+  `../Humanoide-vla-evidence/20260918_V7_AUDIT/`. Candidata intermedia v6 (16,45 s,
+  bajada 10 s) sólo en repo: `tasks/cruzr_internal_home_body_first_v6_16s_CANDIDATE.xml`
+  (`1472de86…`). La v5-18s sigue reconocida por el contrato workbin para revertir.
+- **2026-09-18 — body-first v5 (18,25 s) INSTALADO y luego SUSTITUIDO por v7 (12:12 Madrid, E-stop pulsado,
+  cargador 0, MetaMove esperado); verificado por hash. Primer arranque y ensayo
+  físico PENDIENTES.** Sustituye a la v5 de 21,5 s (`212f3ad8…`, instalada 11:52 y
+  nunca ejecutada), que a su vez sustituyó a la v4 (`e3d06564…`).
+  Backups: v4 `/etc/walker/trajectory-overlays/20260918T095221.811178Z_home_body_first_v5/home.before.xml`;
+  v5-21s `/etc/walker/trajectory-overlays/20260918T101211.525540Z_home_body_first_v5/home.before.xml`.
+  Evidencia `../Humanoide-vla-evidence/20260918T095250.040820Z_INTERNAL-HOME-CHANGE/` y
+  `20260918T101234.670337Z_INTERNAL-HOME-CHANGE/`. Revertir: reinstalar el `home.before.xml`
+  elegido bajo E-stop.
+  Motivo: [incidente codo fuera de límite](incidents/2026-09-18_HOME_ARRANQUE_CODO_FUERA_LIMITE.md)
+  y peticiones del propietario (abrir la mitad, acelerar). Cambios frente a v4:
+  (1) ambos codos `delta −0,03 rad` en paralelo con cabeza/elevador/cintura
+  (3,75 s, threshold 5); (2) apertura mitad: `delta` roll −0,2 en 1,8 s (v4 −0,4 en
+  2,5 s); (3) bajada 10 s con roll −0,3 (v4 −0,6); (4) cierre 2,7 s (v4 3,75 s).
+  Total 18,25 s. Velocidad/aceleración pico quintic de los tramos fijos ≤ v4
+  (comprobado en test); la bajada conserva los 10 s de v4.
+  Fuente [`cruzr_internal_home_body_first_v5_18s.xml`](../scripts/teleoperation/tasks/cruzr_internal_home_body_first_v5_18s.xml)
+  SHA `adc24aba387ceb94a229db14d28668a04e7b9a64432ffa9989dd7145cc9cbf4c`,
+  generador `cruzr_internal_home_body_first.py` (v4 byte-idéntico).
+  **Barrido offline** [`audit_body_first_v5_opening.py`](../scripts/teleoperation/audit_body_first_v5_opening.py),
+  501 muestras, abrazadera ↔ enlaces que no son de su brazo: desde PICO mínimo
+  133,1 mm (v4 164,3; cota condicional 68,9 vs 101,9); brazos abajo 171,9 mm;
+  `separate_right` real 181,6 mm. Calibración: HOME directo de fábrica 2,7–10,2 mm
+  desde PICO (coincide con el acercamiento real). Sólo geometría archivada; sin
+  seguimiento, frenado, carga ni obstáculos. Evidencia
+  `../Humanoide-vla-evidence/20260918_V5_18S_AUDIT/` (y `20260918_V5_HALF_OPENING_AUDIT/`, 21,5 s).
+  [`cruzr_install_internal_home_body_first.py`](../scripts/teleoperation/cruzr_install_internal_home_body_first.py)
+  instala v5-18s desde open-v3, v4 o v5-21s; [`cruzr_blue_workbin_cycle.sh`](../scripts/cruzr_blue_workbin_cycle.sh)
+  reconoce `body-first-v5-18s`. Tests body-first y contrato workbin pasan.
+  **Norma operativa:** no pulsar E-stop ni apagar con los brazos fuera de HOME;
+  terminar cada escenario con `cruzr/home`. v5 sólo cubre los codos.
 
 - **VERIFICADO instalado y proceso recargado 2026-09-10; ensayo físico PENDIENTE.**
   Sustituye `cruzr/home`: apertura relativa, bajar abiertos, cuerpo HOME y
@@ -739,6 +859,33 @@ XML o entradas de `task_list.yaml` no están instalados/cargados en Motion.
   copia de ambos directorios de configuración de manipulación en el respaldo.
   Comparar/revertir sólo la tarea afectada. Ni el fichero presente ni una
   prueba antigua autorizan ejecutar todos los árboles recuperados.
+
+### MOT-05 — HOME original de fábrica como `cruzr/originalhome`
+
+- **2026-09-18 Europe/Madrid — PREPARADO en PC; instalación en robot PENDIENTE.**
+  Añade el HOME original UBTECH como tarea adicional; `cruzr/home` sigue siendo
+  el HOME propio (body-first v4, SHA `e3d0656424a3611d89262ae645f127d975920fd09c437f9ef9c07725d69dc49c`,
+  comprobado por lectura el 18-09). No modifica `home.xml`.
+- **Fuente:** [`cruzr_home_original_factory.xml`](../scripts/teleoperation/tasks/cruzr_home_original_factory.xml),
+  SHA `50d819d6d6190280c6efee1dc275877362c3f7c807ec733fbc3c7ed217daed88`, idéntico
+  a `scripts/hands/factory_tasks.sha256` y a
+  `../Humanoide-vla-evidence/20260910T095255Z_HOME-ROUTE-REVIEW/home-original.xml`.
+  Cabeza, elevador, cintura y ambos brazos a cero en paralelo, 6 s: es la
+  trayectoria directa que acercó los brazos al cuerpo (ver MOT-01).
+- **Destino:** Motion, `walker-motion.manipulation_robot_app-1`:
+  `config/cruzr/originalhome.xml` y entrada `cruzr_originalhome` en
+  `config/task_list.yaml` (mismos `json_args` que `cruzr_home`: `TimeRatio 0.5`).
+- **Reaplicación:** [`cruzr_install_original_home.sh`](../scripts/teleoperation/cruzr_install_original_home.sh)
+  `--check` → `--status` → `--install` → `--reload`. Install y reload exigen
+  E-stop accionado, cargador desconectado y confirmación escrita en terminal.
+  El script nunca envía la tarea.
+- **Verificación:** `--status` debe dar `INSTALL_STATE=exact` y
+  `TASK_PROCESS_ORDER=after-task-list`. Ejecución física: no ensayada.
+- **Dependencias:** la recarga cambia el hash de `task_list.yaml` y la identidad
+  del proceso; las etapas `entry410` cualificadas deben volver a cualificarse.
+- **Backup/reversión:** `/home/walker/cruzr-owner-backups/<token>-originalhome/`
+  con `task_list.yaml` anterior. Retirar sólo la entrada `cruzr_originalhome` y
+  el XML, conservando entradas posteriores, y recargar bajo E-stop.
 
 ### PC-01 — Red de trabajo
 
@@ -2140,3 +2287,227 @@ READY ejecutado. La parada y la ejecución efectiva nuevas no se declaran probad
   y estos enlaces, preservando cambios previos; robot sin cambios que revertir.
 - **Pendiente:** selección y cualificación de flujos para nuestra escena; no se
   consideran resueltas por archivarlos. No se hizo commit ni push en esta tarea.
+
+## BOX-01 — Variante de caja única a estantería inclinada
+
+**2026-09-16 — BOX-01: variante de una caja a estantería inclinada, sólo diseño offline.**
+Medidas del operador: caja603×397×217 mm, base570 mm, destino1000→830 mm en600 mm,
+hueco1250×500 mm y tope presente. Perfil y cálculo de pendiente/envolvente creados;
+elevación30 mm propuesta, desencaje real pendiente. Sin XML ejecutable, instalación,
+SSH ni movimiento. Registro/IK/barrido y ensayo siguen pendientes.
+[Diseño, reproducción y límites](box_handling/SINGLE_BOX_INCLINED_RACK.md).
+
+Destino PC exclusivamente; fuentes y receta, dependencias Python3, verificación, backup y reversión en la ficha enlazada. Estado: preparado offline; NO instalado/cargado/probado.
+
+**2026-09-16 — BOX-01-EXEC: reparación del ejecutor de agarre derecho, sólo PC.**
+**ESTADO SUSTITUIDO: ejecución suspendida tras el incidente siguiente.**
+Se corrigió `scripts/force_separate_right_cruzr.sh`: carga compatible del setup
+UBTECH con `COLCON_TRACE` opcional, eliminación de un `done` huérfano, timeout
+de 45 s y comprobación explícita de `SUCCEED/status=4`. `bash -n` pasa; no se
+envió movimiento durante esa corrección. En el primer ensayo posterior, la
+preparación articular terminó y MetaClamp devolvió `7101003`: los logs indican
+`Transport vision is not running`, por lo que no hubo agarre. El script añade
+ahora el prerrequisito original `vision/enable_transport_vision_switch`, espera
+un segundo y valida por separado ambos resultados, sin reintentos. Esta segunda
+corrección está verificada sólo localmente; su ejecución física queda pendiente.
+Backup y diff en
+`../Humanoide-vla-evidence/20260916_FORCE_SEPARATE_FIX/`. Reversión: restaurar
+el archivo de `before/`; no hay estado remoto que revertir.
+
+**2026-09-16 — BOX-01-EXEC: suspensión inicial tras postura peligrosa (histórica).**
+El ensayo del operador llegó a flexión peligrosa del torso con E-stop y
+retirada de cajas. La versión que habilita visión NO queda validada.
+Destino exacto PC: `scripts/force_separate_right_cruzr.sh`; salida78 antes de
+SSH/ROSA, sin opción para omitirla. No se modificaron XML/YAML, límites,
+servicios o configuración remota. Después, el operador comunica reinicio y
+HOME; comprobación pasiva confirma HOME inmóvil, paros0/0, cargador0 y sin
+errores de actuadores. El agente no ejecutó ese reinicio ni HOME.
+Fuente/receta reproducible: copiar la versión suspendida del script; activación
+inmediata local sin instalación ni recarga. Verificación con sentinelas de
+clientes remotos y sintaxis Bash. Backup previo, logs y hashes en
+`../Humanoide-vla-evidence/20260916T084847Z_SEPARATE_RIGHT_INCIDENT/`.
+No restaurar operativamente el ejecutor anterior; sólo conservarlo para análisis.
+El bloqueo local no desregistra la tarea del robot: no llamar get1 mediante otro
+cliente. La reanudación requiere revisar coordenadas, torso y barrido corporal.
+[Ficha completa y evidencia](incidents/2026-09-16_SEPARATE_RIGHT_POSTURA_PELIGROSA.md).
+
+**2026-09-16 — BOX-01-EXEC / MOT-04: get1 exitoso tras corregir disposición.**
+Estado vigente: operador confirma base780mm, longitudinal590mm y lateral160mm
+hacia fuera; separate_right goal cf10d446-d7cc-49e7-85fd-6c8329920adc SUCCEED.
+Script modificado por el usuario en fffe749, sin bloqueo anterior; se preserva.
+Antes: agente ejecutó sólo cabeza−0,43rad y habilitó transport vision, ambos con
+SUCCEED; dos detecciones sin agarre. Sin XML/YAML instalado/recargado, sin cambios
+de límites ni movimiento de base. Visión queda habilitada. La postura del ensayo
+posterior no se restablece automáticamente, pues puede haber caja sujeta.
+Perfil PC actualizado a780mm y cálculo offline regenerado; no habilita depósitos.
+Destino exacto, fuentes/hashes, goals, activación, reproducción, verificación,
+backup/reversión y pendientes: [ficha del ensayo](box_handling/GET1_PROVEEDOR_ENSAYO_20260916.md).
+
+**2026-09-16 — BOX-01-EXEC, aclaración documental del mapa:** la dependencia
+original NavigationLocation fija utars_nav_map y abre/inicializa brazos al
+comenzar. Se documenta referencia, mismos puntos/ori­entación y continuación
+después de get1. Sin seleccionar/crear/renombrar mapas, cambiar XML ni ejecutar
+robot. Fuente y receta de adaptación pendiente en la ficha del ensayo.
+
+## MAP-GET1 / BOX-01-EXEC — Punto y ciclo de una caja
+
+**2026-09-16 — MAP-GET1 / BOX-01-EXEC:** `get1` guardado y releído en
+`utars_nav_map`: X0,543184372094m, Y−1,77098915045m, yaw−1,53310485885rad.
+Usuario completó localización; guardado sin movimientos del agente. `put1`
+aún falta. Ejecutor PC ampliado a separación→retroceso20cm→put1→depósito→HOME,
+con `--check` y abortos; sólo validación offline, sin ejecutar el ciclo.
+[Estado, reproducción, respaldo y límites](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md).
+
+## BOX-01-EXEC — Diagnóstico posterior Iceoryx
+
+**2026-09-16 — Incidente posterior: separación abortó con Iceoryx, salida137.**
+Tras navegar a get1, visión detectó la caja; RouDi retiró aplicaciones por
+heartbeats ausentes ~1,5s y Motion abortó con CHUNK_LOCKING_ERROR/SIGABRT.
+Docker reinició manipulación e IMU; no fue timeout45s. Operador confirma caja
+apoyada, robot inmóvil, sin pulsar paro; JointStates posterior con velocidades0.
+X_BaseBox0,810808m excede por10,808mm el límite0,8m, hallazgo distinto sin vínculo
+causal demostrado con el crash. Sólo diagnóstico; no se reinició ni movió nada.
+[Informe y continuación](incidents/2026-09-16_SEPARATE_RIGHT_137_ICEORYX.md).
+
+2026-09-16, actualización posterior: dos intentos get1 devolvieron
+ClampBoxOutOfReach7101100; X ligeramente fuera de0.8m y fallo IK101 conjunto.
+Pose posterior próxima a get1 (7,84mm); HOME intermedio no resolvió alcance.
+put1 ya existe. No hubo cambios remotos; diagnóstico adicional en
+`docs/incidents/2026-09-16_SEPARATE_RIGHT_137_ICEORYX.md`.
+
+## BOX-01-DEPOSIT-HEIGHT — 2026-09-16, diagnóstico sin cambios remotos
+
+**2026-09-16 — VERIFICADO: depósito WRC original no adaptado a superficie de 100 cm.**
+YAML instalado y trayectoria registrada ordenan Z de manos ≈1,10→0,65→0,45 m;
+`1.2` corresponde al torso, no a la estantería. Los 90 cm del documento son
+horizontales desde rueda derecha a parte inferior del mueble, no altura ni la
+misma referencia física que los 59 cm de recogida. No corregirlo acercando el
+mueble. Usuario comunica reinicio; HOME posterior no medido por el agente.
+Diagnóstico sin movimientos ni cambios remotos; variante de depósito pendiente.
+[Análisis y referencias](box_handling/DEPOSITO_WRC_ALTURA_100CM.md).
+
+2026-09-16 11:56 UTC — Tras reinicio completo comunicado por operador,
+comprobación sólo lectura `cruzr_boot_ready.sh --check` rc0: Motion3/3,
+cámaras2/2 en seis topics con marcas crecientes y RELEASE_TECHNICAL_CHECK=passed.
+Preflight del instalador confirma principal1, servo0, cargador0, MetaMove esperado
+y HOME body-first-v4-20s exacto. Se indica liberación supervisada manteniendo
+brazos abajo/vacíos y zona libre. Puede ejecutar HOME interno; liberación,
+fin de arranque y ensayo de trayectoria aún pendientes. Cero movimientos del
+agente. Evidencia: ../Humanoide-vla-evidence/20260916T115604.369673Z_INTERNAL-HOME-CHANGE/.
+
+## 2026-09-16 — BOX-01-AUTO-MAP: preparación automática del mapa
+
+IMPLEMENTADO EN PC; prueba con robot pendiente. Por petición del usuario,
+`scripts/force_separate_right_cruzr.sh` conserva navegación a get1 y añade:
+consulta de mapa/estado, validación de get1 y put1 guardados (orientación finita,
+modo logo_nav), map_set a utars_nav_map si es otro, relocation_start global
+si cambió el mapa o está FSM_WAITRELOCATE, y nueva consulta que exige mapa
+correcto y FSM_WAITNAVIGATE antes de navegar/agarrar. Si ya está listo, no carga
+ni relocaliza. Estados ocupados/desconocidos se rechazan; no se interrumpe una
+navegación ajena. Acciones de preparación limitadas a90s, una vez, sin reintento.
+Timeout o fallo no permite seguir; no se afirma que un timeout detenga el servicio.
+`--check` permanece sólo lectura: informa preparación pendiente con salida55.
+
+Uso normal, desde scripts: `./force_separate_right_cruzr.sh` (inicia el ciclo
+completo). No requiere instalar XML ni reiniciar el robot; el script envía la
+preparación al ejecutarse. Conserva depósito y HOME existentes sin cambiar alturas.
+Mapa fijo del escenario1: utars_nav_map, coherente con Navigation/navigation.xml
+del proveedor; no usa coordenadas manuales para fingir localización.
+No se ha ejecutado el ciclo ni cambiado mapas/estado remoto en esta intervención.
+
+Reversión: restaurar únicamente el script respaldado en /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260916T122654Z_AUTO_MAP,
+conservando cambios posteriores. No revierte modificaciones de mapas de futuras
+ejecuciones. Tests offline simulan ROSA/API; validación física pendiente.
+
+HOME-BODY-FIRST-04: usuario comunica «funciona» tras el reinicio/liberación;
+se registra éxito observado por operador, sin inferir validación desde cualquier
+postura ni nueva telemetría del agente.
+
+Verificación BOX-01-AUTO-MAP: 14 tests offline y bash -n correctos. SHA256 ejecutor: `94ec4bc7747d2fee1a46028bd942bf5ad3be2b56b00dbb86a5fae7001cbd34be`.
+
+## 2026-09-17 — Escenario1: puntos mapping_marker
+
+Consulta viva confirma get1 y put1 tipo mapping_marker, mode vacío. El bloqueo
+«get1 debe tener modo logo_nav» era una restricción del ejecutor, no fallo de
+localización: FSM_WAITNAVIGATE en el log del operador. Corrección PC en
+scripts/force_escenario1.sh: acepta logo_nav por ID, o mapping_marker/mode vacío
+mediante free_nav con point_x/point_y/point_yaw guardados, siguiendo el contrato
+ya implementado en cruzr_blue_workbin_map_route.sh. Ambos puntos se validan antes
+de mover; otros tipos, duplicados y coordenadas no finitas siguen rechazados.
+Velocidad free_nav: x0,18m/s, y0,01m/s, yaw0,20rad/s. Sin cambios a mapa ni puntos.
+Preserva resultado final estricto y parada de navegación ante fallo.
+No se ejecuta ciclo físico en esta revisión. Respaldo ejecutor/tests: /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260917T085737Z_SCENARIO1_MARKERS.
+Reversión selectiva desde ese respaldo; no modifica estado del robot.
+
+Verificación 17-09: 17 tests offline y sintaxis Bash pasan; --check vivo rc0, utars_nav_map/FSM_WAITNAVIGATE y get1/put1 disponibles. Cero navegación o manipulación.
+
+## 17-09 — Recuperación de localización y corrección del diagnóstico
+
+Usuario autoriza recuperar localización con robot confirmado inmóvil. Se envió
+una sola relocation_start global para utars_nav_map: goal
+ccd4e4bb-1e67-4914-81e5-e6f6ce38724f, NAVIGATION_READY/status4. No navegación,
+agarre, HOME, reinicio ni cambios de archivos remotos. Estado volátil de
+localización modificado; no hay reversión automática a una pose antigua.
+
+Dos publicadores TRANSIENT_LOCAL en /nav/robot_pose. Consulta ROS2 por defecto
+recibía muestra retenida antigua cercana a put1. Consulta ROSA nativa y ROS2 con
+--qos-durability volatile reciben poses nuevas coincidentes: x0.095318657,
+y0.666315422; stamps1789635912.933→1789635942.574→1789635945.434.
+Posición actual a≈8,08mm de get1, orientación≈0,39° de diferencia.
+Esto corrige la inferencia anterior de localización totalmente congelada;
+no demuestra que antes de relocalizar no hubiera ya una fuente válida.
+VSLAM auxiliar sigue LOCATION_LOST y la navegación2D había registrado FINISH.
+No aceptar ese resultado contradictorio sin verificar llegada con pose fresca.
+El script conserva rechazo estricto; ajustar interpretación/validación de llegada
+es pendiente separado, no se repitió el ciclo. Evidencia: /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260917T090350Z_RELOCALIZE.
+Receta ejecutada y respuesta completas en relocation.json; consultas de fuentes
+nativa/volátil en native_pose*.json y pose_volatile.json.
+
+## 17-09 — BOX-01-ARRIVAL: éxito condicionado a llegada medida
+
+Modificado force_escenario1.sh a petición del usuario. VSLAM_LOCATION_LOST sólo
+pasa el filtro inicial si status4 y dmsg empieza navigation_start SUCCEEDED;
+no concede continuación por sí solo. Después de toda navegación, incluso con
+resultado normal, se releen mapa/WAITNAVIGATE y dos poses ROSA nuevas mediante
+QoS volatile. Se exige marco map, tiempos posteriores al inicio de lectura
+(tolerancia0,1s), edad≤2s, avance temporal, cuaternión válido, coordenadas finitas,
+error≤0,05m y yaw≤3°. Las dos muestras deben cumplir. Si no, aborta y solicita
+navigation_stop, sin agarre/depósito/HOME ni reintento. Nunca acepta otros errores.
+No certifica despeje físico ni exactitud absoluta de la localización.
+
+Se conservan coordenadas esperadas también para logo_nav; no se envía ese
+metadato interno al servidor. Ambos destinos usan idéntica comprobación.
+19 tests offline pasan, incluidos aviso auxiliar con llegada válida, posición
+antigua, posición incorrecta y orientación incorrecta; Bash sintaxis correcta.
+Ensayo de lectura del verificador real en get1: dos muestras nuevas, error8mm,
+yaw0,388°, LLEGADA_VERIFICADA=get1. No se envió navegación/manipulación ni se
+cambió el mapa. Ejecución del ciclo corregido aún pendiente del operador.
+
+Cambio PC; no requiere instalar ni recargar robot. Respaldo, prueba viva y
+reversión selectiva del script/tests: /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260917T091003Z_ARRIVAL_CHECK. SHA256 ejecutor: 9a212c3b26c750d86cec3a9af9c34d2d55d24677d3d07e2c4ea9366ebaf6bb46.
+
+## 2026-09-17 — BOX-01-WAITSETMAP: carga inicial después del encendido
+
+**OBSERVADO en salida aportada por el operador:** mapa activo vacío y
+FSM_WAITSETMAP; el preflight abortó con54 antes de cargar el mapa. No es
+prueba de navegación ocupada ni del fallo anterior ClampBoxOutOfReach.
+**IMPLEMENTADO en PC:** se admite explícitamente FSM_WAITSETMAP para preparar
+el mapa. En ejecución normal se llama map_set a utars_nav_map también cuando
+el nombre ya coincide pero el FSM espera carga; después relocalización global
+y comprobación independiente de mapa/FSM antes de navegar. Estados ocupados o
+desconocidos siguen rechazados. --check permanece de lectura y devuelve55 si
+requiere preparación. Se conserva HOME comentado por el operador.
+
+Destino/fuente reproducible: scripts/force_escenario1.sh en el PC; se transmite
+por SSH al ejecutarlo, sin instalación remota. SHA256: `6e72819ba953a2556691971c93b673de9c43fc9e0482615f8210960608ba5236`.
+Depende de los endpoints ROSA y API de mapas existentes y de get1/put1 válidos.
+Backup anterior, incluidos cambios pendientes y SHA256SUMS: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260917T104341Z_WAITSETMAP_FIX`.
+Reversión: retirar únicamente FSM_WAITSETMAP de la admisión y de la condición
+map_set, conservando los demás cambios del operador. Tests asociados en
+scripts/test_force_separate_right_flow.py; ejecutar `bash -n scripts/force_escenario1.sh`
+y `python3 -m unittest scripts/test_force_separate_right_flow.py`.
+No se ha conectado al robot ni enviado mapa, localización o movimiento durante
+esta corrección. Instalación/carga/prueba física remota: PENDIENTES; siguiente
+paso, verificar la preparación en la próxima ejecución supervisada.
+
+Validación local: sintaxis Bash correcta y 23 pruebas offline superadas (43,718s), incluidas carga inicial, --check sin escrituras, fallo de carga y estado desconocido. No constituye ensayo físico.

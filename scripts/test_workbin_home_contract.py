@@ -34,7 +34,7 @@ class HomeContractTests(unittest.TestCase):
 
     def check(self, hashes):
         block = 'check_hash() {' + CYCLE.split('check_hash() {', 1)[1].split('\nmotion_info=', 1)[0]
-        mapping = {'head_sha':'HEAD_LOWER_SHA', 'ready_sha':'ARMS_READY_SHA',
+        mapping = {'body_first_home_sha':'BODY_FIRST_HOME_SHA', 'body_first_v5_home_sha':'BODY_FIRST_V5_HOME_SHA', 'body_first_v7_home_sha':'BODY_FIRST_V7_HOME_SHA', 'head_sha':'HEAD_LOWER_SHA', 'ready_sha':'ARMS_READY_SHA',
                    'home_sha':'HOME_SHA', 'direct_home_sha':'DIRECT_HOME_SHA',
                    'open_home_sha':'OPEN_HOME_SHA', 'open_home_meta_sha':'OPEN_HOME_META_SHA',
                    'clamp_meta_sha':'CLAMP_META_SHA', 'deposit_meta_sha':'DEPOSIT_META_SHA',
@@ -51,7 +51,7 @@ class HomeContractTests(unittest.TestCase):
                               env=dict(os.environ, MOCK_HASHES=json.dumps(hashes)))
 
     def test_reviewed_overlay_and_vendor_original_recognized(self):
-        for pin, label in [('OPEN_HOME_SHA', 'open-v3-20s'), ('DIRECT_HOME_SHA', 'vendor-direct-6s')]:
+        for pin, label in [('BODY_FIRST_V7_HOME_SHA', 'body-first-v7-13s'), ('BODY_FIRST_V5_HOME_SHA', 'body-first-v5-18s'), ('BODY_FIRST_HOME_SHA', 'body-first-v4-20s'), ('OPEN_HOME_SHA', 'open-v3-20s'), ('DIRECT_HOME_SHA', 'vendor-direct-6s')]:
             hashes = self.hashes(); hashes[HOME] = PINS[pin]
             if pin == 'DIRECT_HOME_SHA':
                 del hashes[LIB]  # The original does not use the relative-angle overlay contract.

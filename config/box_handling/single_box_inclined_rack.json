@@ -1,0 +1,33 @@
+{
+  "schema": "cruzr-single-box-layout-v1",
+  "status": "offline_design_not_executable",
+  "units": "m",
+  "source": "Operator measurements and confirmations, 2026-09-16; uncertainties not supplied",
+  "box": {"width": 0.603, "depth": 0.397, "height": 0.217, "trial_contents": "empty_required_not_live_verified"},
+  "pickup": {
+    "box_base_above_floor": 0.78,
+    "pallet_height": 0.13,
+    "supporting_boxes": null,
+    "layout_update": "Operator changed base height from 0.57 to 0.78 m; support count not reconfirmed",
+    "right_wheel_center_to_box_front": 0.59,
+    "lateral_right_wheel_side_to_box_right_side": 0.16,
+    "lateral_side": "wheel outside box toward robot right, confirmed by operator",
+    "reported_minimum_disengagement": 0.02,
+    "proposed_vertical_lift": 0.03,
+    "disengagement_verified": false
+  },
+  "rack": {
+    "clear_width": 1.25,
+    "reported_clear_height": 0.50,
+    "clear_height_is_minimum_over_path": null,
+    "horizontal_depth": 0.60,
+    "entry_surface_above_floor": 1.00,
+    "exit_surface_above_floor": 0.83,
+    "rollers": false,
+    "lower_stop_present": true,
+    "stop_geometry": null,
+    "stop_capacity_verified": false
+  },
+  "registration": {"pickup_pose_in_map": null, "rack_pose_in_map": null, "box_to_clamps_transform": null},
+  "execution": {"enabled": false, "cycles": 1, "automatic_retries": 0, "automatic_home_on_failure": false}
+}

@@ -1,5 +1,17 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+**2026-09-17 12:30 Europe/Madrid — BOOT-01, comprobación previa de liberación VERIFICADA.**
+`scripts/cruzr_boot_ready.sh --check` terminó rc0: Motion3/3, seis cámaras
+2/2 con marcas crecientes y `RELEASE_TECHNICAL_CHECK=passed; movement_commands=0`.
+El contrato verifica primera WaitEStopRelease e identidad CC estable, principal1,
+servo0 y cargador0. Operador confirma brazos abajo/estables, abrazaderas vacías,
+sin contacto, recorrido libre, ruedas bloqueadas y persona junto al paro.
+Se indica liberar para continuar el encendido; puede comenzar HOME interno.
+Liberación, autodiagnóstico y fin del arranque PENDIENTES. Sólo lectura remota,
+sin reinicios ni comandos de movimiento; cambios locales exclusivamente documentales.
+Evidencia: salida del check y confirmación presencial en esta sesión.
+
+
 **2026-09-14 13:50 UTC — Nuevo ciclo completo comunicado; comprobación técnica de liberación correcta.**
 `cruzr_boot_ready.sh --check` devuelve0, Motion3/3, cámaras2/2 en seis topics
 con marcas crecientes y RELEASE_TECHNICAL_CHECK=passed. Cero comandos de movimiento.

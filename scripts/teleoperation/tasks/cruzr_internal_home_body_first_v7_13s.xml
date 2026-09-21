@@ -1,0 +1,27 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="home_body_first_v7_13s">
+            <Parallel name="body_home_with_arm_elbows_then_open" threshold="5">
+                <Action ID="MetaMove" type="head" location="single" duration="3.750" joint_angles="0; 0" />
+                <Action ID="MetaMove" type="lifter" location="single" duration="3.750" joint_angles="0; 0; 0" />
+                <Action ID="MetaMove" type="waist" location="single" duration="3.750" joint_angles="0" />
+                <Sequence name="left_arm_elbow_then_open">
+                    <Action ID="MetaMove" type="arm" location="left" duration="1.000" delta_joint_angles="0; 0; 0; -0.03; 0; 0; 0" />
+                    <Action ID="MetaMove" type="arm" location="left" duration="1.800" delta_joint_angles="0; -0.2; 0; 0; 0; 0; 0" />
+                </Sequence>
+                <Sequence name="right_arm_elbow_then_open">
+                    <Action ID="MetaMove" type="arm" location="right" duration="1.000" delta_joint_angles="0; 0; 0; -0.03; 0; 0; 0" />
+                    <Action ID="MetaMove" type="arm" location="right" duration="1.800" delta_joint_angles="0; -0.2; 0; 0; 0; 0; 0" />
+                </Sequence>
+            </Parallel>
+            <Parallel name="lower_arms_while_open" threshold="2">
+                <Action ID="MetaMove" type="arm" location="left" duration="7.000" joint_angles="0; -0.3; 0; 0; 0; 0; 0" />
+                <Action ID="MetaMove" type="arm" location="right" duration="7.000" joint_angles="0; -0.3; 0; 0; 0; 0; 0" />
+            </Parallel>
+            <Parallel name="close_lowered_arms" threshold="2">
+                <Action ID="MetaMove" type="arm" location="left" duration="2.700" joint_angles="0; 0; 0; 0; 0; 0; 0" />
+                <Action ID="MetaMove" type="arm" location="right" duration="2.700" joint_angles="0; 0; 0; 0; 0; 0; 0" />
+            </Parallel>
+        </Sequence>
+    </BehaviorTree>
+</root>

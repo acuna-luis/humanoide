@@ -1,5 +1,39 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**2026-09-16 — HOME-BODY-FIRST-04:** instalado HOME de20 s con cuerpo a cero
+antes de apertura/bajada/cierre de brazos, por petición del propietario y con
+paro confirmado. Hash e3d06564…69dc49c; diez tests locales pasan. Sin acciones
+de movimiento; ensayo físico pendiente. Sustituye open_v3 como archivo vigente.
+Reinicio de manipulación completado y hash verificado; carga funcional pendiente:
+Motion espera ListControllers y CC WaitStartMotion. Mantener paro; recuperación
+por ciclo completo supervisado v0.2.0 antes de ensayo.
+[Receta, respaldo y estado](../teleoperation/CRUZR_HOME_CUERPO_PRIMERO.md).
+
+
+**2026-09-16 — Incidente posterior: separación abortó con Iceoryx, salida137.**
+Tras navegar a get1, visión detectó la caja; RouDi retiró aplicaciones por
+heartbeats ausentes ~1,5s y Motion abortó con CHUNK_LOCKING_ERROR/SIGABRT.
+Docker reinició manipulación e IMU; no fue timeout45s. Operador confirma caja
+apoyada, robot inmóvil, sin pulsar paro; JointStates posterior con velocidades0.
+X_BaseBox0,810808m excede por10,808mm el límite0,8m, hallazgo distinto sin vínculo
+causal demostrado con el crash. Sólo diagnóstico; no se reinició ni movió nada.
+[Informe y continuación](../incidents/2026-09-16_SEPARATE_RIGHT_137_ICEORYX.md).
+
+**2026-09-16 — Posterior al incidente: nuevo get1 exitoso comunicado.**
+El operador corrigió altura/lateral y ejecutó separate_right con SUCCEED/status4.
+El HOME del reinicio anterior no es el estado actual tras este nuevo agarre.
+[Ensayo y punto de continuación](../box_handling/GET1_PROVEEDOR_ENSAYO_20260916.md).
+
+**2026-09-16 — HISTÓRICO: postura peligrosa en get1 y recuperación por el operador.**
+`Singapore/separate_right_cruzr` produjo flexión peligrosa; operador accionó
+E-stop y retiró cajas. El error final7101108 fue posterior al paro registrado.
+Mientras se investigaba, el operador completó reinicio y confirmó HOME con
+paro liberado; muestra nueva confirma HOME inmóvil y actuadores sin error.
+En ese momento no se ordenó HOME redundante ni se repitió la tarea. El agente recogió evidencia
+y suspendió el wrapper local con salida78 antes de conectar. Este HOME posterior
+no valida recuperación automática desde la postura de la foto ni la tarea fallida.
+[Incidente, cronología y límites](../incidents/2026-09-16_SEPARATE_RIGHT_POSTURA_PELIGROSA.md).
+
 **2026-09-10 — HOME interno sustituido por apertura relativa; 20 s instalados.**
 Usuario confirma brazos abajo/vacíos/libres y solicita corregir `cruzr/home`.
 Se reemplazó su XML por home_open_v3_20s: abrir ambos hombros −0,4 rad relativos

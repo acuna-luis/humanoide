@@ -1,0 +1,63 @@
+{
+  "status": "OFFLINE_LAYOUT_ONLY_NOT_MOTION_APPROVAL",
+  "units": "m, degrees",
+  "calculated": {
+    "slope_degrees": 15.819193947500148,
+    "pickup_box_top": 0.997,
+    "proposed_lift_above_reported_minimum": 0.009999999999999998,
+    "box_horizontal_depth_at_slope": 0.44111906857016486,
+    "box_vertical_extent_at_slope": 0.3170047208754804,
+    "maximum_box_depth_during_pitch": 0.44111906857016486,
+    "maximum_box_height_during_pitch": 0.3170047208754804,
+    "nominal_width_residual_total_box_only": 0.647,
+    "nominal_depth_residual_total_box_only": 0.15888093142983511,
+    "nominal_height_residual_box_only": 0.18299527912451963,
+    "ideal_static_friction_threshold_tan_slope": 0.28333333333333344
+  },
+  "limitations": [
+    "Residual dimensions are not robot collision clearance or allowable positioning error.",
+    "Pitch projections exclude translation sweep, clamps, arms, shelf lips, posts and stop.",
+    "Reported 0.50 m opening is not yet a measured minimum along the entire insertion.",
+    "Friction threshold is idealised, not a measurement or a retention qualification.",
+    "A reported minimum disengagement is not an upper bound on required lift."
+  ],
+  "stages": [
+    {
+      "id": "grasp",
+      "requirement": "Detect top box, approach sides and confirm bimanual grip; no lateral extraction."
+    },
+    {
+      "id": "disengage",
+      "proposed_vertical_translation_m": 0.03,
+      "requirement": "Lift vertically without tilt; confirm lower boxes remain supported and upper rim clears."
+    },
+    {
+      "id": "withdraw",
+      "requirement": "Only after disengagement; path from registered pile and pallet geometry."
+    },
+    {
+      "id": "transport",
+      "requirement": "Navigate once to taught pre-rack pose with held-box geometry."
+    },
+    {
+      "id": "place",
+      "requirement": "Review approach, rigid bimanual rotation, insertion and support on actual slope."
+    },
+    {
+      "id": "release",
+      "requirement": "Release only with stable support and verified retention; do not assume sliding."
+    },
+    {
+      "id": "retreat",
+      "requirement": "Withdraw empty clamps clear of rack before separate HOME."
+    }
+  ],
+  "pending": [
+    "Registration of pickup/rack and actual joint state",
+    "Box-to-clamp contact frame and bimanual tilted pose/IK",
+    "Full shelf/posts/upper-level/stop and clamp swept geometry",
+    "Disengagement and stable support/retention confirmation",
+    "Runtime trajectory semantics, monitoring and supervised trial"
+  ],
+  "execution_enabled": false
+}
