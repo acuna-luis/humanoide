@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  nav_min.xml — subárbol de navegación MÍNIMO para la rutina get1 -> coger -> put1 -> depositar.
+  Extraído literalmente de subtrees/Navigation/navigation.xml, conservando solo los tres
+  BehaviorTree que necesita la rutina: NavigationLocation, logo_nav_get1, logo_nav_put1.
+  Los tres son autónomos (no referencian otros SubTree). Se omiten los 22 árboles no usados
+  y el ID duplicado 'logo_nav_get0' que rompía la carga en Groot2.
+  Uso en tu rutina:  <include path="subtrees/Navigation/nav_min.xml"/>
+-->
+<root BTCPP_format="4">
+
+  <BehaviorTree ID="NavigationLocation">
+    <Sequence>
+      <ParallelAll max_failures="1">
+        <ManipulationAction task_name="cruzr/open_arm_before_home"
+                            yaml_args=""
+                            arm_error=""
+                            status_code=""/>
+        <Sequence>
+          <Script code="map_self_str:=&quot;0&quot;"/>
+          <Sequence _description="Navigation relocalization decision">
+            <MappingNameGain command="get_map_name"
+                             map_name="utars_nav_map"
+                             map_self="{map_self_str}"
+                             _description="Check whether the map exists"/>
+            <Sequence>
+              <ParallelAll max_failures="1"
+                           _description="Check if this map is set: 1 = already set"
+                           _skipIf="map_self_str!=&quot;1&quot;">
+                <ForceSuccess>
+                  <TtsClient tts="Checking map"/>
+                </ForceSuccess>
+                <NavigationCheck command="check_state"
+                                 nav_code="{nav_code_str}"
+                                 map_self="{map_self_str}"
+                                 _description="Get map code"/>
+              </ParallelAll>
+              <Sequence _description="Map not set: 0 = not configured"
+                        _skipIf="map_self_str!=&quot;0&quot;">
+                <ParallelAll max_failures="1">
+                  <ForceSuccess>
+                    <TtsClient tts="Setting map"/>
+                  </ForceSuccess>
+                  <Fallback>
+                    <MappingOperations command="map_set"
+                                       map_name="utars_nav_map"
+                                       nav_error="{map_set_error_msg}"/>
+                    <ForceFailure>
+                      <TtsClient tts="{map_set_error_msg}"/>
+                    </ForceFailure>
+                  </Fallback>
+                </ParallelAll>
+                <RetryUntilSuccessful num_attempts="3">
+                  <Fallback>
+                    <Delay delay_msec="300">
+                      <RelocationActuator command="relocation_start"
+                                          mode="global"
+                                          relocation_x="0"
+                                          relocation_y="0"
+                                          relocation_z="0"
+                                          nav_error="{relocation_error_msg}"/>
+                    </Delay>
+                    <ForceFailure>
+                      <TtsClient tts="{relocation_error_msg}"/>
+                    </ForceFailure>
+                  </Fallback>
+                </RetryUntilSuccessful>
+              </Sequence>
+            </Sequence>
+          </Sequence>
+        </Sequence>
+      </ParallelAll>
+      <ParallelAll max_failures="1">
+        <ForceSuccess>
+          <TtsClient tts="Navigation localization successful"/>
+        </ForceSuccess>
+        <ManipulationAction task_name="vision/enable_transport_vision_switch"
+                            yaml_args=""
+                            arm_error=""
+                            status_code=""/>
+      </ParallelAll>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="logo_nav_get1">
+    <RetryUntilSuccessful num_attempts="5">
+      <Fallback>
+        <Delay delay_msec="300">
+          <NavigationActuator command="navigation_start"
+                              mode="logo_nav"
+                              target_id="get1"
+                              nav_error="{to_put_error_msg}"/>
+        </Delay>
+        <ForceFailure>
+          <Sequence>
+            <Delay delay_msec="500">
+              <ForceSuccess>
+                <TtsClient tts="{to_put_error_msg}"/>
+              </ForceSuccess>
+            </Delay>
+          </Sequence>
+        </ForceFailure>
+      </Fallback>
+    </RetryUntilSuccessful>
+  </BehaviorTree>
+
+  <BehaviorTree ID="logo_nav_put1">
+    <RetryUntilSuccessful num_attempts="5">
+      <Fallback>
+        <Delay delay_msec="300">
+          <NavigationActuator command="navigation_start"
+                              mode="logo_nav"
+                              target_id="put1"
+                              nav_error="{to_put_error_msg}"/>
+        </Delay>
+        <ForceFailure>
+          <Sequence>
+            <Delay delay_msec="500">
+              <ForceSuccess>
+                <TtsClient tts="{to_put_error_msg}"/>
+              </ForceSuccess>
+            </Delay>
+          </Sequence>
+        </ForceFailure>
+      </Fallback>
+    </RetryUntilSuccessful>
+  </BehaviorTree>
+
+  <!-- Modelo de nodos: solo los tipos usados por estos tres subárboles.
+       Direcciones de puerto tomadas de navigation.xml (map_self como output). -->
+  <TreeNodesModel>
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+      <output_port name="arm_error"/>
+      <output_port name="status_code"/>
+    </Action>
+    <Action ID="MappingNameGain"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="map_name"/>
+      <output_port name="map_self"/>
+    </Action>
+    <Action ID="MappingOperations"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="map_name"/>
+      <inout_port name="nav_error"/>
+    </Action>
+    <Action ID="NavigationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="target_id"/>
+      <input_port name="nav_error"/>
+    </Action>
+    <Action ID="NavigationCheck"
+            editable="true">
+      <input_port name="command"/>
+      <output_port name="nav_code"/>
+      <output_port name="map_self"/>
+    </Action>
+    <Action ID="RelocationActuator"
+            editable="true">
+      <input_port name="command"/>
+      <input_port name="mode"/>
+      <input_port name="relocation_x"/>
+      <input_port name="relocation_y"/>
+      <input_port name="relocation_z"/>
+      <inout_port name="nav_error"/>
+    </Action>
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>
