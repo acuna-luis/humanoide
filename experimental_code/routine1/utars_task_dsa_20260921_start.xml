@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  utars_task_dsa_20260921_start.xml
+  =================================
+  Box transfer routine rebuilt as a Behavior Tree (BT.CPP v4), equivalent to the
+  ROSA script routine: go to get1 -> pick the box (self-adjusting) -> go to put1 ->
+  deposit -> return home.
+
+  Composition only: every leaf node calls a vendor node already compiled on the robot
+  (no C++ added). Runs in the vendor task manager. The self-adjusting grasp is inherited
+  unchanged from the 'blue_workbin_clamp_only' task (MetaLook + MetaClamp, whole-body IK
+  anchored to the perceived box + force control).
+-->
+<root BTCPP_format="4"
+      main_tree_to_execute="test">
+
+  <!-- Pulls in the navigation subtrees used below: NavigationLocation, logo_nav_get1, logo_nav_put1. -->
+  <include path="subtrees/Navigation/nav_min.xml"/>
+
+  <BehaviorTree ID="test">
+
+    <!-- SAFETY WRAPPER: runs the mission and the remote-control watchdog concurrently.
+         max_failures="1" => the whole routine fails if any branch fails. -->
+    <ParallelAll max_failures="1">
+
+      <!-- Spoken start notice. ForceSuccess so a TTS error never aborts the mission. -->
+      <ForceSuccess>
+        <TtsClient tts="Starting procedure"/>
+      </ForceSuccess>
+
+      <!-- Init blackboard: taskControl = control channel; flysky = enable the RC remote. -->
+      <Script code="taskControl:=&apos;void&apos;"/>
+      <Script code="flysky:=1"/>
+
+      <!-- Remote-control pair: RemoteControlNode WRITES taskControl (pause/stop from the
+           radio remote); TaskSequenceNode READS it to gate the mission below. This is what
+           lets an operator pause/stop at any time. -->
+      <RemoteControlNode taskControl="{taskControl}"/>
+      <TaskSequenceNode taskControl="{taskControl}"
+                        finish="false">
+
+        <!-- MISSION. SequenceWithMemory runs steps in order and remembers completed ones,
+             so it can resume after a pause without repeating finished steps. -->
+        <SequenceWithMemory>
+
+          <!-- 1) Relocalize on the map before moving. -->
+          <SubTree ID="NavigationLocation"/>
+
+          <!-- 2) Navigate to the pickup waypoint 'get1'. -->
+          <SubTree ID="logo_nav_get1"/>
+
+          <!-- 3) GRASP (self-adjusting). Runs once, no retry (matches the ROSA routine). -->
+          <Sequence>
+            <!-- Lower the head so the camera sees the box. -->
+            <ManipulationAction task_name="cruzr/move_head_lower"
+                                yaml_args=""
+                                arm_error="{arm_error}"
+                                status_code="{status_code}"/>
+            <!-- Move both arms/clamps to the pre-grasp ready pose. -->
+            <ManipulationAction task_name="transport/clamp_ready_cruzr"
+                                yaml_args=""
+                                arm_error="{arm_error}"
+                                status_code="{status_code}"/>
+            <!-- Perception pre-check: confirm the box is detected before moving the arms. -->
+            <ManipulationAction task_name="cruzr/blue_workbin_detect_only"
+                                yaml_args=""
+                                arm_error="{arm_error}"
+                                status_code="{status_code}"/>
+            <!-- Clamp + lift. Self-adjusts to the box height via whole-body IK + force control. -->
+            <ManipulationAction task_name="cruzr/blue_workbin_clamp_only"
+                                yaml_args=""
+                                arm_error="{arm_error}"
+                                status_code="{status_code}"/>
+          </Sequence>
+
+          <!-- 4) Navigate to the deposit waypoint 'put1' (box held). -->
+          <SubTree ID="logo_nav_put1"/>
+
+          <!-- 5) Deposit: lower to table contact and open the clamps. -->
+          <ManipulationAction task_name="cruzr/blue_workbin_auto_deposit"
+                              yaml_args=""
+                              arm_error="{arm_error}"
+                              status_code="{status_code}"/>
+
+          <!-- 6) Return arms/body to the rest (home) posture. -->
+          <ManipulationAction task_name="cruzr/home"
+                              yaml_args=""
+                              arm_error="{arm_error}"
+                              status_code="{status_code}"/>
+
+        </SequenceWithMemory>
+      </TaskSequenceNode>
+    </ParallelAll>
+  </BehaviorTree>
+
+  <!-- Node models (editor metadata for Groot2). Navigation node models live in nav_min.xml. -->
+  <TreeNodesModel>
+    <!-- Calls a Motion ArmTask by name; optional outputs report error/status into the blackboard. -->
+    <Action ID="ManipulationAction"
+            editable="true">
+      <input_port name="task_name"/>
+      <input_port name="yaml_args"/>
+      <output_port name="arm_error"/>
+      <output_port name="status_code"/>
+    </Action>
+    <!-- Reads the RC remote and publishes pause/stop/run into taskControl. -->
+    <Action ID="RemoteControlNode"
+            editable="true">
+      <input_port name="taskControl"/>
+    </Action>
+    <!-- Gate decorator: allows/pauses/stops its child subtree based on taskControl. -->
+    <Decorator ID="TaskSequenceNode"
+               editable="true">
+      <input_port name="taskControl"/>
+      <input_port name="finish"/>
+    </Decorator>
+    <!-- Text-to-speech. -->
+    <Action ID="TtsClient"
+            editable="true">
+      <input_port name="tts"/>
+    </Action>
+  </TreeNodesModel>
+
+</root>
