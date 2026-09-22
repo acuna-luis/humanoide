@@ -5,13 +5,11 @@ readonly MOTION_HOST="192.168.11.2"
 readonly WIFI_GATEWAY="192.168.42.2"
 
 readonly ROBOT_USER="walker"
-readonly DEFAULT_PASSWORD="aa"
 
 # SSH ejecuta este mismo archivo para obtener la contraseña.
 # Debe ir antes del procesamiento de argumentos.
 if [[ "${CRUZR_INTERNAL_ASKPASS:-0}" == "1" ]]; then
-    printf '%s\n' "$DEFAULT_PASSWORD"
-    exit 0
+    exec bash "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/cruzr_recover_to_home.sh"
 fi
 
 readonly SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
@@ -24,15 +22,10 @@ for argument in "$@"; do
     case "$argument" in
         --wifi) SSH_ROUTE=(-J "${ROBOT_USER}@${WIFI_GATEWAY}") ;;
         --check) MODE=check ;;
-        --check-sps) MODE=check_sps ;;
-        --check-front) MODE=check_front ;;
         --help|-h)
-            printf 'Uso: %s [--wifi] [--check | --check-front | --check-sps]\n' "$0"
+            printf 'Uso: %s [--wifi] [--check]\n' "$0"
             printf '%s\n' \
-                'Sin argumentos: ciclo con selección frontal, tras confirmación física y preflight.' \
-                '--check-front consulta visión y selecciona la caja frontal sin priorizar altura; no mueve ni habilita visión.' \
-                'El resultado de --check-front es diagnóstico, no una autorización de agarre.' \
-                '--check-sps prueba percepción nativa y actualiza su caché; usar sin caja sujeta. No ejecuta trayectorias.' \
+                'Sin --check: preparar mapa/localización → get1 → visión → separate_right → retroceso 20 cm → put1 → depósito → HOME.' \
                 'Mapa de la tarea: utars_nav_map; carga y localización global automáticas si hacen falta.' \
                 'Iniciar sin caja sujeta, desde la disposición de recogida del proveedor.' \
                 '--check sólo consulta mapa/destino; no valida el montaje físico del depósito.' \
@@ -43,39 +36,19 @@ for argument in "$@"; do
 done
 readonly MODE
 
-readonly BOX_SCRIPTS="$(dirname -- "$SCRIPT_PATH")/box_handling"
-FRONT_ROUTE=()
-if ((${#SSH_ROUTE[@]})); then FRONT_ROUTE=(--wifi); fi
-
-if [[ "$MODE" == check_sps ]]; then
-    exec python3 "$BOX_SCRIPTS/front_box_integration.py" --check "${FRONT_ROUTE[@]}"
-fi
-
+# Tareas anteriores a SPS; no requiere ni arranca el adaptador frontal.
 if [[ "$MODE" == run ]]; then
     if [[ ! -t 0 ]]; then
-        printf 'CONFIRMACION_FISICA_REQUERIDA: ejecute desde un terminal junto al robot.\n' >&2
+        printf 'Ejecute desde un terminal junto al robot.\n' >&2
         exit 78
     fi
     printf '%s\n' \
-        'Se ejecutará get1 → agarre de la caja frontal → put1 → depósito → HOME.' \
-        'Compruebe ahora: abrazaderas vacías, postura inicial estable, caja apoyada,' \
-        'recorrido de brazos y caja libre (también respecto a las cajas laterales),' \
-        'destino preparado, cargador desconectado, paros liberados, ruedas en modo navegación,' \
-        'modo automático y ningún otro mando activo; una persona junto al paro.' \
-        'La selección frontal está comprobada; el agarre con esta disposición todavía requiere ensayo supervisado.'
-
-    # Gate técnico existente: salud articular, paros, batería, cargador y acción libre.
+        'Ciclo original: get1 → Singapore/separate_right_cruzr → retroceso 20 cm → put1 → depósito → cruzr/originalhome.' \
+        'La selección original puede elegir una caja lateral. No conserva la posición actual: navega a get1.' \
+        'Compruebe abrazaderas vacías, postura estable, caja apoyada y recorridos libres,' \
+        'destino preparado, cargador desconectado, paros liberados, ruedas en navegación,' \
+        'modo automático, ningún otro mando activo y una persona junto al paro.'
     bash "$(dirname -- "$SCRIPT_PATH")/cruzr_blue_workbin_cycle.sh" --check
-    # El mismo flujo versionado viaja por stdin; la sesión mantiene el adaptador
-    # hasta finalizar y no instala, reinicia ni reintenta acciones.
-    python3 - "$SCRIPT_PATH" <<'PY_FRONT_FLOW' | python3 "$BOX_SCRIPTS/front_box_integration.py" --flow "${FRONT_ROUTE[@]}"
-from pathlib import Path
-import sys
-source = Path(sys.argv[1]).read_text()
-flow = source.split("<<'INNER'\n", 1)[1].split('\nINNER\n', 1)[0]
-print(flow)
-PY_FRONT_FLOW
-    exit 0
 fi
 
 if [[ ! -x "$SCRIPT_PATH" ]]; then
@@ -100,23 +73,6 @@ ssh_motion() {
         -o StrictHostKeyChecking=accept-new \
         "${SSH_ROUTE[@]}" "${ROBOT_USER}@${MOTION_HOST}" "$@"
 }
-
-if [[ "$MODE" == check_front ]]; then
-    # Ambos módulos viajan por stdin; no se instalan archivos ni servicios.
-    python3 - "$BOX_SCRIPTS" <<'PY_BUNDLE' | ssh_motion \
-        "docker exec -i walker-ros.ros2-1 bash -lc 'source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; timeout 35 python3 -'"
-import pathlib, sys
-root = pathlib.Path(sys.argv[1])
-selector = (root / 'select_front_box.py').read_text()
-probe = (root / 'probe_front_box.py').read_text()
-print('import sys, types')
-print("module = types.ModuleType('select_front_box')")
-print("sys.modules['select_front_box'] = module")
-print('exec(compile(%r, "select_front_box.py", "exec"), module.__dict__)' % selector)
-print('exec(compile(%r, "probe_front_box.py", "exec"))' % probe)
-PY_BUNDLE
-    exit 0
-fi
 
 ssh_motion bash -se -- "$MODE" <<'REMOTE'
 set -Eeuo pipefail
@@ -199,20 +155,7 @@ except (ValueError, SyntaxError, KeyError, TypeError) as exc:
 PY_RESULT
 }
 
-ensure_front_session() {
-    [[ "$MODE" == check ]] && return 0
-    python3 - "${CRUZR_FRONT_SESSION:-}" <<'PY_LEASE'
-import json, pathlib, sys, time
-if not sys.argv[1]:
-    raise SystemExit('FRONT_SESSION_REQUIRED: use el ejecutor con adaptador')
-root = pathlib.Path(sys.argv[1])
-if (root/'stop').exists() or time.monotonic() >= json.loads((root/'lease.json').read_text())['deadline']:
-    raise SystemExit('FRONT_SESSION_EXPIRED: sin nuevas órdenes; comprobar robot y caja')
-PY_LEASE
-}
-
 nav_query() {
-    ensure_front_session
     local command="$1" args="$2" limit="$3" goal
     goal="$(python3 -c 'import json,sys; print(json.dumps({"command":sys.argv[1],"arg_json":sys.argv[2]}))' "$command" "$args")"
     NAV_OUTPUT="$(timeout "$limit" rosa action send_goal /vnav/task/command unav_task_msgs/action/Task "$goal" 2>&1)" || {
@@ -293,7 +236,6 @@ PY_POINT
 }
 
 run_task_once() {
-    ensure_front_session
     local task_name="$1"
     local timeout_seconds="$2"
     local output
@@ -361,7 +303,6 @@ PY_ARRIVAL
 }
 
 navigate_point() {
-    ensure_front_session
     local point="$1" output goal
     STAGE="navigation_$point"
     goal="$(python3 - "$POINT_TARGETS" "$point" <<'PY_GOAL'
@@ -390,8 +331,6 @@ PY_GOAL
 navigate_get1() { navigate_point get1; }
 navigate_put1() { navigate_point put1; }
 
-ensure_front_session
-if [[ "$MODE" != check ]]; then printf '%s\n' "$$" > "$CRUZR_FRONT_SESSION/flow.pid"; fi
 check_map_and_destination
 if [[ "$MODE" == check ]]; then
     printf 'CHECK_OK: mapa localizado y get1/put1 disponibles; no se envió movimiento.\n'
@@ -404,11 +343,11 @@ navigate_get1
 sleep 1
 run_task_once "vision/enable_transport_vision_switch" 20
 sleep 1
-run_task_once "local_front_box/separate_right_cruzr" 45
+run_task_once "Singapore/separate_right_cruzr" 45
 run_task_once "cruzr/mobot_back_20" 30
 navigate_put1
 run_task_once "wrc_cruzr/put_cruzr_wrc_low" 120
-run_task_once "cruzr/home" 60
+run_task_once "cruzr/originalhome" 60
 printf 'CICLO_GET1_PUT1_HOME_COMPLETADO\n'
 INNER
 

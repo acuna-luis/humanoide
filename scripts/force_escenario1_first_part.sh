@@ -25,13 +25,10 @@ for argument in "$@"; do
         --wifi) SSH_ROUTE=(-J "${ROBOT_USER}@${WIFI_GATEWAY}") ;;
         --check) MODE=check ;;
         --check-sps) MODE=check_sps ;;
-        --check-front) MODE=check_front ;;
         --help|-h)
-            printf 'Uso: %s [--wifi] [--check | --check-front | --check-sps]\n' "$0"
+            printf 'Uso: %s [--wifi] [--check | --check-sps]\n' "$0"
             printf '%s\n' \
-                'Sin argumentos: ciclo con selección frontal, tras confirmación física y preflight.' \
-                '--check-front consulta visión y selecciona la caja frontal sin priorizar altura; no mueve ni habilita visión.' \
-                'El resultado de --check-front es diagnóstico, no una autorización de agarre.' \
+                'Sin --check: preparar mapa/localización → get1 → visión → agarre frontal → retroceso 20 cm → put1 → depósito → HOME.' \
                 '--check-sps prueba percepción nativa y actualiza su caché; usar sin caja sujeta. No ejecuta trayectorias.' \
                 'Mapa de la tarea: utars_nav_map; carga y localización global automáticas si hacen falta.' \
                 'Iniciar sin caja sujeta, desde la disposición de recogida del proveedor.' \
@@ -63,7 +60,8 @@ if [[ "$MODE" == run ]]; then
         'destino preparado, cargador desconectado, paros liberados, ruedas en modo navegación,' \
         'modo automático y ningún otro mando activo; una persona junto al paro.' \
         'La selección frontal está comprobada; el agarre con esta disposición todavía requiere ensayo supervisado.'
-
+    read -r -p 'Escriba CONTINUAR si ha comprobado estas condiciones: ' confirmation
+    [[ "$confirmation" == CONTINUAR ]] || exit 78
     # Gate técnico existente: salud articular, paros, batería, cargador y acción libre.
     bash "$(dirname -- "$SCRIPT_PATH")/cruzr_blue_workbin_cycle.sh" --check
     # El mismo flujo versionado viaja por stdin; la sesión mantiene el adaptador
@@ -100,23 +98,6 @@ ssh_motion() {
         -o StrictHostKeyChecking=accept-new \
         "${SSH_ROUTE[@]}" "${ROBOT_USER}@${MOTION_HOST}" "$@"
 }
-
-if [[ "$MODE" == check_front ]]; then
-    # Ambos módulos viajan por stdin; no se instalan archivos ni servicios.
-    python3 - "$BOX_SCRIPTS" <<'PY_BUNDLE' | ssh_motion \
-        "docker exec -i walker-ros.ros2-1 bash -lc 'source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; timeout 35 python3 -'"
-import pathlib, sys
-root = pathlib.Path(sys.argv[1])
-selector = (root / 'select_front_box.py').read_text()
-probe = (root / 'probe_front_box.py').read_text()
-print('import sys, types')
-print("module = types.ModuleType('select_front_box')")
-print("sys.modules['select_front_box'] = module")
-print('exec(compile(%r, "select_front_box.py", "exec"), module.__dict__)' % selector)
-print('exec(compile(%r, "probe_front_box.py", "exec"))' % probe)
-PY_BUNDLE
-    exit 0
-fi
 
 ssh_motion bash -se -- "$MODE" <<'REMOTE'
 set -Eeuo pipefail

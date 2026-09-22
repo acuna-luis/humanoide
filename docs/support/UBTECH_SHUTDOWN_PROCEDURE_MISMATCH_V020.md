@@ -1,5 +1,14 @@
 # Discrepancia del procedimiento de apagado — Cruzr S2 v0.2.0
 
+**22-09 09:17 Europe/Madrid — preparación de apagado para COMM-01.** Usuario
+confirma HOME y ambos brazos físicamente asegurados. Nueva lectura ROS2 de20
+articulaciones: máximo absoluto 0.002589rad, velocidad0, stamp
+1790061405.106022216; compatible con HOME. Esto no sustituye salud de actuadores.
+Paros principal0/servo0; se indica pulsar el principal y confirmar para seguir.
+Servicio ShutDown y contrato redescubiertos. Sin solicitud de apagado, reinicios
+ni movimiento. Activación principal del ajuste OFF pendiente.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260922T071720Z_COMM_RECOVERY_SHUTDOWN`.
+
 **2026-09-10 — Apagado lógico aceptado y confirmado visualmente desde PICO asegurado:**
 Operador confirmó paro pulsado y brazos asegurados contra caída/golpe; las
 abrazaderas estaban vacías y el robot estable/sin contacto. Lectura nueva de

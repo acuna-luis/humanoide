@@ -1,0 +1,8 @@
+# OFFLINE CANDIDATE: not installed, loaded, or physically qualified.
+# See docs/box_handling/ARC_PRECISE_ARRANQUE_20260922.md before any deployment.
+# Only functional difference from the captured v0.2.0 config: allow_backward.
+allow_backward: false
+threshold_distance: 0.7
+precise_goal_tolerance: 0.012
+front_back_hysteresis: 0.005
+precise_control_time_limit: 25.0

@@ -1,5 +1,35 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+**2026-09-22 09:38 CEST — Arranque tras liberar VERIFICADO; lectura de actuadores corregida.**
+Operador comunica «todo liberado». Misma instancia CC pasa selfcheck=true/error0,
+StartMotion succ y JoystickMode. Paros0/0, cargador0; HOME20D medido, máximo
+0,002780rad, brazos0,000959rad, velocidad0, sin faults/consignas latentes fuera
+de tolerancia. Preflight técnico y SPS runtime rc0; baterías61,8/62,5%.
+COMM-01 cargado en principales desde el arranque anterior; recuperación de
+lectura20D VERIFICADA, sin prueba de agarre ni estabilidad bajo carga prolongada.
+El primer check rc33 era incompatibilidad QoS: publicador ActuatorState ofrece
+BEST_EFFORT/VOLATILE; ROSA echo solicita RELIABLE por defecto. Con tipo explícito
+y QoS defecto expira124; con best_effort/volatile recibe datos válidos. Se
+actualizan las dos lecturas del ciclo base, conservando el gate20D intacto.
+Sin movimiento, cambio de modo, reinicio ni instalación remota por el agente.
+Alcance/IK de la caja sigue PENDIENTE; no se ha repetido el ciclo.
+[Detalle y evidencia](../support/CRUZR_CYCLONE_SIN_SHM_20260922.md).
+
+**2026-09-22 09:31 CEST — COMM-01 CARGADO tras encendido manual; check técnico correcto.**
+Usuario comunica encendido con paro pulsado. Motion y HW conservan contenedores
+y setup SHA5504c791…6748ffe; procesos principales robot_app PID64 y
+rosa_control_node PID65 cargan `ROSA_MIDDLE_WARE=cyclone`, `ROSA_USE_SHM=OFF`.
+Nuevo arranque07:26:09Z; HOME interno v7 SHA1e6e2fb7…a6f03 conservado.
+`cruzr_boot_ready.sh --check` rc0: Motion3/3, seis cámaras2/2 con marcas
+crecientes y RELEASE_TECHNICAL_CHECK=passed. Contrato de check: espera inicial
+WaitEStopRelease, principal1, servo0, cargador0 e identidad CC estable.
+Sin comandos de movimiento, reinicios o apagado desde el agente.
+Antes de liberar sigue pendiente la confirmación física de brazos abajo/vacíos,
+sin sujeciones que impidan HOME, recorrido libre, ruedas bloqueadas y persona
+junto al paro. Se preguntó porque previamente estaban asegurados para apagar.
+Salud20D después de StartMotion, fin de arranque y agarre siguen PENDIENTES.
+[Ficha de comunicación](../support/CRUZR_CYCLONE_SIN_SHM_20260922.md).
+
 **2026-09-17 12:30 Europe/Madrid — BOOT-01, comprobación previa de liberación VERIFICADA.**
 `scripts/cruzr_boot_ready.sh --check` terminó rc0: Motion3/3, seis cámaras
 2/2 con marcas crecientes y `RELEASE_TECHNICAL_CHECK=passed; movement_commands=0`.

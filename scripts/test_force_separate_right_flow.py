@@ -94,16 +94,27 @@ class FlowTest(unittest.TestCase):
                 inner = inner.replace('http://192.168.11.3:30023',
                                       f'http://127.0.0.1:{server.server_port}')
                 log = root / 'calls.jsonl'
+                lease = root/'lease.json'
+                import time
+                lease.write_text(json.dumps({'deadline':time.monotonic()+30}))
+                if overrides.get('EXPIRED_FRONT_SESSION'):
+                    (root/'stop').write_text('stop')
                 env = dict(os.environ, PATH=f'{root}:' + os.environ['PATH'],
-                           CALL_LOG=str(log), **overrides)
+                           CALL_LOG=str(log), CRUZR_FRONT_SESSION=str(root), **overrides)
                 result = subprocess.run(['bash', '-s', '--', mode], input=inner,
                                         text=True, capture_output=True, env=env, timeout=15)
-                calls = [json.loads(line) for line in log.read_text().splitlines()]
+                calls = [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
                 return result, [x.get('task_name', x.get('command')) for x in calls]
         finally:
             server.shutdown()
             server.server_close()
             thread.join()
+
+    def test_stopped_session_never_starts_navigation(self):
+        result,calls=self.run_flow(EXPIRED_FRONT_SESSION='1')
+        self.assertNotEqual(result.returncode,0)
+        self.assertEqual(calls,[])
+        self.assertIn('FRONT_SESSION_EXPIRED',result.stderr)
 
     def test_auxiliary_lost_requires_verified_arrival(self):
         result,calls=self.run_flow(AUX_LOST='1')
@@ -115,7 +126,7 @@ class FlowTest(unittest.TestCase):
         for option in ('STALE_POSE','WRONG_POSE','WRONG_YAW'):
             result,calls=self.run_flow(AUX_LOST='1',**{option:'1'})
             self.assertNotEqual(result.returncode,0)
-            self.assertNotIn('Singapore/separate_right_cruzr',calls)
+            self.assertNotIn('local_front_box/separate_right_cruzr',calls)
             self.assertEqual(calls[-1],'navigation_stop')
             self.assertIn('LLEGADA_NO_VERIFICADA',result.stderr)
 
@@ -162,9 +173,9 @@ class FlowTest(unittest.TestCase):
         result, calls = self.run_flow()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(calls, ['get_map_name', 'check_state', 'get_map_name', 'check_state', 'navigation_start', 'get_map_name', 'check_state',
-            'vision/enable_transport_vision_switch', 'Singapore/separate_right_cruzr',
+            'vision/enable_transport_vision_switch', 'local_front_box/separate_right_cruzr',
             'cruzr/mobot_back_20', 'navigation_start', 'get_map_name','check_state',
-            'wrc_cruzr/put_cruzr_wrc_low'])
+            'wrc_cruzr/put_cruzr_wrc_low', 'cruzr/home'])
 
     def test_missing_destination_before_grasp(self):
         result, calls = self.run_flow(point=False)
@@ -197,7 +208,7 @@ class FlowTest(unittest.TestCase):
             result,calls=self.run_flow(TEST_MAP='otro', FAIL_AT=failure)
             self.assertNotEqual(result.returncode,0)
             self.assertNotIn('navigation_start',calls)
-            self.assertNotIn('Singapore/separate_right_cruzr',calls)
+            self.assertNotIn('local_front_box/separate_right_cruzr',calls)
 
     def test_relocation_timeout_never_moves(self):
         result,calls=self.run_flow(TEST_STATE='FSM_WAITRELOCATE',TIMEOUT_AT='relocation_start')
@@ -216,9 +227,9 @@ class FlowTest(unittest.TestCase):
         self.assertEqual(calls,['get_map_name','check_state'])
 
     def test_grasp_failure_stops_sequence(self):
-        result, calls = self.run_flow(FAIL_AT='Singapore/separate_right_cruzr')
+        result, calls = self.run_flow(FAIL_AT='local_front_box/separate_right_cruzr')
         self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(calls[-1], 'Singapore/separate_right_cruzr')
+        self.assertEqual(calls[-1], 'local_front_box/separate_right_cruzr')
 
     def test_navigation_error_even_with_status_four_stops(self):
         result, calls = self.run_flow(FAIL_AT='navigation_start')

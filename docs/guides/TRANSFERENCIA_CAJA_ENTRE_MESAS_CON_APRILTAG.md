@@ -1,5 +1,166 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**22-09-2026 — BOX-01-ORIGINAL-SCRIPT: variante local con tareas anteriores.**
+Creado por petición explícita [force_excenario1.original.sh](../../scripts/force_excenario1.original.sh)
+(nombre exacto solicitado, excenario). Deriva del force_escenario1.sh de HEAD
+identificado en manifest de evidencia. Secuencia get1→vision/enable_transport_vision_switch
+→Singapore/separate_right_cruzr→cruzr/mobot_back_20→put1→wrc_cruzr/put_cruzr_wrc_low
+→cruzr/originalhome. No usa ni inicia SPS; la selección original puede elegir
+una lateral. Ejecuta navegación a get1, no un agarre en posición actual.
+Conserva validación de resultados, aborto, mapa/localización y llegada; añade
+preflight técnico existente y aviso físico del ejecutor actual. Mantiene el
+ajuste ROSA_LOG_LEVEL=ERROR en lectura JSON de pose. Reutiliza el helper SSH
+existente sin duplicar credenciales. No cambia middleware ni tareas instaladas.
+
+Destino PC: scripts/force_excenario1.original.sh, ejecutable, SHA256 `5870865587e6b301d8c90fc2b2e3ce8024066921e5f0f41b32ab71586b95342b`.
+Aplicación: archivo aditivo; dependencias scripts/cruzr_recover_to_home.sh,
+scripts/cruzr_blue_workbin_cycle.sh, SSH/Docker/ROSA y tareas originales del robot.
+Validación local: bash -n, --help; pruebas offline de ciclo, fallo de agarre y
+--check registradas en evidencia. No ejecución, instalación ni movimiento en
+robot; compatibilidad/agarre físico PENDIENTES. Uso diagnóstico:
+`./scripts/force_excenario1.original.sh --check`; ciclo sólo tras comprobar
+estado físico y recorrido. No reanudar el ciclo con caja sujeta.
+Reversión: retirar sólo este archivo nuevo y revertir selectivamente estas notas;
+los dos scripts actuales permanecen intactos. Evidencia/manifest y backups:
+`/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260922T095947Z_ORIGINAL_SCRIPT`. Sin commit/push.
+
+**22-09-2026 — Intentoc1c6c537: excesoX0,69mm, agarre aún fallido.**
+Logs actualizados confirman intervalo/IK rechazados; no hay parche validado
+que consiga el agarre desde esta posición. No ampliar límites ni falsear pose.
+Diagnóstico sólo lectura; scripts y robot sin cambios.
+[Registro y evidencia](../incidents/2026-09-22_CAJA_FRONTAL_COTA_BAJA.md).
+
+**22-09-2026 — BOX-01-FRONT-SPS: IK alternativa, no prueba de imposibilidad.**
+Operador confirma caja sobre un apoyo. Análisis estático demuestra que la
+comprobación IK observada se activa al salir del intervalo original; excesoX
+3,55mm en el último intento. Priorizar validación de colocación con margen,
+sin ampliar límites, inventar pose ni reactivar el avance corto que retrocedió.
+No hay parche de recogida probado. Sólo análisis/imagen histórica y documentación.
+[Detalle, receta y evidencia](../incidents/2026-09-22_CAJA_FRONTAL_COTA_BAJA.md).
+
+**22-09-2026 — BOX-01-FRONT-SPS: repetición55965b96 y auditoría del original.**
+Pose frontal entregada sin alterar; Motion X0,803550/Z0,181595m, límites/IK
+rechazados. En la misma captura índice0 corresponde a una lateral: restaurar
+Singapore no compararía el mismo objetivo. Trayectoria YAML preservada, pero
+equivalencia de ambas vías perceptivas para la misma caja aún PENDIENTE.
+Priorizar esa comparación antes de prescribir otra trayectoria. Sólo lectura
+y documentación; no nuevas órdenes ni cambios de scripts/robot.
+[Registro y evidencia](../incidents/2026-09-22_CAJA_FRONTAL_COTA_BAJA.md).
+
+**22-09-2026 11:22 CEST — Nueva recogida baja rechazada; selección correcta.**
+Goal52efbb3b… devuelve ClampBoxOutOfReach. Sesión/TF/imagen y Motion confirman
+candidata3 frontal, no laterales. Pose nueva base_link≈[0,8006;0,1181;0,1671]m;
+Motion≈[0,8039;0,1192;0,1741]m. Distinta de la caja aZ≈0,794m de la prueba
+perceptiva anterior. Excede X3,92mm y falla IK011/búsqueda de postura; no basta
+quitar el límite ni interpretar llegada get1 como alcance de agarre. Preparó
+cabeza/brazos; no asumir HOME. Agente sólo diagnóstico, sin nuevas trayectorias
+ni cambios de controles; recoger a esta cota sigue pendiente de validación.
+[Informe y evidencia](../incidents/2026-09-22_CAJA_FRONTAL_COTA_BAJA.md).
+
+**22-09-2026 10:58 CEST — Corregido empate entre caja frontal y soporte.**
+El nuevo fallo38371422…/NoneException procedía del selector: dos detecciones de
+la misma pila tenían ángulo casi igual. Operador confirma la caja abierta
+superior de la pila frontal. Selector ahora agrupa columnas coherentes de
+workbin22cm y elige la superior dentro de la pila frontal, sin priorizar la
+altura de pilas laterales ni ampliar controles físicos. Paquete
+`74f5507e44addd71` instalado de forma aditiva; percepción directa y recepción
+nativa SUCCEED verificadas, sin trayectoria. Pose nueva X≈0,780/Y≈0,134/Z≈0,794m;
+no reutilizar la pose baja del fallo anterior. Usuario confirma inmóvil y sin
+contacto; tras preparación del ensayo no asumir HOME. Agarre aún PENDIENTE.
+[Causa, fuentes, pruebas, instalación y reversión](../incidents/2026-09-22_FRONTAL_PILA_AMBIGUA.md).
+
+**22-09-2026 10:10 CEST — Se retoma el agarre por indicación del operador.**
+Selección frontal consumida por Motion verificada; el rechazo previo al agarre
+combina pose X0,803542m e IK fallida para la trayectoria de separación. No hay
+prueba de contacto lateral en ese rechazo. Revisar postura/trayectoria de la
+caja baja, sin anular controles ni cambiar a ciegas de tarea.
+El diagnóstico estático de navegación explica la primera salida−0,04m/s por
+inicialización `odom_vx−0,05`; su perfil candidato permanece sólo en PC,
+SIN instalar/activar/probar. No hubo nuevos movimientos ni cambios remotos.
+[Agarre](../incidents/2026-09-22_FRONTAL_SPS_ALCANCE_ICEORYX.md#revision-centrada-en-el-agarre-22-09-2026); [navegación](../box_handling/ARC_PRECISE_ARRANQUE_20260922.md).
+
+**2026-09-22 09:55 CEST — Ensayo5cm interrumpido por retroceso; robot detenido en HOME.**
+Operador confirmó espacio frontal/apoyos libres, ruedas en navegación y persona
+junto al paro. Se cargó utars_nav_map y relocalizó: NAVIGATION_READY; durante
+esta preparación la cabeza volvió cerca de HOME, observado antes de navegar.
+Un único objetivo5cm al frente (27028c333b0c450ea296ff577d3c38bc) generó retroceso.
+El monitor solicitó navigation_stop al medir−5,11mm; petición aceptada status4.
+Postlectura: desplazamiento−7,503mm, velocidad0, HOME20D sin faults, máximo
+0,000959rad. No avance5cm, agarre, reintento ni segundo movimiento de cabeza.
+Log del proveedor: MPPI tolerancia0,3m→ArcPreciseController, allow_backward=true;
+objetivo delante5cm, x_tilt−0,05 y salida x−0,04m/s. Causa completa/contrato del
+controlador PENDIENTE; no invertir signos ni forzar parámetros a ciegas.
+Herramienta nueva front_nudge.py queda bloqueada para --run; --check sólo lectura.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260922T073932Z_FRONT_REACH_RECHECK`.
+
+**2026-09-22 09:46 CEST — Caja frontal confirmada; cabeza preparada, sin agarre.**
+Tras «adelante» y condiciones físicas confirmadas en el arranque, se ejecuta
+únicamente `--prepare-vision --yes`: cabeza0/−0,43rad en2s,
+goalc68f5d5e-45b9-4ff6-9ac7-a3c9d01ac807 SUCCEED/status4. Preflight correcto.
+Postlectura20D sana, inmóvil; pitch−0,430473rad y brazos próximos a HOME.
+Dos detecciones con TF exacta eligen índice1, la caja frontal baja, frente a
+la lateral alta: X0,800744/0,798246m; Y0,105542/0,106856m;
+Z0,383803/0,382768m. Selección correcta y estable≈3mm; X en el borde0,8m
+del proveedor. Esto no valida IK ni espacio entre cajas.
+Mapa vacío/FSM_WAITSETMAP tras encendido; no hay pose de navegación actual.
+Propuesta de ensayo: avance recto5cm y nueva medición, conservando límites;
+requiere preparar localización/control y confirmar espacio de chasis/apoyos y
+ruedas en navegación. Confirmación solicitada y PENDIENTE. Sin avance ni agarre.
+Cabeza queda bajada; no HOME automático.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260922T073932Z_FRONT_REACH_RECHECK`.
+
+**22-09 — Comunicación: ajuste OFF instalado en setup Motion/HW y clientes SPS,
+paquete `a9eaf948512d2eb4`.** Consultas nuevas y preflight runtime verificados;
+servicios principales SIN RECARGAR, sin movimiento. Recuperación física y
+agarre siguen pendientes; no repetir ciclo. [Aplicación y reversión](../support/CRUZR_CYCLONE_SIN_SHM_20260922.md).
+
+**22-09 — Recomendación UBTECH de CycloneDDS contrastada.** Motion ya usa
+`cyclone`, con Iceoryx en la ruta observada. `ROSA_USE_SHM=OFF` confirmado en
+cliente temporal: descubre acción, pero actuator_state sigue sin muestra. Sin
+cambio persistente, reinicio, apagado o movimiento. Medios para asegurar brazos
+confirmados; aseguramiento y apagado NO confirmados/ejecutados. [Estado y receta](../support/CRUZR_CYCLONE_SIN_SHM_20260922.md).
+
+**22-09 — Ensayo frontal FALLIDO; diagnóstico de lectura VERIFICADO.** MetaClamp
+sí recibió la caja frontal elegida, pero rechazó alcance/IK (X0,803542m).
+RouDi retiró runtimes por heartbeat y abortaron cliente ROSA/adaptador; comunicación
+sigue degradada. Robot inmóvil en postura preparatoria, **fuera de HOME**;
+actuator_state sin muestra. No repetir ciclo ni reiniciar a ciegas. Usuario
+confirma recogidas previas sin laterales y caja sobre otras dos; no pedir nuevas
+medidas. Sin cambios remotos del agente. [Informe y reanudación](../incidents/2026-09-22_FRONTAL_SPS_ALCANCE_ICEORYX.md).
+
+**22-09 — VERIFICADO: corregido rechazo SPS sin clientes/servidores.** ROSA devuelve
+rc0 y salida vacía para esos endpoints; ahora se contrasta con un listado válido
+que contenga Motion/transporte. Servidores existentes o descubrimiento incompleto
+siguen bloqueados. Paquete `a66aa93932ef9bdb` instalado;21 tests y `--check-runtime`
+real correctos, sin iniciar adaptadores ni enviar tareas/movimientos. Agarre físico
+continúa PENDIENTE. [Causa, verificación y reversión](../box_handling/INTEGRACION_CAJA_FRONTAL_SPS.md#correccion-del-descubrimiento-sps-2026-09-22).
+
+**21-09 — VIGENTE: selección frontal SPS instalada y recepción nativa comprobada.** Ambos ejecutores llaman ahora a `local_front_box/separate_right_cruzr`; tres consultas MetaLook SUCCEED seleccionan la caja baja frontal entre dos candidatas y Motion registra la misma pose. `--check-sps` prueba esa interfaz sin trayectoria, actualizando caché `box/0`; usar con abrazaderas vacías. Ciclo habilitado tras confirmación física/preflight, sin ejecutar agarre por el agente.49 tests verificados; recogida y ciclo físicos PENDIENTES. [Instalación, evidencia, uso y reversión](../box_handling/INTEGRACION_CAJA_FRONTAL_SPS.md).
+
+**21-09 — HISTÓRICO, decompilación previa a instalación SPS:** Copias locales de MetaClamp/percepción analizadas; `special_box_name` activa detección y selección SPS. Corrige la conclusión de que necesariamente faltan fuentes. Hay que conservar la pose original y la referencia de historial `box/0`; adaptador e integración aún PENDIENTES. Sin cambios ni movimiento en robot; run conserva rc78. [Hallazgos, reproducción y límites](../box_handling/DECOMPILACION_SELECCION_CAJA.md).
+
+**21-09 — HISTÓRICO, diagnóstico previo a integración SPS:** Consulta real elige caja baja frontal (índice1,7,685°) con TF del mismo instante;13 tests locales correctos. Sin argumentos sale78 ANTES de SSH/navegación: agarre frontal aún NO integrado en MetaClamp. No se movió ni instaló nada en robot. [Uso, evidencia y bloqueo pendiente](../box_handling/SELECCION_CAJA_FRONTAL.md#ejecutor-con-comprobacion-frontal).
+
+**21-09 13:11 — Prueba perceptiva con laterales:** selector offline elige caja frontal baja frente a primera detección superior izquierda. Sin movimiento; no integrado en tarea de agarre. [Resultado y límites](../box_handling/SELECCION_CAJA_FRONTAL.md#ensayo-perceptivo-con-cajas-laterales-2026-09-21-1311).
+
+**21-09 — Requisito frontal independiente de altura:** selector preparado offline,8 tests; no conectado a MetaClamp. Apartar cajas no es solución final. Rama nativa usa índice0. [Implementación y pendiente de integración](../box_handling/SELECCION_CAJA_FRONTAL.md).
+
+**21-09 — Tras apartar la pila, objetivo primero en dos detecciones:** caja baja derecha, deriva0.83mm; aún5/6 candidatos. X estimada por TF≈0.800m, sin margen probado ni validación IK. Sin movimiento; cabeza bajada. [Detalle](../box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md).
+
+**21-09 — Cabeza bajada y objetivo confirmado por nueva visión:** head−0.430473rad,
+consulta grasp devuelve tres cajas; objetivo baja derecha es candidata1.
+Selector directo select_by_xyzCam rechazado por Vision; timeout y cancelación
+rechazada, cierre perceptivo pendiente. Sin agarre/cambio de límites. Cabeza
+permanece bajada. [Detalle](../box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md).
+
+**21-09 — Selección identificada en imagen original:** el fallo58946ad3 usa la caja superior de la pila izquierda; otra candidata es la baja de la derecha. Operador confirma objetivo: caja baja derecha. Consulta actual desde HOME devuelve cero poses; sin movimientos ni cambios de configuración. [Detalle](../box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md).
+
+**2026-09-21 — ClampBoxOutOfReach con tres cajas detectadas:** goal58946ad3;
+Motion usa la primera pose devuelta, Y0,723056m frente al límite0,4m,
+X0,804895m frente a0,8m, seguido de fallo IK. Selección de caja lateral es
+inferencia; identidad visual pendiente. Sin comandos ni cambios remotos.
+[Diagnóstico y propuesta](../box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md).
+
 **2026-09-16 — VIGENTE: get1 exitoso comunicado con montaje corregido.**
 Base780mm, longitudinal590mm, lateral160mm hacia fuera. El usuario ejecutó
 separate_right: SUCCEED/status4 y éxito físico. Siguiente: retroceso20cm,

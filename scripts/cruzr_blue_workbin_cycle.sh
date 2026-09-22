@@ -418,7 +418,9 @@ grep -q 'Action server count: 1' <<<"$vision_info" || exit 26
 # 0,01 rad de su posición inmóvil.
 actuator_state="$(docker exec "$motion_container" bash -lc '
   source /opt/walker/setup.bash
-  timeout 8 rosa topic echo --once --no-daemon /mc/actuator_state
+  ROSA_LOG_LEVEL=ERROR timeout 8 rosa topic echo --once --no-daemon \
+    --qos-reliability best_effort --qos-durability volatile \
+    /mc/actuator_state mc_state_msgs/msg/ActuatorState
 ')" || exit 33
 # Reutilizar el gate estricto 20D evita aceptar listas vacías, IDs duplicados,
 # campos ausentes o NaN. Se ejecuta en memoria, sin instalar archivos remotos.
@@ -1067,7 +1069,7 @@ check_open_only_actuators() {
   local sample
   sample="$(ssh_motion bash -s -- "$MOTION_CONTAINER" <<'REMOTE'
 set -Eeuo pipefail
-docker exec "$1" bash -lc 'source /opt/walker/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; timeout 8 rosa topic echo --once --no-daemon /mc/actuator_state'
+docker exec "$1" bash -lc 'source /opt/walker/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; ROSA_LOG_LEVEL=ERROR timeout 8 rosa topic echo --once --no-daemon --qos-reliability best_effort --qos-durability volatile /mc/actuator_state mc_state_msgs/msg/ActuatorState'
 REMOTE
 )"
   python3 "$SCRIPT_DIR/lib/cruzr_home_posture_gate.py" <<<"$sample" |
