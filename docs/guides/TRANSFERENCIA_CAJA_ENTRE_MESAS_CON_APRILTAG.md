@@ -1,5 +1,44 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**28-09-2026 18:35 CEST — rango frontal restaurado por petición del operador.**
+X vuelve a[0,41;0,79] m; el paquete requerido vuelve a`bf145fa17e1116fc`.
+La edición local previa[0,35;0,90] generaba otra identidad no instalada y abortó
+el intento163254 antes de etapas. Mensaje nuevo`SPS_PACKAGE_MISSING` explica
+el problema sin omitir dependencias. 141 pruebas pasan; archivos host/ambos
+contenedores y preflight remoto verificados, rc0. Sin instalación ni movimientos.
+La detección a0,7955 m continúa fuera de rango.
+[Detalle y evidencia](../box_handling/FRONT_BOX_DEPTH_GATE_20260928.md#configuración-local-y-paquete-ausente--28-09-2026-1835-cest).
+
+**28-09-2026 — ejecutor optimista adicional.**
+`scripts/optimistic_scenario1.sh` mantiene el recorrido y la selección SPS,
+sin preguntas y con estado de caja asumido. Recibe salud continuamente para
+evitar volver a esperar los canales de paro de cadencia≈4,49 s en cada etapa.
+Mantiene límites, errores, reposo, navegación y HOME medido. Perfil propio
+`optimistic_v1`; no mezclar sus checkpoints con los del ejecutor normal.
+583 pruebas y `--check` real correctos; comparación en reposo2,49 s frente
+a0,003 s en salud, sin medir todavía ciclo con movimiento. No cambia depósito.
+[Comandos, límites temporales y evidencia](../box_handling/OPTIMISTIC_SCENARIO1.md).
+
+**28-09-2026 — selección delantera y rechazo SPS instalados.** Paquete
+`bf145fa17e1116fc`: caja cercana entre alternativas alineadas al mismo nivel,
+cima dentro de pila vertical; ambigüedad sin elección arbitraria. Gate XYZ
+base_link con reserva1 cm antes de entregar la pose, sin sustitución lateral.
+El caso grabado elige caja cercana0,794 m pero rechaza entrega por máximo0,79 m;
+no vuelve a entregar la posterior1,192 m. Tres ciclos anteriores pasan replay.
+Operador informa recuperación a HOME. Validación física nueva pendiente;
+sin movimientos del agente. No se modificaron alturas de depósito ni navegación.
+[Reglas, límites y verificación](../box_handling/FRONT_BOX_DEPTH_GATE_20260928.md).
+
+**Historial 28-09-2026 — incidente de caja posterior: suspensión del agarre.**
+Sesión144311: selección angular entrega caja baja a1,192 m, con otra delante a
+0,794 m. RGB-D y poses confirman elección del fondo; Motion avisa fuera de límite
+X0,8 m pero continúa. El operador detiene con E-stop ante flexión inesperada.
+Error de seguimiento posterior al paro; altura baja por sí sola no explica el
+caso, pues existe ciclo previo terminado con caja baja cercana. Sin corrección
+de selección/alcance instalada; suspender operativamente ensayos de este montaje.
+No reanudar ni HOME desde la postura interrumpida. Logs preservados en PC.
+[Evidencia y pendientes](../incidents/2026-09-28_ULTIMA_CAJA_FONDO_ESTOP.md).
+
 **28-09-2026 14:43 CEST — consola del escenario mejorado.**
 Las tres entradas muestran etapas legibles, progreso normal repetido hasta una
 vez por segundo y avisos inmediatos. La sujeción/liberación asumida conserva esa

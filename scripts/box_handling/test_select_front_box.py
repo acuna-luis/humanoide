@@ -17,6 +17,33 @@ def detection(*poses):
 
 
 class FrontBoxTest(unittest.TestCase):
+    def test_nearer_same_level_box_wins_even_if_background_more_centered(self):
+        front, back = pose(.77, .10, .10), pose(1.17, .11, .10)
+        for candidates in itertools.permutations([front, back, pose(.8, .7, 1.2)]):
+            result = select_front_box(detection(*candidates))
+            self.assertEqual(result['selected_pose'], front)
+            self.assertEqual(len(result['background_stack_tops_excluded']), 1)
+            excluded = result['background_stack_tops_excluded'][0]
+            self.assertEqual(candidates[excluded['background_index']], back)
+
+    def test_front_back_order_uses_stack_tops_not_supports(self):
+        front = [pose(.77, .10, .40), pose(.77, .10, .62)]
+        back = [pose(1.17, .11, .40), pose(1.17, .11, .62)]
+        for candidates in itertools.permutations(front+back):
+            result = select_front_box(detection(*candidates))
+            self.assertEqual(result['selected_pose'], front[-1])
+            self.assertEqual(len(result['selected_stack_indices_bottom_to_top']), 2)
+
+    def test_different_depth_levels_and_lateral_chains_are_not_guessed(self):
+        cases = [
+            [pose(.77, .10, .10), pose(1.17, .11, .32)],
+            [pose(.77, .10, .10), pose(1.17, .17, .10), pose(1.57, .24, .10)],
+        ]
+        for candidates in cases:
+            for ordered in itertools.permutations(candidates):
+                with self.assertRaisesRegex(ValueError, 'Ambiguous frontal lane'):
+                    select_front_box(detection(*ordered))
+
     def test_lower_front_box_wins_over_higher_lateral_boxes_in_any_order(self):
         front = pose(.80, .10, .39)
         for poses in itertools.permutations([front, pose(.805, .723, .707),

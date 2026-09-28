@@ -24,6 +24,7 @@ CONFIRMATION_POLICIES = ('ask', 'assume', 'sensors')
 _VERIFICATION_SOURCES = {'ask': 'operator', 'assume': 'assumed', 'sensors': 'sensors'}
 _BOX_VERIFICATIONS = {'verify_held': 'held', 'verify_released': 'released'}
 COMPATIBILITY = ('verified', 'operator_assumed_existing', 'pending', 'incompatible')
+EXECUTION_PROFILES = ('standard_v1', 'optimistic_v1')
 _ACCEPTED_COMPATIBILITY = ('verified', 'operator_assumed_existing')
 _TASKS = {
     'grasp': 'local_front_box/separate_right_cruzr',
@@ -122,6 +123,29 @@ def _policy(value):
         raise ValueError('Unknown confirmation policy')
 
 
+def _execution_profile(value, policy):
+    _policy(policy)
+    if type(value) is not str or value not in EXECUTION_PROFILES:
+        raise ValueError('Unknown execution profile')
+    if value == 'optimistic_v1' and policy != 'assume':
+        raise ValueError('Optimistic execution profile requires assume policy')
+    return value
+
+
+def execution_profile(checkpoint):
+    """Read the execution identity; an absent legacy field means standard only.
+
+    This checks the identity/policy pair, not the full checkpoint state machine.
+    No default is inserted, so old checkpoint hashes and exact keys survive.
+    """
+    if not isinstance(checkpoint, dict):
+        raise ValueError('Execution profile requires a checkpoint object')
+    if checkpoint.get('version') == 1 and 'execution_profile' in checkpoint:
+        raise ValueError('Legacy v1 checkpoint cannot declare an execution profile')
+    return _execution_profile(checkpoint.get('execution_profile', 'standard_v1'),
+                              checkpoint.get('policy', 'ask'))
+
+
 def _box_evidence(policy, box, source, sensor_evidence):
     """Record provenance; the runtime must validate actual fresh sensor reports.
 
@@ -178,18 +202,24 @@ def _profile_hash(profile):
                                     allow_nan=False).encode()).hexdigest()
 
 
-def new_checkpoint(profile, *, stop_after='verify_home', policy='ask'):
+def new_checkpoint(profile, *, stop_after='verify_home', policy='ask',
+                   execution_profile='standard_v1'):
     profile = validate_profile(profile, stop_after=stop_after)
-    _policy(policy)
-    return dict(version=2, profile_id=profile['id'], profile_sha256=_profile_hash(profile),
-                stop_after=stop_after, completed=[], in_flight=None,
-                box_state='empty', failure=None, policy=policy, confirmations={})
+    _execution_profile(execution_profile, policy)
+    checkpoint = dict(version=2, profile_id=profile['id'], profile_sha256=_profile_hash(profile),
+                      stop_after=stop_after, completed=[], in_flight=None,
+                      box_state='empty', failure=None, policy=policy, confirmations={})
+    if execution_profile != 'standard_v1':
+        checkpoint['execution_profile'] = execution_profile
+    return checkpoint
 
 
 def new_resume_checkpoint(profile, *, entry_stage, entry_box_state, origin,
-                          stop_after='verify_home', policy='assume'):
+                          stop_after='verify_home', policy='assume',
+                          execution_profile='standard_v1'):
     """Create an empty execution segment without inventing completed stages."""
-    cp = new_checkpoint(profile, stop_after=stop_after, policy=policy)
+    cp = new_checkpoint(profile, stop_after=stop_after, policy=policy,
+                        execution_profile=execution_profile)
     cp.update(version=3, entry_stage=entry_stage, entry_box_state=entry_box_state,
               origin=copy.deepcopy(origin), box_state=entry_box_state)
     return validate_checkpoint(cp, profile)
@@ -200,10 +230,13 @@ def validate_checkpoint(checkpoint, profile=None):
     if (not isinstance(checkpoint, dict) or type(checkpoint.get('version')) is not int
             or checkpoint['version'] not in (1, 2, 3)):
         raise ValueError('Unsupported checkpoint version')
-    _keys(checkpoint, {1: _CHECKPOINT_KEYS, 2: _CHECKPOINT_V2_KEYS,
-                      3: _CHECKPOINT_V3_KEYS}[checkpoint['version']],
-          'Checkpoint')
+    expected_keys = {1: _CHECKPOINT_KEYS, 2: _CHECKPOINT_V2_KEYS,
+                     3: _CHECKPOINT_V3_KEYS}[checkpoint['version']]
+    if checkpoint['version'] >= 2 and 'execution_profile' in checkpoint:
+        expected_keys = expected_keys | {'execution_profile'}
+    _keys(checkpoint, expected_keys, 'Checkpoint')
     _finite_json(checkpoint)
+    execution_profile(checkpoint)
     cp = checkpoint
     _stop_after(cp['stop_after'])
     if (type(cp['profile_id']) is not str or
@@ -323,7 +356,8 @@ def fail_stage(checkpoint, stage, reason):
 
 def resume_checkpoint(checkpoint, profile, *, confirmed_box, state_reconfirmed,
                       stop_after='verify_home', policy='ask',
-                      verification_source='operator', sensor_evidence=None):
+                      verification_source='operator', sensor_evidence=None,
+                      execution_profile='standard_v1'):
     """Resume a clean held/released checkpoint under its unchanged policy.
 
     state_reconfirmed is the caller's explicit attestation of fresh runtime and
@@ -338,6 +372,9 @@ def resume_checkpoint(checkpoint, profile, *, confirmed_box, state_reconfirmed,
     _policy(policy)
     if cp.get('policy', 'ask') != policy:
         raise ValueError('Resume cannot change the checkpoint confirmation policy')
+    _execution_profile(execution_profile, policy)
+    if cp.get('execution_profile', 'standard_v1') != execution_profile:
+        raise ValueError('Resume cannot change the checkpoint execution profile')
     if state_reconfirmed is not True:
         raise ValueError('Fresh state reconfirmation required')
     if (cp['in_flight'] is not None or cp['failure'] is not None or

@@ -28,6 +28,7 @@ if __package__:
     from . import scenario1_dependencies as dependencies
     from . import scenario1_nav_correction as nav_correction
     from . import scenario1_resume as resume
+    from . import scenario1_live_health as live_health
     from .scenario1_session import ProcessSession
     from scripts.lib.cruzr_home_posture_gate import classify
     from .front_sps_session import check_sps_discovery
@@ -38,6 +39,7 @@ else:
     import scenario1_dependencies as dependencies
     import scenario1_nav_correction as nav_correction
     import scenario1_resume as resume
+    import scenario1_live_health as live_health
     from scenario1_session import ProcessSession
     from cruzr_home_posture_gate import classify
     from front_sps_session import check_sps_discovery
@@ -135,6 +137,11 @@ class Runtime:
         self.policy = payload.get('policy', self.checkpoint.get('policy', 'ask'))
         if self.policy != self.checkpoint.get('policy', 'ask'):
             raise ValueError('Checkpoint confirmation policy differs from entrypoint')
+        self.execution_profile = payload.get('execution_profile', 'standard_v1')
+        if self.execution_profile != contract.execution_profile(self.checkpoint):
+            raise ValueError('Checkpoint execution profile differs from entrypoint')
+        self.live_monitor_enabled = False
+        self.last_action_end_ns = None
         self.sensor_process = None
         self.sensor_min_stamp_ns = 0
         self.action_sessions = {}
@@ -176,6 +183,8 @@ class Runtime:
                 if self.armed and self.policy == 'sensors':
                     self.sensor_stream_alive()
                 self.check_workers()
+                if self.live_monitor_enabled:
+                    self.check_live_health()
                 self.write_lease()
         except BaseException as exc:
             self.stop.set()  # No silent watchdog failure; existing lease expires.
@@ -204,6 +213,8 @@ class Runtime:
         if self.armed and self.policy == 'sensors':
             self.sensor_stream_alive()
         self.check_workers()
+        if self.live_monitor_enabled:
+            self.check_live_health()
 
     def check_workers(self):
         for worker in ([self.health_session] if self.health_session else []) + list(self.action_sessions.values()):
@@ -215,7 +226,10 @@ class Runtime:
         if self.health_session is not None:
             return
         self.create_session()
-        command = code_command(self.payload['health_worker'], ['--session', str(self.session)])
+        arguments = ['--session', str(self.session)]
+        if self.execution_profile == 'optimistic_v1':
+            arguments.append('--live-health')
+        command = code_command(self.payload['health_worker'], arguments)
         self.health_session = ProcessSession(['docker', 'exec', '-i', self.native_container,
             'bash', '-lc', SETUP+'exec '+shlex.join(command)],
             lambda event: self.emit('health_worker', detail=event))
@@ -228,6 +242,44 @@ class Runtime:
         if len(reports) != 1:
             raise RuntimeError('HEALTH_RESULT_UNCONFIRMED')
         return reports[0]
+
+    def check_live_health(self, *, stationary=False, after_ns=None, require_home=False):
+        snapshot = json.loads((self.session/'live-health.json').read_text())
+        return live_health.validate_snapshot(snapshot, now_ns=time.time_ns(),
+            now_monotonic_ns=time.monotonic_ns(), stationary=stationary,
+            after_ns=after_ns, require_home=require_home)
+
+    def start_live_monitor(self):
+        """Warm up once, before arming; an incomplete cache is never an OK."""
+        deadline = time.monotonic()+12
+        while True:
+            self.connected()
+            try:
+                self.check_live_health()
+                break
+            except (FileNotFoundError, live_health.LiveHealthPending):
+                if time.monotonic() >= deadline:
+                    raise RuntimeError('LIVE_HEALTH_NOT_READY: no se permite armar')
+                time.sleep(0.02)
+        self.live_monitor_enabled = True
+        self.emit('live_health_ready', execution_profile=self.execution_profile)
+
+    def quick_health(self):
+        """Use the live safety cache; wait only briefly for post-result rest."""
+        if not self.live_monitor_enabled:
+            raise RuntimeError('LIVE_HEALTH_NOT_ARMED: no cached success fallback')
+        deadline = time.monotonic()+0.5
+        while True:
+            self.connected()
+            try:
+                report = self.check_live_health(stationary=True, after_ns=self.last_action_end_ns)
+                self.emit('live_health_transition', report=report,
+                          after_ns=self.last_action_end_ns)
+                return
+            except live_health.LiveHealthPending as exc:
+                if time.monotonic() >= deadline:
+                    raise RuntimeError('LIVE_HEALTH_TRANSITION_UNCONFIRMED: '+str(exc)) from exc
+                time.sleep(0.01)
 
     def sensor_stream_alive(self):
         """During motion check stream liveness, not stationary pose envelopes."""
@@ -406,6 +458,7 @@ class Runtime:
             results = [row for row in rows if row['event'] == 'result']
             if len(results) != 1:
                 raise RuntimeError('ACTION_UNCONFIRMED: resultado terminal ausente o duplicado')
+            self.last_action_end_ns = time.time_ns()
             return results[0]
         return self.one_shot_action(kind, goal, timeout)
 
@@ -501,6 +554,8 @@ class Runtime:
             self.timed('health', self.health,
                        require_home=(self.resume_plan['requirements']['home'] if self.resume_plan is not None
                                      else not self.checkpoint['completed']))
+            if self.execution_profile == 'optimistic_v1':
+                self.timed('live_health', self.quick_health)
             if self.timed('map_state', self.map_state) != expected_map_state:
                 raise RuntimeError('MAP_STATE_CHANGED_DURING_CHECK')
             if expected_map_state == ('utars_nav_map', 'FSM_WAITNAVIGATE'):
@@ -757,8 +812,11 @@ class Runtime:
             if not logical_assumption:
                 self.timed('containers', self.discover)
                 self.timed('dependencies', self.hashes)
-                self.timed('health', self.health, require_home=stage == 'verify_home' or
-                           bool(resume_entry and self.resume_plan['requirements']['home']))
+                if self.execution_profile == 'optimistic_v1' and not resume_entry and stage != 'verify_home':
+                    self.timed('live_health', self.quick_health)
+                else:
+                    self.timed('health', self.health, require_home=stage == 'verify_home' or
+                               bool(resume_entry and self.resume_plan['requirements']['home']))
             if resume_entry:
                 # Interactive confirmation or local file checks may have taken
                 # time since ready/arm. Entry conditions must still hold now.
@@ -823,6 +881,8 @@ class Runtime:
             require_home = (self.resume_plan['requirements']['home'] if self.resume_plan is not None
                             else not self.checkpoint['completed'])
             self.timed('health', self.health, require_home=require_home)
+            if self.execution_profile == 'optimistic_v1':
+                self.start_live_monitor()
             points = self.map_points()
             map_name, nav_state = self.map_state()
             if (map_name, nav_state) == ('utars_nav_map', 'FSM_WAITNAVIGATE'):
@@ -830,6 +890,8 @@ class Runtime:
             context = dict(boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
                            containers=self.container_identity, dependencies=self.dependency_identity,
                            points=points)
+            if self.execution_profile != 'standard_v1':
+                context['execution_profile'] = self.execution_profile
             if self.policy == 'sensors':
                 context['sensor_profile_sha256'] = hashlib.sha256(json.dumps(
                     self.payload['sensor_profile'], sort_keys=True, allow_nan=False).encode()).hexdigest()

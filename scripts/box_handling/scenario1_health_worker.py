@@ -11,10 +11,12 @@ import copy
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import queue
 import re
 import sys
+import tempfile
 import threading
 import time
 
@@ -166,7 +168,7 @@ def session_active(session, now):
 
 class NativeReader:
     """Uses APIs inspected from the installed ROSA Python modules, 28-09-2026."""
-    def __init__(self):
+    def __init__(self, live_session=None):
         import rosa
         from rosa.base._QoS import SensorDataQoS, ActionStatusQoS
         from rosa.utils import resolve_message_type
@@ -176,6 +178,8 @@ class NativeReader:
         self.fatal = None
         self.controller = None
         self.response_ready = threading.Event()
+        self.live_cache = None
+        self.live_session = None
         rosa.init()
         try:
             self.node = rosa.Node('scenario1_health_readonly')
@@ -192,6 +196,22 @@ class NativeReader:
                 self.readers[key] = self.node.create_reader(resolve_message_type(type_name), topic,
                                                             self.callback(key), qos=qos)
             self.client = self.node.create_client(resolve_message_type(CONTROLLER_TYPE), CONTROLLER_SERVICE)
+            if live_session is not None:
+                if __package__:
+                    from . import scenario1_live_health as live_health
+                else:
+                    import scenario1_live_health as live_health
+                self.live_module = live_health
+                self.live_cache = live_health.LiveHealthCache()
+                self.live_session = Path(live_session)
+                # An independent read-only client leaves acquire()'s future
+                # and callback untouched for the ordinary preflight protocol.
+                self.live_client = self.node.create_client(resolve_message_type(CONTROLLER_TYPE), CONTROLLER_SERVICE)
+                self.live_future = None
+                self.live_response_ready = threading.Event()
+                self.live_next_controller = 0.0
+                self.live_last_write = 0.0
+                self._write_live()
         except BaseException:
             rosa.shutdown()
             raise
@@ -203,9 +223,15 @@ class NativeReader:
                 message = object_json(raw)
                 if key == 'status':
                     self.status = message
+                live_cache = getattr(self, 'live_cache', None)
+                if live_cache is not None and key != 'pose':
+                    live_cache.add(key, message, time.time_ns(), time.monotonic_ns())
                 if self.acquisition is not None:
                     self.acquisition.add(key, message, time.time_ns(), time.monotonic_ns())
             except Exception as error:
+                if getattr(self, 'live_cache', None) is not None:
+                    self.live_cache.fail(error)
+                    self._write_live()
                 self.fatal = error
         return receive
 
@@ -215,8 +241,65 @@ class NativeReader:
         if not self.rosa.ok():
             raise RuntimeError('ROSA stopped')
         self.rosa.spin_once(self.node, 20)
+        if getattr(self, 'live_cache', None) is not None:
+            self._live_tick()
         if self.fatal is not None:
             raise self.fatal
+
+    def _write_live(self):
+        """Replace one complete snapshot; readers never observe partial JSON."""
+        value = self.live_cache.snapshot(time.time_ns(), time.monotonic_ns())
+        path = self.live_session/'live-health.json'
+        with tempfile.NamedTemporaryFile(mode='w', dir=self.live_session,
+                                         prefix='live-health.json.', delete=False) as stream:
+            temporary = Path(stream.name)
+            try:
+                # Docker runs this writer as root; the host supervisor runs as
+                # walker. The walker-owned session directory stays private
+                # (0700), while every replacement must remain readable by it.
+                os.fchmod(stream.fileno(), 0o644)
+                json.dump(value, stream, allow_nan=False)
+                stream.write('\n')
+                stream.flush()
+            except BaseException:
+                temporary.unlink(missing_ok=True)
+                raise
+        os.replace(temporary, path)
+
+    def _live_tick(self):
+        now = time.monotonic()
+        # Poll at 50 ms so an ordinary 20 ms spin does not make the intended
+        # <=100 ms snapshot publication cadence depend on exact scheduling.
+        if now-self.live_last_write < .05:
+            return
+        try:
+            counts = {key: self.readers[key].getWriterCount()
+                      for key in (*SAFETY, 'actuator', 'status')}
+            service_count = self.live_client.getServiceCount()
+            self.live_cache.set_publishers(dict(counts, controller=service_count))
+            if self.live_future is not None and self.live_response_ready.is_set():
+                message = object_json(self.live_client.get_result(self.live_future, json_format=True))
+                self.live_cache.add('controller', message, time.time_ns(), time.monotonic_ns())
+                self.live_future = None
+                self.live_response_ready.clear()
+            if self.live_future is None and service_count == 1 and now >= self.live_next_controller:
+                if self.live_client.wait_service(0):
+                    self.live_response_ready.clear()
+                    self.live_future = self.live_client.call_async('{}', lambda *unused: self.live_response_ready.set())
+                    if self.live_future is None:
+                        raise RuntimeError('Live ListControllers request failed')
+                    self.live_next_controller = now+1.0
+            try:
+                self.live_module.validate_snapshot(self.live_cache.snapshot(time.time_ns(), time.monotonic_ns()),
+                    now_ns=time.time_ns(), now_monotonic_ns=time.monotonic_ns())
+            except self.live_module.LiveHealthPending:
+                pass  # Incomplete startup is explicitly represented, never OK.
+            self._write_live()
+            self.live_last_write = now
+        except Exception as error:
+            self.live_cache.fail(error)
+            self._write_live()
+            raise
 
     def acquire(self, request, check_guard):
         self.acquisition = Acquisition(request, time.time_ns(), time.monotonic_ns())
@@ -285,6 +368,8 @@ def emit(**event):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--session', required=True, type=Path)
+    parser.add_argument('--live-health', action='store_true',
+                        help='Maintain fresh continuous telemetry for the optimistic supervisor')
     args = parser.parse_args(argv)
     commands = queue.Queue(maxsize=16)
     ended = threading.Event()
@@ -316,7 +401,7 @@ def main(argv=None):
         if not session_active(args.session, time.monotonic()):
             return 0
         threading.Thread(target=receive, daemon=True).start()
-        native = NativeReader()
+        native = NativeReader(live_session=args.session) if args.live_health else NativeReader()
         guard()
         emit(event='session_ready', request_id=None)
         while True:

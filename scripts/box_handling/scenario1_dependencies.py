@@ -117,7 +117,20 @@ if not native and text_paths:
 hashes={}; texts={}
 def collect(path):
     digest=hashlib.sha256(); chunks=[]
-    with open(path,'rb') as stream:
+    try:
+        stream=open(path,'rb')
+    except FileNotFoundError:
+        prefix='/opt/cruzr-front-box/'
+        if path.startswith(prefix):
+            package=path[len(prefix):].split('/')[0]
+            raise SystemExit('SPS_PACKAGE_MISSING: paquete '+package+
+                ' ausente o incompleto en este contenedor; falta '+path+
+                '. Las fuentes PC determinan el paquete requerido. Revise los limites locales; '
+                'despues instale la misma version con python3 scripts/box_handling/'
+                'front_box_integration.py --install y verifique con --check-runtime. '
+                'No se usara otra version automaticamente.')
+        raise SystemExit('DEPENDENCY_MISSING: falta el archivo requerido '+path)
+    with stream:
         before=os.fstat(stream.fileno())
         while True:
             chunk=stream.read(1024*1024)

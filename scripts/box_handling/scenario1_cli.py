@@ -38,6 +38,7 @@ MODULES = [('cruzr_home_posture_gate', ROOT/'scripts/lib/cruzr_home_posture_gate
            ('front_sps_session', HERE/'front_sps_session.py'),
            ('scenario1_contract', HERE/'scenario1_contract.py'),
            ('scenario1_checks', HERE/'scenario1_checks.py'),
+           ('scenario1_live_health', HERE/'scenario1_live_health.py'),
            ('scenario1_sensors', HERE/'scenario1_sensors.py'),
            ('scenario1_dependencies', HERE/'scenario1_dependencies.py'),
            ('scenario1_session', HERE/'scenario1_session.py'),
@@ -102,13 +103,24 @@ def make_payload(mode, profile, checkpoint):
                     "sys.modules['scenario1_nav_correction']=_guard\n"
                     'exec(compile('+repr(guard_source)+",'scenario1_nav_correction.py','exec'),_guard.__dict__)\n"+
                     (HERE/'scenario1_action_client.py').read_text())
+    # The independent health process needs the same pure validators as the
+    # supervisor. This introduces no ROS writers or persistent installation.
+    health_dependencies = [(name, path) for name, path in MODULES
+                           if name in ('cruzr_home_posture_gate', 'scenario1_checks',
+                                       'scenario1_live_health')]
+    health_source = ('import sys,types\n'
+                     'for _name,_source in '+repr([(name, path.read_text())
+                                                   for name, path in health_dependencies])+':\n'
+                     ' _module=types.ModuleType(_name);sys.modules[_name]=_module\n'
+                     ' exec(compile(_source,_name+".py","exec"),_module.__dict__)\n'+
+                     (HERE/'scenario1_health_worker.py').read_text())
     return dict(mode=mode, profile=profile, checkpoint=checkpoint, bundle=bundle,
                 extra_hashes=extra, home_pins=dict(accepted=[pins[n] for n in names],
                     direct=pins['DIRECT_HOME_SHA'], meta=pins['OPEN_HOME_META_SHA']),
                 action_client=action_source,
                 perception_guard=(HERE/'scenario1_perception.py').read_text(),
                 sensor_worker=(HERE/'scenario1_sensor_worker.py').read_text(),
-                health_worker=(HERE/'scenario1_health_worker.py').read_text(),
+                health_worker=health_source,
                 resume_worker=(HERE/'scenario1_resume_worker.py').read_text(),
                 modules=[(name, path.read_text()) for name, path in MODULES])
 
@@ -247,14 +259,22 @@ ENTRYPOINTS = {'ask': 'ask_improved_scenario1.sh', 'assume': 'force_improved_sce
               'sensors': 'force_improved_scenario1_autochecked.sh'}
 
 
+def entrypoint_name(policy, execution_profile='standard_v1'):
+    if execution_profile == 'optimistic_v1' and policy == 'assume':
+        return 'optimistic_scenario1.sh'
+    if execution_profile != 'standard_v1':
+        raise ValueError('Unsupported execution profile or confirmation policy')
+    return ENTRYPOINTS[policy]
+
+
 class SensorCalibrationPending(ValueError):
     pass
 
 
-def parser(policy='ask'):
-    p = argparse.ArgumentParser(prog=ENTRYPOINTS[policy],
+def parser(policy='ask', execution_profile='standard_v1'):
+    p = argparse.ArgumentParser(prog=entrypoint_name(policy, execution_profile),
         description='Escenario 1; política '+policy+'. Conserva la geometría actual. Por defecto sólo --check.')
-    p.set_defaults(policy=policy)
+    p.set_defaults(policy=policy, execution_profile=execution_profile)
     mode = p.add_mutually_exclusive_group()
     mode.add_argument('--check', action='store_true', help='Comprobaciones completas sin iniciar adaptadores SPS ni mover')
     mode.add_argument('--plan', action='store_true', help='Mostrar perfil y etapas sin conectar al robot')
@@ -288,6 +308,8 @@ def is_moving(args):
 
 def _main(args):
     policy = args.policy
+    execution_profile = getattr(args, 'execution_profile', 'standard_v1')
+    wrapper = entrypoint_name(policy, execution_profile)
     moving = is_moving(args)
     if not args.resume and (args.from_stage or args.box_state or args.recovery_confirmed):
         raise ValueError('--from-stage, --box-state y --recovery-confirmed requieren --resume CHECKPOINT')
@@ -295,7 +317,8 @@ def _main(args):
         raise ValueError('--benchmark-checks sólo permite comprobaciones de lectura')
     stop_after = {'get1': 'navigate_get1', 'grasp': 'verify_held', 'cycle': 'verify_home'}[args.stop_after]
     profile = contract.validate_profile(json.loads(args.profile.read_text()), stop_after=stop_after)
-    checkpoint = contract.new_checkpoint(profile, stop_after=stop_after, policy=policy)
+    checkpoint = contract.new_checkpoint(profile, stop_after=stop_after, policy=policy,
+                                         execution_profile=execution_profile)
     sensor_profile = None
     if policy == 'sensors':
         sensor_profile = sensors.validate_profile(json.loads(args.sensor_profile.read_text()),
@@ -311,7 +334,8 @@ def _main(args):
         if args.from_stage is None and contract.progress_index(source_checkpoint) > contract.STAGES.index(stop_after):
             raise RuntimeError('La reanudación solicitada no tiene etapas pendientes')
         resume_options = dict(stage=args.from_stage, box_state=args.box_state,
-                              recovery_confirmed=args.recovery_confirmed, stop_after=stop_after, policy=policy)
+                              recovery_confirmed=args.recovery_confirmed, stop_after=stop_after, policy=policy,
+                              execution_profile=execution_profile)
         resume_plan = resume.plan_resume(source_checkpoint, profile, **resume_options)
         checkpoint = resume_plan['checkpoint']
     if moving and policy == 'ask' and not sys.stdin.isatty():
@@ -319,6 +343,9 @@ def _main(args):
     print('Geometría: force_escenario1.sh actual; tareas y límites del proveedor conservados.')
     print('Confirmación: '+{'ask': 'operador', 'assume': 'sin preguntas; sujeción/liberación asumidas tras éxito técnico',
                           'sensors': 'sin preguntas; ventanas FT y postura con referencias cualificadas'}[policy])
+    if execution_profile == 'optimistic_v1':
+        print('Optimista: salud recibida continuamente; sin repetir la adquisición completa entre etapas. '
+              'Se conservan errores, reposo, límites de caja, llegada y HOME medido.')
     correction_status = nav_correction.qualification_report()
     if correction_status['motion_enabled']:
         approach = format(nav_correction.POLICY['max_approach_angular_speed_rad_s'], '.2f').replace('.', ',')
@@ -330,7 +357,10 @@ def _main(args):
         print('Llegada get1: 2 cm / 2 grados. Ajuste bloqueado: '+correction_status['reason'])
     if args.plan:
         print(json.dumps(dict(profile=profile, stages=list(contract.STAGES[contract.progress_index(checkpoint):contract.STAGES.index(stop_after)+1]),
-            policy=policy, sensor_qualification=sensor_profile['qualification'] if sensor_profile else None,
+            policy=policy, execution_profile=execution_profile,
+            interstage_health=('live_snapshot_and_fresh_stationary_actuators'
+                               if execution_profile == 'optimistic_v1' else 'full_acquisition'),
+            sensor_qualification=sensor_profile['qualification'] if sensor_profile else None,
             physical_validation='pending', automatic_retries=0,
             get1_correction=dict(nav_correction.qualification_report(), policy=dict(nav_correction.POLICY)),
             resume=resume_plan), indent=2, ensure_ascii=False))
@@ -338,7 +368,8 @@ def _main(args):
     if moving:
         subprocess.run(['bash', str(ROOT/'scripts/lib/cruzr_contact_motion_lock.sh'), 'improved-scenario1'], check=True)
     evidence = args.evidence_dir or ROOT.parent/'Humanoide-vla-evidence'/(
-        time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())+'_IMPROVED_SCENARIO1_'+str(os.getpid()))
+        time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())+
+        ('_OPTIMISTIC_SCENARIO1_' if execution_profile == 'optimistic_v1' else '_IMPROVED_SCENARIO1_')+str(os.getpid()))
     evidence.mkdir(parents=True, exist_ok=False)
     os.chmod(evidence, 0o700)
     atomic_json(evidence/'profile.json', profile)
@@ -346,6 +377,7 @@ def _main(args):
         atomic_json(evidence/'checkpoint.json', checkpoint)
     payload = make_payload('run' if moving else 'check', profile, checkpoint)
     payload['policy'] = policy
+    payload['execution_profile'] = execution_profile
     payload['check_repetitions'] = args.benchmark_checks
     if sensor_profile is not None:
         payload['sensor_profile'] = sensor_profile
@@ -369,7 +401,7 @@ def _main(args):
             'resume_worker': hashlib.sha256(payload['resume_worker'].encode()).hexdigest(),
             'scenario1_console': hashlib.sha256((HERE/'scenario1_console.py').read_bytes()).hexdigest(),
             'scenario1_cli': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-            'entrypoint': hashlib.sha256((ROOT/'scripts'/ENTRYPOINTS[policy]).read_bytes()).hexdigest()})
+            'entrypoint': hashlib.sha256((ROOT/'scripts'/wrapper).read_bytes()).hexdigest()})
     print('Evidencia: '+str(evidence), flush=True)
     connection = None
     with ExitStack() as stack:
@@ -446,13 +478,13 @@ def _main(args):
                 connection.close()
 
 
-def main(argv=None, *, policy='ask'):
-    return _main(parser(policy).parse_args(argv))
+def main(argv=None, *, policy='ask', execution_profile='standard_v1'):
+    return _main(parser(policy, execution_profile).parse_args(argv))
 
 
-def entrypoint(argv=None, *, policy='ask'):
+def entrypoint(argv=None, *, policy='ask', execution_profile='standard_v1'):
     """Report read-only failures without implying an interrupted movement."""
-    args = parser(policy).parse_args(argv)
+    args = parser(policy, execution_profile).parse_args(argv)
     try:
         return _main(args)
     except SensorCalibrationPending:

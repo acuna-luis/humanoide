@@ -15,7 +15,8 @@ else:
 
 
 def plan_resume(checkpoint, profile, *, stage=None, box_state=None,
-                recovery_confirmed=False, stop_after='verify_home', policy='assume'):
+                recovery_confirmed=False, stop_after='verify_home', policy='assume',
+                execution_profile='standard_v1'):
     source = contract.validate_checkpoint(checkpoint, profile)
     contract.validate_profile(profile, stop_after=stop_after)
     if type(recovery_confirmed) is not bool:
@@ -24,6 +25,10 @@ def plan_resume(checkpoint, profile, *, stage=None, box_state=None,
         raise ValueError('Unknown confirmation policy')
     if source.get('policy', 'ask') != policy:
         raise ValueError('Resume cannot change the checkpoint confirmation policy')
+    requested_execution = contract.execution_profile(
+        {'policy': policy, 'execution_profile': execution_profile})
+    if contract.execution_profile(source) != requested_execution:
+        raise ValueError('Resume cannot change the checkpoint execution profile')
     if stage is not None and (type(stage) is not str or stage not in contract.STAGES):
         raise ValueError('Unknown resume stage')
     index = contract.progress_index(source)
@@ -57,7 +62,7 @@ def plan_resume(checkpoint, profile, *, stage=None, box_state=None,
         'repeated_stages': list(contract.STAGES[selected_index:index]) if selected_index < index else [],
     }
     cp = contract.new_resume_checkpoint(profile, entry_stage=selected, entry_box_state=expected,
-        origin=origin, stop_after=stop_after, policy=policy)
+        origin=origin, stop_after=stop_after, policy=policy, execution_profile=execution_profile)
     waypoint = ('get1' if selected in ('enable_vision', 'grasp', 'verify_held', 'retreat') else
                 'put1' if selected == 'deposit' else None)
     return {'checkpoint': cp, 'stage': selected, 'source_sha256': source_sha256,

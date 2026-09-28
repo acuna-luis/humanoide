@@ -1,5 +1,19 @@
 # Integración frontal mediante percepción SPS
 
+**28-09-2026 — BOX-01-FRONT-DEPTH-GATE: INSTALADO; preflight de lectura
+VERIFICADO; ensayo físico PENDIENTE.** Paquete `bf145fa17e1116fc`, anterior
+`74f5507e44addd71`. Prioriza la menor profundidad entre cimas del mismo nivel
+y franja lateral, conservando la selección de pilas coherentes. El contrato
+SPS añade rechazo XYZ con reserva de 10 mm antes de ambas respuestas exitosas;
+un rechazo invalida la sesión sin sustituir otra caja. XML/YAML sin cambios.
+40 pruebas específicas y 530 de la suite pertinente pasan. Instalación rc0,
+sin reinicios/movimiento, tareas compartidas intactas; `--check-runtime` rc0.
+Las pruebas incluyen las dos capturas del incidente:
+índice 4 frontal seleccionado, pero X≈0,794 m rechazado por máximo 0,79 m.
+[Reglas, límites, fuentes, instalación y reversión vigentes](FRONT_BOX_DEPTH_GATE_20260928.md).
+Los resultados fechados inferiores son históricos, no validación del paquete
+nuevo ni autorización de recuperación tras el E-stop.
+
 **22-09-2026 11:22 CEST — Nueva recogida baja rechazada; selección correcta.**
 Goal52efbb3b… devuelve ClampBoxOutOfReach. Sesión/TF/imagen y Motion confirman
 candidata3 frontal, no laterales. Pose nueva base_link≈[0,8006;0,1181;0,1671]m;
@@ -22,7 +36,7 @@ no reutilizar la pose baja del fallo anterior. Usuario confirma inmóvil y sin
 contacto; tras preparación del ensayo no asumir HOME. Agarre aún PENDIENTE.
 [Causa, fuentes, pruebas, instalación y reversión](../incidents/2026-09-22_FRONTAL_PILA_AMBIGUA.md).
 
-**22-09 — Paquete vigente `a9eaf948512d2eb4`, instalado.** Añade OFF/cyclone a
+**Histórico 22-09 — Paquete `a9eaf948512d2eb4`, instalado entonces.** Añade OFF/cyclone a
 clientes nativos, adaptador y flujo; parser admite el aviso INFO exacto de OFF.
 `--check-runtime` real correcto, sin arrancar adaptadores ni ejecutar tareas.
 Setup Motion/HW preparado, procesos principales todavía SIN RECARGAR.
@@ -41,10 +55,13 @@ nativo VERIFICADO. Agarre físico y ciclo con esta variante PENDIENTES.**
 
 Los dos ejecutores `force_escenario1.sh` y `force_escenario1_first_part.sh`
 llaman ahora a `local_front_box/separate_right_cruzr`. La variante usa
-`special_box_name: box`, con un adaptador temporal que selecciona por mínimo
-ángulo horizontal respecto a `base_link`. No prioriza altura ni el orden del
-detector; si la frontal es ambigua, obsoleta o inalcanzable, no se sustituye
-por una lateral. La comprobación de alcance/IK continúa en Motion.
+`special_box_name: box`, con un adaptador temporal. La versión corregida del
+28-09 agrupa pilas, resuelve frente/fondo al mismo nivel por profundidad y
+compara ángulos entre las franjas restantes en `base_link`. No prioriza una
+pila lateral más alta ni el orden del detector. El contrato rechaza una pose
+fuera de su envolvente XYZ sin sustituirla por una lateral. Motion conserva
+sus comprobaciones originales, pero su aviso de límite puede continuar a IK;
+no equivale por sí solo a un bloqueo antes de la aproximación.
 
 Ambos scripts conservan su secuencia previa completa get1→recogida→retroceso
 20cm→put1→depósito→HOME, incluido el HOME que ya figuraba en el archivo del
@@ -74,9 +91,10 @@ Para el ciclo completo, sólo tras revisar la disposición física actual:
 ./scripts/force_escenario1.sh
 ```
 
-Exige terminal y confirmación `CONTINUAR` sobre efector, caja libre, postura,
-recorridos de brazos/caja/chasis, destino, modo de ruedas, paros, cargador,
-control exclusivo y persona junto al paro, conforme a AGENTS.md. Ejecuta
+El wrapper antiguo exige terminal y muestra un aviso de comprobación física;
+su código actual no solicita escribir `CONTINUAR`. Deben comprobarse efector,
+caja libre, postura, recorridos de brazos/caja/chasis, destino, modo de ruedas,
+paros, cargador, control exclusivo y persona junto al paro. Ejecuta
 además el preflight técnico existente `cruzr_blue_workbin_cycle.sh --check`:
 salud articular20D, inmovilidad/consigna, paros, baterías, cargador y acción libre.
 Después valida hashes del paquete/tareas/bibliotecas y arranca los adaptadores
@@ -101,8 +119,10 @@ de0,8m y `base_link` no se ha demostrado idéntico al `X_BaseBox` interno.
    `/cv/task/transport_action`, transport/head/grasp, tamaño0,603/0,397/0,22.
 3. Exige status4/ok, marco óptico conocido, antigüedad≤2s y relación temporal
    con la petición. Obtiene TF en el stamp exacto; no acepta TF latest.
-4. Clasifica todas las poses en `base_link` y conserva la pose original de
-   cámara de la elegida. Detección SPS devuelve sólo esa candidata; selección
+4. Clasifica todas las poses en `base_link`, comprueba la envolvente XYZ
+   del contrato y conserva la pose original de cámara de la elegida. Antes
+   de cada respuesta exitosa vuelve a verificar la pose real, sin confiar
+   en una marca previa `passed`. Detección SPS devuelve sólo esa candidata; selección
    SPS consume la misma transacción una vez. Datos ambiguos, petición sin
    detección, caducidad, cancelación o fallo invalidan la sesión.
 5. El cliente C++ recibe y guarda la pose como `box/0`, la clave utilizada
@@ -126,7 +146,7 @@ nuevas órdenes mediante la marca stop. No es un watchdog físico ni demuestra p
 del robot al perder SSH. El flujo conserva sus abortos y parada solicitada
 de navegación, sin reintento, apertura o HOME después de un fallo.
 
-## Evidencia en esta unidad
+## Evidencia histórica del 21-09 en esta unidad
 
 **Éxito1:** tarea `local_front_box/detect_only`, goal
 `fb548cf0-b984-4bc9-b2c8-fba840aa73b1`, SUCCEED/state1101001/status4.
@@ -187,11 +207,13 @@ python3 scripts/box_handling/front_box_integration.py --install
 ```
 
 Ambos modos de conexión admiten `--wifi`. El paquete identifica sus fuentes
-por SHA256; ID vigente `a66aa93932ef9bdb`. El instalador rechaza divergencias
+por SHA256; ID corregido instalado `bf145fa17e1116fc`, con estado de instalación
+en la [ficha vigente](FRONT_BOX_DEPTH_GATE_20260928.md). El instalador rechaza divergencias
 en originales/dependencias y conflictos en destinos; no sobrescribe originales.
 No cambia `task_list.yaml`: carga de los XML nuevos comprobada sin reinicio.
 
-Destinos exactos en Motion192.168.11.2:
+Destinos del despliegue histórico `a66aa93932ef9bdb` en Motion192.168.11.2
+(para el paquete corregido, véase la ficha vigente):
 
 - Host: `/var/tmp/cruzr-front-box/a66aa93932ef9bdb/`, manifiesto y recibo.
 - Contenedores `walker-motion.manipulation_robot_app-1` y `walker-ros.ros2-1`:
@@ -219,7 +241,11 @@ pose antigua: toda recogida frontal debe adquirir una detección nueva.
 Vision puede conservar sus imágenes diagnósticas habituales. No se modificaron
 SDK original, bibliotecas, servicios, límites, mapa ni configuración del detector.
 
-## Respaldo y reversión
+## Respaldo y reversión de la integración inicial (histórico)
+
+La reversión acotada del cambio del 28-09 está en la
+[ficha vigente](FRONT_BOX_DEPTH_GATE_20260928.md#evidencia-reversión-y-reanudación):
+no requiere retirar los XML/YAML compartidos descritos a continuación.
 
 Evidencia externa:
 `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260921T114523Z_FRONT_SPS_INTEGRATION`.
@@ -274,7 +300,7 @@ el ciclo conserva el preflight físico/técnico completo del wrapper.
 Los dos wrappers consumen automáticamente el supervisor corregido mediante
 el ID del paquete; no se modificaron sus etapas en esta intervención.
 
-Paquete vigente `a66aa93932ef9bdb`, anterior `1fbe634748083afe` preservado.
+Paquete de esta corrección histórica `a66aa93932ef9bdb`, anterior `1fbe634748083afe` preservado.
 Instalado con el instalador versionado: seis módulos por contenedor y paquete
 del host en los destinos indicados arriba; `created_tasks=[]`, cero originales
 sobrescritos, reinicios o comandos de movimiento. XML/YAML y bibliotecas siguen

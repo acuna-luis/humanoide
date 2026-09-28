@@ -1,5 +1,37 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**Actualización 28-09-2026 — recuperación comunicada por el operador.**
+El operador informa que recolocó los brazos, liberó E-stop y el robot funciona
+en HOME. OBSERVADO por operador; no constituye procedimiento validado para
+repetir esa recuperación ni medida actual del agente. No se enviaron órdenes
+de recuperación desde el agente. Se corrigió e instaló después selección/SPS
+para impedir la entrega de la caja del fondo fuera del espacio permitido;
+prueba física de esa corrección pendiente.
+[Fuente y verificación](../box_handling/FRONT_BOX_DEPTH_GATE_20260928.md).
+El relato inferior conserva las condiciones anteriores a esta recuperación.
+
+**Historial 28-09-2026 — última caja: E-stop tras alcanzar objetivo del fondo.**
+VERIFICADO: sesión144311, objetivoX1,195 fuera del intervalo0,4–0,8 m; Motion
+continúa IK y descenso de manos. Exceso FT y E-stop casi simultáneos en hosts
+distintos; ClampJointTrackingError≈2,6 s después del paro. Reinicios automáticos
+de hw/manipulación dejan esperas de controladores; no acreditan recuperación.
+Operador confirma después estabilidad, abrazaderas vacías y sin contacto aparente.
+No liberar, rearmar ni ordenar HOME desde esta postura. Evidencia copiada;
+apagado exige estabilidad/soporte presencial contra caída, paro mantenido y
+secuencia lógica de esta unidad. Consulta posterior sin ruta de red; apagado
+posterior confirmado por operador, seguido de nuevo encendido con E-stop.
+Conserva postura inclinada; no liberar paro para lanzar HOME de arranque.
+Cero movimiento/reinicio/apagado del agente.
+Lectura posterior con red recuperada: HOME v8 SHA d9e946… conserva fase inicial
+de cuerpo y brazos en paralelo; no usar la premisa «torso primero» para autorizar
+recuperación. Su XML no demuestra elevación inicial de abrazaderas ni holgura al suelo.
+Lectura final nueva: principal1/servo0; HW espera start y Motion ListControllers.
+A17:11 CEST el operador confirma alguna abrazadera apoyada en el suelo.
+ActuatorState Writer0 y JointState no disponible bajo paro. No hay postura
+medida para plan remoto ni ruta ejecutable validada con ese apoyo; intervención
+presencial/servicio UBTECH para asegurar y recuperar, sin liberar para probar.
+[Informe](../incidents/2026-09-28_ULTIMA_CAJA_FONDO_ESTOP.md).
+
 **28-09-2026 — `force_home.sh` pendiente con tarea PICO previa; sólo lectura.**
 VERIFICADO: Motion registra `Task is running` a13:33:31 (+08), tras inicio PICO
 a13:32:35; servidor ArmTask1 y cliente HOME remoto185 aún abierto.

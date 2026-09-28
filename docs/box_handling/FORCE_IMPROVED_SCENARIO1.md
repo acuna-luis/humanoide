@@ -1,5 +1,43 @@
 # Ejecutor mejorado del escenario 1
 
+**Perfil adicional, 28-09-2026:** [`optimistic_scenario1.sh`](../../scripts/optimistic_scenario1.sh)
+usa `assume` con salud recibida continuamente para reducir la adquisición entre
+etapas. Mantiene los fallos bloqueantes, dos muestras articulares posteriores
+al resultado, reposo, navegación/SPS y HOME medido. Su identidad
+`optimistic_v1` no permite mezclar checkpoints con el perfil normal.
+Implementado; cadencia medida en lectura. Paro/servo publican aproximadamente
+cada 4,49 s: sólo su recepción admite hasta 5 s; el resto conserva 2 s y el archivo 1 s.
+Los dos primeros checks fallidos quedan documentados. Verificación final:
+583 pruebas correctas y tercer `--check --benchmark-checks 1` con código 0,
+HOME 20D medido. En reposo: salud completa 2,491728 s frente a validación continua
+0,003216 s; no mide ahorro del ciclo móvil. El cierre registró mensajes de lease
+vencido/stop tras revocarlo, pendientes de mejorar. Ensayo físico pendiente.
+[Uso, límites y estado](OPTIMISTIC_SCENARIO1.md).
+
+**28-09-2026 — corrección de selección instalada.** Los tres ejecutores improved
+y los dos `force_escenario1*` usan el nuevo paquete SPS `bf145fa17e1116fc`.
+Prioriza la caja cercana entre alternativas alineadas al mismo nivel; conserva
+la superior de una pila coherente. Antes de entregar la pose aplica límites XYZ
+con reserva de1 cm; fallo `BOX_POSITION_REJECTED` significa objetivo rechazado,
+sin escoger otra caja ni reintentar. No añade consultas de cámara ni esperas.
+Las dos capturas de estabilidad siguen vigentes en improved. Esto bloquea el
+alcance a la caja; la tarea puede haber realizado su preparación antes de la
+consulta visual. No equivale a un ciclo sin movimiento ni certifica IK.
+La reproducción del incidente elige la cercana a0,794 m, pero también la rechaza:
+el máximo admitido en base_link es0,79 m. Los checkpoints del paquete anterior
+no se deben alterar para saltar la discrepancia de contexto/dependencias.
+Operador informa robot recuperado a HOME. Ensayo físico de la corrección pendiente.
+[Reglas, ubicación de límites, pruebas y despliegue](FRONT_BOX_DEPTH_GATE_20260928.md).
+
+**Historial del incidente, 28-09-2026:** el agarre de la sesión144311 seleccionó la
+caja del fondo a1,192 m y continuó pese al aviso de Motion fuera de X0,8 m.
+Operador pulsó E-stop por movimiento inesperado. Registros e imágenes copiados;
+operador apagó y volvió a encender con paro, conservando postura inclinada;
+recuperación física pendiente. No repetir ni reanudar el agarre ni HOME
+desde esta postura. La selección estable no certifica alcance ni identidad de
+la pila. No se ha instalado una corrección de selección/control en el diagnóstico.
+[Reconstrucción y contención](../incidents/2026-09-28_ULTIMA_CAJA_FONDO_ESTOP.md).
+
 28-09-2026, Europe/Madrid. **BOX-01-EXEC-IMPROVED — implementado en el PC.**
 Consola vigente: etapas legibles, feedback normal repetido limitado a una vez
 por segundo, avisos inmediatos y registro técnico íntegro; `--verbose` muestra
@@ -50,15 +88,23 @@ get1 → habilitar visión → `local_front_box/separate_right_cruzr` →
 No se sustituyen XML/YAML, límites, tamaños internos ni distancias del proveedor.
 El perfil registra `operator_assumed_existing`, no una validación física nueva.
 
-Hay tres entradas con política fija. Todas conservan los controles técnicos y
-el modo de lectura por defecto; únicamente cambia cómo se obtiene la evidencia
-de caja. No se puede cambiar de política mediante un argumento del ejecutor.
+Hay tres entradas normales (`standard_v1`) con política fija. Todas conservan
+los controles técnicos y el modo de lectura por defecto; entre ellas únicamente
+cambia cómo se obtiene la evidencia de caja. No se puede cambiar de política
+mediante un argumento del ejecutor. La entrada adicional
+[`optimistic_scenario1.sh`](OPTIMISTIC_SCENARIO1.md) conserva `assume` y cambia
+la adquisición de salud entre etapas mediante el perfil `optimistic_v1`.
 
 | Entrada | Política | Evidencia de sujeción/liberación |
 | --- | --- | --- |
 | [`ask_improved_scenario1.sh`](../../scripts/ask_improved_scenario1.sh) | `ask` | Confirmación presencial; requiere terminal y pregunta en las transiciones |
 | [`force_improved_scenario1.sh`](../../scripts/force_improved_scenario1.sh) | `assume` | Sin preguntas; estado de caja **asumido** después del éxito técnico de la etapa |
 | [`force_improved_scenario1_autochecked.sh`](../../scripts/force_improved_scenario1_autochecked.sh) | `sensors` | Sin preguntas; exige ventanas frescas de FT y postura dentro de un perfil cualificado |
+
+El perfil optimista tiene las mismas opciones `--plan`, `--check`, `--run` y
+`--resume`, y también hace sólo `--check` por defecto. No mide la sujeción por FT.
+Su [guía propia](OPTIMISTIC_SCENARIO1.md) detalla la supervisión continua y las
+comprobaciones completas conservadas al inicio, al reanudar y al verificar HOME.
 
 **El perfil de sensores distribuido está `pending`.** La entrada autochecked
 permite recoger telemetría con `--check`, pero rechaza `--run` y `--resume` antes
@@ -148,7 +194,10 @@ ejecutor no introduce una parada entre el descenso y esa apertura.
   y Motion. Un fallo/interrupción deja estado indeterminado y bloquea continuidad.
 - Los ciclos desde el inicio usan versión2; las reanudaciones usan versión3
   con etapa de entrada, procedencia y segmento realmente ejecutado. Guardan
-  `policy` y `confirmations`.
+  `policy` y `confirmations`. Los del perfil optimista guardan además
+  `execution_profile=optimistic_v1`; la ausencia del campo significa
+  `standard_v1`. No se permite cruzar estos perfiles al reanudar, tampoco con
+  confirmación de recuperación.
   Cada verificación de caja registra `box_state`, `source` (`operator`, `assumed`
   o `sensors`) y, cuando corresponde, `sensor_evidence`. Un checkpoint antiguo
   versión1 sólo puede continuar con `ask`; no se convierte en evidencia de sensores.
@@ -164,7 +213,10 @@ ejecutor no introduce una parada entre el descenso y esa apertura.
   la sesión. Se vuelven a comprobar controladores y acción libre antes de cada
   etapa física y al verificar HOME. En `assume`, `verify_held` y
   `verify_released` sólo registran la suposición y su checkpoint; la etapa física
-  siguiente conserva su comprobación completa y fresca.
+  siguiente conserva su comprobación completa y fresca en `standard_v1`.
+  En `optimistic_v1` valida la salud continua y dos muestras articulares nuevas
+  posteriores al resultado, con acción libre y reposo; mantiene adquisición
+  completa al entrar en una reanudación y al verificar HOME.
   Los locks no arbitran todos los posibles mandos externos: el operador debe
   mantener PICO/UI/mando manual fuera del control simultáneo.
 - HOME final requiere dos muestras20D recientes con velocidad/consigna dentro
@@ -305,7 +357,8 @@ integra el avance corto no cualificado ni se amplían límites.
 
 - [Entrada con preguntas](../../scripts/ask_improved_scenario1.sh),
   [entrada sin preguntas](../../scripts/force_improved_scenario1.sh),
-  [entrada de sensores](../../scripts/force_improved_scenario1_autochecked.sh)
+  [entrada de sensores](../../scripts/force_improved_scenario1_autochecked.sh),
+  [perfil optimista](OPTIMISTIC_SCENARIO1.md)
   y [CLI](../../scripts/box_handling/scenario1_cli.py).
 - [Supervisor](../../scripts/box_handling/scenario1_runtime.py), [cliente nativo](../../scripts/box_handling/scenario1_action_client.py).
 - [Lector persistente de salud](../../scripts/box_handling/scenario1_health_worker.py)

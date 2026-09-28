@@ -203,6 +203,24 @@ class CollectorTest(unittest.TestCase):
                                         capture_output=True, text=True, timeout=5)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(result.stdout, '')
+                self.assertIn('DEPENDENCY_MISSING:', result.stderr)
+                self.assertNotIn('Traceback', result.stderr)
+
+    def test_missing_sps_file_explains_exact_package_without_success_or_fallback(self):
+        # Use a private, certainly absent name: the standalone collector only reads.
+        with tempfile.TemporaryDirectory() as temporary:
+            package = 'missing-' + Path(temporary).name
+            path = '/opt/cruzr-front-box/' + package + '/front_sps_contract.py'
+            request = dict(paths=[path], text_paths=[])
+            result = subprocess.run([sys.executable, '-B', '-c', collector_source(), json.dumps(request)],
+                                    capture_output=True, text=True, timeout=5)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, '')
+            self.assertIn('SPS_PACKAGE_MISSING: paquete ' + package, result.stderr)
+            self.assertIn(path, result.stderr)
+            self.assertIn('front_box_integration.py --install', result.stderr)
+            self.assertIn('--check-runtime', result.stderr)
+            self.assertNotIn('Traceback', result.stderr)
 
 
 if __name__ == '__main__':

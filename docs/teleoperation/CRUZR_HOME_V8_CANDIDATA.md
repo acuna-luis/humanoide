@@ -1,5 +1,18 @@
 # HOME v8 candidata: apertura inicial repartida
 
+**28-09-2026 — lectura tras incidente de caja: HOME v8 conserva movimiento paralelo.**
+Nuevo boot Motion `cd0b8a7b-94d6-4fa2-a56b-561d13a603f2`; `home.xml` leído
+directamente conserva SHA d9e9462792b41300d352604b53ea2a4890a9382e942321990708f6ded2e26ccb.
+El operador apagó/encendió bajo E-stop y confirma continuar en postura flexionada.
+La primera fase mueve cuerpo/cabeza hacia cero durante3,75 s **en paralelo**
+con ajustes de hombros/codos desde el primer segundo; después baja brazos7 s
+y cierra2,7 s. No es «torso primero, brazos inmóviles» ni elevación cartesiana
+vertical. No hay gate de holgura al suelo en el XML; las fotos nuevas muestran
+abrazaderas próximas al suelo sin permitir cuantificar contacto/soporte.
+No liberar paro ni usar HOME para probar recuperación desde esta postura.
+Sólo lectura; ningún movimiento/rearme/modificación remota del agente.
+[Incidente, evidencia y estado posterior](../incidents/2026-09-28_ULTIMA_CAJA_FONDO_ESTOP.md).
+
 **22-09-2026 14:31 CEST — HOME-V8-AUTO-01: nuevo arranque, liberación preparada.**
 Usuario reinició todo manteniendo el paro. Boot Motion nuevo
 bd5efdb3-f7e0-40b2-a519-50c8ffa893de; contenedores redescubiertos.

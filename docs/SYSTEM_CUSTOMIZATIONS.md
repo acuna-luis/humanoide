@@ -3805,3 +3805,178 @@ retirada de los archivos nuevos después de restaurar el cliente, preservando
 trabajo posterior; actualizar esta ficha. No restaurar checkpoints ni estados
 transitorios. Validación de la presentación en una próxima ejecución real queda
 pendiente; no hay deuda de instalación remota. Sin commit/push.
+
+
+### BOX-01-EXEC-IMPROVED — incidente de caja del fondo, 28-09-2026, Europe/Madrid
+
+**VERIFICADO:** la sesión144311 prefirió por menor ángulo una caja baja posterior
+X1,192 m frente a otra cercana0,794 m. Motion registró fuera de límiteX0,8 m,
+continuó IK/trayectoria y descendió las manos haciaZ0,11 en su marco interno.
+El operador pulsó E-stop; error articular posterior y reinicios automáticos de
+hw/manipulación. La captura RGB-D guardada confirma la disposición. No hay una
+corrección instalada ni validación de alcance por el selector; estabilidad entre
+capturas no sustituye selección de la pila deseada ni límite duro de ejecución.
+Contención operativa: no repetir montaje/agarre ni reanudar/HOME desde esta postura.
+
+Destino de esta intervención: documentación PC, informe
+[ULTIMA_CAJA_FONDO_ESTOP](incidents/2026-09-28_ULTIMA_CAJA_FONDO_ESTOP.md), fuente
+global, guías de transferencia/recuperación/ejecutor y este índice. No cambios
+persistentes de control, parámetros, servicios, contenedores ni tareas. No
+reinicios, rearme, apagado ni objetivos enviados por el agente. Las lecturas
+Docker/archivos y copia de imágenes no activaron detección ni movimiento.
+
+Evidencia, versiones, recetas de consultas y hashes:
+`../Humanoide-vla-evidence/20260928T145208Z_LOWEST_BOX_ESTOP/`.
+Incluye antes/después documental, fuentes PC, cuatro sesiones, configuración
+viva, logs, RGB-D/estéreo y reportes comparativos. Verificación: reproducción
+local de selección, contraste de poses/logs/cámara y orden de etapas; no ensayo
+físico del agente. La consulta posterior de paros falló por No route to host;
+no afirmar apagado. Operador confirma estabilidad y abrazaderas vacías;
+apagado y nuevo encendido con E-stop realizados después por el operador, que
+confirma conservar la postura inclinada. Recuperación física PENDIENTE; no
+liberar paro para ejecutar HOME interno. Lectura del nuevo arranque separada
+de las evidencias anteriores.
+
+Activación: sólo información operativa/documental; scripts de control siguen
+sin modificación. Dependencias y límites técnicos conservados; recomendaciones
+de selección vinculada a pila y rechazo efectivo fuera de alcance pendientes de
+implementar/revisar/ensayar. Reversión documental selectiva desde `before/`,
+preservando cambios posteriores; no hay rollback remoto ni de checkpoints.
+No retirar evidencia del incidente para presentar el montaje como validado.
+
+
+HOME-V8-AUTO-01 relacionado, lectura posterior al nuevo encendido: home.xml vivo
+SHA d9e9462792b41300d352604b53ea2a4890a9382e942321990708f6ded2e26ccb,
+boot Motion cd0b8a7b-94d6-4fa2-a56b-561d13a603f2. Primera fase v8 mueve cuerpo
+3,75 s en paralelo con ajustes de brazos desde el inicio, luego bajada7 s y
+cierre2,7 s; no es torso primero con brazos inmóviles. No hay gate de distancia
+al suelo ni validación de la postura de las fotos. Se actualiza también
+`docs/teleoperation/CRUZR_HOME_V8_CANDIDATA.md`, con backup en la evidencia del
+incidente. Telemetría posterior verifica principal1/servo0, HW esperando start
+y manipulación esperando ListControllers. Sólo lectura, sin liberar paro ni
+llamar start/HOME. Recuperación física pendiente.
+
+
+BOX-01-EXEC-IMPROVED, actualización28-09-2026 17:11 CEST: operador confirma
+abrazadera apoyada en suelo tras nuevo encendido. Sólo consulta pasiva:
+principal1/servo0, ActuatorState Writer0, sin JointState/muestra de20ejes. No
+trayectoria remota ni HOME autorizados desde ese contacto; recuperación
+presencial/servicio UBTECH pendiente. Sin objetivo, servicios o cambios remotos.
+Evidencia y backup documental:
+`../Humanoide-vla-evidence/20260928T151006Z_RECOVERY_POSTURE_READONLY/`.
+Destino PC: informe del incidente, fuente global, guía de recuperación y este
+índice; no software modificado. Receta de lectura: funciones execute/ros de
+`scripts/collect_estop_available_readonly.py` con comandos exactos guardados en
+`results.json`. Hashes antes/después, verificación documental y rollback selectivo
+preservando cambios posteriores; no hay activación ni rollback remoto. Paquete
+preparado para soporte, sin comunicación enviada a terceros.
+
+
+### BOX-01-FRONT-SPS / BOX-01-FRONT-DEPTH-GATE — 28-09-2026, Europe/Madrid
+
+**INSTALADO** `bf145fa17e1116fc`, reemplaza la selección angular exclusiva de
+`74f5507e44addd71` para nuevas sesiones. Motivo: incidente144311 entregó caja
+posterior1,192 m; Motion permitió IK pese al aviso de límite0,8 m.
+Fuentes cambiadas PC: `scripts/box_handling/select_front_box.py` y
+`front_sps_contract.py`; pruebas de selector/contrato, dos suites nuevas y fixture
+numérica saneada de cuatro sesiones. Scripts de entrada calculan ID desde fuentes.
+
+Regla: agrupar pilas como antes, ordenar delante/detrás sólo dentro de franja
+Y80 mm y cimasZ40 mm, rechazar cadenas/alturas ambiguas; después comprobar posición
+seleccionada. Gate exact-time base_link XYZ [.41,.79]/[-.39,.39]/[.01,1.49] m,
+reserva10 mm, en ambas respuestas SPS. No filtrar por alcance para elegir otra
+caja, no alterar medición ni ampliar límites originales. El margen no es una
+cota calibrada de TF ni certificación IK/colisión. Sin consultas adicionales.
+
+Destino Motion: host `/var/tmp/cruzr-front-box/bf145fa17e1116fc/` y
+`/opt/cruzr-front-box/bf145fa17e1116fc/` en contenedores redescubiertos
+`walker-motion.manipulation_robot_app-1` y `walker-ros.ros2-1`.
+Instalación aditiva: seis fuentes, manifiesto/recibo; tareas compartidas ya iguales,
+created_tasks=[], sin originales sobrescritos, reinicios ni comandos de movimiento.
+Dependencias XML/YAML/binarios y verificación por hashes conservadas. Carga de
+adaptador al próximo ciclo; el paquete previo queda como evidencia histórica.
+Ensayo físico con paquete nuevo PENDIENTE. Operador comunica HOME recuperado,
+no nueva medición HOME del agente. No se tocaron procesos de percepción residuales.
+
+Evidencia/copia antes/después/manifiestos:
+`../Humanoide-vla-evidence/20260928T153324Z_FRONT_BOX_DEPTH_GATE/`.
+Bundle SHA256 `2aacf0d3cab182f596ee0c4b7f2eeb2b9ebab3f01e0b69bd62641af4a1abcd28`.
+Receta reproducible, resultados de tests/lecturas, activación y rollback selectivo:
+[FRONT_BOX_DEPTH_GATE_20260928](box_handling/FRONT_BOX_DEPTH_GATE_20260928.md).
+Revertir sólo fuentes de esta adaptación preservando trabajo posterior devuelve
+el ID anterior, pero reintroduce el defecto: no usarlo para repetir el incidente.
+No restaurar checkpoints/cachés ni borrar tareas compartidas. Sin commit/push.
+
+
+### BOX-01-EXEC-OPTIMISTIC — 28-09-2026, Europe/Madrid
+
+**IMPLEMENTADO en PC; carga temporal y lectura real VERIFICADAS; ensayo físico
+PENDIENTE.** Nueva entrada `scripts/optimistic_scenario1.sh`, policy`assume`,
+execution_profile`optimistic_v1`. Motivo: eliminar la repetición de adquisiciones
+completas de salud que consume≈3–5 s entre etapas; no crear un permiso ciego.
+Se mantienen preflight, entrada de recuperación y HOME final completos, identidad
+por hashes/contenedores, dos muestras articulares posteriores al resultado en
+reposo, éxitos de aplicación, llegada2cm/2° y selector/rechazoXYZ SPS.
+
+Fuentes PC modificadas: CLI, runtime, contrato, reanudación y lector de salud
+`scenario1_*.py`; nuevos `scenario1_live_health.py`, wrapper y tres suites de
+pruebas. Transmisión en memoria al iniciar, al host Motion y al proceso nativo
+ROSA en `walker-motion.manipulation_robot_app-1`; no instalación permanente,
+recarga de servicios ni cambio de los seis módulos SPS`bf145fa17e1116fc`.
+`live-health.json` temporal, reemplazo atómico20Hz, modo0644 en sesión privada0700
+para compartir root del contenedor con walker del host. Segundos cliente y
+consultas ListControllers son sólo lectura; cadencia de consulta≈1 s.
+
+Cadencias medidas pasivamente durante16,09 s: paro principal/servo4,4889–4,4920 s,
+cargador/baterías≈0,253 s, actuadores≈0,020 s, pose≈0,096 s; estado de acción
+retenido. Presupuesto de edad de recepción sólo para los dos paros5 s; los demás
+canales/controlador y fuente articular2 s, archivo1 s. Edad real archivada, sin
+renovarla al consultar ni tomar muestras repetidas como nuevas. Cualquier fallo,
+fuente perdida/duplicada o congelación rechaza; un fallo observado queda retenido.
+El watchdog comprueba el archivo durante acciones y revoca el lease ante fallo.
+No modifica la respuesta física del paro, control de fuerza, límites o calibra
+FT. La ausencia de fuerza medida no se presenta como verificación de sujeción.
+
+583 pruebas pasan. `--check --benchmark-checks 1` real termina rc0/CHECK_OK,
+con HOME20D medido; no se armaron etapas ni adaptadores SPS. En reposo: adquisición
+completa2,491728 s frente a continua0,003216 s; discover+hashes0,226823 s.
+No es medida del ciclo con movimiento. Ensayos anteriores preservados: permiso
+600 del snapshot impedía lectura del host y fue corregido con regresión;
+caducidad global2 s rechazaba el canal normal de paro antes de medir su período.
+Cierre deliberado revoca leases; mensajes de error de los workers al salir siguen
+en el registro, deuda de presentación existente, no éxito de movimiento.
+
+Evidencia reproducible y backup íntegro antes/después:
+`../Humanoide-vla-evidence/20260928T155443Z_OPTIMISTIC_SCENARIO1/`.
+Incluye `cadence-readonly.py`, resultados/console de tres checks, métricas y hashes
+finales. Receta de activación es invocar el nuevo wrapper; contexto y checkpoint
+impiden cruzar normal/optimista incluso con recuperación confirmada. Reversión:
+retirar entrada nueva y restaurar selectivamente los cinco módulos PC respaldados,
+luego validador/pruebas nuevos si no se referencian; preservar cambios posteriores,
+checkpoints y la corrección SPS. No restaurar estados transitorios del robot.
+[Fuente, uso, pruebas y rollback](box_handling/OPTIMISTIC_SCENARIO1.md).
+Sin commit/push y sin movimiento, reinicio ni apagado realizados por el agente.
+
+### BOX-01-SPS-PREFLIGHT — 28-09-2026 18:35 CEST, Europe/Madrid
+
+**IMPLEMENTADO PC; VERIFICADO offline y en lectura remota.** Motivo:
+edición local de rango produjo ID665dc3bff417b03a ausente en Motion y una
+excepción FileNotFoundError antes de etapas. El operador eligió restaurar
+X=[0,41;0,79] m: `scripts/box_handling/front_sps_contract.py` vuelve al bundle
+instalado`bf145fa17e1116fc` (SHA256 idéntico al registro BOX-01-FRONT-DEPTH-GATE).
+No se aplica la ampliación local X=[0,35;0,90] ni se adapta el rango al objeto.
+
+`scripts/box_handling/scenario1_dependencies.py` y su prueba distinguen paquete
+SPS ausente/incompleto (`SPS_PACKAGE_MISSING`) de otra dependencia ausente
+(`DEPENDENCY_MISSING`); informan receta y conservan fallo, lectura completa y
+hashes. Sin fallback, descarga ni instalación automática. Fuente transmitida en
+memoria al contenedor Motion/ROS2 por el ejecutor; no requiere reinstalar SPS.
+141 pruebas pertinentes correctas. Hashes host/ambos contenedores coinciden;
+no instalación ni reinicio. Primer preflight rc78 por acción ocupada o estado
+no verificable; lectura posterior terminal4/un publicador; segundo preflight
+rc0, CHECK_SPS_RUNTIME_OK. Sin adaptadores ni tareas/movimiento. No mide HOME
+ni valida trayectorias. Respaldo anterior, bundle y comandos/resultados
+en `../Humanoide-vla-evidence/20260928T163456Z_SPS_PACKAGE_PREFLIGHT/`.
+Reversión selectiva sólo del módulo de diagnóstico y su prueba desde`before/`;
+no restaurar el rango anterior del backup, descartado por petición del operador.
+[Receta, detalles y pendientes](box_handling/FRONT_BOX_DEPTH_GATE_20260928.md#configuración-local-y-paquete-ausente--28-09-2026-1835-cest).

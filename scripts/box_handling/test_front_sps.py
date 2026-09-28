@@ -118,7 +118,7 @@ def report():
     header=dict(frame_id='stereo_left_rectified_optical_frame',stamp=dict(sec=100,nanosec=0))
     return dict(status=4,request_ns=99_900_000_000,goal_id='raw-goal',
         vision_result=dict(ok=True,trans_outputs=dict(camera_name='head',object_name='workbin',
-            box_pose=dict(header=header,poses=[pose(1.,.7,1.3),pose(1.,.02,.4)]))),
+            box_pose=dict(header=header,poses=[pose(.55,.7,1.3),pose(.55,.02,.4)]))),
         tf_at_detection=dict(header=dict(frame_id='base_link',stamp=copy.deepcopy(header['stamp'])),
             child_frame_id=header['frame_id'],transform=dict(translation=dict(x=.2,y=0.,z=0.),
             rotation=dict(x=0.,y=0.,z=0.,w=1.))))
@@ -157,7 +157,7 @@ class ContractTest(unittest.TestCase):
         self.assertEqual(approx,selected)
         self.assertEqual(selected['sps_outputs']['poses'],[r['vision_result']['trans_outputs']['box_pose']['poses'][1]])
         self.assertEqual(evidence['selection']['selected_index'],1)
-        self.assertAlmostEqual(evidence['selection']['selected_pose']['position']['x'],1.2)
+        self.assertAlmostEqual(evidence['selection']['selected_pose']['position']['x'],.75)
         self.assertEqual(r,before)
 
     def test_no_cached_selection_without_detection(self):

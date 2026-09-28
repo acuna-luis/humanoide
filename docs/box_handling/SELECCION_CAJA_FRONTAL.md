@@ -1,4 +1,19 @@
-# Seleccionar la caja frontal independientemente de la altura
+# Seleccionar la caja frontal entre pilas y profundidades
+
+**28-09-2026 — BOX-01-FRONT-DEPTH-GATE: INSTALADO; preflight de lectura
+VERIFICADO; ensayo físico PENDIENTE.** Paquete `bf145fa17e1116fc`. En la misma franja
+lateral y con cimas al mismo nivel, se elige primero la menor profundidad;
+después se comparan ángulos entre franjas. El contrato SPS rechaza posiciones
+fuera de X[0,41;0,79], Y[−0,39;0,39], Z[0,01;1,49] m en `base_link`, sin
+sustituir otra caja. El margen de 1 cm no certifica TF, IK ni colisiones.
+En el incidente elige ahora la frontal índice 4, pero X≈0,794 m sigue fuera
+del intervalo y se rechaza la entrega. Las tres selecciones previas pasan;
+40 pruebas específicas offline y 530 de la suite pertinente correctas.
+Instalación sin reinicio ni movimiento; `--check-runtime` rc0. [Fuente vigente, reglas, estado de
+instalación y reversión](FRONT_BOX_DEPTH_GATE_20260928.md).
+
+Los registros fechados anteriores se conservan como historial; no acreditan
+el estado físico actual ni una prueba perceptiva/física del paquete nuevo.
 
 **22-09-2026 10:58 CEST — Corregido empate entre caja frontal y soporte.**
 El nuevo fallo38371422…/NoneException procedía del selector: dos detecciones de
@@ -12,7 +27,7 @@ no reutilizar la pose baja del fallo anterior. Usuario confirma inmóvil y sin
 contacto; tras preparación del ensayo no asumir HOME. Agarre aún PENDIENTE.
 [Causa, fuentes, pruebas, instalación y reversión](../incidents/2026-09-22_FRONTAL_PILA_AMBIGUA.md).
 
-**VIGENTE — integración SPS instalada, enlace perceptivo nativo probado:** ambos ejecutores usan la variante frontal. Tres pruebas MetaLook SUCCEED y coincidencia de pose en el log C++; agarre físico pendiente. [Uso, estado exacto y reversión](INTEGRACION_CAJA_FRONTAL_SPS.md). Los registros inferiores describen las etapas previas de diagnóstico y bloqueo.
+**Histórico del 21–22-09 — integración SPS instalada, enlace perceptivo nativo probado:** ambos ejecutores usan la variante frontal. Tres pruebas MetaLook SUCCEED y coincidencia de pose en el log C++; agarre físico entonces pendiente. [Uso y evolución de la integración](INTEGRACION_CAJA_FRONTAL_SPS.md). Los registros inferiores describen las etapas previas de diagnóstico y bloqueo.
 
 **Actualización 21-09 13:40 Europe/Madrid:** decompilación completada de las funciones de selección; identificada rama configurable SPS mediante `special_box_name`. Se sustituye el requisito anterior de obtener necesariamente fuentes/build. Es una vía por verificar, todavía sin adaptador ni agarre integrado. [Hallazgos, pseudocódigo y receta](DECOMPILACION_SELECCION_CAJA.md).
 
@@ -28,7 +43,7 @@ solución funcional solicitada. No priorizar altura ni índice devuelto por visi
 Seleccionar y comprobar alcance son operaciones diferentes: si la caja frontal
 no es alcanzable, detenerse; no elegir en su lugar una lateral.
 
-## Hallazgo de la ruta actual
+## Hallazgo histórico de la ruta original
 
 En la biblioteca instalada libmeta_clamp.so, rama GetVisionBox(Request,...),
 la llamada en0x120bc0 a PerceptionActionClient::GetBoxVisionPose pasa índice0
@@ -43,21 +58,25 @@ instalado; su presencia en Motion no equivale a soporte extremo a extremo.
 Los ejemplos vision_aligned con id pertenecen a otra ruta y no autorizan
 cambiar el tipo de tarea separate_box ni fijar índice1: los índices cambian.
 
-## Componente preparado
+## Componente vigente
 
 Fuente: [select_front_box.py](../../scripts/box_handling/select_front_box.py).
 Consume un único conjunto de poses coherente transformado a base_link.
-Criterio: mínimo valor absoluto de atan2(Y,X), con X positivo; la altura Z
-no interviene en la clasificación. Sector diagnóstico inicial ±20°, ambigüedad
-≤2° entre mejores candidatas: rechazar. Son parámetros provisionales del
-selector, no límites físicos ni precisión validada. Dos cajas apiladas igualmente
-centradas quedan ambiguas: el criterio frontal por sí solo no distingue alturas.
+Criterio: con X positivo y sector ±20°, agrupa pilas coherentes por XY≤80 mm
+y niveles de 220 ±40 mm, conservando la cima. Entre cimas en una franja lateral
+de 80 mm y niveles que difieren ≤40 mm, conserva la más cercana si las
+profundidades sucesivas distan >80 mm. Cimas alineadas a alturas distintas o
+agrupaciones ambiguas se rechazan. Sólo después compara el valor absoluto de
+atan2(Y,X) entre franjas; diferencia ≤2° entre las mejores también rechaza.
+Son políticas de clasificación, no tolerancias físicas validadas.
 
 Devuelve la pose original seleccionada sin modificar coordenadas, orientación
 ni límites. No descarta una caja frontal por alcance para escoger otra. No
 crea clientes ROS, publicadores o acciones; no acepta --run. No certifica
-frescura, TF, tamaño, alcance, IK, contactos o trayectoria. Estos controles
-siguen siendo requisitos del adaptador y de Motion.
+frescura, TF, tamaño, alcance, IK, contactos o trayectoria. El contrato SPS
+comprueba TF/frescura y la envolvente XYZ de la ficha vigente antes de entregar
+la pose. No confiar exclusivamente en el aviso nativo de límite: el 28-09
+Motion continuó a IK después de `PositionAndRotationLimit failed`.
 
 Verificación:
 
@@ -66,7 +85,7 @@ python3 -m unittest scripts.box_handling.test_select_front_box
 python3 scripts/box_handling/select_front_box.py detecciones_en_base_link.json
 ```
 
-Ocho tests correctos: caja frontal más baja, todas las permutaciones,
+Validación histórica inicial: ocho tests correctos; caja frontal más baja, todas las permutaciones,
 altura independiente, frontal inalcanzable sin sustitución, ambigüedad,
 marco incorrecto, poses inválidas y política inválida.
 Reproducción aproximada de captura de tres cajas del21-09 elige índice1,
@@ -74,7 +93,7 @@ la baja derecha, bearing7.04°. Usa transformación histórica redondeada y
 supuesto de postura igual, únicamente para probar clasificación; no es nueva
 medida ni validación geométrica. No publicar ese resultado en el robot.
 
-## Integración que falta
+## Histórico del 21-09: integración entonces pendiente
 
 El selector debe consumir las candidatas de la MISMA consulta que utilizará
 MetaClamp, con transformación temporal válida. Una medición previa seguida de
@@ -126,7 +145,7 @@ selection-result.json y SHA256SUMS. Reproducción offline:
 Pendiente: TF temporal coherente en integración, selección consumida realmente
 por MetaClamp, validación de alcance/IK y prueba física autorizada.
 
-## Ejecutor con comprobacion frontal
+## Histórico del 21-09: ejecutor con comprobación frontal
 
 2026-09-21 13:18 Europe/Madrid. **VERIFICADO:** modificación local de
 `scripts/force_escenario1.sh` y nuevo `scripts/box_handling/probe_front_box.py`.

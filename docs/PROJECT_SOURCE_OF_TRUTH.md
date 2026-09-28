@@ -1,5 +1,66 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**28-09-2026 18:35 CEST — BOX-01-SPS-PREFLIGHT: restaurado rango pedido.**
+El intento163254 falló antes de etapas porque la edición local X=[0,35;0,90]
+generaba el paquete ausente`665dc3bff417b03a`. Por petición del operador se
+restaura X=[0,41;0,79], recuperando exactamente el bundle`bf145fa17e1116fc`.
+Diagnóstico PC nuevo`SPS_PACKAGE_MISSING`, sin fallback ni omitir hashes.
+141 pruebas pertinentes pasan; hashes host/ambos contenedores y preflight remoto
+verificados, rc0 tras una primera lectura que no confirmó acción libre. Sin
+instalación, reinicios ni movimientos. La caja detectada a0,7955 m sigue rechazada.
+No amplía alcance ni demuestra una trayectoria segura.
+[Causa, verificación y reversión](box_handling/FRONT_BOX_DEPTH_GATE_20260928.md#configuración-local-y-paquete-ausente--28-09-2026-1835-cest).
+
+**28-09-2026 — BOX-01-EXEC-OPTIMISTIC: nueva entrada rápida, lectura real verificada.**
+`scripts/optimistic_scenario1.sh` usa `assume` y perfil `optimistic_v1`;
+sustituye siete adquisiciones completas entre etapas por telemetría continua
+con edad comprobada y dos muestras articulares posteriores al resultado.
+Conserva errores, reposo, hashes/contenedores, llegada, SPS y HOME medido.
+Medición pasiva: los dos canales de paro publican cada≈4,49 s; sólo sus recibos
+admiten≤5 s. Resto de salud/controlador y fuentes articulares≤2 s, archivo≤1 s.
+No se modifica paro físico, control de fuerza ni límites de caja. No hay FT de
+sujeción/liberación medido: siguen asumidas. Checkpoints no cruzan perfil normal.
+583 pruebas pasan; `--check --benchmark-checks 1` real rc0. En reposo: salud
+completa2,491728 s frente a lectura continua0,003216 s; hashes/contenedores≈0,23 s.
+Eso no mide el ahorro de un ciclo físico. Ensayo con movimiento PENDIENTE.
+Sólo fuentes PC y procesos temporales de lectura; SPS`bf145fa17e1116fc` intacto.
+[Uso, cadencias, ensayos previos y reversión](box_handling/OPTIMISTIC_SCENARIO1.md).
+
+**28-09-2026 — BOX-01-FRONT-SPS: corregida elección de caja posterior.**
+INSTALADO paquete `bf145fa17e1116fc`: dentro de una franja frontal y a igual
+nivel, prima la caja cercana; conserva la cima de cada pila coherente. El
+contrato SPS rechaza XYZ fuera de [0,41;0,79]/[−0,39;0,39]/[0,01;1,49] m en
+base_link, con reserva de1 cm, antes de entregar ambas respuestas nativas.
+Sin sustitución lateral ni modificación de pose; no certifica IK/colisiones.
+Reproducción de las capturas elige índice4 cercano, nunca5 del fondo; en esa
+colocación también rechaza la cercana por falta de margen. Tres ciclos previos
+conservan selección válida. Tareas/YAML intactos, sin reinicio ni movimiento.
+Operador informa recuperación a HOME tras recolocar brazos y liberar E-stop;
+es observación del operador, no una nueva medición HOME del agente. Ensayo físico
+con el nuevo paquete PENDIENTE. El historial inferior describe el estado anterior.
+[Cambio, pruebas, instalación y reversión](box_handling/FRONT_BOX_DEPTH_GATE_20260928.md).
+
+**28-09-2026 — historial BOX-01-EXEC-IMPROVED: incidente en última caja, E-stop.**
+VERIFICADO en sesión PC144311 y registros/imágenes del robot: se eligió caja
+posterior a X≈1,192 m pese a detectar otra a0,794 m. El criterio angular la
+prefirió; Motion registró X≈1,195 fuera de [0,4;0,8] y continuó IK/trayectoria,
+con objetivos de manos Z≈0,11 en marco interno. FT elevado y E-stop quedaron
+registrados casi simultáneos; ClampJointTrackingError apareció después del paro.
+Sin retroceso, depósito ni HOME posterior. Operador confirma estabilidad y
+abrazaderas vacías tras retirar cajas. Después apagó y volvió a encender con
+E-stop; confirma que sigue inclinado. Recuperación física PENDIENTE.
+Mantener E-stop; no repetir ni reanudar/HOME desde esta postura. Registros RGB-D
+y logs copiados al PC; lectura posterior perdió red, sin inferir apagado.
+Sólo diagnóstico y documentación; no cambio de control ni bloqueo instalado.
+Tras recuperar red, lectura del HOME v8 confirma cuerpo y brazos en paralelo,
+no torso primero con brazos inmóviles. Nuevo boot cd0b8a7b…; hash d9e946… intacto.
+No liberar E-stop para probar HOME desde postura flexionada/abrazaderas bajas.
+Lectura posterior: principal1/servo0; HW espera start y Motion ListControllers.
+Actualización17:11 CEST: operador confirma abrazadera apoyada en suelo. Lectura
+pasiva nueva: actuadores Writer0, sin JointState disponible. No liberar paro ni
+HOME para conseguir datos; recuperación presencial/servicio UBTECH pendiente.
+[Reconstrucción y condiciones de apagado](incidents/2026-09-28_ULTIMA_CAJA_FONDO_ESTOP.md).
+
 **28-09-2026 14:43 CEST — BOX-01-EXEC-IMPROVED: consola resumida.**
 Implementado en el PC: etapas en español, tiempos redondeados y feedback normal
 repetido como máximo una vez por segundo y objetivo. Cambios de estado, errores,
