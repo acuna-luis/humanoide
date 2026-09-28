@@ -222,3 +222,84 @@ Evidencia: ../Humanoide-vla-evidence/20260916_SCENARIO1_DISCOVERY/:
 scenario-candidates.json, active-config.json, log-config.json, motion-tasks.json,
 copia del XML y SHA256SUMS. Esto sustituye únicamente la ausencia del XML en las
 copias locales: el hallazgo remoto no demuestra que el flujo se haya probado.
+
+## Comparación con `force_escenario1.sh` — 28-09-2026
+
+**VERIFICADO en fuentes locales; Europe/Madrid.** El script actual adapta
+únicamente el primer traslado del escenario Canada/WRC; el XML Zhucheng
+corresponde al segundo escenario. No son dos lanzadores del mismo recorrido.
+
+| Aspecto | Script actual | XML Zhucheng archivado el 16-09 |
+| --- | --- | --- |
+| Secuencia | get1 → agarre frontal → retroceso 0,20 m → put1 → depósito WRC → HOME, una vez | get1 → put2 → HOME; get2 → put1 → HOME; vueltas según NUM_TIMES_ENV |
+| Ejecución | PC por SSH/ROSA; tareas individuales | Árbol de tareas en Vision, RemoteControlNode y TaskSequenceNode |
+| Agarre | local_front_box/separate_right_cruzr, derivado de Singapore y con selección frontal SPS | zhucheng/clamp_cruzr, MetaLook de transporte/nube y MetaClamp propios |
+| Parámetros | Detector y YAML de separación usan [0.603,0.397,0.22]; el wrapper pasa yaml_args={} | Árbol pasa boxSize=[0.4,0.3,0.22], targetPos Z=0.7/1.2 y putHeight=0.7/1.2 |
+| Depósito | wrc_cruzr/put_cruzr_wrc_low | move_up previo y luego zhucheng/put_cruzr_low o put_cruzr_high |
+| Fallos | Timeout y resultado validado; aborta sin reintentar ni ejecutar HOME de recuperación | Subárbol de agarre permite hasta cinco intentos adicionales tras ciertos errores; navegación también tiene reintentos |
+
+El script prepara `utars_nav_map`, admite puntos `mapping_marker` por sus
+coordenadas y verifica llegada con dos poses frescas (5 cm/3°). Zhucheng usa
+`NavigationModelSelect`: sus variables de entorno eligen navegación y rama
+con/sin carga; los includes pueden ejecutar HOME y preparar mapa antes de get1.
+El agarre Zhucheng incorpora retroceso de 0,50 m; sus depósitos incorporan
+apertura y retroceso de 0,40 m. El tamaño, los puntos compartidos por nombre y
+los parámetros Z no hacen intercambiables sus trayectorias. La semántica
+geométrica efectiva de `targetPos`/`height` no queda certificada por el XML;
+algunos YAML de depósito conservan tamaños predeterminados distintos.
+
+Fuentes: [script](../../scripts/force_escenario1.sh),
+[Zhucheng](../../vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_env_20260428_start.xml),
+[Canada/WRC](../../vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_canada_wrc_20250930_start.xml)
+y sus includes/tareas archivados. Ninguna cadena revisada invoca explícitamente
+checkpoint-40000; esto no audita todos los binarios internos.
+
+La revisión constata terminal obligatorio, aviso físico y preflight en el
+script actual, pero no una lectura interactiva de `CONTINUAR` en el wrapper,
+integrador o supervisor locales; la afirmación anterior de esa confirmación
+en la guía SPS no describe estas fuentes. No se corrigió ni ejecutó el código.
+Compatibilidad con la escena y estado instalado actual: **PENDIENTES**.
+
+Cambios sólo documentales PC; sin consultas remotas para esta comparación,
+instalación ni movimiento. Respaldo documental previo y hashes de las fuentes:
+`../Humanoide-vla-evidence/20260928T060905Z_SCENARIO_COMPARISON/`.
+Reversión: retirar sólo esta sección; preservar el historial y cambios ajenos.
+
+## Desapilar cajas de 603 × 397 × 220 mm — 28-09-2026
+
+**Requisito confirmado por el operador:** desapilar una caja encajada en otra.
+**VERIFICADO en fuentes locales:** el candidato con coincidencia exacta y
+evidencia física previa es
+[`Singapore/separate_right_cruzr.xml`](../../vendor/ubtech/cruzr_s2/snapshot_20260916/motion/tasks/Singapore/separate_right_cruzr.xml),
+invocado por `utars_task_canada_wrc_20250930_start.xml` en el primer traslado.
+Su YAML `wrc/separate_right_cruzr.yaml` fija `box_size: [0.603,0.397,0.22]`,
+`task_type: separate_box`, duración nominal 18 s de esa primitiva, puntos
+VISION/relativos y control de fuerza. El XML añade preparación y bodyback;
+18 s no es la duración total del traslado.
+
+**OBSERVADO/VERIFICADO histórico, no robustez general:** el
+[ensayo del 16-09](../box_handling/GET1_PROVEEDOR_ENSAYO_20260916.md)
+fue exitoso según operador y resultado SUCCEED; caja medida entonces
+603×397×217 mm, base a780 mm, distancia longitudinal590 mm desde centro de
+rueda derecha y lateral160 mm con las referencias del informe. Hubo también
+incidente con otra disposición y posteriores rechazos de alcance/IK. El YAML
+conserva `enable_self_collision_check: false` y
+`enable_abnormality_determination: [none]`; esto no describe todas las
+protecciones del robot ni permite dar la tarea por robusta. La selección
+original tampoco garantiza escoger la pila frontal entre varias detecciones.
+
+**Alternativas por investigar:** `utars_task_palletizing_env_20260513_start.xml`
+invoca `cruzr_clamp/passive_clamp/right_separate` con `[0.6,0.4,0.22]` y
+targetPos Z0.8; `utars_task_jiepu_20251229_start.xml` invoca
+`right_separate_40_to_80` y `right_separate_0_to_40`; variantes gongchang
+invocan `shiyan/separate_right_cruzr`. Sus dependencias Motion no forman parte
+del snapshot seleccionado. Nombres, proximidad de tamaño, fecha o reintentos
+no prueban compatibilidad ni mayor fiabilidad. No se recomiendan como
+sustitutos ya validados. El depósito WRC conserva otra geometría y requiere
+evaluación separada: éxito del desapilado no valida el ciclo completo.
+
+Cambios sólo documentales; ninguna consulta remota ni ejecución. Pendiente:
+dependencias y ensayos comparables de alternativas, y repetibilidad del
+desapilado en la disposición solicitada. Evidencia/hash de fuentes y respaldo
+previo: `../Humanoide-vla-evidence/20260928_DESAPILADO_603_REVIEW/`.
+Reversión: retirar sólo esta sección y su enlace global; conservar notas previas.

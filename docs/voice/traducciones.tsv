@@ -1,0 +1,110 @@
+zh	es	en
+put_height的值是：	La altura de depósito es:	The placement height is:
+row是：	La fila es:	The row is:
+target_pos的值是：	La posición objetivo es:	The target position is:
+一号位置ctu指令发送失败	No se pudo enviar la orden CTU a la posición uno.	Failed to send the CTU command for position one.
+一号位置ctu指令发送成功	Orden CTU enviada a la posición uno.	CTU command sent successfully for position one.
+二号位置ctu指令发送失败	No se pudo enviar la orden CTU a la posición dos.	Failed to send the CTU command for position two.
+二号位置ctu指令发送成功	Orden CTU enviada a la posición dos.	CTU command sent successfully for position two.
+任务完成	Tarea completada.	Task completed.
+充电中表情	Expresión de carga en curso.	Charging expression.
+充电完成	Carga completada.	Charging completed.
+充电桩服务正在启动	Iniciando el servicio de la estación de carga.	The charging station service is starting.
+充电桩环境异常,请检查后重试	Hay un problema con el entorno de la estación de carga. Compruébalo antes de volver a intentarlo.	There is a problem with the charging station environment. Check it before trying again.
+充电检测	Comprobando la carga.	Checking charging status.
+剩余电量百分之三十，请尽快充电	Queda un treinta por ciento de batería. Recarga lo antes posible.	Thirty percent battery remaining. Please recharge as soon as possible.
+动画表情服务正在启动	Iniciando el servicio de expresiones animadas.	The animated expression service is starting.
+参数异常	Error de parámetros.	Parameter error.
+号点	Punto número.	Point number.
+后坐完成	Movimiento de sentado hacia atrás completado.	Backward sitting movement completed.
+回零完成	Retorno a la posición inicial completado.	Return to the home position completed.
+大家好，科鲁泽一号机，为您服务	Hola a todos. Soy Cruzr número uno, a vuestro servicio.	Hello everyone. Cruzr number one, at your service.
+奇偶数是：	La paridad es:	The parity is:
+导航定位失败	La localización de navegación ha fallado.	Navigation localization failed.
+导航定位成功	Localización de navegación completada.	Navigation localization succeeded.
+导航未开始	La navegación no ha comenzado.	Navigation has not started.
+导航未开始1	La navegación no ha comenzado. Uno.	Navigation has not started. One.
+层数错误	Número de niveles incorrecto.	Incorrect number of levels.
+底盘绿色常亮灯	Luz verde del chasis encendida de forma continua.	Chassis green light steadily on.
+底盘绿色闪烁	Luz verde del chasis intermitente.	Chassis green light flashing.
+开始执行循环任务	Comenzando la tarea repetitiva.	Starting the repeating task.
+开始执行第	Comenzando la iteración número:	Starting iteration number:
+开始执行第二趟任务	Comenzando el segundo recorrido de la tarea.	Starting the second task run.
+当前is_placing_box的值是：	El valor actual de is placing box es:	The current value of is placing box is:
+当前map_self的值是：	El valor actual de map self es:	The current value of map self is:
+当前point3_pick_arrive的值是：	El valor actual de point three pick arrive es:	The current value of point three pick arrive is:
+当前机器人连接充电器，拒绝执行任务	El robot está conectado al cargador. No se puede ejecutar la tarea.	The robot is connected to the charger. The task cannot be executed.
+当前正在上桩充电，禁止执行任务	El robot está acoplándose a la estación de carga. No se permite ejecutar la tarea.	The robot is docking for charging. Task execution is not permitted.
+当前电池电量低于百分之15，拒绝执行任务	La batería está por debajo del quince por ciento. No se puede ejecutar la tarea.	The battery is below fifteen percent. The task cannot be executed.
+当前电池电量低于百分之40，拒绝执行任务	La batería está por debajo del cuarenta por ciento. No se puede ejecutar la tarea.	The battery is below forty percent. The task cannot be executed.
+当前电池电量高于百分之八十，等待任务	La batería está por encima del ochenta por ciento. Esperando una tarea.	The battery is above eighty percent. Waiting for a task.
+您好，我是科鲁泽二号机，欢迎来到优必选智能机器人展厅	Hola. Soy Cruzr número dos. Bienvenido a la exposición de robots inteligentes de UBTECH.	Hello. I am Cruzr number two. Welcome to the UBTECH intelligent robot showroom.
+我在大箱子点，我要开始搬大箱子了	Estoy en el punto de cajas grandes. Voy a recoger una caja grande.	I am at the large box location. I will start picking up a large box.
+我在大箱子点，我要开始放大箱子了	Estoy en el punto de cajas grandes. Voy a depositar una caja grande.	I am at the large box location. I will start placing a large box.
+我在小箱子点，我要开始搬小箱子了	Estoy en el punto de cajas pequeñas. Voy a recoger una caja pequeña.	I am at the small box location. I will start picking up a small box.
+我在小箱子点，我要开始放小箱子了	Estoy en el punto de cajas pequeñas. Voy a depositar una caja pequeña.	I am at the small box location. I will start placing a small box.
+我开始拆垛动作	Voy a comenzar a desapilar las cajas.	I will start unstacking the boxes.
+我要做个前坐动作	Voy a realizar un movimiento de sentado hacia delante.	I will perform a forward sitting movement.
+我要做个半蹲动作	Voy a realizar una media sentadilla.	I will perform a half squat.
+我要做个后蹲动作	Voy a agacharme hacia atrás.	I will squat backward.
+我要做个打招呼动作	Voy a realizar un gesto de saludo.	I will perform a greeting gesture.
+我要先下桩了	Primero voy a salir de la estación de carga.	I will leave the charging station first.
+我要前置抓箱子动作	Voy a realizar el movimiento previo al agarre de la caja.	I will perform the movement before grasping the box.
+我要动腰动作	Voy a mover la cintura.	I will move my waist.
+我要去一号位置拿箱子	Voy a la posición uno a recoger una caja.	I will go to position one to pick up a box.
+我要去二号位置拿箱子	Voy a la posición dos a recoger una caja.	I will go to position two to pick up a box.
+我要去放置箱子	Voy a depositar la caja.	I will go to place the box.
+我要后置抓箱子动作	Voy a realizar el movimiento posterior al agarre de la caja.	I will perform the movement after grasping the box.
+我要后退动作	Voy a retroceder.	I will move backward.
+我要回初始位置了	Voy a volver a la posición inicial.	I will return to the initial position.
+我要回零动作	Voy a volver a la posición HOME.	I will return to the home position.
+我要导航到：	Voy a navegar hasta:	I will navigate to:
+我要开始上桩充电了	Voy a acoplarme a la estación de carga.	I will dock at the charging station.
+我要开始上桩充电了2	Voy a acoplarme a la estación de carga. Dos.	I will dock at the charging station. Two.
+我要开始下桩了	Voy a salir de la estación de carga.	I will leave the charging station.
+我要开始下桩充电了	Voy a salir de la estación de carga.	I will leave the charging station.
+我要开始下桩充电了5	Voy a salir de la estación de carga. Cinco.	I will leave the charging station. Five.
+我要开始下桩操作	Comenzando la salida de la estación de carga.	Starting the undocking procedure.
+我要开始传输数据了	Voy a comenzar a transmitir datos.	I will start transmitting data.
+我要开始传输数据了4	Voy a comenzar a transmitir datos. Cuatro.	I will start transmitting data. Four.
+我要开始工作啦	Voy a comenzar la tarea.	I will start the task.
+我要开始抓取了	Voy a comenzar el agarre.	I will start grasping.
+我要开始抓取橙子	Voy a recoger una naranja.	I will pick up an orange.
+我要开始抓取苹果	Voy a recoger una manzana.	I will pick up an apple.
+我要开始接收数据了	Voy a comenzar a recibir datos.	I will start receiving data.
+我要开始接收数据了3	Voy a comenzar a recibir datos. Tres.	I will start receiving data. Three.
+我要开始搬第一个位置箱子	Voy a recoger la caja de la primera posición.	I will pick up the box at the first position.
+我要开始搬第二个位置箱子	Voy a recoger la caja de la segunda posición.	I will pick up the box at the second position.
+我要开始搬箱子动作了	Voy a comenzar el movimiento para transportar la caja.	I will start the box transport movement.
+我要放箱子动作	Voy a realizar el movimiento para depositar la caja.	I will perform the box placement movement.
+有任务正在执行	Hay una tarea en ejecución.	A task is running.
+未充电我要开始下桩了1	No se está cargando. Voy a salir de la estación. Uno.	Not charging. I will leave the charging station. One.
+机器未启动	El robot no ha arrancado.	The robot has not started.
+机器正在充电	El robot está cargando.	The robot is charging.
+检测地图	Comprobando el mapa.	Checking the map.
+次任务	Tarea.	Task.
+正在充电	Carga en curso.	Charging in progress.
+正在充电,当前电池电量低于百分之40，拒绝执行任务	Carga en curso. La batería está por debajo del cuarenta por ciento. No se puede ejecutar la tarea.	Charging in progress. The battery is below forty percent. The task cannot be executed.
+正在导航定位可能需要一会儿哦	Localizando el robot para navegar. Puede tardar un momento.	Localizing the robot for navigation. This may take a moment.
+正在执行第	Ejecutando la tarea número:	Executing task number:
+现在我们到了桌面机器人展位，悟空机器人，你的第一个智能小伙伴	Hemos llegado al espacio de robots de sobremesa. Wukong, tu primer compañero inteligente.	We have arrived at the desktop robot stand. Wukong, your first intelligent companion.
+现在看到的是Walk系列机器人，他正在做物品识别的演示	Este es un robot de la serie Walk. Está haciendo una demostración de reconocimiento de objetos.	This is a Walk series robot. It is demonstrating object recognition.
+电量低，请尽快充电	Batería baja. Recarga lo antes posible.	Low battery. Please recharge as soon as possible.
+电量极低，请尽快充电	Batería muy baja. Recarga lo antes posible.	Very low battery. Please recharge as soon as possible.
+科鲁泽一号机，为您服务	Cruzr número uno, a tu servicio.	Cruzr number one, at your service.
+等待三分钟后执行第二趟任务	Esperaré tres minutos antes de comenzar el segundo recorrido.	I will wait three minutes before starting the second task run.
+箱子已放置完毕	La caja ha sido depositada.	The box has been placed.
+获取启动标识参数异常	Error al obtener el parámetro de inicio.	Error retrieving the startup flag parameter.
+获取地图	Obteniendo el mapa.	Retrieving the map.
+获取导航充电桩类型环境变量参数异常	Error al obtener la variable del tipo de estación de carga de navegación.	Error retrieving the navigation charging station type environment variable.
+获取导航类型环境变量参数异常	Error al obtener la variable del tipo de navegación.	Error retrieving the navigation type environment variable.
+设置地图	Seleccionando el mapa.	Setting the map.
+设置地图1	Seleccionando el mapa. Uno.	Setting the map. One.
+设置地图111	Seleccionando el mapa. Uno uno uno.	Setting the map. One one one.
+请您喝水	Aquí tienes agua.	Please have some water.
+轮	Iteración.	Iteration.
+运控控制暂时预留	Control de movimiento reservado para uso futuro.	Motion control reserved for future use.
+还未充电	La carga todavía no ha comenzado.	Charging has not started yet.
+还未指定任务，请从网页指定任务后重启任务管理器	No se ha seleccionado una tarea. Selecciónala en la página web y reinicia el gestor de tareas.	No task has been selected. Select a task on the web page, then restart the task manager.
+重抓	Nuevo intento de agarre.	Grasping again.
+需要帮助移动一下箱子	Necesito ayuda para mover la caja.	I need help moving the box.

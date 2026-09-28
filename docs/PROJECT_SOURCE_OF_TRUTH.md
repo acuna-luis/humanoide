@@ -1,5 +1,312 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**28-09-2026 — BOX-01-EXEC-IMPROVED: nuevo ejecutor local del escenario1.**
+Usuario indica conservar la geometría actual. Implementados --check por defecto,
+ejecución confirmada, checkpoints/reanudación de un solo uso, acciones con UUID,
+heartbeat/cancelación acotada, doble captura coherente y HOME medido. VERIFICADO:
+99 pruebas offline; compatibilidad e integración física PENDIENTES. Sin conexión,
+instalación o movimiento del robot; fuentes originales conservan sus hashes.
+[Uso, fuentes, límites y reversión](box_handling/FORCE_IMPROVED_SCENARIO1.md).
+
+**28-09-2026 — revisión de mejoras de `force_escenario1.sh`, sin implementación.**
+VERIFICADO local: el selector exige paso vertical de0,22±0,04m; dos detecciones
+con el mismoXY y paso0,10m se rechazan en prueba sintética. Compatibilidad con
+cajas encajadas reales PENDIENTE de medidas. Prioridades: geometría de recogida
+y depósito, estado de caja entre etapas, interrupción/reanudación y preflight
+específico. [Revisión y límites](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md#revisión-de-mejoras--28-09-2026).
+Sólo documentación PC; sin cambios operativos ni conexiones al robot.
+
+**28-09-2026 — selección documental para desapilar caja encajada603×397×220mm.**
+VERIFICADO local: Canada/WRC→Singapore/separate_right_cruzr usa tamaño exacto
+y task_type separate_box. Éxito16-09 limitado al montaje registrado; robustez
+general y alternativas passive_clamp/Jiepu/Shiyan PENDIENTES. Usuario confirma
+operación de desapilado, no ejecución. [Candidatos, evidencia y límites](vla/UBTECH_PROCEDIMIENTO_CAJAS_20260914.md#desapilar-cajas-de-603--397--220-mm--28-09-2026).
+Sólo documentación PC; sin cambios de scripts, consultas remotas ni movimiento.
+
+**28-09-2026 — diagnóstico `force_home` y comparación de escenarios, sólo lectura.**
+VERIFICADO: cliente HOME iniciado13:33:30 (reloj Motion+08); log registra
+`Task is running` a13:33:31, después de iniciar PICO a13:32:35.
+Servidor ArmTask1; cliente remoto185 seguía abierto. INFERENCIA: HOME rechazado
+por tarea ocupada. Estado final de acción/salud/paros PENDIENTES: última ronda
+falló por permiso local de ASKPASS. Sin cancelación, rearme, reinicio o movimiento.
+Evidencia: `../Humanoide-vla-evidence/20260928T053746Z_FORCE_HOME_WAIT/`.
+Comparación local: script adapta primer traslado Canada/WRC; Zhucheng realiza
+dos traslados con otras tareas/parámetros. [Detalle](vla/UBTECH_PROCEDIMIENTO_CAJAS_20260914.md#comparación-con-force_escenario1sh--28-09-2026).
+Sólo documentación PC; scripts y configuración del robot sin modificar.
+
+**23-09-2026 — VOICE-BRAKE-07: idioma del aviso de freno instalado.**
+Frase exacta de backend_service_vision→WAV español; lógica/condición del freno
+intactas.7 hashes correctos, prueba nativa y a través del entrypoint instalado
+pasan, cero objetivos/audio. Paro1 verificado. Carga real al próximo inicio del
+backend y escucha PENDIENTES; sin restart ni movimiento. Rollback independiente.
+[Fuentes, evidencia y reversión](voice/AVISO_FRENO_ES_ROLLBACK_20260923.md).
+
+
+**23-09-2026 — aviso chino intermedio identificado (VOICE-BOOT-05, cobertura pendiente).**
+Speech Service registra a17:57:09.435 (hora nativa) el TTS
+«当前抱闸被锁死，请操作底盘解抱闸按钮，解锁抱闸», goal
+1d8b0278-a42a-4ed1-ad21-5d47ea3feeee. Significado: «El freno del chasis está
+bloqueado; utilice el botón de liberación del freno del chasis para desbloquearlo».
+Es traducción del aviso observado, no instrucción de desbloqueo en esta revisión.
+Queda entre WAV español cc_006/autocomprobación superada (17:57:02.520) y
+cc_007/control de movimiento iniciado (17:57:11.358). No aparece entre las
+emisiones processRequest del CC consultadas; cliente emisor exacto PENDIENTE.
+No queda cubierto por los24 textos de CC; añadirlo sólo al catálogo no garantiza
+interceptar otro cliente. También existe TTS chino a17:54:31 sobre tarea no
+asignada, anterior a esa secuencia, pendiente de integración separada.
+Sólo lectura; no se modificó freno, red, servicios ni audios. Evidencia: /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260923T095843Z_VOICE_CHINESE_GAP.
+
+**23-09-2026 — VOICE-BOOT-06: anuncio inglés automático retirado.**
+Watcher conserva comprobaciones y visual; sólo se retira announce() de --watch.
+Aviso nativo español intacto.31 tests pasan y hash remoto verificado; sin restart
+ni reproducción. Efectivo al próximo watcher; prueba de nuevo encendido pendiente.
+[Fuente, respaldo y rollback](voice/RETIRADA_AVISO_INGLES_20260923.md).
+
+
+**23-09-2026 — VOICE-BOOT-05: primera reproducción real confirmada.**
+Reinicio realizado por operador. Silencio inicial: guard esperando Motion0→3/3
+antes de ejecutar Control Center; cámaras6topics2/2 con timestamps crecientes.
+Después registra carga VOICE_CC y conversión a FILE español. Speech Service recibe
+/etc/walker/voice/control_center_es_v1/audio_es/cc_016.wav, goal
+021f9637-e809-4195-bcee-ae44c9dcf6e8; callbacks de inicio y fin y envío de éxito.
+Operador confirma escuchar en español «Gire y libere el botón de parada de emergencia».
+Queda verificada carga real y escucha de ese aviso, no de todos los24 ni batería.
+Paro leído1 durante diagnóstico; CC alcanza WaitEStopRelease. No liberación,
+reinicio, reproducción ni movimiento ordenados por agente; sólo consultas.
+Los mensajes de shutdown de PID942 pertenecen al proceso anterior, no a fallo del
+nuevo arranque. No inferir fallo por nivel E de callbacks: describen inicio/fin.
+Evidencia: /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260923T094542Z_VOICE_BOOT_CHECK.
+
+**23-09-2026 11:39 CEST — VOICE-BOOT-05 instalada con rollback.**
+Control Center:24 avisos fijos a WAV español, patrón de batería a TTS inglés;
+mensajes desconocidos preservados.32 archivos verificados; guard de hashes y
+LD_PRELOAD antes del exec, gates originales idénticos por comparación AST.
+Paro1 antes/después. Prueba nativa de objetivos pasa, cero audio/movimiento.
+Proceso actual aún sin adaptador; carga al próximo inicio y escucha PENDIENTES.
+No reinicios ni cambios de red. Recibo externo20260923_VOICE_CC_DEPLOY/receipt.json;
+backup persistente /etc/walker/voice/deployments/cruzr-voice-20260923T093840Z.
+[Fuentes, compatibilidad, validación y rollback](voice/CONTROL_CENTER_ES_ROLLBACK_20260923.md).
+
+
+**23-09-2026 — VOICE-BOOT-05: conexión recuperada, causa contrastada en vivo.**
+Control Center del último arranque registra avisos chinos vía tts_impl.cpp;
+24 WAV españoles nuevos generados localmente con Piper (mono16kHz PCM16,
+señal/duración verificadas), traducciones inglesas preparadas y cuatro ejemplos
+numéricos de batería separados como dinámicos. No están instalados ni conectados.
+Catálogo: docs/voice/catalogo_control_center_20260923.json. Paquete PC:
+/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260923_VOICE_CC_AUDIO (ESCUCHAR.html y audio_es/manifest.json).
+Los949+7 archivos ES03/EN04 pasan comparación SHA tras reinicio: no se perdieron.
+Paro principal leído0; no se solicita pulsarlo antes de preparar integración y
+revisar postura. No se modificó ni reinició ningún servicio ni se reprodujo audio.
+Inspección nativa: processRequest construye Tts_Goal TTS1 con texto y velocidad/
+volumen; llamada directa a ActionClient::start. El adaptador de workers no cubre
+esa función; base.conf/cc.conf no muestran selector voice/locale/language/tts.
+No se ha validado todavía una integración del cliente de Control Center: no
+instalar ahí el adaptador anterior suponiendo que funcione. Pendiente diseñar y
+probar conversión de objetivos preservando callbacks y voz de fallos, respaldar
+cliente/lanzador y preparar rollback antes de cualquier despliegue.
+Evidencia de lectura y desensamblado: /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260923T093159Z_VOICE_CC.
+Cambios sólo PC (catálogo, WAV, HTML y documentación); rollback local selectivo,
+conservar respaldos ES03/EN04. Sin commit/push.
+
+**23-09-2026 11:30 CEST — PC-01: Wi-Fi USB desconectada, diagnóstico de lectura.**
+A las11:03:33 el adaptador Realtek0bda:b812/rtw88_8822bu pierde asociación
+(reason2 PREV_AUTH_NOT_VALID); después repite failed to download firmware /
+failed to leave ips state. NetworkManager registra ssid-not-found a11:03:48.
+Adaptador presente y rfkill sin bloqueo; no demuestra avería física ni identifica
+la causa inicial de la desautenticación. Ya hubo errores USB -71 a09:27.
+Ethernet eno1 sigue NO-CARRIER/carrier off pese a cable conectado según operador.
+Los planes VOICE-ES-03/EN-04 (949+7 rutas) no incluyen red/driver/firmware;
+no hay evidencia de relación causal con audio. No se puede comprobar aún el AP
+del robot. No se modificó red, driver, servicios ni robot.
+Evidencia: `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260923T093026Z_PC_WIFI_AUDIT`. Reanudar comprobando enlace Ethernet y recuperación del
+adaptador USB; diagnóstico del arranque/audio sigue pendiente de conectividad.
+
+**23-09-2026 — VOICE-BOOT-05: cobertura de arranque incompleta.**
+Operador escucha chino tras reinicio. Logs históricos identifican TTS propio de
+Control Center (`tts_impl.cpp`), fuera del adaptador de workers VOICE-EN-04 y
+los XML de VOICE-ES-03. 28 textos observados inventariados; no catálogo exhaustivo.
+Lectura del último arranque pendiente por timeout SSH a Vision. No se modificó
+robot ni se reprodujo audio. [Auditoría y pendientes](voice/AUDITORIA_ARRANQUE_20260923.md).
+
+
+**23-09-2026 — VOICE-EN-04: ruta TTS dinámica integrada e instalada.**
+Adaptador local para TtsClient:346 traducciones/fragmentos; texto/números en EN;
+FILE español intacto. Chino desconocido conserva objetivo original y registra
+aviso, sin ocultar errores. Lanzador de ae_bt_worker carga biblioteca con hashes
+fijados; no se toca biblioteca vendor. Siete rutas verificadas. Paro1 mantenido.
+Prueba nativa de ABI/enlace y prueba del lanzador correctas, cero objetivos/audio.
+Sin workers activos en lectura previa; se aplica al próximo worker. Primera tarea
+real/escucha pendientes; sin reinicios. Rollback independiente devuelve lanzador
+y elimina sólo archivos de esta capa, preservando el paquete español anterior.
+Recibo externo: ../Humanoide-vla-evidence/20260923_VOICE_DYNAMIC/install/receipt.json.
+Respaldo persistente: /etc/walker/voice/deployments/cruzr-voice-20260923T085523Z.
+[Detalles, límites y rollback](voice/TTS_DINAMICO_EN_Y_ROLLBACK_20260923.md).
+
+**23-09-2026 — VOICE-ES-03: avisos españoles instalados en disco.**
+Autorizado con paro principal pulsado, comprobado antes de cada grupo.
+291 WAV +2 JSON en /etc/walker/voice/es_local_v1;600 XML ahora usan FILE español;
+56 rutas de audio hablado sustituidas. Música/efectos intactos.949 hashes finales
+verificados. Sin reproducción, recarga, reinicio ni movimiento. Dinámicos60
+conservan ruta nativa (puede hablar chino); EN sólo preparado, no integrado.
+Rollback ejecutable con recibo y originales inmediatos persistentes:
+/etc/walker/voice/deployments/cruzr-voice-20260923T083811Z;
+copia externa ../Humanoide-vla-evidence/20260923_VOICE_INSTALL/run/.
+Fuentes build_spanish_install.py/deploy_voice_assets.py y test, bajo scripts/voice.
+Cuatro tests pasan. Instalado: sí; carga/reproducción: PENDIENTES.
+[Instalación, límites y comando de rollback](voice/INSTALACION_Y_ROLLBACK_20260923.md).
+
+**23-09-2026 — VOICE-ES-02: respaldo verificado y síntesis local preparados.**
+Inventario vivo:344 textos TtsClient distintos,284 fijos (274 chinos),60 variables.
+291 WAV ES locales Piper:284 textos +7 propuestas de audios hablados transcritos
+con Whisper local. TTS EN preparado con language=en;600 copias XML sólo texto.
+Música/efectos conservados por petición explícita. No se instaló/reprodujo nada
+ni se enviaron movimientos. Audición humana/idioma efectivo del dispatcher e
+integración de variables dinámicas pendientes; respuesta infantil breve ambigua.
+Seis tar externos con4278 entradas verificadas +ejecutable TTS separado;173 rutas
+de audio entre contenedores,21 hashes distintos. Identidades Docker/metadata
+privadas, permisos y hashes preservados. Ensayo de rollback offline de XML/audio;
+no restauración remota. Primer tar con log transitorio cambiante rechazado y
+conservado como fallo; sólo originals_verified/ es válido.
+Paquete, modelos/atribución, entorno y hashes:
+`../Humanoide-vla-evidence/20260923_VOICE_ROLLBACK`.
+Fuentes/receta/alcance y rollback: `docs/voice/VOZ_LOCAL_Y_ROLLBACK_20260923.md`,
+`scripts/voice/`; catálogo actual JSON y traducciones adicionales versionados.
+Cambio persistente sólo PC: Piper1.8.0 añadido al entorno privado de voz y modelos
+Piper/Whisper descargados; GPU4070 disponible, generación/transcripción en CPU.
+Reversión selectiva de archivos nuevos PC; preservar backups para cualquier
+instalación posterior. Ningún cambio en SDK original ni robot. Sin commit/push.
+
+[Paquete local y rollback](voice/VOZ_LOCAL_Y_ROLLBACK_20260923.md).
+
+**22-09-2026 — VOICE-ES-01: catálogo y paquete ES/EN preparados en PC.**
+109 textos fijos y19 variables TtsClient inventariados en snapshot16-09;
+traducciones ES/EN y57 copias XML inglesas (sólo literales tts; variables intactas).
+Más aviso local de arranque ya inglés:110 audios ES y110 EN, cada uno WAV PCM16
+mono16kHz y MP3. Decodificación/duración/señal verificadas; no escucha humana.
+22 rutas WAV originales del inventario previo listadas, sin copia/transcripción:
+el robot perdió conexión y el operador confirmó apagado/desconectado.
+Inventario exhaustivo actual, mensajes compilados/dinámicos y escucha originales
+PENDIENTES. No se cambió ni reprodujo nada en el robot. Catálogo y recetas en
+`docs/voice/CATALOGO_VOZ_ES_EN.md`; fuentes `scripts/voice/` y TSV versionados.
+Paquete, reproductor HTML, ZIP, hashes, versiones y fallos de conexión en
+`../Humanoide-vla-evidence/20260922_VOICE_ES_FULL`.
+Entorno PC privado `../Humanoide-vla-evidence/voice-tools-venv` (Edge TTS, PyAV,
+soundfile; faster-whisper instalado pero no utilizado, sin modelo descargado).
+Síntesis remota de textos traducidos, sin envío de grabaciones. Dependencias
+fijadas en requirements-frozen.txt. Instalado/cargado/probado en robot: NO.
+Reversión: retirar sólo archivos nuevos/entorno privado y revertir notas
+selectivamente; no hay configuración remota a restaurar.
+
+**22-09-2026 14:31 CEST — HOME-V8-AUTO-01: nuevo arranque, liberación preparada.**
+Usuario reinició todo manteniendo el paro. Boot Motion nuevo
+bd5efdb3-f7e0-40b2-a519-50c8ffa893de; contenedores redescubiertos.
+HOME remoto conserva SHA d9e9462792b41300d352604b53ea2a4890a9382e942321990708f6ded2e26ccb.
+`cruzr_boot_ready.sh --check` rc0: Motion3/3, seis cámaras2/2 con timestamps
+crecientes, RELEASE_TECHNICAL_CHECK=passed. Contrato: arranque inicial CC,
+paro principal pulsado, secundario liberado y cargador desconectado.
+Operador confirma brazos abajo, abrazaderas instaladas/vacías, sin sujeciones,
+recorrido libre, ruedas bloqueadas, control exclusivo y persona junto al paro.
+Comprobación técnica y física previas completas; se indica liberar manualmente.
+Liberación, ejecución HOME v8 automático, salud20D y fin del arranque PENDIENTES.
+El agente sólo leyó; no envió acciones, rearme ni reinicio. Evidencia:
+`../Humanoide-vla-evidence/20260922T123059Z_V8_BOOT_CHECK`.
+
+**22-09-2026 — HOME-V8-AUTO-01: v8 INSTALADA como HOME automático.**
+Tras nueva petición «hazlo ahora», paro principal1/servo0, cargador0 y hashes
+verificados. home.xml sustituido atómicamente por el XML exacto ensayado:
+SHA256 `d9e9462792b41300d352604b53ea2a4890a9382e942321990708f6ded2e26ccb`.
+Postcheck confirma v8 y paro mantenido. Sin movimiento ni reinicio del agente.
+13,45s nominales; prueba física previa de tarea separada satisfactoria.
+Carga de esta sustitución y prueba durante arranque PENDIENTES. Motion seguía
+esperando ListControllers; instalación no implica recuperación de ese servicio.
+
+El rechazo anterior se resolvió contrastando los diarios retenidos: mismo boot,
+medición HOME reciente, contador del diario original sin cambios, cero tareas
+en todos sus sucesores, salida anterior por heartbeat y nueva instancia esperando
+controladores. El instalador admite esta continuidad sólo para escritura bajo
+paro; no declara salud actual ni autoriza liberación o movimiento. Registro
+HOME original intacto. Se rechazan tareas nuevas, diario ausente/inconsistente,
+cambio de boot, caducidad o historia de reinicio no explicada.
+
+Destino: Motion, walker-motion.manipulation_robot_app-1,
+`/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/cruzr/home.xml`.
+Backup robot: `/etc/walker/trajectory-overlays/20260922T122256.171279Z_home_body_first`.
+Backup externo previo: `install/home.v7.before.xml` en
+`../Humanoide-vla-evidence/20260922T122230Z_HOME_V8_RESUME`;
+recibo, postcheck, continuidad, fuentes y SHA256SUMS en la misma evidencia.
+Fuente/receta: `scripts/teleoperation/install_home_v8_auto.py --install --evidence /RUTA/NUEVA`;
+requiere medición previa según su guía. Preflight de cajas reconoce hash v8 exacto.
+Reversión: bajo paro y sin acciones, comprobar hash v8 y restaurar únicamente
+home.before.xml del backup (v7 SHA1e6e2fb7…a6f03), verificar hash tras escritura.
+No se realizó reversión ni activación. Mantener paro hasta preparar recuperación
+controlada de servicios/arranque; no usar liberación como prueba del fallo.
+
+**22-09-2026 — HOME-V8-AUTO-01: sustitución detenida antes de escribir.**
+Operador confirmó paro principal pulsado tras HOME medido. Preflight verificó
+paro principal1, servo0, cargador0 y hashes originales. El guard de continuidad
+rechazó la instalación: cambió robot_app_log. Log anterior termina con fatal
+heartbeat delta_t=5,04583s a20:19:47.723727 (hora nativa); nueva instancia
+20:19:48 espera ListControllers. Contenedores robot_app y HW muestran arranque
+reciente. Causa de la pérdida de heartbeat PENDIENTE; no atribuirla al XML v8.
+No se ejecutó escritura, reinicio ni movimiento del agente. Hash remoto final
+confirma HOME v7 intacto. Mantener paro; instalación/activación v8 automáticas
+PENDIENTES hasta resolver continuidad/estado. No falsear el registro HOME ni
+liberar el paro sólo para superar el instalador. Evidencia:
+`../Humanoide-vla-evidence/20260922T121856Z_HOME_V8_AUTO` (install/status.json,
+identity-after-stop.json, logs y home-final-hash.json).
+
+**22-09-2026 — HOME-V8-AUTO-01: promoción solicitada, instalación PENDIENTE.**
+Usuario pide v8 como HOME automático tras ensayo satisfactorio. Preparado
+`install_home_v8_auto.py`: exige HOME medido reciente, misma instancia/sin
+nuevas tareas, paro principal pulsado, hash v7/MetaMove y copia externa antes
+de sustituir atómicamente home.xml por los bytes exactos de la candidata.
+Nueva medida: HOME20D, velocidad cero, máximo 0,002876 rad. Se solicita al
+operador pulsar el paro principal; aún no se ha escrito ni reiniciado el robot.
+Preflight del ciclo admite el hash exacto v8 conservando chequeo MetaMove.
+Tres tests de candidata, sintaxis shell y diff-check correctos.
+Evidencia: `../Humanoide-vla-evidence/20260922T121856Z_HOME_V8_AUTO`.
+
+**22-09-2026 14:12 CEST — HOME-V8-CANDIDATE-01: prueba física completada.**
+Una ejecución de la tarea separada devuelve SUCCEED/status4; HOME medido en los
+20 ejes, velocidad cero, máximo absoluto 0,002876 rad. Operador confirma recorrido
+normal, sin contacto, tirones ni ruidos anormales, y estabilidad final.
+Tiempo observado desde inicio del árbol hasta último MetaMove: 15,059 s;
+nominal 13,45 s conservado. Hubo 202 rechazos iniciales de consigna durante
+0,402 s antes de entrar en el límite del hombro; no se modificaron protecciones.
+Instalada, cargada y probada desde esta postura concreta; no recuperación general.
+HOME automático sigue en v7; sin reinicio ni rearme de Control Center.
+Salida de su Fault previo NO verificada. [Prueba, evidencia y límites](teleoperation/CRUZR_HOME_V8_CANDIDATA.md).
+
+**22-09-2026 — HOME-V8-CANDIDATE-01 instalada de forma aditiva, sin movimiento.**
+Tarea separada home_v8_early_roll_CANDIDATE reparte apertura−0,05/−0,15rad
+con el primer ajuste de codo; mantiene13,45s nominales y destinos finalesv7.
+No es condicional ni recuperación general. Lectura actual y barridos501,
+3tests offline correctos; sincronización/seguimiento y prueba física pendientes.
+HOME automáticov7 intacto; sin reinicios, task_list ni acciones. Candidata
+instalada, carga nativa pendiente. [Fuentes, límites, backup y receta](teleoperation/CRUZR_HOME_V8_CANDIDATA.md).
+
+**22-09-2026 — Revisión HOMEv7: fallo del primer paso de codo confirmado.**
+XML y MetaMove remotos coinciden con fuentes/hashes previstos. El primer delta
+izquierdo conserva hombro roll0,116678 fuera de máximo0,0987266:500 consignas
+rechazadas, codo izquierdo no completa; derechoSUCCESS. Se abortan cuerpo/cabeza
+en paralelo. Misma limitación que18-09, no recuperación universal. Operador
+confirma estable/vacío/sin contacto; sólo revisión, ninguna orden física.
+[Secuencia, evidencia y recuperación aún pendiente](incidents/2026-09-22_ARRANQUE_HOME_INCOMPLETO.md).
+
+**22-09-2026 13:55 CEST — Arranque fallido; HOME20D NO alcanzado.**
+Selfcheck passed/error0, pero HOME interno falla por consigna left_arm fuera
+de límite (0,116678 frente a máximo0,0987266rad). CC StartMotion reason19→Fault.
+Muestra20D posterior: MEASURED_HOME=0, maxposición1,477990rad, brazos0,401328rad;
+actuadores sin error reportado. Sólo lectura; sin reintento/rearme ni reinicio.
+Estado físico/contacto pendiente de confirmación. [Informe y evidencia](incidents/2026-09-22_ARRANQUE_HOME_INCOMPLETO.md).
+
+**22-09-2026 — VOICE-ES-01: inventario para todos los avisos en español.**
+Localizados textos TtsClient, WAV y aviso de arranque propio en inglés.
+Conversión no instalada; soporte TTS español pendiente. Primera lectura SSH
+correcta; consulta posterior de voces bloqueada por timeout de conexión.
+Sin audio, micrófonos, reinicios ni cambios remotos. [Inventario y pendientes](guides/CRUZR_S2_VOZ_ESPANOL.md).
+
 **22-09-2026 — BOX-01-ORIGINAL-SCRIPT: variante local con tareas anteriores.**
 Creado por petición explícita [force_excenario1.original.sh](../scripts/force_excenario1.original.sh)
 (nombre exacto solicitado, excenario). Deriva del force_escenario1.sh de HEAD
@@ -5567,3 +5874,8 @@ ClampBoxOutOfReach7101100; X ligeramente fuera de0.8m y fallo IK101 conjunto.
 Pose posterior próxima a get1 (7,84mm); HOME intermedio no resolvió alcance.
 put1 ya existe. No hubo cambios remotos; diagnóstico adicional en
 `docs/incidents/2026-09-16_SEPARATE_RIGHT_137_ICEORYX.md`.
+
+**23-09-2026 11:17 CEST — conectividad comprobada:** Ethernet `eno1` y Wi-Fi
+del robot `wlx80afcad40bd6` están DOWN; sólo DSA CORPORATE está activa. La ruta
+a Vision usa la puerta de enlace corporativa, y SSH agota timeout. No demuestra
+un fallo de Vision: falta conexión local al robot. Ningún cambio de red o robot.

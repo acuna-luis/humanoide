@@ -1,0 +1,1658 @@
+[
+  {
+    "zh": "put_height的值是：",
+    "es": "La altura de depósito es:",
+    "en": "The placement height is:",
+    "id": "tts_f32546e00a00",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_palletizing_env_20260513_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "row是：",
+    "es": "La fila es:",
+    "en": "The row is:",
+    "id": "tts_c89fbb9c3866",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_voice_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "target_pos的值是：",
+    "es": "La posición objetivo es:",
+    "en": "The target position is:",
+    "id": "tts_0b37df621b45",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_palletizing_env_20260513_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{agv_status_message}",
+    "es": "",
+    "en": "",
+    "id": "tts_5677ccc4d46c",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{demon_count}",
+    "es": "",
+    "en": "",
+    "id": "tts_939e4510276a",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_demon_repeat_20260312_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{grab_box_error}",
+    "es": "",
+    "en": "",
+    "id": "tts_c4cd099803bc",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Manipulation/manipulation.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{is_placing_box}",
+    "es": "",
+    "en": "",
+    "id": "tts_f9877a7ad742",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{map_self_str}",
+    "es": "",
+    "en": "",
+    "id": "tts_83719c4bd61d",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_nav_test_20250815_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{map_set_error_msg}",
+    "es": "",
+    "en": "",
+    "id": "tts_354a2e7a5e9f",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_20250630_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_model_star.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_guangzhou_free_nav_20250815_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_20251216_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_20251215_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250605_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_test_carry.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_20251126_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_water_20251201_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_uqi_20250710_star.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_nav_test_20250815_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{nav_code_str}",
+    "es": "",
+    "en": "",
+    "id": "tts_39a5c5ececdd",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_nav_test_20250815_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{nav_error_msg}",
+    "es": "",
+    "en": "",
+    "id": "tts_f891f6d5f3d0",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{odd_enev_num}",
+    "es": "",
+    "en": "",
+    "id": "tts_d707fc2c441a",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_voice_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{pole_message}",
+    "es": "",
+    "en": "",
+    "id": "tts_0ec3cdddae30",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{put_height}",
+    "es": "",
+    "en": "",
+    "id": "tts_d8666e7569a9",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_palletizing_env_20260513_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{relocation_error_msg}",
+    "es": "",
+    "en": "",
+    "id": "tts_df6539f6dfcc",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_20250630_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_model_star.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_guangzhou_free_nav_20250815_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_20251216_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_20251215_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250605_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_test_carry.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_20251126_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_water_20251201_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_uqi_20250710_star.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_nav_test_20250815_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{rept_num}",
+    "es": "",
+    "en": "",
+    "id": "tts_1c1b4328faa8",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_charge_20260316_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_20260318_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_nav_pose_20260328_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_nav_pose_20260520_speed_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_no_nav_pose_20260520_speed_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_small_20260315_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_two_20260407_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nav_desk_repeat_free_small_20260317_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_palletizing_env_20260513_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_repeat_free_nav_20251226_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{row_oper_num}",
+    "es": "",
+    "en": "",
+    "id": "tts_172e03d2c6a0",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_voice_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{send_success}",
+    "es": "",
+    "en": "",
+    "id": "tts_5904e4771ecd",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_ctu_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{stop_navigation_error_msg}",
+    "es": "",
+    "en": "",
+    "id": "tts_aac53c7243f0",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{target_pos}",
+    "es": "",
+    "en": "",
+    "id": "tts_43183a45ba48",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_palletizing_env_20260513_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{to_put_error_msg}",
+    "es": "",
+    "en": "",
+    "id": "tts_d6e9b6ab0f24",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_20250630_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_model_star.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_guangzhou_free_nav_20250815_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_20251216_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_20251215_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250515_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250605_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_test_carry.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_20251126_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_water_20251201_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_uqi_20250710_star.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_nav_test_20250815_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "{voice_rept_num}",
+    "es": "",
+    "en": "",
+    "id": "tts_cb7dc8471837",
+    "kind": "dynamic",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_env_20260428_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "一号位置ctu指令发送失败",
+    "es": "No se pudo enviar la orden CTU a la posición uno.",
+    "en": "Failed to send the CTU command for position one.",
+    "id": "tts_16b72e32bc67",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "一号位置ctu指令发送成功",
+    "es": "Orden CTU enviada a la posición uno.",
+    "en": "CTU command sent successfully for position one.",
+    "id": "tts_ca1aefae851c",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "二号位置ctu指令发送失败",
+    "es": "No se pudo enviar la orden CTU a la posición dos.",
+    "en": "Failed to send the CTU command for position two.",
+    "id": "tts_1bd38d26dd10",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "二号位置ctu指令发送成功",
+    "es": "Orden CTU enviada a la posición dos.",
+    "en": "CTU command sent successfully for position two.",
+    "id": "tts_55eede4c3d59",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "任务完成",
+    "es": "Tarea completada.",
+    "en": "Task completed.",
+    "id": "tts_324225eef1d7",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_uqi_20250710_star.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "充电中表情",
+    "es": "Expresión de carga en curso.",
+    "en": "Charging expression.",
+    "id": "tts_2ba8a376b2b0",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_facial_chassis_20251125_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "充电完成",
+    "es": "Carga completada.",
+    "en": "Charging completed.",
+    "id": "tts_78f4e2d8d6e6",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_facial_chassis_20251125_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "充电桩服务正在启动",
+    "es": "Iniciando el servicio de la estación de carga.",
+    "en": "The charging station service is starting.",
+    "id": "tts_52dd66b3cf15",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "充电桩环境异常,请检查后重试",
+    "es": "Hay un problema con el entorno de la estación de carga. Compruébalo antes de volver a intentarlo.",
+    "en": "There is a problem with the charging station environment. Check it before trying again.",
+    "id": "tts_1469eb9508cc",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "充电检测",
+    "es": "Comprobando la carga.",
+    "en": "Checking charging status.",
+    "id": "tts_b376dc0df82e",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "剩余电量百分之三十，请尽快充电",
+    "es": "Queda un treinta por ciento de batería. Recarga lo antes posible.",
+    "en": "Thirty percent battery remaining. Please recharge as soon as possible.",
+    "id": "tts_a37ab28effac",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_facial_chassis_20251125_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "动画表情服务正在启动",
+    "es": "Iniciando el servicio de expresiones animadas.",
+    "en": "The animated expression service is starting.",
+    "id": "tts_7c048b81ff95",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_facial_chassis_20251125_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "参数异常",
+    "es": "Error de parámetros.",
+    "en": "Parameter error.",
+    "id": "tts_775847120c66",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_palletizing_env_20260513_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "号点",
+    "es": "Punto número.",
+    "en": "Point number.",
+    "id": "tts_49cd4752d2f7",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_ctu_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_voice_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "后坐完成",
+    "es": "Movimiento de sentado hacia atrás completado.",
+    "en": "Backward sitting movement completed.",
+    "id": "tts_90213d5d7ab0",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "回零完成",
+    "es": "Retorno a la posición inicial completado.",
+    "en": "Return to the home position completed.",
+    "id": "tts_e956ba151004",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "大家好，科鲁泽一号机，为您服务",
+    "es": "Hola a todos. Soy Cruzr número uno, a vuestro servicio.",
+    "en": "Hello everyone. Cruzr number one, at your service.",
+    "id": "tts_689b53aeea6a",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250515_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "奇偶数是：",
+    "es": "La paridad es:",
+    "en": "The parity is:",
+    "id": "tts_1af6e5945aeb",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_voice_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "导航定位失败",
+    "es": "La localización de navegación ha fallado.",
+    "en": "Navigation localization failed.",
+    "id": "tts_b6e861d54695",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250515_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "导航定位成功",
+    "es": "Localización de navegación completada.",
+    "en": "Navigation localization succeeded.",
+    "id": "tts_c43076af623a",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_20250630_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_model_star.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_guangzhou_free_nav_20250815_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_20251216_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_20251215_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250515_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250605_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_test_carry.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_20251126_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_water_20251201_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_uqi_20250710_star.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_voice_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_nav_test_20250815_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "导航未开始",
+    "es": "La navegación no ha comenzado.",
+    "en": "Navigation has not started.",
+    "id": "tts_d551b8a66f3d",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "导航未开始1",
+    "es": "La navegación no ha comenzado. Uno.",
+    "en": "Navigation has not started. One.",
+    "id": "tts_958f2b3e843a",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "层数错误",
+    "es": "Número de niveles incorrecto.",
+    "en": "Incorrect number of levels.",
+    "id": "tts_7c7566f98384",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_demon_repeat_20260312_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "底盘绿色常亮灯",
+    "es": "Luz verde del chasis encendida de forma continua.",
+    "en": "Chassis green light steadily on.",
+    "id": "tts_cb6b3d18a90a",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_facial_chassis_20251125_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "底盘绿色闪烁",
+    "es": "Luz verde del chasis intermitente.",
+    "en": "Chassis green light flashing.",
+    "id": "tts_e1f03b58bb68",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_facial_chassis_20251125_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "开始执行循环任务",
+    "es": "Comenzando la tarea repetitiva.",
+    "en": "Starting the repeating task.",
+    "id": "tts_d149c352ce24",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_charge_20260316_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_20260318_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_nav_pose_20260328_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_nav_pose_20260520_speed_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_no_nav_pose_20260520_speed_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_small_20260315_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_two_20260407_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nav_desk_repeat_free_small_20260317_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_palletizing_env_20260513_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_repeat_free_nav_20251226_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "开始执行第",
+    "es": "Comenzando la iteración número:",
+    "en": "Starting iteration number:",
+    "id": "tts_0d8ccbe0eb04",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_charge_20260316_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_20260318_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_nav_pose_20260328_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_nav_pose_20260520_speed_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_no_nav_pose_20260520_speed_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_small_20260315_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_two_20260407_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nav_desk_repeat_free_small_20260317_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_palletizing_env_20260513_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_env_20260428_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_repeat_free_nav_20251226_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "开始执行第二趟任务",
+    "es": "Comenzando el segundo recorrido de la tarea.",
+    "en": "Starting the second task run.",
+    "id": "tts_66726fae4fdc",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_20251126_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "当前is_placing_box的值是：",
+    "es": "El valor actual de is placing box es:",
+    "en": "The current value of is placing box is:",
+    "id": "tts_8cab41d321c4",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "当前map_self的值是：",
+    "es": "El valor actual de map self es:",
+    "en": "The current value of map self is:",
+    "id": "tts_7362afa2e686",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_nav_test_20250815_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "当前point3_pick_arrive的值是：",
+    "es": "El valor actual de point three pick arrive es:",
+    "en": "The current value of point three pick arrive is:",
+    "id": "tts_89f4880f8655",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_ctu_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "当前机器人连接充电器，拒绝执行任务",
+    "es": "El robot está conectado al cargador. No se puede ejecutar la tarea.",
+    "en": "The robot is connected to the charger. The task cannot be executed.",
+    "id": "tts_93ecead7eb34",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "当前正在上桩充电，禁止执行任务",
+    "es": "El robot está acoplándose a la estación de carga. No se permite ejecutar la tarea.",
+    "en": "The robot is docking for charging. Task execution is not permitted.",
+    "id": "tts_bb9be02d1e1d",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "当前电池电量低于百分之15，拒绝执行任务",
+    "es": "La batería está por debajo del quince por ciento. No se puede ejecutar la tarea.",
+    "en": "The battery is below fifteen percent. The task cannot be executed.",
+    "id": "tts_e8e26bbeb4c6",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "当前电池电量低于百分之40，拒绝执行任务",
+    "es": "La batería está por debajo del cuarenta por ciento. No se puede ejecutar la tarea.",
+    "en": "The battery is below forty percent. The task cannot be executed.",
+    "id": "tts_7a340b6a7250",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "当前电池电量高于百分之八十，等待任务",
+    "es": "La batería está por encima del ochenta por ciento. Esperando una tarea.",
+    "en": "The battery is above eighty percent. Waiting for a task.",
+    "id": "tts_b20125697049",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "您好，我是科鲁泽二号机，欢迎来到优必选智能机器人展厅",
+    "es": "Hola. Soy Cruzr número dos. Bienvenido a la exposición de robots inteligentes de UBTECH.",
+    "en": "Hello. I am Cruzr number two. Welcome to the UBTECH intelligent robot showroom.",
+    "id": "tts_de87b334a5b5",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250605_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我在大箱子点，我要开始搬大箱子了",
+    "es": "Estoy en el punto de cajas grandes. Voy a recoger una caja grande.",
+    "en": "I am at the large box location. I will start picking up a large box.",
+    "id": "tts_4f7e5caf7c13",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_voice_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我在大箱子点，我要开始放大箱子了",
+    "es": "Estoy en el punto de cajas grandes. Voy a depositar una caja grande.",
+    "en": "I am at the large box location. I will start placing a large box.",
+    "id": "tts_debb5d805e69",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_voice_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我在小箱子点，我要开始搬小箱子了",
+    "es": "Estoy en el punto de cajas pequeñas. Voy a recoger una caja pequeña.",
+    "en": "I am at the small box location. I will start picking up a small box.",
+    "id": "tts_ec0e7cfa74ff",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_voice_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我在小箱子点，我要开始放小箱子了",
+    "es": "Estoy en el punto de cajas pequeñas. Voy a depositar una caja pequeña.",
+    "en": "I am at the small box location. I will start placing a small box.",
+    "id": "tts_6013652bca32",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_voice_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我开始拆垛动作",
+    "es": "Voy a comenzar a desapilar las cajas.",
+    "en": "I will start unstacking the boxes.",
+    "id": "tts_7bdceb69d01a",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_model_star.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要做个前坐动作",
+    "es": "Voy a realizar un movimiento de sentado hacia delante.",
+    "en": "I will perform a forward sitting movement.",
+    "id": "tts_c26a4cc3df79",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_20250515_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要做个半蹲动作",
+    "es": "Voy a realizar una media sentadilla.",
+    "en": "I will perform a half squat.",
+    "id": "tts_d4fec3db1f63",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_20250515_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要做个后蹲动作",
+    "es": "Voy a agacharme hacia atrás.",
+    "en": "I will squat backward.",
+    "id": "tts_93ba40196adc",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_20250515_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要做个打招呼动作",
+    "es": "Voy a realizar un gesto de saludo.",
+    "en": "I will perform a greeting gesture.",
+    "id": "tts_9832772970ce",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_20250515_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要先下桩了",
+    "es": "Primero voy a salir de la estación de carga.",
+    "en": "I will leave the charging station first.",
+    "id": "tts_8e517f65df09",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要前置抓箱子动作",
+    "es": "Voy a realizar el movimiento previo al agarre de la caja.",
+    "en": "I will perform the movement before grasping the box.",
+    "id": "tts_cc20c90bbf1a",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_20250515_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要动腰动作",
+    "es": "Voy a mover la cintura.",
+    "en": "I will move my waist.",
+    "id": "tts_493f4e2bcf6a",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_20250515_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要去一号位置拿箱子",
+    "es": "Voy a la posición uno a recoger una caja.",
+    "en": "I will go to position one to pick up a box.",
+    "id": "tts_03460a506306",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要去二号位置拿箱子",
+    "es": "Voy a la posición dos a recoger una caja.",
+    "en": "I will go to position two to pick up a box.",
+    "id": "tts_5884dac31646",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要去放置箱子",
+    "es": "Voy a depositar la caja.",
+    "en": "I will go to place the box.",
+    "id": "tts_a5446992cc3f",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_water_20251201_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要后置抓箱子动作",
+    "es": "Voy a realizar el movimiento posterior al agarre de la caja.",
+    "en": "I will perform the movement after grasping the box.",
+    "id": "tts_6a81469f95e7",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_20250515_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要后退动作",
+    "es": "Voy a retroceder.",
+    "en": "I will move backward.",
+    "id": "tts_759b44daf561",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_model_star.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要回初始位置了",
+    "es": "Voy a volver a la posición inicial.",
+    "en": "I will return to the initial position.",
+    "id": "tts_6a654b675584",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_nav_20250918_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_nav_agv_20251210_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_nav_short_20250918_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_nav_short_agv_20251210_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要回零动作",
+    "es": "Voy a volver a la posición HOME.",
+    "en": "I will return to the home position.",
+    "id": "tts_1d79c8b67e54",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_20250515_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要导航到：",
+    "es": "Voy a navegar hasta:",
+    "en": "I will navigate to:",
+    "id": "tts_925ab34062b7",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_voice_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始上桩充电了",
+    "es": "Voy a acoplarme a la estación de carga.",
+    "en": "I will dock at the charging station.",
+    "id": "tts_d99200f91bc8",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_charge_20260316_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_two_20260407_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始上桩充电了2",
+    "es": "Voy a acoplarme a la estación de carga. Dos.",
+    "en": "I will dock at the charging station. Two.",
+    "id": "tts_3fe52377dc9b",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始下桩了",
+    "es": "Voy a salir de la estación de carga.",
+    "en": "I will leave the charging station.",
+    "id": "tts_c43d839a9e83",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_charge_20260316_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_two_20260407_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始下桩充电了",
+    "es": "Voy a salir de la estación de carga.",
+    "en": "I will leave the charging station.",
+    "id": "tts_a09996a8d85a",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始下桩充电了5",
+    "es": "Voy a salir de la estación de carga. Cinco.",
+    "en": "I will leave the charging station. Five.",
+    "id": "tts_61245fa78dc1",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始下桩操作",
+    "es": "Comenzando la salida de la estación de carga.",
+    "en": "Starting the undocking procedure.",
+    "id": "tts_5d3e914b03de",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始传输数据了",
+    "es": "Voy a comenzar a transmitir datos.",
+    "en": "I will start transmitting data.",
+    "id": "tts_18e4d2c8fbf2",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始传输数据了4",
+    "es": "Voy a comenzar a transmitir datos. Cuatro.",
+    "en": "I will start transmitting data. Four.",
+    "id": "tts_c30c230cd5ef",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始工作啦",
+    "es": "Voy a comenzar la tarea.",
+    "en": "I will start the task.",
+    "id": "tts_2ae677672105",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_20250515_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_bo_20251226_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_bo_20260326_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_20250630_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_model_star.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_canada_wrc_20250930_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_demon_repeat_20260312_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_fsk_tray_20251115_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_nav_20250918_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_nav_agv_20251210_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_nav_short_20250918_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_nav_short_agv_20251210_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_charge_20260316_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_20260318_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_nav_pose_20260328_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_nav_pose_20260520_speed_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_no_nav_pose_20260520_speed_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_small_20260315_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_two_20260407_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_guangzhou_free_nav_20250815_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiepu_20251229_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiepu_tray_20260130_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_20251216_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_ctu_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_20251215_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nav_desk_repeat_free_small_20260317_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250515_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250605_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_palletizing_env_20260513_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_shengxinxi_20250825_llm_sps.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_test_carry.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_20251126_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_water_20251201_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_uqi_20250710_star.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_voice_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_20250815_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_agv_20250815_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_agv_nav_new_20260303_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_agv_new_20260303_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_env_20260428_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_free_nav_20250815_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_free_nav_agv_20250815_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_nav_test_20250815_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_repeat_free_nav_20251226_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_universal_20260115_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始抓取了",
+    "es": "Voy a comenzar el agarre.",
+    "en": "I will start grasping.",
+    "id": "tts_fc25a8c52d0c",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_shengxinxi_20250825_llm_sps.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始抓取橙子",
+    "es": "Voy a recoger una naranja.",
+    "en": "I will pick up an orange.",
+    "id": "tts_51210759f96e",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_shengxinxi_20250825_llm_sps.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始抓取苹果",
+    "es": "Voy a recoger una manzana.",
+    "en": "I will pick up an apple.",
+    "id": "tts_b671e81c7a95",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_shengxinxi_20250825_llm_sps.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始接收数据了",
+    "es": "Voy a comenzar a recibir datos.",
+    "en": "I will start receiving data.",
+    "id": "tts_2e1c3f9a32cc",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始接收数据了3",
+    "es": "Voy a comenzar a recibir datos. Tres.",
+    "en": "I will start receiving data. Three.",
+    "id": "tts_d1be3044652d",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始搬第一个位置箱子",
+    "es": "Voy a recoger la caja de la primera posición.",
+    "en": "I will pick up the box at the first position.",
+    "id": "tts_9b9fa1d781d5",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_20251215_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始搬第二个位置箱子",
+    "es": "Voy a recoger la caja de la segunda posición.",
+    "en": "I will pick up the box at the second position.",
+    "id": "tts_9025af656379",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_20251215_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要开始搬箱子动作了",
+    "es": "Voy a comenzar el movimiento para transportar la caja.",
+    "en": "I will start the box transport movement.",
+    "id": "tts_43c263a411a1",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_model_star.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "我要放箱子动作",
+    "es": "Voy a realizar el movimiento para depositar la caja.",
+    "en": "I will perform the box placement movement.",
+    "id": "tts_e6871a0d2366",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_model_star.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "有任务正在执行",
+    "es": "Hay una tarea en ejecución.",
+    "en": "A task is running.",
+    "id": "tts_8dfeaf70c9f5",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "未充电我要开始下桩了1",
+    "es": "No se está cargando. Voy a salir de la estación. Uno.",
+    "en": "Not charging. I will leave the charging station. One.",
+    "id": "tts_f0437bad6bf8",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "机器未启动",
+    "es": "El robot no ha arrancado.",
+    "en": "The robot has not started.",
+    "id": "tts_73cd47140b80",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "机器正在充电",
+    "es": "El robot está cargando.",
+    "en": "The robot is charging.",
+    "id": "tts_0d0acac0b941",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "检测地图",
+    "es": "Comprobando el mapa.",
+    "en": "Checking the map.",
+    "id": "tts_71f7d9350069",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_guangzhou_free_nav_20250815_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_20251216_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_20251215_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_20251126_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_water_20251201_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_uqi_20250710_star.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_nav_test_20250815_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "次任务",
+    "es": "Tarea.",
+    "en": "Task.",
+    "id": "tts_822800b4d4c0",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_demon_repeat_20260312_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "正在充电",
+    "es": "Carga en curso.",
+    "en": "Charging in progress.",
+    "id": "tts_310427034483",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "正在充电,当前电池电量低于百分之40，拒绝执行任务",
+    "es": "Carga en curso. La batería está por debajo del cuarenta por ciento. No se puede ejecutar la tarea.",
+    "en": "Charging in progress. The battery is below forty percent. The task cannot be executed.",
+    "id": "tts_6754d036d151",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "正在导航定位可能需要一会儿哦",
+    "es": "Localizando el robot para navegar. Puede tardar un momento.",
+    "en": "Localizing the robot for navigation. This may take a moment.",
+    "id": "tts_325277b52536",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250515_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "正在执行第",
+    "es": "Ejecutando la tarea número:",
+    "en": "Executing task number:",
+    "id": "tts_e83d2e027cc0",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_demon_repeat_20260312_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "现在我们到了桌面机器人展位，悟空机器人，你的第一个智能小伙伴",
+    "es": "Hemos llegado al espacio de robots de sobremesa. Wukong, tu primer compañero inteligente.",
+    "en": "We have arrived at the desktop robot stand. Wukong, your first intelligent companion.",
+    "id": "tts_c6117ec8f077",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250605_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "现在看到的是Walk系列机器人，他正在做物品识别的演示",
+    "es": "Este es un robot de la serie Walk. Está haciendo una demostración de reconocimiento de objetos.",
+    "en": "This is a Walk series robot. It is demonstrating object recognition.",
+    "id": "tts_f73320f0a9c3",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250605_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "电量低，请尽快充电",
+    "es": "Batería baja. Recarga lo antes posible.",
+    "en": "Low battery. Please recharge as soon as possible.",
+    "id": "tts_7476fcfc16f9",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_facial_chassis_20251125_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "电量极低，请尽快充电",
+    "es": "Batería muy baja. Recarga lo antes posible.",
+    "en": "Very low battery. Please recharge as soon as possible.",
+    "id": "tts_2ec543c32151",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_facial_chassis_20251125_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "科鲁泽一号机，为您服务",
+    "es": "Cruzr número uno, a tu servicio.",
+    "en": "Cruzr number one, at your service.",
+    "id": "tts_096c49e3953d",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250515_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "等待三分钟后执行第二趟任务",
+    "es": "Esperaré tres minutos antes de comenzar el segundo recorrido.",
+    "en": "I will wait three minutes before starting the second task run.",
+    "id": "tts_93e945bd5031",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_20251126_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "箱子已放置完毕",
+    "es": "La caja ha sido depositada.",
+    "en": "The box has been placed.",
+    "id": "tts_bf44e7a663d4",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "获取启动标识参数异常",
+    "es": "Error al obtener el parámetro de inicio.",
+    "en": "Error retrieving the startup flag parameter.",
+    "id": "tts_c3784dcb0f16",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "获取地图",
+    "es": "Obteniendo el mapa.",
+    "en": "Retrieving the map.",
+    "id": "tts_abb826777cb4",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_nav_test_20250815_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "获取导航充电桩类型环境变量参数异常",
+    "es": "Error al obtener la variable del tipo de estación de carga de navegación.",
+    "en": "Error retrieving the navigation charging station type environment variable.",
+    "id": "tts_275152e328b7",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "获取导航类型环境变量参数异常",
+    "es": "Error al obtener la variable del tipo de navegación.",
+    "en": "Error retrieving the navigation type environment variable.",
+    "id": "tts_19e44f6a148f",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "设置地图",
+    "es": "Seleccionando el mapa.",
+    "en": "Setting the map.",
+    "id": "tts_5eaf405840fc",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_new_check_20260205_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_a_to_b_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_20250630_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_model_star.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_guangzhou_free_nav_20250815_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_20251216_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_20251215_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nva_20250605_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_test_carry.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_20251126_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_water_20251201_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_uqi_20250710_star.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_nav_test_20250815_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "设置地图1",
+    "es": "Seleccionando el mapa. Uno.",
+    "en": "Setting the map. One.",
+    "id": "tts_b8b5965b96f6",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_running_start_test.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "设置地图111",
+    "es": "Seleccionando el mapa. Uno uno uno.",
+    "en": "Setting the map. One one one.",
+    "id": "tts_778d4edb183b",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigationCollection.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "请您喝水",
+    "es": "Aquí tienes agua.",
+    "en": "Please have some water.",
+    "id": "tts_41d67261fdb5",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_water_20251201_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "轮",
+    "es": "Iteración.",
+    "en": "Iteration.",
+    "id": "tts_13c99c24e904",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_charge_20260316_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_20260318_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_nav_pose_20260328_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_nav_pose_20260520_speed_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_big_tray_liulijia_no_nav_pose_20260520_speed_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_free_small_20260315_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_repeat_two_20260407_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_nav_desk_repeat_free_small_20260317_test.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_palletizing_env_20260513_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_env_20260428_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_zhucheng_repeat_free_nav_20251226_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "运控控制暂时预留",
+    "es": "Control de movimiento reservado para uso futuro.",
+    "en": "Motion control reserved for future use.",
+    "id": "tts_850078cc330d",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Manipulation/manipulation.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "还未充电",
+    "es": "La carga todavía no ha comenzado.",
+    "en": "Charging has not started yet.",
+    "id": "tts_cf195d80fd9b",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_20250820_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_agv_charge_check_20251024_start.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "还未指定任务，请从网页指定任务后重启任务管理器",
+    "es": "No se ha seleccionado una tarea. Selecciónala en la página web y reinicia el gestor de tareas.",
+    "en": "No task has been selected. Select a task on the web page, then restart the task manager.",
+    "id": "tts_f0428d8b60ec",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/default_task_config.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "重抓",
+    "es": "Nuevo intento de agarre.",
+    "en": "Grasping again.",
+    "id": "tts_6718e09577d0",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_shengxinxi_20250825_llm_sps.xml"
+    ],
+    "installed": false
+  },
+  {
+    "zh": "需要帮助移动一下箱子",
+    "es": "Necesito ayuda para mover la caja.",
+    "en": "I need help moving the box.",
+    "id": "tts_e24ad0358b19",
+    "kind": "fixed",
+    "sources": [
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_byd_20250630_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_canada_wrc_20250930_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_fsk_tray_20251115_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_nav_20250918_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_nav_agv_20251210_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_nav_short_20250918_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_gongchang_nav_short_agv_20251210_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_guangzhou_free_nav_20250815_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiepu_20251229_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_20251216_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_jiujiang_plc_ctu_20251215_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_20251126_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_tsl_water_20251201_start.xml",
+      "vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_uqi_20250710_star.xml"
+    ],
+    "installed": false
+  },
+  {
+    "id": "boot_ready",
+    "kind": "boot",
+    "zh": "",
+    "es": "Comprobaciones de arranque completadas. Listo para liberar el paro de emergencia.",
+    "en": "Ready to release the emergency stop.",
+    "sources": [
+      "scripts/upgrade/cruzr_boot_voice.py"
+    ],
+    "installed": false
+  }
+]

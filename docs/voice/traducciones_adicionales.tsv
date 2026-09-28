@@ -1,0 +1,129 @@
+zh	es	en
+sps_ready失败	Ha fallado la preparación SPS.	SPS readiness failed.
+上料任务结束	Tarea de suministro de material terminada.	Material loading task finished.
+下蹲失败	No se pudo realizar la sentadilla.	Squatting failed.
+从高处取箱失败	No se pudo recoger la caja en altura.	Picking up the box from a high position failed.
+任务失败	La tarea ha fallado.	The task failed.
+请检查六维力数据是否异常	Comprueba si los datos del sensor de fuerza y par de seis ejes presentan anomalías.	Check the six-axis force and torque sensor data for abnormalities.
+请检查行为树文件是否正确	Comprueba que el archivo del árbol de comportamiento sea correcto.	Check that the behavior tree file is correct.
+请重启机器后重试	Reinicia el robot antes de volver a intentarlo.	Restart the robot before trying again.
+任务类型错误	Tipo de tarea incorrecto.	Incorrect task type.
+任务结束	Tarea terminada.	Task finished.
+任务退出	Se ha salido de la tarea.	Task exited.
+低头动作失败	No se pudo bajar la cabeza.	Lowering the head failed.
+退出任务	Se abandona la tarea.	Exiting the task.
+低头异常	Error al bajar la cabeza.	Error lowering the head.
+停止摆臂动作失败	No se pudo detener el balanceo de los brazos.	Stopping the arm swing failed.
+全向行走异常	Error en el desplazamiento omnidireccional.	Omnidirectional movement error.
+关闭摆臂失败	No se pudo desactivar el balanceo de los brazos.	Disabling arm swing failed.
+关闭罩子失败	No se pudo cerrar la cubierta.	Closing the cover failed.
+切换行走模式失败	No se pudo cambiar el modo de desplazamiento.	Changing the movement mode failed.
+前进失败	No se pudo avanzar.	Moving forward failed.
+双手抬起失败	No se pudieron levantar ambos brazos.	Raising both arms failed.
+双手放下失败	No se pudieron bajar ambos brazos.	Lowering both arms failed.
+双目关闭失败	No se pudo desactivar la visión estéreo.	Disabling stereo vision failed.
+双目打开失败	No se pudo activar la visión estéreo.	Enabling stereo vision failed.
+请检查双目程序	Comprueba el programa de visión estéreo.	Check the stereo vision program.
+只有一块电池没法换电	Sólo hay una batería. No es posible realizar el cambio de batería.	Only one battery is present. Battery swapping is not possible.
+后退失败	No se pudo retroceder.	Moving backward failed.
+检查导航模块	Comprueba el módulo de navegación.	Check the navigation module.
+启动定位失败	No se pudo iniciar la localización.	Starting localization failed.
+回正失败	No se pudo volver a la posición centrada.	Returning to the centered position failed.
+回腰异常	Error al devolver la cintura a su posición.	Error returning the waist to its position.
+大模型超时	El modelo de lenguaje ha superado el tiempo de espera.	The language model timed out.
+请检查连接	Comprueba la conexión.	Check the connection.
+大模型路径规划失败	Ha fallado la planificación de ruta del modelo de lenguaje.	Language model path planning failed.
+头部回零异常	Error al devolver la cabeza a la posición inicial.	Error returning the head to its home position.
+头部控制异常	Error de control de la cabeza.	Head control error.
+头部无法回零	La cabeza no puede volver a la posición inicial.	The head cannot return to its home position.
+导航到保护罩失败	No se pudo navegar hasta la cubierta de protección.	Navigation to the protective cover failed.
+导航到放箱子点失败	No se pudo navegar hasta el punto de depósito de cajas.	Navigation to the box placement point failed.
+检查障碍物	Comprueba si hay obstáculos.	Check for obstacles.
+检查导航模块是否异常	Comprueba si el módulo de navegación presenta errores.	Check the navigation module for errors.
+导航到目标点失败	No se pudo navegar hasta el punto de destino.	Navigation to the target point failed.
+导航到箱子位置失败	No se pudo navegar hasta la posición de la caja.	Navigation to the box location failed.
+导航到箱子失败	No se pudo navegar hasta la caja.	Navigation to the box failed.
+导航盲走后退异常	Error de retroceso sin realimentación de navegación.	Error moving backward without navigation feedback.
+工件已离开	La pieza ha salido.	The workpiece has left.
+工件抵达	La pieza ha llegado.	The workpiece has arrived.
+开始工作	Comenzando el trabajo.	Starting work.
+工作中	Robot trabajando.	Robot at work.
+请注意避让	Mantén libre el espacio de trabajo.	Please keep clear of the work area.
+建图失败	No se pudo crear el mapa.	Map creation failed.
+开始搬运箱号为1的箱子	Comenzando el transporte de la caja número uno.	Starting transport of box number one.
+开始搬运箱号为2的箱子	Comenzando el transporte de la caja número dos.	Starting transport of box number two.
+我再尝试一次	Voy a intentarlo una vez más.	I will try once more.
+我准备好了	Estoy preparado.	I am ready.
+我在工作	Estoy trabajando.	I am working.
+我要开始工作了	Voy a comenzar la tarea.	I will start the task.
+手未运动到初始状态	Los brazos no han alcanzado su postura inicial.	The arms have not reached their initial posture.
+拒绝执行	No se permite la ejecución.	Execution is refused.
+手臂任务执行错误	Error al ejecutar la tarea de los brazos.	Arm task execution error.
+打开位姿检测失败	No se pudo activar la detección de pose.	Enabling pose detection failed.
+检查视觉模块是否需要重启	Comprueba si es necesario reiniciar el módulo de visión.	Check whether the vision module needs restarting.
+打开摆臂失败	No se pudo activar el balanceo de los brazos.	Enabling arm swing failed.
+打开罩子失败	No se pudo abrir la cubierta.	Opening the cover failed.
+抓取失败	El agarre ha fallado.	Grasping failed.
+投料任务结束	Tarea de descarga de material terminada.	Material unloading task finished.
+抬头失败	No se pudo levantar la cabeza.	Raising the head failed.
+抬手异常	Error al levantar los brazos.	Error raising the arms.
+换手	Cambiando de mano.	Switching hands.
+换电失败	El cambio de batería ha fallado.	Battery swapping failed.
+急需人工协助！	Se necesita asistencia humana urgente.	Urgent human assistance is required.
+搬箱子过程掉了	La caja se ha caído durante el transporte.	The box was dropped during transport.
+搬箱子运控规划失败	Ha fallado la planificación de movimiento para transportar la caja.	Motion planning for box transport failed.
+搬起箱子失败	No se pudo levantar la caja.	Lifting the box failed.
+搬运初始化完毕	Inicialización del transporte completada.	Transport initialization completed.
+搬运失败	El transporte ha fallado.	Transport failed.
+请人工介入处理	Se necesita intervención humana.	Human intervention is required.
+搬运成功	Transporte completado correctamente.	Transport succeeded.
+撸起袖子加油干！我们是永不停机的新质生产力。	¡Manos a la obra! Somos la nueva fuerza productiva que nunca se detiene.	Let's get to work! We are the new productive force that never stops.
+放箱子前伸手失败	No se pudieron extender los brazos antes de depositar la caja.	Extending the arms before placing the box failed.
+放箱子动作异常	Error en el movimiento para depositar la caja.	Box placement movement error.
+放箱子失败	No se pudo depositar la caja.	Placing the box failed.
+放箱子错误	Error al depositar la caja.	Box placement error.
+放置异常	Error de colocación.	Placement error.
+放置螺丝失败	No se pudo colocar el tornillo.	Placing the screw failed.
+请人工处理	Se necesita intervención humana.	Human intervention is required.
+料盘为空	La bandeja está vacía.	The tray is empty.
+终止分拣流程	Se detiene el proceso de clasificación.	Stopping the sorting process.
+料盘搬运初始化完毕	Inicialización del transporte de bandejas completada.	Tray transport initialization completed.
+料盘搬运失败	El transporte de la bandeja ha fallado.	Tray transport failed.
+料盘搬运成功	Transporte de la bandeja completado correctamente.	Tray transport succeeded.
+无法恢复手臂	No se pueden devolver los brazos a su postura.	The arms cannot be returned to their posture.
+无法恢复腰部位置	No se puede recuperar la posición de la cintura.	The waist position cannot be restored.
+无法获取机器人位姿信息	No se puede obtener la pose del robot.	The robot pose cannot be retrieved.
+暂无物料	No hay material disponible.	No material is available.
+暂无物料箱子	No hay cajas de material disponibles.	No material boxes are available.
+正在回收空箱	Recogiendo las cajas vacías.	Collecting empty boxes.
+物体丢失	Se ha perdido el objeto.	The object has been lost.
+物体移动	El objeto se ha movido.	The object has moved.
+重新规划	Volviendo a planificar.	Replanning.
+盲走前进异常	Error de avance sin realimentación de navegación.	Error moving forward without navigation feedback.
+空箱回收任务结束	Tarea de recogida de cajas vacías terminada.	Empty box collection task finished.
+空箱回收异常	Error al recoger cajas vacías.	Empty box collection error.
+箱号错误	Número de caja incorrecto.	Incorrect box number.
+请重新指定任务	Selecciona de nuevo la tarea.	Please select the task again.
+终止摆臂动作失败	No se pudo detener el balanceo de los brazos.	Stopping the arm swing failed.
+结束工作	Trabajo terminado.	Work finished.
+腰部上升异常	Error al elevar la cintura.	Error raising the waist.
+螺丝分拣失败	La clasificación de tornillos ha fallado.	Screw sorting failed.
+视觉开启失败	No se pudo activar la visión.	Enabling vision failed.
+视觉模块异常	Error en el módulo de visión.	Vision module error.
+视觉识别错误	Error de reconocimiento visual.	Visual recognition error.
+记录腰部位置异常	Error al registrar la posición de la cintura.	Error recording the waist position.
+设置地图失败	No se pudo seleccionar el mapa.	Setting the map failed.
+调摆臂动作失败	No se pudo ajustar el balanceo de los brazos.	Adjusting the arm swing failed.
+调整重心失败	No se pudo ajustar el centro de gravedad.	Adjusting the center of gravity failed.
+调用取箱失败	No se pudo iniciar la recogida de la caja.	Starting box pickup failed.
+调用摆臂姿势失败	No se pudo activar la postura de balanceo de los brazos.	Activating the arm swing posture failed.
+超出工作空间	Fuera del espacio de trabajo.	Outside the workspace.
+请移动一下再试试吧	Reubica el robot antes de volver a intentarlo.	Reposition the robot before trying again.
+踏步失败	No se pudo realizar el paso en el sitio.	Stepping in place failed.
+转腰失败	No se pudo girar la cintura.	Turning the waist failed.
+错误手臂未到ready状态	Error. Los brazos no han alcanzado la postura de preparación.	Error. The arms have not reached the ready posture.
+检查运控模块	Comprueba el módulo de control de movimiento.	Check the motion control module.
+检测运控模块是否异常	Comprueba si el módulo de control de movimiento presenta errores.	Check the motion control module for errors.
+检查运控模块是否需要重启	Comprueba si es necesario reiniciar el módulo de control de movimiento.	Check whether the motion control module needs restarting.
+航模可以重试	Se puede volver a intentar desde el radiomando.	You can retry using the radio controller.
+毛宁表示，日方在与中国台湾邻近的西南诸岛部署进攻性武器，刻意制造地区紧张，挑动军事对立，联系到日本首相高市早苗的涉台错误言论，这一动向极其危险，需要引起周边国家及国际社会的高度警惕	Mao Ning declaró que Japón está desplegando armas ofensivas en las islas del sudoeste próximas a Taiwán, a la que se refiere como parte de China, creando deliberadamente tensiones regionales y fomentando la confrontación militar. Relacionó este hecho con las declaraciones sobre Taiwán de la primera ministra japonesa, Sanae Takaichi, que calificó de erróneas, y afirmó que esta evolución es sumamente peligrosa y exige una gran vigilancia de los países vecinos y de la comunidad internacional.	Mao Ning stated that Japan is deploying offensive weapons on its southwestern islands near Taiwan, which she referred to as part of China, deliberately creating regional tensions and provoking military confrontation. Linking this to Japanese Prime Minister Sanae Takaichi's remarks on Taiwan, which she described as erroneous, she called this development extremely dangerous and said it requires heightened vigilance from neighboring countries and the international community.

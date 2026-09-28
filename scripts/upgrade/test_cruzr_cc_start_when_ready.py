@@ -178,7 +178,7 @@ class GateTests(unittest.TestCase):
             self.assertEqual(voice.main(['--check', '--announce']), 75)
             announce.assert_not_called()
 
-    def test_plain_check_never_speaks_and_successful_watcher_does_once(self):
+    def test_watcher_preserves_visual_without_duplicate_voice(self):
         initial = [['1', '/current'], ['TmpState', 'WaitEStopRelease']]
         with patch.object(voice.socket, 'gethostname', return_value='vision'), \
              patch.object(gate, 'claim_boot_voice', return_value=True), \
@@ -191,8 +191,10 @@ class GateTests(unittest.TestCase):
             announce.assert_not_called()
             hold.assert_not_called()
             self.assertEqual(voice.main(['--watch']), 0)
-            announce.assert_called_once_with()
+            announce.assert_not_called()
             hold.assert_called_once()
+            self.assertEqual(voice.main(['--check', '--announce']), 0)
+            announce.assert_called_once_with()
 
     def test_motion_lost_after_cameras_rejects_release(self):
         with patch.object(gate, 'wait_ready', return_value=True), \

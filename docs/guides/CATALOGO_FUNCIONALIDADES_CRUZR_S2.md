@@ -1,5 +1,11 @@
 # Catálogo operativo de funcionalidades del Cruzr S2
 
+**22-09-2026 — VOICE-ES-01: inventario para todos los avisos en español.**
+Localizados textos TtsClient, WAV y aviso de arranque propio en inglés.
+Conversión no instalada; soporte TTS español pendiente. Primera lectura SSH
+correcta; consulta posterior de voces bloqueada por timeout de conexión.
+Sin audio, micrófonos, reinicios ni cambios remotos. [Inventario y pendientes](CRUZR_S2_VOZ_ESPANOL.md).
+
 Fecha de verificación: 25 de agosto de 2026<br>
 Unidad: Cruzr S2, `HW_TYPE=cruzr_s2_v1`<br>
 Motion: `utars-integration:zs2_motion-v0.2.0`

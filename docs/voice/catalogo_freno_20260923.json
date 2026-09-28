@@ -1,0 +1,10 @@
+[
+  {
+    "id": "brake_locked",
+    "kind": "fixed",
+    "zh": "当前抱闸被锁死，请操作底盘解抱闸按钮，解锁抱闸",
+    "es": "El freno del chasis está bloqueado. Utilice el botón de liberación del freno del chasis para desbloquearlo.",
+    "en": "The chassis brake is locked. Use the chassis brake release button to unlock it.",
+    "installed": false
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "id": "scenario1_current_geometry_v1",
+  "box_size_m": [0.603, 0.397, 0.22],
+  "intended_use": "separate_nested_box",
+  "grasp": {
+    "task": "local_front_box/separate_right_cruzr",
+    "compatibility": "operator_assumed_existing"
+  },
+  "deposit": {
+    "task": "wrc_cruzr/put_cruzr_wrc_low",
+    "compatibility": "operator_assumed_existing"
+  }
+}

@@ -162,7 +162,7 @@ def visual_ready_checker():
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument('--watch', action='store_true', help='Once per host boot, wait and announce')
+    mode.add_argument('--watch', action='store_true', help='Once per host boot, check readiness and show display')
     mode.add_argument('--check', action='store_true', help='Read-only check, no sound by default')
     mode.add_argument('--prepare-display', action='store_true', help='Install the known screen addition only')
     parser.add_argument('--announce', action='store_true', help='With --check: one explicit voice test')
@@ -199,7 +199,9 @@ def main(argv=None):
     if not check_ready(deadline):
         return 75
     gate.log('RELEASE_TECHNICAL_CHECK=passed; movement_commands=0')
-    if (args.watch or args.announce) and not announce():
+    # Native Control Center now announces readiness in Spanish. Keep automatic
+    # technical checks/display, but avoid the later duplicate English prompt.
+    if args.announce and not announce():
         return 75
     if args.watch or args.visual:
         import cruzr_boot_visual as visual

@@ -1,6 +1,88 @@
 # HOME: cuerpo a cero antes de los brazos
 
-## Vigente: v7 (13,45 s), 2026-09-18
+**22-09-2026 — HOME-V8-AUTO-01: v8 INSTALADA como HOME automático.**
+Tras nueva petición «hazlo ahora», paro principal1/servo0, cargador0 y hashes
+verificados. home.xml sustituido atómicamente por el XML exacto ensayado:
+SHA256 `d9e9462792b41300d352604b53ea2a4890a9382e942321990708f6ded2e26ccb`.
+Postcheck confirma v8 y paro mantenido. Sin movimiento ni reinicio del agente.
+13,45s nominales; prueba física previa de tarea separada satisfactoria.
+Carga de esta sustitución y prueba durante arranque PENDIENTES. Motion seguía
+esperando ListControllers; instalación no implica recuperación de ese servicio.
+
+El rechazo anterior se resolvió contrastando los diarios retenidos: mismo boot,
+medición HOME reciente, contador del diario original sin cambios, cero tareas
+en todos sus sucesores, salida anterior por heartbeat y nueva instancia esperando
+controladores. El instalador admite esta continuidad sólo para escritura bajo
+paro; no declara salud actual ni autoriza liberación o movimiento. Registro
+HOME original intacto. Se rechazan tareas nuevas, diario ausente/inconsistente,
+cambio de boot, caducidad o historia de reinicio no explicada.
+
+Destino: Motion, walker-motion.manipulation_robot_app-1,
+`/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/cruzr/home.xml`.
+Backup robot: `/etc/walker/trajectory-overlays/20260922T122256.171279Z_home_body_first`.
+Backup externo previo: `install/home.v7.before.xml` en
+`../Humanoide-vla-evidence/20260922T122230Z_HOME_V8_RESUME`;
+recibo, postcheck, continuidad, fuentes y SHA256SUMS en la misma evidencia.
+Fuente/receta: `scripts/teleoperation/install_home_v8_auto.py --install --evidence /RUTA/NUEVA`;
+requiere medición previa según su guía. Preflight de cajas reconoce hash v8 exacto.
+Reversión: bajo paro y sin acciones, comprobar hash v8 y restaurar únicamente
+home.before.xml del backup (v7 SHA1e6e2fb7…a6f03), verificar hash tras escritura.
+No se realizó reversión ni activación. Mantener paro hasta preparar recuperación
+controlada de servicios/arranque; no usar liberación como prueba del fallo.
+
+**22-09-2026 — HOME-V8-AUTO-01: sustitución detenida antes de escribir.**
+Operador confirmó paro principal pulsado tras HOME medido. Preflight verificó
+paro principal1, servo0, cargador0 y hashes originales. El guard de continuidad
+rechazó la instalación: cambió robot_app_log. Log anterior termina con fatal
+heartbeat delta_t=5,04583s a20:19:47.723727 (hora nativa); nueva instancia
+20:19:48 espera ListControllers. Contenedores robot_app y HW muestran arranque
+reciente. Causa de la pérdida de heartbeat PENDIENTE; no atribuirla al XML v8.
+No se ejecutó escritura, reinicio ni movimiento del agente. Hash remoto final
+confirma HOME v7 intacto. Mantener paro; instalación/activación v8 automáticas
+PENDIENTES hasta resolver continuidad/estado. No falsear el registro HOME ni
+liberar el paro sólo para superar el instalador. Evidencia:
+`../Humanoide-vla-evidence/20260922T121856Z_HOME_V8_AUTO` (install/status.json,
+identity-after-stop.json, logs y home-final-hash.json).
+
+**22-09-2026 — HOME-V8-AUTO-01: promoción solicitada, instalación PENDIENTE.**
+Usuario pide v8 como HOME automático tras ensayo satisfactorio. Preparado
+`install_home_v8_auto.py`: exige HOME medido reciente, misma instancia/sin
+nuevas tareas, paro principal pulsado, hash v7/MetaMove y copia externa antes
+de sustituir atómicamente home.xml por los bytes exactos de la candidata.
+Nueva medida: HOME20D, velocidad cero, máximo 0,002876 rad. Se solicita al
+operador pulsar el paro principal; aún no se ha escrito ni reiniciado el robot.
+Preflight del ciclo admite el hash exacto v8 conservando chequeo MetaMove.
+Tres tests de candidata, sintaxis shell y diff-check correctos.
+Evidencia: `../Humanoide-vla-evidence/20260922T121856Z_HOME_V8_AUTO`.
+
+**22-09-2026 14:12 CEST — HOME-V8-CANDIDATE-01: prueba física completada.**
+Una ejecución de la tarea separada devuelve SUCCEED/status4; HOME medido en los
+20 ejes, velocidad cero, máximo absoluto 0,002876 rad. Operador confirma recorrido
+normal, sin contacto, tirones ni ruidos anormales, y estabilidad final.
+Tiempo observado desde inicio del árbol hasta último MetaMove: 15,059 s;
+nominal 13,45 s conservado. Hubo 202 rechazos iniciales de consigna durante
+0,402 s antes de entrar en el límite del hombro; no se modificaron protecciones.
+Instalada, cargada y probada desde esta postura concreta; no recuperación general.
+HOME automático sigue en v7; sin reinicio ni rearme de Control Center.
+Salida de su Fault previo NO verificada. [Prueba, evidencia y límites](CRUZR_HOME_V8_CANDIDATA.md).
+
+**22-09-2026 — HOME-V8-CANDIDATE-01 instalada de forma aditiva, sin movimiento.**
+Tarea separada home_v8_early_roll_CANDIDATE reparte apertura−0,05/−0,15rad
+con el primer ajuste de codo; mantiene13,45s nominales y destinos finalesv7.
+No es condicional ni recuperación general. Lectura actual y barridos501,
+3tests offline correctos; sincronización/seguimiento y prueba física pendientes.
+HOME automáticov7 intacto; sin reinicios, task_list ni acciones. Candidata
+instalada, carga nativa pendiente. [Fuentes, límites, backup y receta](CRUZR_HOME_V8_CANDIDATA.md).
+
+**22-09-2026 — Revisión HOMEv7: fallo del primer paso de codo confirmado.**
+XML y MetaMove remotos coinciden con fuentes/hashes previstos. El primer delta
+izquierdo conserva hombro roll0,116678 fuera de máximo0,0987266:500 consignas
+rechazadas, codo izquierdo no completa; derechoSUCCESS. Se abortan cuerpo/cabeza
+en paralelo. Misma limitación que18-09, no recuperación universal. Operador
+confirma estable/vacío/sin contacto; sólo revisión, ninguna orden física.
+[Secuencia, evidencia y recuperación aún pendiente](../incidents/2026-09-22_ARRANQUE_HOME_INCOMPLETO.md).
+
+## Histórico: v7 (13,45 s), instalado 2026-09-18 y sustituido 22-09
 
 `cruzr/home` = [`cruzr_internal_home_body_first_v7_13s.xml`](../../scripts/teleoperation/tasks/cruzr_internal_home_body_first_v7_13s.xml)
 (SHA `1e6e2fb7…`). Primer tramo (3,75 s): cabeza/elevador/cintura a cero y, en

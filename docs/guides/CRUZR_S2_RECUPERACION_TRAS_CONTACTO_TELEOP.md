@@ -1,5 +1,22 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**28-09-2026 — `force_home.sh` pendiente con tarea PICO previa; sólo lectura.**
+VERIFICADO: Motion registra `Task is running` a13:33:31 (+08), tras inicio PICO
+a13:32:35; servidor ArmTask1 y cliente HOME remoto185 aún abierto.
+INFERENCIA: rechazo por ocupación; el aviso INFO de SHM desactivado no demuestra
+fallo. El wrapper no tiene timeout; Ctrl+C local no acredita cancelación remota.
+Estado terminal, salud y paros PENDIENTES (última consulta falló en ASKPASS local).
+No se canceló, reinició, rearmó ni envió movimiento. Antes de otra acción,
+verificar cliente pendiente y tarea activa; no recuperar servicios como prueba.
+Evidencia: `../Humanoide-vla-evidence/20260928T053746Z_FORCE_HOME_WAIT/`.
+
+**22-09-2026 13:55 CEST — Arranque fallido; HOME20D NO alcanzado.**
+Selfcheck passed/error0, pero HOME interno falla por consigna left_arm fuera
+de límite (0,116678 frente a máximo0,0987266rad). CC StartMotion reason19→Fault.
+Muestra20D posterior: MEASURED_HOME=0, maxposición1,477990rad, brazos0,401328rad;
+actuadores sin error reportado. Sólo lectura; sin reintento/rearme ni reinicio.
+Estado físico/contacto pendiente de confirmación. [Informe y evidencia](../incidents/2026-09-22_ARRANQUE_HOME_INCOMPLETO.md).
+
 **2026-09-16 — HOME-BODY-FIRST-04:** instalado HOME de20 s con cuerpo a cero
 antes de apertura/bajada/cierre de brazos, por petición del propietario y con
 paro confirmado. Hash e3d06564…69dc49c; diez tests locales pasan. Sin acciones

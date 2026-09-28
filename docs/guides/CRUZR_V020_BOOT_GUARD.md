@@ -1,5 +1,107 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+**23-09-2026 — VOICE-BOOT-06: anuncio inglés automático retirado.**
+Watcher conserva comprobaciones y visual; sólo se retira announce() de --watch.
+Aviso nativo español intacto.31 tests pasan y hash remoto verificado; sin restart
+ni reproducción. Efectivo al próximo watcher; prueba de nuevo encendido pendiente.
+[Fuente, respaldo y rollback](../voice/RETIRADA_AVISO_INGLES_20260923.md).
+
+
+**23-09-2026 11:39 CEST — VOICE-BOOT-05 instalada con rollback.**
+Control Center:24 avisos fijos a WAV español, patrón de batería a TTS inglés;
+mensajes desconocidos preservados.32 archivos verificados; guard de hashes y
+LD_PRELOAD antes del exec, gates originales idénticos por comparación AST.
+Paro1 antes/después. Prueba nativa de objetivos pasa, cero audio/movimiento.
+Proceso actual aún sin adaptador; carga al próximo inicio y escucha PENDIENTES.
+No reinicios ni cambios de red. Recibo externo20260923_VOICE_CC_DEPLOY/receipt.json;
+backup persistente /etc/walker/voice/deployments/cruzr-voice-20260923T093840Z.
+[Fuentes, compatibilidad, validación y rollback](../voice/CONTROL_CENTER_ES_ROLLBACK_20260923.md).
+
+
+**22-09-2026 14:31 CEST — HOME-V8-AUTO-01: nuevo arranque, liberación preparada.**
+Usuario reinició todo manteniendo el paro. Boot Motion nuevo
+bd5efdb3-f7e0-40b2-a519-50c8ffa893de; contenedores redescubiertos.
+HOME remoto conserva SHA d9e9462792b41300d352604b53ea2a4890a9382e942321990708f6ded2e26ccb.
+`cruzr_boot_ready.sh --check` rc0: Motion3/3, seis cámaras2/2 con timestamps
+crecientes, RELEASE_TECHNICAL_CHECK=passed. Contrato: arranque inicial CC,
+paro principal pulsado, secundario liberado y cargador desconectado.
+Operador confirma brazos abajo, abrazaderas instaladas/vacías, sin sujeciones,
+recorrido libre, ruedas bloqueadas, control exclusivo y persona junto al paro.
+Comprobación técnica y física previas completas; se indica liberar manualmente.
+Liberación, ejecución HOME v8 automático, salud20D y fin del arranque PENDIENTES.
+El agente sólo leyó; no envió acciones, rearme ni reinicio. Evidencia:
+`../Humanoide-vla-evidence/20260922T123059Z_V8_BOOT_CHECK`.
+
+**22-09-2026 — HOME-V8-AUTO-01: v8 INSTALADA como HOME automático.**
+Tras nueva petición «hazlo ahora», paro principal1/servo0, cargador0 y hashes
+verificados. home.xml sustituido atómicamente por el XML exacto ensayado:
+SHA256 `d9e9462792b41300d352604b53ea2a4890a9382e942321990708f6ded2e26ccb`.
+Postcheck confirma v8 y paro mantenido. Sin movimiento ni reinicio del agente.
+13,45s nominales; prueba física previa de tarea separada satisfactoria.
+Carga de esta sustitución y prueba durante arranque PENDIENTES. Motion seguía
+esperando ListControllers; instalación no implica recuperación de ese servicio.
+
+El rechazo anterior se resolvió contrastando los diarios retenidos: mismo boot,
+medición HOME reciente, contador del diario original sin cambios, cero tareas
+en todos sus sucesores, salida anterior por heartbeat y nueva instancia esperando
+controladores. El instalador admite esta continuidad sólo para escritura bajo
+paro; no declara salud actual ni autoriza liberación o movimiento. Registro
+HOME original intacto. Se rechazan tareas nuevas, diario ausente/inconsistente,
+cambio de boot, caducidad o historia de reinicio no explicada.
+
+Destino: Motion, walker-motion.manipulation_robot_app-1,
+`/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/cruzr/home.xml`.
+Backup robot: `/etc/walker/trajectory-overlays/20260922T122256.171279Z_home_body_first`.
+Backup externo previo: `install/home.v7.before.xml` en
+`../Humanoide-vla-evidence/20260922T122230Z_HOME_V8_RESUME`;
+recibo, postcheck, continuidad, fuentes y SHA256SUMS en la misma evidencia.
+Fuente/receta: `scripts/teleoperation/install_home_v8_auto.py --install --evidence /RUTA/NUEVA`;
+requiere medición previa según su guía. Preflight de cajas reconoce hash v8 exacto.
+Reversión: bajo paro y sin acciones, comprobar hash v8 y restaurar únicamente
+home.before.xml del backup (v7 SHA1e6e2fb7…a6f03), verificar hash tras escritura.
+No se realizó reversión ni activación. Mantener paro hasta preparar recuperación
+controlada de servicios/arranque; no usar liberación como prueba del fallo.
+
+**22-09-2026 — HOME-V8-AUTO-01: sustitución detenida antes de escribir.**
+Operador confirmó paro principal pulsado tras HOME medido. Preflight verificó
+paro principal1, servo0, cargador0 y hashes originales. El guard de continuidad
+rechazó la instalación: cambió robot_app_log. Log anterior termina con fatal
+heartbeat delta_t=5,04583s a20:19:47.723727 (hora nativa); nueva instancia
+20:19:48 espera ListControllers. Contenedores robot_app y HW muestran arranque
+reciente. Causa de la pérdida de heartbeat PENDIENTE; no atribuirla al XML v8.
+No se ejecutó escritura, reinicio ni movimiento del agente. Hash remoto final
+confirma HOME v7 intacto. Mantener paro; instalación/activación v8 automáticas
+PENDIENTES hasta resolver continuidad/estado. No falsear el registro HOME ni
+liberar el paro sólo para superar el instalador. Evidencia:
+`../Humanoide-vla-evidence/20260922T121856Z_HOME_V8_AUTO` (install/status.json,
+identity-after-stop.json, logs y home-final-hash.json).
+
+**22-09-2026 — HOME-V8-AUTO-01: promoción solicitada, instalación PENDIENTE.**
+Usuario pide v8 como HOME automático tras ensayo satisfactorio. Preparado
+`install_home_v8_auto.py`: exige HOME medido reciente, misma instancia/sin
+nuevas tareas, paro principal pulsado, hash v7/MetaMove y copia externa antes
+de sustituir atómicamente home.xml por los bytes exactos de la candidata.
+Nueva medida: HOME20D, velocidad cero, máximo 0,002876 rad. Se solicita al
+operador pulsar el paro principal; aún no se ha escrito ni reiniciado el robot.
+Preflight del ciclo admite el hash exacto v8 conservando chequeo MetaMove.
+Tres tests de candidata, sintaxis shell y diff-check correctos.
+Evidencia: `../Humanoide-vla-evidence/20260922T121856Z_HOME_V8_AUTO`.
+
+**22-09-2026 — Revisión HOMEv7: fallo del primer paso de codo confirmado.**
+XML y MetaMove remotos coinciden con fuentes/hashes previstos. El primer delta
+izquierdo conserva hombro roll0,116678 fuera de máximo0,0987266:500 consignas
+rechazadas, codo izquierdo no completa; derechoSUCCESS. Se abortan cuerpo/cabeza
+en paralelo. Misma limitación que18-09, no recuperación universal. Operador
+confirma estable/vacío/sin contacto; sólo revisión, ninguna orden física.
+[Secuencia, evidencia y recuperación aún pendiente](../incidents/2026-09-22_ARRANQUE_HOME_INCOMPLETO.md).
+
+**22-09-2026 13:55 CEST — Arranque fallido; HOME20D NO alcanzado.**
+Selfcheck passed/error0, pero HOME interno falla por consigna left_arm fuera
+de límite (0,116678 frente a máximo0,0987266rad). CC StartMotion reason19→Fault.
+Muestra20D posterior: MEASURED_HOME=0, maxposición1,477990rad, brazos0,401328rad;
+actuadores sin error reportado. Sólo lectura; sin reintento/rearme ni reinicio.
+Estado físico/contacto pendiente de confirmación. [Informe y evidencia](../incidents/2026-09-22_ARRANQUE_HOME_INCOMPLETO.md).
+
 **2026-09-22 09:38 CEST — Arranque tras liberar VERIFICADO; lectura de actuadores corregida.**
 Operador comunica «todo liberado». Misma instancia CC pasa selfcheck=true/error0,
 StartMotion succ y JoystickMode. Paros0/0, cargador0; HOME20D medido, máximo

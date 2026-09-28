@@ -12,8 +12,8 @@ está en el arranque inicial, el E-stop principal pulsado, el secundario liberad
 y el cargador desconectado. No mueve, rearma ni reinicia el robot.
 
 Uso habitual: encender con brazos abajo y vacíos, zona libre y E-stop pulsado;
-esperar la frase del robot "Ready to release the emergency stop".
-Este comando es la alternativa si no se oye la voz. No sirve para recuperar
+ejecutar esta comprobación técnica antes de liberar el paro. El aviso nativo
+en español no sustituye la comprobación física. No sirve para recuperar
 una detención durante PICO o una trayectoria.
 HELP
     exit 0 ;;

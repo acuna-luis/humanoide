@@ -1,5 +1,13 @@
 # get1 guardado y ejecutor get1 → put1 → HOME
 
+**28-09-2026 — alternativa mejorada implementada sólo en PC.**
+`force_improved_scenario1.sh` conserva la geometría del ejecutor actual por
+indicación expresa del usuario; añade supervisión y recuperación por etapas.
+99 pruebas offline pasan; sin ensayo/conexión al robot. Las trayectorias nuevas,
+el modelo de encaje de menor paso y las verificaciones automáticas de sujeción
+siguen pendientes; las transiciones de caja son confirmaciones presenciales.
+[Uso y estado BOX-01-EXEC-IMPROVED](FORCE_IMPROVED_SCENARIO1.md).
+
 **22-09-2026 — BOX-01-ORIGINAL-SCRIPT: variante local con tareas anteriores.**
 Creado por petición explícita [force_excenario1.original.sh](../../scripts/force_excenario1.original.sh)
 (nombre exacto solicitado, excenario). Deriva del force_escenario1.sh de HEAD
@@ -712,3 +720,50 @@ Evidencia completa y SHA256SUMS: `/home/lacuna/proyectos/Robots/Humanoide-vla-ev
 Incluye confirmación presencial, before/after, respuestas map/localización,
 versión ejecutada, plan y progreso del objetivo, stop, lecturas posteriores
 y logsfreepnc. No se mandó nueva detección ni cabeza tras el fallo del avance.
+
+## Revisión de mejoras — 28-09-2026
+
+Petición: recomendar mejoras del ejecutor a partir del XML Canada/WRC y del
+historial, para desapilar cajas encajadas603×397×220mm. Revisión local;
+**propuestas PENDIENTES, sin implementación ni ejecución física**.
+
+VERIFICADO: [el flujo](../../scripts/force_escenario1.sh) ya valida resultados
+Motion, mapa/localización y dos poses frescas de llegada; invoca preflight
+técnico antes de run. El supervisor SPS añade lock remoto, hashes, controladores
+y acción libre al inicio, y lease900s. Un fallo corta la secuencia sin apertura,
+HOME o reintento automático. Esas protecciones deben conservarse.
+
+Aprendizajes del [Canada/WRC](../../vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/utars_task_canada_wrc_20250930_start.xml):
+etapas explícitas, preparación inicial, control de tarea y aviso de ayuda.
+`SequenceWithMemory` no demuestra recuperación persistente tras reinicio;
+los10 intentos de get1 repiten la tarea física, no sólo percepción. Propuesta:
+estado persistente de fase/caja, recuperación condicionada al estado actual y
+reintentos limitados a operaciones cuya repetición esté demostrada como segura.
+No copiar automáticamente `open_arm_before_home` ni los reintentos de agarre.
+
+| Prioridad | Mejora propuesta | Evidencia / alcance |
+|---|---|---|
+| Alta | Validar montaje y margen de recogida después de get1 | Llegar a5cm/3° no certifica alcance. [Fallo de cota baja](../incidents/2026-09-22_CAJA_FRONTAL_COTA_BAJA.md); no comparar directamente X de TF con el límite interno de Motion ni integrar el avance corto no cualificado. |
+| Alta | Perfil de depósito para el mueble y caja reales | [WRC bajo](DEPOSITO_WRC_ALTURA_100CM.md) conserva tamaño600×400×280mm y trayectoria no adaptada al requisito histórico de100cm. Revalidar ese requisito antes de implementar. |
+| Alta | Comprobar separación, sujeción, apoyo/liberación y HOME medido | El wrapper encadena acciones por resultado exitoso. Requiere señales y umbrales validados para Singapore; no copiar umbrales BYD. |
+| Alta | Seguimiento de GoalID, resultado terminal e interrupción verificable | Timeout/señal al shell no acredita cancelación física; lease fija no es heartbeat del PC. Estado indeterminado debe impedir otra orden. |
+| Alta | Preflight propio, exclusión mantenida y confirmación física efectiva | `--check` sólo mapa/puntos; run exigeTTY pero no espera respuesta. Workbin--check no ejecuta el bloqueo de contacto de sus modos mutantes. El lock SPS no arbitra todos los otros mandos. |
+| Alta | Revisar paso vertical del selector para cajas encajadas | El modelo actual exige0,22±0,04m entre detecciones de la misma pila; no equivale necesariamente al paso entre cajas encajadas. |
+| Media | Estabilidad entre capturas y registro unificado del ciclo | TF exacta, frescura, transacción única y selection.jsonl ya existen. Añadir continuidad de identidad y dispersión, sin fabricar poses ni seleccionar una lateral por alcance. |
+| Media | Descubrimiento de contenedores y manifiesto de todas las tareas utilizadas | El manifiesto SPS cubre separación/bodyback; ampliar a retroceso y depósito WRC, conservando el contrato HOME existente. |
+| Media | Separar ejecutor de perfil y ampliar pruebas offline | Cubrir interrupción con carga, pérdida de enlace, rechazo por tarea ocupada, cambio de controlador, depósito incompatible y falsa finalización HOME. |
+
+VERIFICADO sólo en memoria con `python3 -B`: dos poses válidas, mismaXY,
+ΔZ0,10m→`Ambiguous stack: heights do not match successive 0.22m boxes`;
+ΔZ0,22m→caja superior. Fuente: [selector](../../scripts/box_handling/select_front_box.py),
+constantes y validación de gaps. **INFERENCIA:** puede rechazar algunas escenas
+de cajas encajadas. No se midió el paso real ni se demostró que causara los fallos
+anteriores. No ampliar tolerancias a ciegas; recoger ejemplos con duplicados,
+oclusiones y cajas superiores antes de cambiar la política.
+
+Evidencia y backup previo: `../Humanoide-vla-evidence/20260928_FORCE_ESCENARIO1_REVIEW/`
+(`source-sha256.json`, `before/`). Cambios persistentes: estas notas y enlaces
+en fuente global/índice. Reversión documental selectiva desde before, preservando
+otros cambios. Scripts, SDK, robot y runtime intactos; sin consulta remota.
+Punto de reanudación: acordar alcance de implementación y medir montaje real;
+ninguna propuesta equivale a trayectoria instalada o probada físicamente.
