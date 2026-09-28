@@ -55,7 +55,10 @@ def discover_containers(inspect_json):
     if not isinstance(inventory, list) or not inventory:
         raise ValueError('Missing Docker inventory')
     roles = {'native': [], 'ros2': []}
-    services = {'manipulation_robot_app': 'native', 'ros2': 'ros2'}
+    # Both the short Compose services and the qualified vendor services occur
+    # in this project. Match exact labels: ros.ros2-export is a different role.
+    services = {'manipulation_robot_app': 'native', 'motion.manipulation_robot_app': 'native',
+                'ros2': 'ros2', 'ros.ros2': 'ros2'}
     fallbacks = {'walker-motion.manipulation_robot_app-1': 'native',
                  'walker-ros.ros2-1': 'ros2'}
     seen = set()
@@ -77,6 +80,8 @@ def discover_containers(inspect_json):
             raise ValueError('Malformed Docker labels')
         service = labels.get('com.docker.compose.service')
         role = services.get(service) if isinstance(service, str) else None
+        if role is not None and name in fallbacks and fallbacks[name] != role:
+            raise ValueError('Container name conflicts with Compose service role')
         if service is None:
             role = fallbacks.get(name)
         if role is None:
@@ -100,23 +105,29 @@ def discover_containers(inspect_json):
                 raise ValueError('Motion hardware type mismatch')
         roles[role].append(name)
     if any(len(names) != 1 for names in roles.values()):
-        raise ValueError('Require exactly one running Motion and ROS2 container')
+        raise ValueError('Require exactly one running Motion and ROS2 container; '
+                         + ', '.join(role+'='+str(len(names)) for role, names in roles.items()))
     return {role: names[0] for role, names in roles.items()}
 
 
 def parse_controller_response(output):
-    if not isinstance(output, str) or output.count('Response(controller=') != 1:
-        raise ValueError('Missing unique controller response')
-    remainder = output.split('Response(controller=', 1)[1].splitlines()
-    if not remainder:
-        raise ValueError('Malformed controller response')
-    literal = remainder[0]
-    if not literal.endswith(')'):
-        raise ValueError('Malformed controller response')
-    try:
-        rows = ast.literal_eval(literal[:-1])
-    except (ValueError, SyntaxError) as exc:
-        raise ValueError('Malformed controller response') from exc
+    if isinstance(output, dict):
+        if set(output) != {'controller'}:
+            raise ValueError('Malformed controller response')
+        rows = output['controller']
+    else:
+        if not isinstance(output, str) or output.count('Response(controller=') != 1:
+            raise ValueError('Missing unique controller response')
+        remainder = output.split('Response(controller=', 1)[1].splitlines()
+        if not remainder:
+            raise ValueError('Malformed controller response')
+        literal = remainder[0]
+        if not literal.endswith(')'):
+            raise ValueError('Malformed controller response')
+        try:
+            rows = ast.literal_eval(literal[:-1])
+        except (ValueError, SyntaxError) as exc:
+            raise ValueError('Malformed controller response') from exc
     if not isinstance(rows, list):
         raise ValueError('Invalid controller inventory')
     states = {}
@@ -252,8 +263,8 @@ def validate_actuators(payload, classifier):
     return report
 
 
-def validate_nav_pose(payload, expected, started_at, now, previous_stamp=None):
-    """Validate one fresh arrival sample; caller requires two advancing samples."""
+def validate_pose_sample(payload, started_at, now, previous_stamp=None):
+    """Validate fresh map telemetry without claiming arrival at a target."""
     pose = _json(payload)
     started_at = _number(started_at, 'Read start')
     now = _number(now, 'Read completion')
@@ -274,21 +285,32 @@ def validate_nav_pose(payload, expected, started_at, now, previous_stamp=None):
         p, q = pose['pose']['position'], pose['pose']['orientation']
         p = {k: _number(p[k], 'Pose position') for k in 'xyz'}
         q = {k: _number(q[k], 'Pose orientation') for k in 'xyzw'}
-        target = {k: _number(expected[k], 'Target pose') for k in ('point_x', 'point_y', 'point_yaw')}
         norm = math.sqrt(sum(v * v for v in q.values()))
         if abs(norm - 1) > 0.01:
             raise ValueError('Invalid pose quaternion')
         q = {k: v / norm for k, v in q.items()}
         yaw = math.atan2(2 * (q['w'] * q['z'] + q['x'] * q['y']),
                          1 - 2 * (q['y'] ** 2 + q['z'] ** 2))
-        distance = math.hypot(p['x'] - target['point_x'], p['y'] - target['point_y'])
-        angle = abs(math.atan2(math.sin(yaw - target['point_yaw']), math.cos(yaw - target['point_yaw'])))
-        if distance > 0.05 or angle > math.radians(3):
-            raise ValueError('Arrival outside 0.05m / 3 degree tolerance')
         return {'stamp': timestamp, 'stamp_ns': sec * 1_000_000_000 + ns,
-                'distance_m': distance, 'yaw_error_deg': math.degrees(angle)}
+                'x': p['x'], 'y': p['y'], 'yaw': yaw}
     except (KeyError, TypeError) as exc:
         raise ValueError('Malformed navigation pose') from exc
+
+
+def validate_nav_pose(payload, expected, started_at, now, previous_stamp=None):
+    """Validate one fresh arrival sample; caller requires two advancing samples."""
+    measured = validate_pose_sample(payload, started_at, now, previous_stamp)
+    try:
+        target = {k: _number(expected[k], 'Target pose') for k in ('point_x', 'point_y', 'point_yaw')}
+    except (KeyError, TypeError) as exc:
+        raise ValueError('Malformed navigation target') from exc
+    distance = math.hypot(measured['x'] - target['point_x'], measured['y'] - target['point_y'])
+    angle = abs(math.atan2(math.sin(measured['yaw'] - target['point_yaw']),
+                           math.cos(measured['yaw'] - target['point_yaw'])))
+    if distance > 0.05 or angle > math.radians(3):
+        raise ValueError('Arrival outside 0.05m / 3 degree tolerance')
+    return {'stamp': measured['stamp'], 'stamp_ns': measured['stamp_ns'],
+            'distance_m': distance, 'yaw_error_deg': math.degrees(angle)}
 
 
 def validate_map_points(response):

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "id": "wrist_ft_pose_pending_v1",
+  "geometry_id": "scenario1_current_geometry_v1",
+  "qualification": "pending",
+  "evidence_reference": null,
+  "stages": {
+    "held": null,
+    "released": null
+  }
+}

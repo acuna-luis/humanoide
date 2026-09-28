@@ -1,5 +1,78 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**28-09-2026 11:08 CEST — BOX-01-EXEC-IMPROVED: adaptación a mesa de 73 cm revertida.**
+Por petición del usuario se cancela esa adaptación y se restaura exactamente,
+por SHA256, el ejecutor anterior: depósito `wrc_cruzr/put_cruzr_wrc_low`,
+optimizaciones y corrección de pose con dos publicadores conservadas. Retirados
+perfil de altura, generador, instalador incompleto y prueba nuevos; copia externa
+del trabajo descartado conservada. Durante la preparación sólo hubo consultas
+remotas y cambios PC, sin instalación ni movimiento del robot. La autorización
+de la prueba de 73 cm queda cancelada; no se inició agarre, depósito o HOME.
+[Reversión y evidencia](box_handling/FORCE_IMPROVED_SCENARIO1.md#adaptación-a-mesa-de-73-cm-revertida--28-09-2026).
+
+**28-09-2026 10:16 CEST — BOX-01-EXEC-IMPROVED: corregido timeout de pose.**
+VERIFICADO: dos intentos del usuario se interrumpieron en la llegada a `get1`,
+sin enviar agarre ni otras acciones Motion. La optimización exigía exactamente
+un publicador de `/nav/robot_pose`; la unidad tiene dos y sí transmite posiciones
+frescas. Se restaura el contrato anterior de pose (uno o más publicadores,
+dos muestras nuevas/crecientes), manteniendo `map`, edad y tolerancia 5 cm/3°.
+Salud conserva unicidad. Ahora `--check`, benchmark y la comprobación anterior
+a cada navegación ejercitan también el lector de pose; antes no lo probaban.
+250 pruebas offline correctas y `--check --benchmark-checks 3` real devuelve 0:
+cuatro pares nuevos con dos publicadores, adquisición 0,14–0,20 s. Sólo lecturas
+remotas del agente; ciclo físico posterior PENDIENTE. `VSLAM_LOCATION_LOST`
+también aparece en el ciclo anterior con llegada medida: no explica por sí solo
+este timeout ni demuestra localización visual resuelta.
+[Diagnóstico, corrección y evidencia](box_handling/FORCE_IMPROVED_SCENARIO1.md#corrección-de-pose-con-dos-publicadores--28-09-2026).
+
+**28-09-2026 10:07 CEST — BOX-01-EXEC-IMPROVED: supervisión optimizada.**
+VERIFICADO: 242 pruebas offline y comprobaciones reales exclusivamente de lectura.
+Clientes de acción y lector ROSA persistentes, hashes completos agrupados y
+eliminación del chequeo técnico duplicado en `verify_held`/`verify_released` de
+`assume`. Cada etapa física conserva salud fresca, dependencias, resultado y
+HOME medido. Tres rondas completas adicionales de contenedores/hashes/salud/
+mapa-estado: 2,945 / 4,485 / 4,495 s; pareja de consultas de mapa-estado:
+0,106–0,113 s. Son medidas de lectura, no tiempos nuevos del ciclo físico.
+`--check --benchmark-checks 3` reproduce la medición sin mover. `--check` de
+`assume` devuelve 0; `sensors` recibe FT/articulaciones y devuelve 55 sólo por
+referencias pendientes. Fuentes PC instaladas, helpers cargados temporalmente y
+finalizados; sin instalación persistente, acciones físicas ni cambios de mapa.
+Ciclo físico optimizado y calibración sensorial PENDIENTES.
+[Fuentes, mediciones, evidencia y reversión](box_handling/FORCE_IMPROVED_SCENARIO1.md#optimización-de-supervisión--28-09-2026).
+
+**28-09-2026 — BOX-01-EXEC-IMPROVED: diagnóstico histórico previo a optimizar.**
+OBSERVADO: diario20260928T074311Z termina las diez etapas y mide HOME20D; caja
+permanece ASUMIDA. Pausas entre resultado/aceptación de acciones: visión→agarre
+9,162s, agarre→retroceso18,317s, depósito→HOME20,988s. El ejecutor repite
+descubrimiento/hashes/salud11 veces (preflight+10 etapas); las verificaciones
+asumidas duplicaban el chequeo de la siguiente acción. Esta entrada conserva el
+diagnóstico previo; el estado vigente de la optimización figura arriba.
+[Medidas, causa, alcance y receta](box_handling/FORCE_IMPROVED_SCENARIO1.md#latencia-entre-etapas-observada--28-09-2026).
+
+**28-09-2026 — BOX-01-EXEC-IMPROVED: tres políticas de confirmación.**
+Por petición del usuario, `ask_improved_scenario1.sh` conserva las preguntas;
+`force_improved_scenario1.sh` continúa sin preguntas tras éxito técnico y registra
+la sujeción/liberación como ASUMIDAS. `force_improved_scenario1_autochecked.sh`
+añade adquisición simultánea FT de ambas muñecas y articulaciones, con ventanas
+frescas y referencias por postura. Perfil sensorial entregado PENDIENTE: no hay
+calibración cualificada; su `--run` se rechaza antes de conectar o mover. No usar
+fuerza bruta, resta HOME→agarre ni payload_state como prueba de caja sujeta.
+Todos conservan `--check` por defecto, geometría/tareas y fallos técnicos que
+interrumpen el ciclo. VERIFICADO:173 pruebas offline; --check real09:32 CEST recibe
+FT de ambas muñecas y22 articulaciones frescas/inmóviles, mide HOME20D y observa
+utars_nav_map/FSM_WAITNAVIGATE. Retorno55 sólo por calibración pendiente. Sin
+movimiento ni cambios de mapa; colector temporal de lectura finalizado. Fuentes
+locales; integración física PENDIENTE.
+[Uso, evidencia, límites de sensores/visión y reversión](box_handling/FORCE_IMPROVED_SCENARIO1.md).
+
+**28-09-2026 09:06 CEST — BOX-01-EXEC-IMPROVED: --check real reparado.**
+VERIFICADO: Compose usa `motion.manipulation_robot_app`/`ros.ros2`; aliases
+exactos añadidos. Estado de acción leído con QoS automático canónico, manteniendo
+telemetría nueva. 106 pruebas offline pasan. --check completa salud/controladores/
+hashes/HOME20D y devuelve55: mapa vacío/FSM_WAITSETMAP. Preparación del mapa y
+ciclo físico PENDIENTES. Sólo fuentes PC y lecturas remotas; sin movimiento,
+instalación, relocalización o cambios de mapa. [Evidencia y reversión](box_handling/FORCE_IMPROVED_SCENARIO1.md#corrección-de-descubrimiento-y-estado--28-09-2026).
+
 **28-09-2026 — BOX-01-EXEC-IMPROVED: nuevo ejecutor local del escenario1.**
 Usuario indica conservar la geometría actual. Implementados --check por defecto,
 ejecución confirmada, checkpoints/reanudación de un solo uso, acciones con UUID,

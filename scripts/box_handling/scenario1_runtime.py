@@ -3,7 +3,6 @@
 Loaded in memory by scenario1_cli. All robot commands are bounded and go through
 the native client. stdin carries commands and a renewable PC heartbeat.
 """
-import ast
 import base64
 from concurrent.futures import ThreadPoolExecutor
 import fcntl
@@ -21,19 +20,23 @@ import tempfile
 import threading
 import time
 import urllib.request
-import xml.etree.ElementTree as ET
 
 if __package__:
     from . import scenario1_checks as checks, scenario1_contract as contract
+    from . import scenario1_sensors as sensors
+    from . import scenario1_dependencies as dependencies
+    from .scenario1_session import ProcessSession
     from scripts.lib.cruzr_home_posture_gate import classify
-    from .front_sps_session import check_sps_discovery, discovery_output
+    from .front_sps_session import check_sps_discovery
 else:
     import scenario1_checks as checks
     import scenario1_contract as contract
+    import scenario1_sensors as sensors
+    import scenario1_dependencies as dependencies
+    from scenario1_session import ProcessSession
     from cruzr_home_posture_gate import classify
-    from front_sps_session import check_sps_discovery, discovery_output
+    from front_sps_session import check_sps_discovery
 
-TASK_ROOT = '/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/'
 SETUP = 'source /opt/walker/setup.bash; export ROS2CLI_DISABLE_DAEMON=1 ROSA_MIDDLE_WARE=cyclone ROSA_USE_SHM=OFF; '
 ROS_SETUP = 'source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; '
 TASKS = {'enable_vision': ('vision/enable_transport_vision_switch', 20),
@@ -108,7 +111,8 @@ runpy.run_path(root+'/front_sps_native.py',run_name='__main__')
 class Runtime:
     def __init__(self, payload, emit=None):
         self.payload = payload
-        self.emit = emit or (lambda event, **values: print(json.dumps(dict(event=event, **values), allow_nan=False), flush=True))
+        self.emit = emit or (lambda event, **values: print(json.dumps(
+            dict(event=event, time_ns=time.time_ns(), **values), allow_nan=False), flush=True))
         self.commands = queue.Queue()
         self.stop = threading.Event()
         self.last_heartbeat = time.monotonic()
@@ -123,6 +127,21 @@ class Runtime:
         self.dependency_identity = None
         self.session_deadline = None
         self.lease_lock = threading.Lock()
+        self.policy = payload.get('policy', self.checkpoint.get('policy', 'ask'))
+        if self.policy != self.checkpoint.get('policy', 'ask'):
+            raise ValueError('Checkpoint confirmation policy differs from entrypoint')
+        self.sensor_process = None
+        self.sensor_min_stamp_ns = 0
+        self.action_sessions = {}
+        self.health_session = None
+
+    def timed(self, label, function, *args, **kwargs):
+        started = time.monotonic()
+        try:
+            return function(*args, **kwargs)
+        finally:
+            self.emit('timing', stage=self.checkpoint.get('in_flight'), operation=label,
+                      elapsed_s=round(time.monotonic()-started, 6))
 
     def receive(self):
         try:
@@ -142,9 +161,13 @@ class Runtime:
                         self.session_deadline is not None and time.monotonic() >= self.session_deadline):
                     self.stop.set()
                     break
+                if self.armed and self.policy == 'sensors':
+                    self.sensor_stream_alive()
+                self.check_workers()
                 self.write_lease()
-        except BaseException:
+        except BaseException as exc:
             self.stop.set()  # No silent watchdog failure; existing lease expires.
+            self.emit('error', reason='WATCHDOG: '+str(exc))
         finally:
             self.stop.set()
             self.write_lease()
@@ -166,12 +189,113 @@ class Runtime:
         if self.armed and any(process.poll() is not None for process in self.adapters):
             self.stop.set()
             raise RuntimeError('SPS_ADAPTER_LOST: no se permiten nuevas órdenes')
+        if self.armed and self.policy == 'sensors':
+            self.sensor_stream_alive()
+        self.check_workers()
+
+    def check_workers(self):
+        for worker in ([self.health_session] if self.health_session else []) + list(self.action_sessions.values()):
+            if worker.failed or worker.process.poll() is not None:
+                self.stop.set()
+                raise RuntimeError('PERSISTENT_WORKER_LOST: no se permiten nuevas órdenes')
+
+    def start_health(self):
+        if self.health_session is not None:
+            return
+        self.create_session()
+        command = code_command(self.payload['health_worker'], ['--session', str(self.session)])
+        self.health_session = ProcessSession(['docker', 'exec', '-i', self.native_container,
+            'bash', '-lc', SETUP+'exec '+shlex.join(command)],
+            lambda event: self.emit('health_worker', detail=event))
+
+    def health_request(self, command, **parameters):
+        self.connected()
+        self.start_health()
+        rows = self.health_session.call({'command': command, **parameters}, timeout=15)
+        reports = [event for event in rows if event['event'] == command+'_result']
+        if len(reports) != 1:
+            raise RuntimeError('HEALTH_RESULT_UNCONFIRMED')
+        return reports[0]
+
+    def sensor_stream_alive(self):
+        """During motion check stream liveness, not stationary pose envelopes."""
+        if self.sensor_process is None or self.sensor_process.poll() is not None:
+            raise RuntimeError('SENSOR_WORKER_LOST')
+        snapshot = json.loads((self.session/'sensors.json').read_text())
+        now = time.time_ns()
+        stamps = [snapshot['written_ns']]
+        for series in (snapshot['ft']['left'], snapshot['ft']['right'], snapshot['joints']):
+            stamps.extend([series[-1]['stamp_ns'], series[-1]['received_ns']])
+        if any(type(stamp) is not int or not -100_000_000 <= now-stamp <= 800_000_000 for stamp in stamps):
+            raise RuntimeError('SENSOR_STREAM_STALE: se revoca la autorización de comandos')
+
+    def create_session(self):
+        if self.session is not None:
+            return
+        self.session = Path(tempfile.mkdtemp(prefix='cruzr-scenario1-', dir='/tmp'))
+        os.chmod(self.session, 0o700)
+        self.session_deadline = time.monotonic()+900
+        atomic_json(self.session/'lease.json', {'deadline': self.session_deadline})
+        self.write_lease()
+
+    def start_sensors(self):
+        self.create_session()
+        self.command(['docker', 'exec', self.ros_container, 'test', '-d', str(self.session)])
+        log = (self.session/'sensor-worker.log').open('w')
+        self.logs.append(log)
+        command = code_command(self.payload['sensor_worker'], ['--session', str(self.session)])
+        self.sensor_process = subprocess.Popen(['docker', 'exec', self.ros_container, 'bash', '-lc',
+            ROS_SETUP+'exec '+shlex.join(command)], stdout=log, stderr=subprocess.STDOUT)
+        end = time.monotonic()+10
+        last_error = 'No samples'
+        while time.monotonic() < end:
+            self.connected()
+            if self.sensor_process.poll() is not None:
+                error = self.session/'sensors.error'
+                raise RuntimeError('SENSOR_WORKER_FAILED: '+(error.read_text() if error.exists() else 'ver sensor-worker.log'))
+            try:
+                snapshot = json.loads((self.session/'sensors.json').read_text())
+                report = sensors.inspect(snapshot, now_ns=time.time_ns())
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                last_error = str(exc)
+                time.sleep(0.05)
+                continue
+            self.emit('sensor_check', report=report, snapshot=snapshot,
+                      qualification=self.payload['sensor_profile']['qualification'])
+            return
+        raise RuntimeError('SENSOR_PREFLIGHT_FAILED: '+last_error)
+
+    def verify_sensors(self, state):
+        # Wait only for acquisition of a post-action window. Never repeat a
+        # force/pose classification after it has contradicted the expected state.
+        end = time.monotonic()+0.7
+        while True:
+            self.connected()
+            self.sensor_stream_alive()
+            snapshot = json.loads((self.session/'sensors.json').read_text())
+            now = time.time_ns()
+            cutoff = max(self.sensor_min_stamp_ns, now-sensors.WINDOW_NS)
+            windows = [[row for row in series if row['stamp_ns'] > cutoff]
+                       for series in (snapshot['ft']['left'], snapshot['ft']['right'], snapshot['joints'])]
+            if all(len(rows) >= sensors.MIN_SAMPLES and
+                   rows[-1]['stamp_ns']-rows[0]['stamp_ns'] >= sensors.MIN_WINDOW_NS for rows in windows):
+                break
+            if time.monotonic() >= end:
+                raise RuntimeError('SENSOR_WINDOW_INCOMPLETE: falta una ventana fresca después de la acción')
+            time.sleep(0.025)
+        self.emit('sensor_observation', state=state, snapshot=snapshot)
+        report = sensors.evaluate(snapshot, self.payload['sensor_profile'], state=state,
+            now_ns=time.time_ns(), min_stamp_ns=self.sensor_min_stamp_ns)
+        # Archive the input as well as the derived report; no successful report
+        # can be manufactured by a PC command or a persisted checkpoint.
+        self.emit('sensor_verification', state=state, report=report, snapshot=snapshot)
+        return report
 
     @staticmethod
     def command(args, timeout=12):
         result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
         if result.returncode:
-            raise RuntimeError('Consulta fallida: '+str(args[:3])+' '+result.stderr[-1000:])
+            raise RuntimeError('Consulta fallida rc='+str(result.returncode)+': '+str(args[:3])+' '+result.stderr[-1000:])
         return result.stdout
 
     def docker(self, container, args, timeout=12, native=True):
@@ -183,8 +307,15 @@ class Runtime:
         return self.docker(self.native_container, args, timeout)
 
     def topic(self, topic):
-        return self.docker(self.ros_container, ['timeout', '8', 'ros2', 'topic', 'echo', '--once',
-            '--no-daemon', '--qos-durability', 'volatile', topic], native=False)
+        # Action status is retained and changes on transitions. Forcing VOLATILE
+        # loses an idle publisher's last status. Use the proven CLI auto-QoS read;
+        # telemetry still requires a newly published sample.
+        qos = [] if topic == '/mc/manipulation/action/_action/status' else ['--qos-durability', 'volatile']
+        try:
+            return self.docker(self.ros_container, ['timeout', '8', 'ros2', 'topic', 'echo', '--once',
+                '--no-daemon', *qos, topic], native=False)
+        except (RuntimeError, subprocess.TimeoutExpired) as exc:
+            raise RuntimeError('TOPIC_READ_FAILED '+topic+': '+str(exc)) from exc
 
     def discover(self):
         ids = self.command(['docker', 'ps', '-q']).split()
@@ -201,60 +332,30 @@ class Runtime:
         self.emit('containers', native=self.native_container, ros2=self.ros_container)
 
     def hashes(self):
-        bundle = self.payload['bundle']
-        root = '/opt/cruzr-front-box/'+bundle['manifest']['id']
-        expected = dict(bundle['manifest']['robot_files'], **bundle['manifest']['native_binaries'])
-        expected.update(self.payload['extra_hashes'])
-        for container in (self.native_container, self.ros_container):
-            files = {root+'/'+name: sha for name, sha in bundle['manifest']['sources'].items()}
-            if container == self.native_container:
-                files.update(expected)
-            output = self.command(['docker', 'exec', container, 'sha256sum', *files], 20)
-            observed = {}
-            for line in output.splitlines():
-                sha, path = line.split(maxsplit=1)
-                observed[path] = sha
-            if observed != files:
-                raise RuntimeError('DEPENDENCY_CHANGED: paquete SPS/tarea/biblioteca no coincide')
-        home_path = TASK_ROOT+'cruzr/home.xml'
-        home_hash = self.command(['docker', 'exec', self.native_container, 'sha256sum', home_path]).split()[0]
-        pins = self.payload['home_pins']
-        if home_hash not in pins['accepted']:
-            raise RuntimeError('HOME no reconocido por el contrato actual')
-        if home_hash != pins['direct']:
-            library = '/opt/walker/manipulation_meta_tasks/lib/libmeta_move.so'
-            if self.command(['docker', 'exec', self.native_container, 'sha256sum', library]).split()[0] != pins['meta']:
-                raise RuntimeError('Biblioteca HOME no reconocida')
-        vision = self.command(['docker', 'exec', self.native_container, 'cat', TASK_ROOT+'vision/enable_transport_vision_switch.xml'])
-        tree = ET.fromstring(vision)
-        actions = list(tree.iter('Action'))
-        if len(actions) != 1 or actions[0].attrib != {'ID': 'MetaLook', 'start_vision_mode': 'transport_vision'}:
-            raise RuntimeError('Prerrequisito de visión distinto del contrato MetaLook esperado')
-        identity = dict(sps_package=bundle['manifest']['id'], home_sha256=home_hash,
-                        vision_sha256=hashlib.sha256(vision.encode()).hexdigest(), extra=self.payload['extra_hashes'])
+        def collect(native):
+            request = dependencies.collect_request(self.payload, native)
+            container = self.native_container if native else self.ros_container
+            command = code_command(dependencies.collector_source(), [json.dumps(request)])
+            return json.loads(self.command(['docker', 'exec', container, *command], 20))
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            native, ros2 = list(pool.map(collect, (True, False)))
+        identity = dependencies.validate_reports(self.payload, native, ros2)
         if self.dependency_identity is not None and identity != self.dependency_identity:
             raise RuntimeError('DEPENDENCY_CHANGED_DURING_RUN')
         self.dependency_identity = identity
-        self.emit('dependencies', sps_package=bundle['manifest']['id'], home_sha256=home_hash,
-                  vision_sha256=hashlib.sha256(vision.encode()).hexdigest())
+        self.emit('dependencies', **{k: v for k, v in identity.items() if k != 'extra'})
 
     def health(self, require_home=False):
-        self.connected()
-        controller = self.native(['timeout', '7', 'rosa', 'service', 'call',
-            '/mc/controller_manager/list_controllers', 'rosa_control_msgs/srv/ListControllers', '{}'])
-        checks.parse_controller_response(controller)
-        checks.parse_idle_status(self.topic('/mc/manipulation/action/_action/status'))
-        topics = ['/emb/estop_key_state', '/emb/servo_estop_key_state', '/emb/chrg_input_status', '/emb/battery_state']
-        with ThreadPoolExecutor(max_workers=4) as pool:
-            samples = list(pool.map(self.topic, topics))
-        health = checks.parse_health(*samples)
-        measurements = []
-        previous_stamp = None
-        for _ in range(2):
-            started = time.time()
-            sample = json.loads(discovery_output(self.native(['timeout', '8', 'rosa', 'topic', 'echo',
-                '--once', '--no-daemon', '--qos-reliability', 'best_effort', '--qos-durability', 'volatile', '/mc/actuator_state',
-                'mc_state_msgs/msg/ActuatorState'])))
+        started = time.time()
+        report = self.health_request('health', require_home=require_home)
+        checks.parse_controller_response(report['controller'])
+        checks.parse_idle_status(report['status'])
+        values = report['safety']
+        health = checks.parse_health(values['estop'], values['servo'], values['charger'], values['battery'])
+        if len(report['actuator']) != 2:
+            raise RuntimeError('Se requieren dos muestras articulares nuevas')
+        measurements, previous_stamp = [], None
+        for sample in report['actuator']:
             stamp = sample['header']['stamp']
             if type(stamp['sec']) is not int or type(stamp['nanosec']) is not int or not 0 <= stamp['nanosec'] < 10**9:
                 raise RuntimeError('Marca temporal articular inválida')
@@ -264,13 +365,31 @@ class Runtime:
                     previous_stamp is not None and current_stamp <= previous_stamp):
                 raise RuntimeError('Muestra articular antigua o repetida')
             previous_stamp = current_stamp
-            report = dict(line.split('=', 1) for line in classify(sample, 0.02))
-            if require_home and report['MEASURED_HOME'] != '1':
+            measurement = dict(line.split('=', 1) for line in classify(sample, 0.02))
+            if require_home and measurement['MEASURED_HOME'] != '1':
                 raise RuntimeError('HOME_NOT_MEASURED: se exige HOME 20D al inicio/final')
-            measurements.append(report)
+            measurements.append(measurement)
         self.emit('health', safety=health, posture=measurements, home_required=require_home)
 
     def action(self, kind, goal, timeout):
+        # A session is created before preflight. Reuse each endpoint's client;
+        # keep one-shot mode for isolated diagnostics without a session.
+        if self.session is not None:
+            self.connected()
+            if kind not in self.action_sessions:
+                command = code_command(self.payload['action_client'], ['--serve', '--kind', kind,
+                    '--lease-file', str(self.session/'control-lease.json')])
+                self.action_sessions[kind] = ProcessSession(['docker', 'exec', '-i', self.native_container,
+                    'bash', '-lc', SETUP+'exec '+shlex.join(command)],
+                    lambda detail: self.emit('action', kind=kind, detail=detail))
+            rows = self.action_sessions[kind].call({'goal': goal, 'timeout': timeout}, timeout=timeout+18)
+            results = [row for row in rows if row['event'] == 'result']
+            if len(results) != 1:
+                raise RuntimeError('ACTION_UNCONFIRMED: resultado terminal ausente o duplicado')
+            return results[0]
+        return self.one_shot_action(kind, goal, timeout)
+
+    def one_shot_action(self, kind, goal, timeout):
         self.connected()
         arguments = ['--kind', kind, '--goal-json', json.dumps(goal), '--timeout', str(timeout)]
         if self.session:
@@ -350,8 +469,27 @@ class Runtime:
         self.points = points
         return points
 
+    def benchmark_checks(self, count, expected_map_state):
+        """Measure repeated read-only checks with the same live clients."""
+        if self.payload['mode'] != 'check' or self.armed or type(count) is not int or not 1 <= count <= 5:
+            raise ValueError('BENCHMARK_REQUIRES_READ_ONLY_CHECK')
+        for iteration in range(1, count+1):
+            self.connected()
+            started = time.monotonic()
+            self.timed('containers', self.discover)
+            self.timed('dependencies', self.hashes)
+            self.timed('health', self.health, require_home=not self.checkpoint['completed'])
+            if self.timed('map_state', self.map_state) != expected_map_state:
+                raise RuntimeError('MAP_STATE_CHANGED_DURING_CHECK')
+            if expected_map_state == ('utars_nav_map', 'FSM_WAITNAVIGATE'):
+                self.timed('pose', self.read_poses)
+            self.emit('check_benchmark', iteration=iteration,
+                      elapsed_s=round(time.monotonic()-started, 6))
+
     def prepare_map(self):
         current_map, state = self.map_state()
+        if (current_map, state) == ('utars_nav_map', 'FSM_WAITNAVIGATE'):
+            return  # This fresh query already established readiness; no duplicate pair.
         if current_map != 'utars_nav_map' or state == 'FSM_WAITSETMAP':
             result = self.nav('map_set', {'map_name': 'utars_nav_map'}, 90)
             if result['state']['desc'] not in ('VSLAM_LOAD_MAP_FINISHED', 'SUCCESS', 'SUCCEED'):
@@ -364,9 +502,26 @@ class Runtime:
         if self.map_state() != ('utars_nav_map', 'FSM_WAITNAVIGATE'):
             raise RuntimeError('Mapa/localización no listos')
 
+    def read_poses(self):
+        """Exercise the actual arrival reader, without certifying a destination."""
+        started = time.time()
+        report = self.health_request('pose')
+        poses = report['poses']
+        if len(poses) != 2:
+            raise RuntimeError('Se requieren dos poses nuevas de navegación')
+        measurements, previous = [], None
+        for pose in poses:
+            measured = checks.validate_pose_sample(pose, started, time.time(), previous)
+            previous = measured['stamp']
+            measurements.append(measured)
+        self.emit('pose_check', measurements=measurements,
+                  publisher_count=report.get('publisher_count'), arrival_verified=False)
+        return poses, started
+
     def navigate(self, point):
         self.prepare_map()
         self.map_points()
+        self.timed('pose', self.read_poses)  # Broken telemetry must block before motion.
         target = dict(self.points[point])
         expected = target.pop('_expected_pose')
         result = self.action('navigation', {'command': 'navigation_start',
@@ -375,10 +530,8 @@ class Runtime:
         if self.map_state() != ('utars_nav_map', 'FSM_WAITNAVIGATE'):
             raise RuntimeError('Estado después de navegación no confirmado')
         previous = None
-        for _ in range(2):
-            started = time.time()
-            pose = json.loads(discovery_output(self.native(['timeout', '7', 'rosa', 'topic', 'echo',
-                '--once', '--no-daemon', '--qos-durability', 'volatile', '/nav/robot_pose'])))
+        poses, started = self.read_poses()
+        for pose in poses:
             measured = checks.validate_nav_pose(pose, expected, started, time.time(), previous)
             previous = measured['stamp']
             self.emit('arrival', point=point, measurement=measured)
@@ -412,25 +565,45 @@ class Runtime:
         if not self.armed:
             raise RuntimeError('RUN_NOT_ARMED')
         stage = message['stage']
+        started = time.monotonic()
         self.checkpoint = contract.begin_stage(self.checkpoint, stage)
         self.save()  # Durable intent before an action is sent.
         try:
             self.connected()
-            self.discover()
-            self.hashes()
-            self.health(require_home=stage == 'verify_home')
+            logical_assumption = self.policy == 'assume' and stage in ('verify_held', 'verify_released')
+            if not logical_assumption:
+                self.timed('containers', self.discover)
+                self.timed('dependencies', self.hashes)
+                self.timed('health', self.health, require_home=stage == 'verify_home')
+            if self.policy == 'sensors' and stage in ('retreat', 'navigate_put1', 'deposit', 'home'):
+                self.verify_sensors('released' if stage == 'home' else 'held')
             if stage.startswith('navigate_'):
                 self.navigate(stage.removeprefix('navigate_'))
             elif stage in TASKS:
                 task, timeout = TASKS[stage]
                 result = self.action('motion', {'task_name': task, 'yaml_args': '{}'}, timeout)
                 contract.validate_motion_result(result)
+                self.connected()
+                self.sensor_min_stamp_ns = time.time_ns()
             elif stage not in ('verify_held', 'verify_released', 'verify_home'):
                 raise RuntimeError('Unknown stage')
+            verification = {}
+            if stage in ('verify_held', 'verify_released'):
+                state = 'held' if stage == 'verify_held' else 'released'
+                if self.policy == 'ask':
+                    verification['confirmed_box'] = message.get('confirmed_box')
+                elif self.policy == 'assume':
+                    verification.update(confirmed_box=state, verification_source='assumed')
+                else:
+                    verification.update(confirmed_box=state, verification_source='sensors',
+                                        sensor_evidence=self.verify_sensors(state))
+            elif message.get('confirmed_box') is not None:
+                raise RuntimeError('Unexpected box confirmation')
             self.checkpoint = contract.complete_stage(self.checkpoint, stage,
-                confirmed_box=message.get('confirmed_box'), home_verified=stage == 'verify_home')
+                home_verified=stage == 'verify_home', **verification)
             self.save()
-            self.emit('stage_complete', stage=stage)
+            self.emit('stage_complete', stage=stage, elapsed_s=round(time.monotonic()-started, 3),
+                      logical_assumption=logical_assumption)
         except BaseException as exc:
             self.checkpoint = contract.fail_stage(self.checkpoint, stage, str(exc))
             self.save()
@@ -444,21 +617,36 @@ class Runtime:
         try:
             self.lock = open('/tmp/cruzr-front-sps.lock', 'a')
             fcntl.flock(self.lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            self.discover()
-            self.hashes()
+            if self.policy == 'sensors':
+                sensors.validate_profile(self.payload['sensor_profile'], self.payload['profile']['id'],
+                                         require_qualified=self.payload['mode'] != 'check')
+            self.timed('containers', self.discover)
+            self.timed('dependencies', self.hashes)
             check_sps_discovery(lambda command: subprocess.run(['docker', 'exec', self.native_container,
                 'bash', '-lc', SETUP+'timeout 8 rosa '+command], capture_output=True, text=True, timeout=12))
-            self.health(require_home=not self.checkpoint['completed'])
+            self.timed('health', self.health, require_home=not self.checkpoint['completed'])
             points = self.map_points()
             map_name, nav_state = self.map_state()
+            if (map_name, nav_state) == ('utars_nav_map', 'FSM_WAITNAVIGATE'):
+                self.timed('pose', self.read_poses)
             context = dict(boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
                            containers=self.container_identity, dependencies=self.dependency_identity,
                            points=points)
+            if self.policy == 'sensors':
+                context['sensor_profile_sha256'] = hashlib.sha256(json.dumps(
+                    self.payload['sensor_profile'], sort_keys=True, allow_nan=False).encode()).hexdigest()
             if self.payload.get('resume_context') is not None and context != self.payload['resume_context']:
                 raise RuntimeError('RESUME_CONTEXT_CHANGED: robot reiniciado, tareas/contenedores/mapa cambiados')
+            if self.policy == 'sensors':
+                self.start_sensors()
+            if self.payload.get('check_repetitions'):
+                self.benchmark_checks(self.payload['check_repetitions'], (map_name, nav_state))
             self.emit('ready', points=points, map_name=map_name, nav_state=nav_state,
                       geometry='operator_assumed_existing', context=context)
             if self.payload['mode'] == 'check':
+                if self.policy == 'sensors' and self.payload['sensor_profile']['qualification'] != 'qualified':
+                    self.emit('sensor_profile_pending', reason='Referencias FT por postura sin cualificar; --run bloqueado antes de movimiento')
+                    return 55
                 return 0 if (map_name, nav_state) == ('utars_nav_map', 'FSM_WAITNAVIGATE') else 55
             while True:
                 self.connected()
@@ -469,21 +657,17 @@ class Runtime:
                 if message == {'command': 'finish'}:
                     return 0
                 if message.get('command') == 'resume' and not self.armed:
-                    proposed = contract.validate_checkpoint(message['checkpoint'], self.payload['profile'])
+                    state = self.checkpoint['box_state']
                     resumed = contract.resume_checkpoint(self.checkpoint, self.payload['profile'],
-                        confirmed_box=self.checkpoint['box_state'], state_reconfirmed=True,
-                        stop_after=proposed['stop_after'])
-                    if proposed != resumed:
-                        raise RuntimeError('Invalid resume checkpoint')
+                        confirmed_box=state, state_reconfirmed=True, policy=self.policy,
+                        verification_source={'ask': 'operator', 'assume': 'assumed', 'sensors': 'sensors'}[self.policy],
+                        sensor_evidence=self.verify_sensors(state) if self.policy == 'sensors' else None,
+                        stop_after=message['stop_after'])
                     self.checkpoint = resumed
-                    self.emit('resume_ready')
+                    self.emit('resume_ready', checkpoint=self.checkpoint)
                     continue
                 if message == {'command': 'arm'} and not self.armed:
-                    self.session = Path(tempfile.mkdtemp(prefix='cruzr-scenario1-', dir='/tmp'))
-                    os.chmod(self.session, 0o700)
-                    self.session_deadline = time.monotonic()+900
-                    atomic_json(self.session/'lease.json', {'deadline': self.session_deadline})
-                    self.write_lease()
+                    self.create_session()
                     self.start_adapters()
                     self.armed = True
                     self.save()
@@ -504,7 +688,9 @@ class Runtime:
                 if selection.exists():
                     for line in selection.read_text().splitlines():
                         self.emit('perception', detail=json.loads(line))
-            for process in self.adapters:
+            for worker in list(self.action_sessions.values()) + ([self.health_session] if self.health_session else []):
+                worker.close()
+            for process in self.adapters + ([self.sensor_process] if self.sensor_process else []):
                 try:
                     process.wait(timeout=3)
                 except subprocess.TimeoutExpired:

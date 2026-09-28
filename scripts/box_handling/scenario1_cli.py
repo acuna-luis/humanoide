@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PC entry point; --check by default, explicit supervised --run only."""
+"""PC entry point with fixed ask/assume/sensors wrappers; --check by default."""
 import argparse
 import base64
 from contextlib import ExitStack
@@ -19,9 +19,11 @@ import time
 
 if __package__:
     from . import scenario1_contract as contract
+    from . import scenario1_sensors as sensors
     from .front_box_integration import build_bundle, TASK_ROOT, META_ROOT, SNAPSHOT
 else:
     import scenario1_contract as contract
+    import scenario1_sensors as sensors
     from front_box_integration import build_bundle, TASK_ROOT, META_ROOT, SNAPSHOT
 
 HERE = Path(__file__).resolve().parent
@@ -30,6 +32,9 @@ MODULES = [('cruzr_home_posture_gate', ROOT/'scripts/lib/cruzr_home_posture_gate
            ('front_sps_session', HERE/'front_sps_session.py'),
            ('scenario1_contract', HERE/'scenario1_contract.py'),
            ('scenario1_checks', HERE/'scenario1_checks.py'),
+           ('scenario1_sensors', HERE/'scenario1_sensors.py'),
+           ('scenario1_dependencies', HERE/'scenario1_dependencies.py'),
+           ('scenario1_session', HERE/'scenario1_session.py'),
            ('scenario1_runtime', HERE/'scenario1_runtime.py')]
 BOOTSTRAP = '''import json,sys,types
 payload=json.loads(sys.stdin.readline())
@@ -86,6 +91,8 @@ def make_payload(mode, profile, checkpoint):
                     direct=pins['DIRECT_HOME_SHA'], meta=pins['OPEN_HOME_META_SHA']),
                 action_client=(HERE/'scenario1_action_client.py').read_text(),
                 perception_guard=(HERE/'scenario1_perception.py').read_text(),
+                sensor_worker=(HERE/'scenario1_sensor_worker.py').read_text(),
+                health_worker=(HERE/'scenario1_health_worker.py').read_text(),
                 modules=[(name, path.read_text()) for name, path in MODULES])
 
 
@@ -178,6 +185,18 @@ class Connection:
                     print('  Progreso: '+json.dumps(detail, ensure_ascii=False), flush=True)
             elif kind == 'arrival':
                 print('  Llegada medida: '+json.dumps(event, ensure_ascii=False), flush=True)
+            elif kind == 'pose_check':
+                print('  Posición de navegación: dos muestras nuevas en map', flush=True)
+            elif kind == 'sensor_check':
+                print('  Telemetría FT/articular recibida; referencias: '+event['qualification'], flush=True)
+            elif kind == 'sensor_verification':
+                print('  FT/postura compatibles con '+event['state'], flush=True)
+            elif kind == 'timing':
+                print('  Comprobación '+event['operation']+': '+format(event['elapsed_s'], '.2f')+' s', flush=True)
+            elif kind == 'stage_complete' and 'elapsed_s' in event:
+                print('  Etapa completada: '+format(event['elapsed_s'], '.2f')+' s', flush=True)
+            elif kind == 'check_benchmark':
+                print('  Lectura '+str(event['iteration'])+': '+format(event['elapsed_s'], '.2f')+' s en total', flush=True)
             if kind == desired:
                 return event
         raise RuntimeError('Plazo agotado esperando '+desired+'; estado físico no confirmado')
@@ -209,41 +228,69 @@ def confirm(prompt, token):
         raise RuntimeError('Confirmación no recibida; no se enviará la siguiente etapa')
 
 
-def parser():
-    p = argparse.ArgumentParser(prog='force_improved_scenario1.sh',
-        description='Escenario 1 supervisado; conserva la geometría actual. Por defecto sólo --check.')
+ENTRYPOINTS = {'ask': 'ask_improved_scenario1.sh', 'assume': 'force_improved_scenario1.sh',
+              'sensors': 'force_improved_scenario1_autochecked.sh'}
+
+
+class SensorCalibrationPending(ValueError):
+    pass
+
+
+def parser(policy='ask'):
+    p = argparse.ArgumentParser(prog=ENTRYPOINTS[policy],
+        description='Escenario 1; política '+policy+'. Conserva la geometría actual. Por defecto sólo --check.')
+    p.set_defaults(policy=policy)
     mode = p.add_mutually_exclusive_group()
-    mode.add_argument('--check', action='store_true', help='Comprobaciones completas sin iniciar adaptadores ni mover')
+    mode.add_argument('--check', action='store_true', help='Comprobaciones completas sin iniciar adaptadores SPS ni mover')
     mode.add_argument('--plan', action='store_true', help='Mostrar perfil y etapas sin conectar al robot')
-    mode.add_argument('--run', action='store_true', help='Ejecutar con confirmaciones presenciales')
+    mode.add_argument('--run', action='store_true', help='Ejecutar '+('con confirmaciones presenciales' if policy == 'ask' else 'sin preguntas'))
     mode.add_argument('--resume', type=Path, metavar='CHECKPOINT', help='Continuar sólo desde una pausa limpia con caja verificada')
     p.add_argument('--wifi', action='store_true', help='SSH mediante 192.168.42.2')
+    p.add_argument('--benchmark-checks', type=int, choices=range(1, 6), default=0, metavar='N',
+                   help='Sólo con --check: medir de 1 a 5 rondas adicionales de consultas sin mover')
     p.add_argument('--stop-after', choices=('grasp', 'cycle'), default='cycle', help='grasp: terminar tras confirmar caja sujeta')
     p.add_argument('--profile', type=Path, default=HERE/'scenario1_current_geometry.json')
+    if policy == 'sensors':
+        p.add_argument('--sensor-profile', type=Path, default=HERE/'scenario1_sensor_profile.json',
+                       help='Referencias FT por postura; --run requiere perfil cualificado')
     p.add_argument('--evidence-dir', type=Path, help='Directorio nuevo para logs y checkpoint; por defecto fuera de Git')
     return p
 
 
-def main(argv=None):
-    args = parser().parse_args(argv)
+def _main(args):
+    policy = args.policy
+    moving = bool(args.run or args.resume)
+    if args.benchmark_checks and (moving or args.plan):
+        raise ValueError('--benchmark-checks sólo permite comprobaciones de lectura')
     stop_after = 'verify_held' if args.stop_after == 'grasp' else 'verify_home'
     profile = contract.validate_profile(json.loads(args.profile.read_text()), stop_after=stop_after)
-    checkpoint = contract.new_checkpoint(profile, stop_after=stop_after)
+    checkpoint = contract.new_checkpoint(profile, stop_after=stop_after, policy=policy)
+    sensor_profile = None
+    if policy == 'sensors':
+        sensor_profile = sensors.validate_profile(json.loads(args.sensor_profile.read_text()),
+            profile['id'])
+        if moving and sensor_profile['qualification'] != 'qualified':
+            raise SensorCalibrationPending('Sensor calibration qualification is pending')
     if args.resume:
         if args.resume.with_name(args.resume.name+'.consumed.json').exists():
             raise RuntimeError('Este checkpoint ya fue consumido por otra reanudación')
         checkpoint = contract.validate_checkpoint(json.loads(args.resume.read_text()), profile)
         # Structural check now; a fresh physical/runtime confirmation is still required below.
         candidate = contract.resume_checkpoint(checkpoint, profile, confirmed_box=checkpoint['box_state'],
-            state_reconfirmed=True, stop_after=stop_after)
+            state_reconfirmed=True, stop_after=stop_after, policy=policy,
+            verification_source={'ask': 'operator', 'assume': 'assumed', 'sensors': 'sensors'}[policy],
+            sensor_evidence=(checkpoint.get('confirmations', {}).get(checkpoint['completed'][-1], {}).get('sensor_evidence')
+                             if policy == 'sensors' and checkpoint['completed'] else None))
         if contract.next_stage(candidate) is None:
             raise RuntimeError('La reanudación solicitada no tiene etapas pendientes')
-    moving = bool(args.run or args.resume)
-    if moving and not sys.stdin.isatty():
+    if moving and policy == 'ask' and not sys.stdin.isatty():
         raise RuntimeError('Se requiere un terminal y operador junto al robot')
     print('Geometría: force_escenario1.sh actual; tareas y límites del proveedor conservados.')
+    print('Confirmación: '+{'ask': 'operador', 'assume': 'sin preguntas; sujeción/liberación asumidas tras éxito técnico',
+                          'sensors': 'sin preguntas; ventanas FT y postura con referencias cualificadas'}[policy])
     if args.plan:
         print(json.dumps(dict(profile=profile, stages=list(contract.STAGES[:contract.STAGES.index(stop_after)+1]),
+            policy=policy, sensor_qualification=sensor_profile['qualification'] if sensor_profile else None,
             physical_validation='pending', automatic_retries=0), indent=2, ensure_ascii=False))
         return 0
     if moving:
@@ -256,14 +303,21 @@ def main(argv=None):
     if not args.resume:
         atomic_json(evidence/'checkpoint.json', checkpoint)
     payload = make_payload('run' if moving else 'check', profile, checkpoint)
+    payload['policy'] = policy
+    payload['check_repetitions'] = args.benchmark_checks
+    if sensor_profile is not None:
+        payload['sensor_profile'] = sensor_profile
+        atomic_json(evidence/'sensor-profile.json', sensor_profile)
     if args.resume:
         payload['resume_context'] = json.loads((args.resume.parent/'context.json').read_text())
     atomic_json(evidence/'source-sha256.json', {name: hashlib.sha256(source.encode()).hexdigest()
         for name, source in payload['modules']} | {
             'action_client': hashlib.sha256(payload['action_client'].encode()).hexdigest(),
             'perception_guard': hashlib.sha256(payload['perception_guard'].encode()).hexdigest(),
+            'sensor_worker': hashlib.sha256(payload['sensor_worker'].encode()).hexdigest(),
+            'health_worker': hashlib.sha256(payload['health_worker'].encode()).hexdigest(),
             'scenario1_cli': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-            'entrypoint': hashlib.sha256((ROOT/'scripts/force_improved_scenario1.sh').read_bytes()).hexdigest()})
+            'entrypoint': hashlib.sha256((ROOT/'scripts'/ENTRYPOINTS[policy]).read_bytes()).hexdigest()})
     print('Evidencia: '+str(evidence), flush=True)
     connection = None
     with ExitStack() as stack:
@@ -277,18 +331,19 @@ def main(argv=None):
             print('Comprobaciones técnicas completadas; mapa='+ready['map_name']+' '+ready['nav_state'], flush=True)
             if not moving:
                 rc = connection.process.wait(timeout=10)
-                print('CHECK_OK' if rc == 0 else 'PREPARACION_REQUERIDA: --run prepara mapa/localización después de confirmar.')
+                if policy == 'sensors' and sensor_profile['qualification'] != 'qualified':
+                    print('SENSORES_PENDIENTES: faltan referencias cualificadas por postura; --run no ejecutará movimientos.')
+                print('CHECK_OK' if rc == 0 else 'PREPARACION_REQUERIDA: revise eventos; mapa/localización o referencias de sensores pendientes.')
                 return rc
             if args.resume:
                 state = checkpoint['box_state']
-                confirm('Reanudación: confirme que la caja sigue '+('sujeta, separada y estable.' if state == 'held' else 'apoyada y liberada.')+
-                        ' No debe haberse ejecutado otra tarea desde el checkpoint.', 'REANUDAR')
-                checkpoint = contract.resume_checkpoint(checkpoint, profile, confirmed_box=state,
-                    state_reconfirmed=True, stop_after=stop_after)
-                # Runtime also receives the explicitly extended stop boundary.
-                connection.send({'command': 'resume', 'checkpoint': checkpoint})
-                connection.wait('resume_ready')
-            confirm('Confirme abrazaderas '+('vacías y robot en HOME' if not args.resume else 'en el estado indicado')+
+                if policy == 'ask':
+                    confirm('Reanudación: confirme que la caja sigue '+('sujeta, separada y estable.' if state == 'held' else 'apoyada y liberada.')+
+                            ' No debe haberse ejecutado otra tarea desde el checkpoint.', 'REANUDAR')
+                connection.send({'command': 'resume', 'stop_after': stop_after})
+                checkpoint = contract.validate_checkpoint(connection.wait('resume_ready')['checkpoint'], profile)
+            if policy == 'ask':
+                confirm('Confirme abrazaderas '+('vacías y robot en HOME' if not args.resume else 'en el estado indicado')+
                     ', montaje original de recogida/depósito, trayectorias libres, ruedas en navegación, '
                     'cargador desconectado, paros liberados, modo automático, ningún otro mando y persona junto al paro.', 'CONTINUAR')
             if args.resume:
@@ -297,12 +352,12 @@ def main(argv=None):
             connection.wait('armed')
             while (stage := contract.next_stage(checkpoint)) is not None:
                 message = {'command': 'stage', 'stage': stage}
-                if stage == 'verify_held':
+                if policy == 'ask' and stage == 'verify_held':
                     confirm('Compruebe caja superior separada de la inferior, sujeta estable por ambas abrazaderas y libre para retroceder.', 'SUJETA')
                     message['confirmed_box'] = 'held'
-                elif stage == 'deposit':
+                elif policy == 'ask' and stage == 'deposit':
                     confirm('Compruebe alineación, apoyo y espacio para el depósito WRC actual. Esta tarea incluye apertura de abrazaderas.', 'DEPOSITAR')
-                elif stage == 'verify_released':
+                elif policy == 'ask' and stage == 'verify_released':
                     confirm('Compruebe caja apoyada y liberada, abrazaderas vacías y recorrido HOME libre.', 'LIBRE')
                     message['confirmed_box'] = 'released'
                 subprocess.run(['bash', str(ROOT/'scripts/lib/cruzr_contact_motion_lock.sh'), 'improved-scenario1:'+stage], check=True)
@@ -317,7 +372,8 @@ def main(argv=None):
             rc = connection.process.wait(timeout=15)
             if rc:
                 raise RuntimeError('Supervisor terminó con error')
-            print('CAJA_SUJETA_VERIFICADA; ciclo pausado.' if stop_after == 'verify_held' else 'CICLO_COMPLETO_HOME_MEDIDO')
+            print(('CAJA_SUJETA_'+('ASUMIDA' if policy == 'assume' else 'VERIFICADA')+'; ciclo pausado.')
+                  if stop_after == 'verify_held' else 'CICLO_COMPLETO_HOME_MEDIDO; evidencia de caja: '+policy)
             print('Checkpoint: '+str(evidence/'checkpoint.json'))
             return 0
         finally:
@@ -325,10 +381,29 @@ def main(argv=None):
                 connection.close()
 
 
-if __name__ == '__main__':
+def main(argv=None, *, policy='ask'):
+    return _main(parser(policy).parse_args(argv))
+
+
+def entrypoint(argv=None, *, policy='ask'):
+    """Report read-only failures without implying an interrupted movement."""
+    args = parser(policy).parse_args(argv)
     try:
-        raise SystemExit(main())
+        return _main(args)
+    except SensorCalibrationPending:
+        print('SENSORES_SIN_CUALIFICAR: faltan referencias de fuerza/par por postura para distinguir sujeción y liberación.', file=sys.stderr)
+        print('No se conectó al robot ni se envió movimiento. --check permite inspeccionar la telemetría; '
+              '--sensor-profile requiere un perfil cualificado.', file=sys.stderr)
+        return 78
     except (Exception, KeyboardInterrupt) as error:
-        print('ESCENARIO_INTERRUMPIDO: '+str(error), file=sys.stderr)
-        print('Sin reintento ni HOME automático. Un estado indeterminado requiere recuperación y comprobación física.', file=sys.stderr)
-        raise SystemExit(78)
+        if args.run or args.resume:
+            print('ESCENARIO_INTERRUMPIDO: '+str(error), file=sys.stderr)
+            print('Sin reintento ni HOME automático. Un estado indeterminado requiere recuperación y comprobación física.', file=sys.stderr)
+        else:
+            print('CHECK_FALLIDO: '+str(error), file=sys.stderr)
+            print('No se envió ninguna orden de movimiento.', file=sys.stderr)
+        return 78
+
+
+if __name__ == '__main__':
+    raise SystemExit(entrypoint())

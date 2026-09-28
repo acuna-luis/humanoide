@@ -3287,3 +3287,218 @@ Rollback: retirar las fuentes nuevas y revertir selectivamente notas desde befor
 no restaurar estados físicos ni sobreescribir cambios ajenos. Deuda: validar
 --check en instalación real y después las etapas supervisadas; no atribuir
 validación de alcance/depósito a las comprobaciones de percepción.
+
+### BOX-01-EXEC-IMPROVED — corrección --check, 28-09-2026 09:06 CEST
+
+Estado vigente: fuente PC corregida, preflight de lectura probado en robot;
+ciclo físico PENDIENTE. Motivo: etiquetas Compose vendor cualificadas no
+reconocidas y estado de acción retenido que el lector VOLATILE no recibía.
+Destino: `scripts/box_handling/scenario1_checks.py`, `scenario1_runtime.py`,
+`scenario1_cli.py` y sus tests. Añadidos aliases exactos, QoS canónico para el
+estado de acciones y diagnóstico que distingue --check de ejecución interrumpida.
+
+VERIFICADO:106 tests offline; --check real pasa hashes/controladores/salud/HOME
+y retorna55 por mapa vacío/FSM_WAITSETMAP. Instalado sólo en PC; código de
+consulta transmitido en memoria. Sin instalación persistente, cambios de mapas,
+servicios/SDK, percepción, ArmTask, cancelación o movimiento en robot.
+[Fuentes, comandos, evidencia, límites y rollback](box_handling/FORCE_IMPROVED_SCENARIO1.md#corrección-de-descubrimiento-y-estado--28-09-2026).
+Backup antes de editar y hashes finales:
+`../Humanoide-vla-evidence/20260928T070318Z_SCENARIO1_DISCOVERY_FIX/`.
+Reversión: reposición selectiva desde before, conservando otros cambios.
+Deuda: preparación autorizada de mapa y ensayo supervisado; el estado observado
+no constituye autorización ni confirmación física reutilizable.
+
+### BOX-01-EXEC-IMPROVED — políticas ask/assume/sensors, 28-09-2026, Europe/Madrid
+
+Estado vigente: fuentes instaladas en PC; ensayo físico y cualificación sensorial
+PENDIENTES. Motivo: petición de ejecución sin confirmaciones en cada etapa,
+conservando una variante interactiva. Destinos exactos PC:
+`scripts/ask_improved_scenario1.sh`, `scripts/force_improved_scenario1.sh`,
+`scripts/force_improved_scenario1_autochecked.sh`, módulos/plantilla/tests
+`scripts/box_handling/scenario1_*` y `test_scenario1_*`. Checkpoint v2 registra
+la procedencia operador/asumida/sensores, sin promover suposiciones a medidas;
+v1 sigue perteneciendo a ask. Reanudación sólo con la misma política.
+
+La variante autochecked usa ROS2/rclpy estándar en el contenedor descubierto:
+FT L/R WrenchStamped y whole_joint_states. Perfil por postura separado del
+perfil geométrico, incluido con hash en el contexto; plantilla pending sin
+umbrales inventados. `--run` requiere referencias cualificadas antes de conectar.
+Visión conserva doble captura y TF del agarre; comprobación visual autónoma de
+separación/liberación NO implementada. FT no demuestra esos hechos directamente.
+No se alteran XML/YAML/SDK, protecciones ni geometría del proveedor.
+
+Aplicación/activación: fuentes ejecutables ya disponibles; sin argumentos sólo
+--check, movimiento sólo mediante --run/--resume. Receta, contratos, límites,
+pruebas y calibración pendiente en la [guía](box_handling/FORCE_IMPROVED_SCENARIO1.md).
+Respaldo ANTES de editar, fuentes previas y posteriores con hashes/evidencia:
+`../Humanoide-vla-evidence/20260928T072132Z_SCENARIO1_POLICIES/`.
+No requiere instalación persistente en robot; el recolector se transmite en
+memoria y usa un directorio temporal /tmp/cruzr-scenario1-* con leases y salida.
+Reversión: restaurar selectivamente fuentes previas de before; retirar sólo los
+dos wrappers, recolector, evaluador y plantilla nuevos. Conservar los checkpoints
+y no convertir políticas a mano. No sobrescribir cambios posteriores del usuario.
+Deuda: calibración positiva/negativa por postura y montaje, validación física del
+ciclo y cualquier verificación visual posterior al agarre.
+
+VERIFICADO en esta ampliación:173 tests offline, sintaxis Bash, ayuda/plan de las
+tres entradas y diffcheck. Shellcheck no instalado. --check real09:32 CEST recibe
+16 muestras FT por muñeca en0,30s y27 articulares (22 nombres), con desfase L/R0;
+HOME20D medido, paros0/0, cargador0, baterías83/84,6%. Mapa observado
+utars_nav_map/FSM_WAITNAVIGATE; esta intervención no lo cargó ni relocalizó.
+Retorno55 exclusivamente por perfil sensorial pendiente. No prueba agarre,
+liberación ni contacto. Colector temporal finalizado; sin acciones físicas.
+Evidencia de consulta:
+`../Humanoide-vla-evidence/20260928T073255Z_IMPROVED_SCENARIO1_355885/`.
+Fuentes exactas de esa consulta registradas por hash; las últimas mejoras de
+integración (espera acotada/exclusión posicional de ruedas) se verifican offline.
+Posiciones integradas de ruedas excluidas de la postura calibrada; su velocidad
+sigue comprobándose. No hay datos cualificados de carga, tara o compensación
+gravitatoria que permitan activar todavía el perfil sensorial distribuido.
+
+### BOX-01-EXEC-IMPROVED — diagnóstico de latencia, 28-09-2026, Europe/Madrid
+
+Estado histórico: diagnóstico VERIFICADO por código y diario local; la
+optimización vigente se registra en la ficha siguiente.
+Usuario ejecutó ciclo20260928T074311Z, con10 etapas completas y HOME20D medido;
+no se confirma físicamente la caja, pues la política era assume. Intervalos
+visión→agarre9,162s, agarre→retroceso18,317s y depósito→HOME20,988s. Hay11 pasadas
+completas de descubrimiento/dependencias/salud: una inicial y una en cada etapa.
+Los verify de caja asumida repiten chequeos que vuelve a hacer la siguiente
+acción. El diagnóstico no envió consultas remotas ni movimiento.
+
+Sólo cambian docs/PROJECT_SOURCE_OF_TRUTH.md, este índice y
+[la guía con receta y resultados](box_handling/FORCE_IMPROVED_SCENARIO1.md#latencia-entre-etapas-observada--28-09-2026).
+Ejecutor instalado/cargado sin cambios; sin activación o ensayo nuevo del agente.
+Evidencia fuente: ../Humanoide-vla-evidence/20260928T074311Z_IMPROVED_SCENARIO1_382679/.
+Backup previo, informe y hashes documentales:
+../Humanoide-vla-evidence/20260928T074936Z_SCENARIO1_LATENCY_REVIEW/.
+Reversión: retirar selectivamente estas notas desde before, preservando cambios
+ajenos; no hay estado operativo que restaurar. Deuda: optimizar reutilización de
+clientes/lecturas y redundancias conservando muestras frescas y requisitos técnicos.
+
+### BOX-01-EXEC-IMPROVED — supervisión optimizada, 28-09-2026 10:07 CEST, Europe/Madrid
+
+Motivo: petición «optimiza» tras observar pausas entre etapas. Estado vigente:
+fuentes instaladas en PC y helpers cargados temporalmente para consultas reales;
+VERIFICADO en lectura y offline, ciclo físico optimizado PENDIENTE. Se sustituyen
+procesos de consulta repetidos por sesiones persistentes y se omite únicamente
+el chequeo técnico duplicado de las dos verificaciones asumidas. Se mantienen
+resultados, leases, salud fresca antes de cada etapa física, hashes completos,
+llegada y HOME medido. Geometría, XML/YAML del proveedor y límites intactos.
+
+Destinos PC modificados: `scripts/box_handling/scenario1_runtime.py`,
+`scenario1_cli.py`, `scenario1_action_client.py`, `scenario1_checks.py` y
+`test_scenario1_runtime.py`. Nuevos: `scenario1_dependencies.py`,
+`scenario1_health_worker.py`, `scenario1_session.py`, y pruebas
+`test_scenario1_dependencies.py`, `test_scenario1_health_worker.py`,
+`test_scenario1_session.py`, `test_scenario1_action_session.py`,
+`test_scenario1_optimization.py`, todos bajo `scripts/box_handling/`.
+Documentación actualizada en la fuente global, este índice y la
+[guía reproducible](box_handling/FORCE_IMPROVED_SCENARIO1.md#optimización-de-supervisión--28-09-2026).
+Los tres wrappers utilizan estos módulos sin cambiar sus políticas.
+
+Destino remoto temporal: host Motion y contenedores descubiertos
+`walker-motion.manipulation_robot_app-1` / `walker-ros.ros2-1`; supervisor/helper
+en memoria y directorios `/tmp/cruzr-scenario1-*` con leases. Dependencias:
+ROSA instalado, tipos/QoS y `ListControllers` descubiertos, ROS2 para FT,
+bundle SPS y hashes HOME/tareas/bibliotecas ya exigidos. Sin instalación o
+servicios nuevos en robot. Activación: la siguiente invocación carga las fuentes
+PC; por defecto sólo `--check`. Receta de medición sin movimiento:
+`./scripts/force_improved_scenario1.sh --check --benchmark-checks 3`.
+
+VERIFICADO: 242 pruebas offline, sintaxis Python/Bash, ayuda/plan y diffcheck;
+shellcheck ausente. `--check` assume devuelve 0; tres rondas adicionales completas
+de lectura tardan 2,945 / 4,485 / 4,495 s, pareja mapa/estado 0,106–0,113 s.
+La consulta autochecked recibe FT/articulaciones y devuelve 55 por referencias
+pendientes. No hay movimiento, carga/relocalización de mapa ni ciclo ejecutado
+por el agente. La primera prueba reveló el requisito `wait_service(0)` nativo,
+corregido y verificado antes de las mediciones finales. Se conservan evidencias
+del fallo y del éxito; los helpers terminaron al cerrar sus sesiones.
+
+Backup anterior, fuentes exactas posteriores, hashes/versiones e informe:
+`../Humanoide-vla-evidence/20260928T075234Z_SCENARIO1_OPTIMIZATION/`
+(`before/`, `after/`, `before-sha256.json`, `after-sha256.json`,
+`changed-files.json`, `verification.json`). Consultas reales:
+`20260928T075850Z_IMPROVED_SCENARIO1_423527/` (fallo inicial),
+`20260928T080205Z_IMPROVED_SCENARIO1_432098/` (check reparado),
+`20260928T080528Z_IMPROVED_SCENARIO1_442692/` (mediciones),
+`20260928T080634Z_IMPROVED_SCENARIO1_446664/` (sensores), bajo el mismo directorio
+externo de evidencias. Cada consulta conserva sus hashes propios.
+
+Reversión: restaurar selectivamente archivos modificados desde `before/` y
+retirar sólo los nuevos de `changed-files.json`, preservando trabajo posterior,
+checkpoints y evidencias; no restaurar estados transitorios ni lanzar tareas.
+No hay configuración persistente remota que revertir. Punto de reanudación:
+medir el próximo ciclo físico autorizado. Deuda: latencia y cancelación durante
+movimiento real, validación de la llegada con el nuevo lector durante navegación,
+y cualificación sensorial por postura; las mediciones de lectura no las prueban.
+
+### BOX-01-EXEC-IMPROVED — corrección de pose, 28-09-2026 10:16 CEST, Europe/Madrid
+
+Estado vigente: instalado en fuentes PC, cargado temporalmente y VERIFICADO en
+lectura; ciclo físico posterior PENDIENTE. Motivo: dos intentos del usuario
+agotaron el plazo del lector de pose al terminar `navigate_get1`. El lector
+introducido al optimizar exigía un publicador único, pero la unidad muestra dos
+y transmite poses frescas. La comprobación anterior `--check` no probaba pose.
+
+Destinos modificados bajo `scripts/box_handling/`: `scenario1_health_worker.py`,
+`scenario1_checks.py`, `scenario1_runtime.py`, `scenario1_cli.py`,
+`test_scenario1_health_worker.py`, `test_scenario1_optimization.py`; nueva prueba
+`test_scenario1_pose_preflight.py`. También fuente global, este índice y
+[guía/receta](box_handling/FORCE_IMPROVED_SCENARIO1.md#corrección-de-pose-con-dos-publicadores--28-09-2026).
+Pose admite uno o más publicadores como el lector anterior; salud conserva la
+unicidad. Se mantienen dos muestras nuevas/crecientes, VOLATILE, edad máxima,
+marco map y tolerancia 5 cm/3°. Se comprueba el canal en `--check`, benchmark y
+antes de navegar, y se vuelve a medir llegada después del movimiento.
+
+Dependencias: ROSA y tipos/QoS ya instalados, sin cambios de SDK/XML/YAML,
+efector, mapa o localización. Aplicación: la siguiente invocación de cualquiera
+de las tres entradas usa los módulos corregidos. Activación de lectura:
+`./scripts/force_improved_scenario1.sh --check --benchmark-checks 3`.
+Host remoto Motion / contenedores descubiertos sin modificar; sólo procesos
+temporales y sesiones `/tmp/cruzr-scenario1-*`, terminados tras comprobar.
+
+VERIFICADO: 250 tests offline y consulta real con retorno 0; cuatro pares de
+poses frescas, publisher_count 2, adquisición 0,14–0,20 s. La captura paralela
+ROSA/ROS2 demuestra flujo nuevo y coherente, pero no atribuye mensajes a cada
+GID: no inferir que el segundo publicador sólo retiene información antigua.
+Los intentos fallidos no enviaron agarre ni acciones Motion. Sus checkpoints
+siguen fallidos y no reanudables. El agente no envió movimientos ni reinicios.
+
+Evidencia de causa: `../Humanoide-vla-evidence/20260928T081314Z_POSE_DISCOVERY/`.
+Check final: `../Humanoide-vla-evidence/20260928T081557Z_IMPROVED_SCENARIO1_475758/`.
+Backup anterior, fuentes finales, hashes/versiones e informe reproducible:
+`../Humanoide-vla-evidence/20260928T081354Z_SCENARIO1_POSE_FIX/`
+(`before/`, `after/`, `before-sha256.json`, `after-sha256.json`,
+`changed-files.json`, `verification.json`). Reversión selectiva desde `before/`
+y retirada de la prueba nueva; preservar cambios ajenos y evidencias. No hay
+configuración remota persistente que restaurar. Esa reversión reinstala el
+defecto y no debe confundirse con recuperación física. Deuda: ensayo físico
+posterior y validación de localización visual; `VSLAM_LOCATION_LOST` no queda
+resuelto por corregir el lector.
+
+### BOX-01-EXEC-IMPROVED — retirada de mesa73, 28-09-2026 11:08 CEST, Europe/Madrid
+
+Estado vigente: adaptación de altura RETIRADA por solicitud del usuario antes
+del ensayo. Restaurados exactamente desde el respaldo previo PC:
+`scripts/box_handling/scenario1_cli.py`, `scenario1_contract.py` y
+`scenario1_runtime.py`; hashes comprobados. Retirados los nuevos
+`scenario1_deposit.py`, `scenario1_deposit_install.py`,
+`test_scenario1_deposit.py` de ese directorio y
+`config/box_handling/scenario1_put1.json`. Conservadas todas las mejoras previas,
+incluida pose con dos publicadores, y cambios ajenos. El depósito vuelve a
+`wrc_cruzr/put_cruzr_wrc_low`; no hay altura73 activa ni instalador nuevo.
+
+Origen reproducible: `../Humanoide-vla-evidence/20260928T090113Z_SCENARIO1_TABLE73_BUILD/before/`
+y `before-sha256.json`. Reversión efectuada, archivos descartados archivados y
+comprobaciones: `../Humanoide-vla-evidence/20260928T090823Z_SCENARIO1_TABLE73_ROLLBACK/`
+(`rollback.json`, `discarded/`, `unit-tests.txt`). Fuentes del estado vigente
+coinciden con el respaldo, sin depender del estado de HEAD. Verificación: 250
+tests offline, plan original y diffcheck. No instalación ni comandos físicos
+durante preparación o reversión; sólo lecturas técnicas previas en
+`20260928T085846Z_SCENARIO1_TABLE73_READONLY/` bajo el mismo directorio externo.
+
+No hay estado operativo remoto que restaurar. No reactivar automáticamente el
+perfil retirado; un trabajo futuro requiere completar su registro geométrico y
+una nueva petición del usuario. La prueba de73cm está cancelada. Detalle y punto
+vigente de uso en la [guía](box_handling/FORCE_IMPROVED_SCENARIO1.md#adaptación-a-mesa-de-73-cm-revertida--28-09-2026).

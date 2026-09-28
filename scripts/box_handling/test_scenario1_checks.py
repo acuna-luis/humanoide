@@ -54,6 +54,37 @@ def map_response():
 
 
 class DiscoveryChecks(unittest.TestCase):
+    def test_observed_vendor_labels_ignore_ros_export_and_other_motion_services(self):
+        rows = containers()
+        rows[0]['Name'] = '/walker-motion.manipulation_robot_app-1'
+        rows[0]['Config']['Labels']['com.docker.compose.service'] = 'motion.manipulation_robot_app'
+        rows[1]['Name'] = '/walker-ros.ros2-1'
+        rows[1]['Config']['Labels']['com.docker.compose.service'] = 'ros.ros2'
+        for name, service in [('walker-ros.ros2-export-1', 'ros.ros2-export'),
+                              ('walker-motion.hw-1', 'motion.hw'),
+                              ('walker-motion.mc_common-1', 'motion.mc_common')]:
+            row = copy.deepcopy(rows[0])
+            row['Name'] = '/'+name
+            row['Config']['Labels']['com.docker.compose.service'] = service
+            rows.append(row)
+        self.assertEqual(discover_containers(rows), {'native':'walker-motion.manipulation_robot_app-1',
+                                                    'ros2':'walker-ros.ros2-1'})
+
+    def test_short_and_qualified_aliases_still_require_one_unique_role(self):
+        rows = containers()
+        extra = copy.deepcopy(rows[0])
+        extra['Name'] = '/second-motion'
+        extra['Config']['Labels']['com.docker.compose.service'] = 'motion.manipulation_robot_app'
+        rows.append(extra)
+        with self.assertRaisesRegex(ValueError, 'native=2'):
+            discover_containers(rows)
+
+    def test_known_name_conflicting_with_recognized_role_rejected(self):
+        rows = containers()
+        rows[0]['Name'] = '/walker-ros.ros2-1'
+        with self.assertRaisesRegex(ValueError, 'conflicts'):
+            discover_containers(rows)
+
     def test_service_labels_discover_renamed_containers(self):
         self.assertEqual(discover_containers(json.dumps(containers())),
                          {'native': 'renamed-motion', 'ros2': 'renamed-ros'})

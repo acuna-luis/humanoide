@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One bounded native ROSA action with JSONL evidence and targeted cancellation.
+"""Bounded native ROSA actions with JSONL evidence and targeted cancellation.
 
 Run inside a discovered Motion container after sourcing /opt/walker/setup.bash.
 This transport does not check physical readiness. Its caller must do that before
@@ -10,6 +10,8 @@ Native API reference: archived rosa/action_client.py from the 2026-09-21 front
 SPS audit. The installed SDK is not modified. Its goal callback loses the real
 acceptance flag, and its cancel helper swaps the stored UUID; this adapter reads
 the response directly and copies the UUID into its own cancel request.
+Optional --serve keeps one reviewed client alive for sequential requests, and
+exits permanently on failure. It never recreates or retries an interrupted goal.
 """
 
 import argparse
@@ -20,9 +22,11 @@ import json
 import math
 from pathlib import Path
 import queue
+import re
 import signal
 import sys
 import textwrap
+import threading
 import time
 
 
@@ -167,6 +171,10 @@ def native_client_class(base, to_string):
     class ObservedClient(base):
         def configure_observer(self, emit):
             self.observer = emit
+            self.retired_goal_ids = set()
+            self.reset_observation()
+
+        def reset_observation(self):
             self.observed_goal_id = None
             self.accepted = False
             self.terminal = False
@@ -175,8 +183,25 @@ def native_client_class(base, to_string):
             self.last_status = None
             self.cancel_future = None
 
+        def retire_successful_goal(self):
+            """Release only a confirmed terminal request, keeping DDS entities."""
+            goal_id = self.observed_goal_id
+            if (not goal_id or not self.accepted or not self.terminal
+                    or self.result_pending or self.cancel_future is not None):
+                raise RuntimeError('Cannot reuse an unconfirmed/interrupted action client')
+            stores = [getattr(self, name, None) for name in
+                      ('_goal_handles', '_goal_futures', '_result_futures', '_goal_options')]
+            if not all(isinstance(value, dict) for value in stores):
+                raise RuntimeError('NATIVE_API_UNSUPPORTED: persistent goal storage')
+            self.retired_goal_ids.add(goal_id)
+            for value in stores:
+                value.pop(goal_id, None)
+            self.reset_observation()
+
         def create_goal_request(self, goal, options=None):
             request, goal_id = super().create_goal_request(goal, options)
+            if goal_id in self.retired_goal_ids:
+                raise RuntimeError('Native UUID reused; request not sent')
             self.observed_goal_id = goal_id
             return request, goal_id
 
@@ -187,6 +212,8 @@ def native_client_class(base, to_string):
         def handle_goal_response_async(self, request, *unused):
             try:
                 goal_id = to_string(request.goal_id.uuid)
+                if goal_id in self.retired_goal_ids:
+                    return
                 if goal_id != self.observed_goal_id:
                     raise ValueError('Acceptance UUID mismatch')
                 response = self._goal_client.get_result(self._goal_futures[goal_id])
@@ -212,6 +239,8 @@ def native_client_class(base, to_string):
             # The misspelling is the name used by the installed native SDK.
             try:
                 goal_id = to_string(request.goal_id.uuid)
+                if goal_id in self.retired_goal_ids:
+                    return
                 if goal_id != self.observed_goal_id:
                     raise ValueError('Result UUID mismatch')
                 response = self._result_client.get_result(self._result_futures[goal_id])
@@ -339,6 +368,20 @@ class RosaTransport:
     def cancel(self):
         self.client.cancel_own_goal()
 
+    def finish_successful_request(self):
+        goal_id = self.goal_id
+        # No background ROSA spinner exists: callbacks run only in spin().
+        # Any unexpected queued evidence still prevents client reuse.
+        for row in self.drain():
+            if row.get('goal_id') != goal_id or row['event'] not in ('status', 'feedback'):
+                raise RuntimeError('Unexpected evidence while completing action request')
+        self.client.retire_successful_goal()
+
+    def validate_session_api(self):
+        for name in ('_goal_handles', '_goal_futures', '_result_futures', '_goal_options'):
+            if not isinstance(getattr(self.client, name, None), dict) or getattr(self.client, name):
+                raise RuntimeError('NATIVE_API_UNSUPPORTED: initial persistent goal storage ' + name)
+
     def close(self):
         self.rosa.shutdown()
 
@@ -447,19 +490,178 @@ def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
     return 2
 
 
+SESSION_NAV_COMMANDS = frozenset(('get_map_name', 'check_state', 'map_set',
+                                  'relocation_start', 'navigation_start'))
+
+
+def validate_session_request(kind, raw, seen):
+    request = object_json(raw)
+    if set(request) != {'request_id', 'goal', 'timeout'}:
+        raise ValueError('Request must contain exactly request_id, goal and timeout')
+    request_id = request['request_id']
+    if (not isinstance(request_id, str)
+            or re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}', request_id) is None):
+        raise ValueError('Invalid request_id')
+    if request_id in seen:
+        raise ValueError('Repeated request_id; no retry permitted')
+    if len(seen) >= 256:
+        raise ValueError('Session request limit reached')
+    timeout = request['timeout']
+    if (isinstance(timeout, bool) or not isinstance(timeout, (int, float))
+            or not math.isfinite(timeout) or timeout <= 0):
+        raise ValueError('Request timeout must be finite and positive')
+    goal = validate_goal(kind, json.dumps(request['goal'], allow_nan=False))
+    if kind == 'navigation' and goal['command'] not in SESSION_NAV_COMMANDS:
+        raise ValueError('Navigation command has no reviewed session result contract')
+    return request_id, goal, timeout
+
+
+def validate_session_result(kind, goal, terminal):
+    """Application failures poison a session before another goal can be sent.
+
+    Arrival pose, map identity and physical verification remain caller checks.
+    navigation_start's historical auxiliary LOCATION_LOST is accepted only with
+    its explicit success dmsg, as in scenario1_contract.validate_navigation_result.
+    """
+    if not terminal or not result_succeeded(kind, terminal.get('status'), terminal.get('result')):
+        raise ValueError('Session request did not confirm successful terminal result')
+    if kind == 'motion':
+        return
+    result = terminal['result']
+    state = result.get('state')
+    desc = state.get('desc') if isinstance(state, dict) else None
+    if not isinstance(desc, str):
+        raise ValueError('Malformed navigation application state')
+    command = goal['command']
+    dmsg = result.get('dmsg', '')
+    if not isinstance(dmsg, str):
+        raise ValueError('Malformed navigation application message')
+    arrival = command == 'navigation_start' and dmsg.startswith('navigation_start SUCCEEDED')
+    auxiliary_lost = desc == 'VSLAM_LOCATION_LOST' and arrival
+    if re.search(r'ERROR|FAIL|ABORT|CANCEL|LOST|OBSTACLE', desc, re.I) and not auxiliary_lost:
+        raise ValueError('Navigation application failure: ' + desc)
+    if command == 'navigation_start' and not (arrival or desc in ('SUCCESS', 'SUCCEED')):
+        raise ValueError('Navigation arrival was not confirmed')
+    if command == 'get_map_name':
+        value = object_json(result.get('result_json', ''))
+        if not isinstance(value.get('map_name'), str):
+            raise ValueError('Navigation map response is invalid')
+    if command == 'check_state':
+        states = re.findall(r'\bFSM_[A-Z_]+\b', dmsg)
+        if len(states) != 1 or states[0] not in ('FSM_WAITNAVIGATE', 'FSM_WAITRELOCATE', 'FSM_WAITSETMAP'):
+            raise ValueError('Navigation state is busy or unrecognized')
+    if command == 'map_set' and desc not in ('VSLAM_LOAD_MAP_FINISHED', 'SUCCESS', 'SUCCEED'):
+        raise ValueError('Map load was not confirmed')
+    if command == 'relocation_start' and desc not in ('NAVIGATION_READY', 'SUCCESS', 'SUCCEED'):
+        raise ValueError('Localization was not confirmed')
+
+
+class SessionInput:
+    """Bounded stdin reader; EOF is immediately visible during an active action."""
+    def __init__(self, stream):
+        self.requests = queue.Queue(maxsize=1)
+        self.reason = None
+        self.eof = False
+        self.thread = threading.Thread(target=self.read, args=(stream,), daemon=True)
+        self.thread.start()
+
+    def read(self, stream):
+        try:
+            while True:
+                line = stream.readline(1024 * 1024 + 1)
+                if not line:
+                    self.eof = True
+                    self.reason = 'Request input pipe disconnected'
+                    return
+                if len(line) > 1024 * 1024 or not line.endswith('\n'):
+                    raise ValueError('Oversized or incomplete session request')
+                try:
+                    self.requests.put_nowait(line)
+                except queue.Full:
+                    raise ValueError('Too many queued requests; session is sequential')
+        except Exception as error:
+            self.reason = 'Request input failed: ' + str(error)
+
+
+def run_session(transport, kind, inbox, emit, interrupted=lambda: None,
+                lease_file=None, clock=time.monotonic, run_one=run_action):
+    """Sequential fail-sticky request loop; never reconnects or retries a goal."""
+    seen = set()
+    emit(event='session_ready', request_id=None, kind=kind)
+    while True:
+        request_id = None
+        try:
+            if interrupted():
+                raise RuntimeError(interrupted())
+            check_lease(lease_file, clock())
+            if inbox.reason:
+                if inbox.eof and inbox.requests.empty():
+                    emit(event='session_closed', request_id=None, reason=inbox.reason)
+                    return 0
+                raise RuntimeError(inbox.reason)
+            try:
+                raw = inbox.requests.get(timeout=.05)
+            except queue.Empty:
+                transport.spin()
+                for row in transport.drain():
+                    # Retired UUID callbacks are filtered by the adapter.
+                    raise RuntimeError(row.get('reason', 'Unexpected idle action evidence'))
+                continue
+            # Keep evidence correlated even if a syntactically valid ID belongs
+            # to a malformed/duplicate request. Never dispatch such a request.
+            candidate = object_json(raw).get('request_id')
+            if isinstance(candidate, str) and re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}', candidate):
+                request_id = candidate
+            request_id, goal, timeout = validate_session_request(kind, raw, seen)
+            seen.add(request_id)
+            terminal = None
+
+            def request_emit(**row):
+                nonlocal terminal
+                if row['event'] == 'result':
+                    terminal = row
+                emit(request_id=request_id, **row)
+
+            code = run_one(transport, kind, goal, timeout, request_emit,
+                           interrupted=lambda: interrupted() or inbox.reason,
+                           lease_file=lease_file, clock=clock)
+            if code == 0:
+                # Do not clear a goal before all successful-result checks pass.
+                validate_session_result(kind, goal, terminal)
+                if interrupted() or inbox.reason:
+                    raise RuntimeError(interrupted() or inbox.reason)
+                check_lease(lease_file, clock())
+                transport.finish_successful_request()
+            emit(event='request_complete', request_id=request_id, returncode=code)
+            if code:
+                return code
+        except Exception as error:
+            emit(event='error', request_id=request_id, goal_id=transport.goal_id, reason=str(error))
+            if request_id is not None:
+                emit(event='request_complete', request_id=request_id, returncode=2)
+            return 2
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--kind', choices=tuple(ENDPOINTS), required=True)
-    parser.add_argument('--goal-json', required=True)
-    parser.add_argument('--timeout', type=float, required=True)
+    parser.add_argument('--goal-json')
+    parser.add_argument('--timeout', type=float)
     parser.add_argument('--lease-file', type=Path)
+    parser.add_argument('--serve', action='store_true', help='Sequential persistent JSONL request session')
     args = parser.parse_args(argv)
-    if not math.isfinite(args.timeout) or args.timeout <= 0:
-        parser.error('--timeout must be finite and positive')
-    try:
-        goal = validate_goal(args.kind, args.goal_json)
-    except ValueError as error:
-        parser.error(str(error))
+    if args.serve:
+        if args.goal_json is not None or args.timeout is not None or args.lease_file is None:
+            parser.error('--serve requires --lease-file and takes goals/timeouts only through stdin')
+    else:
+        if args.timeout is None or not math.isfinite(args.timeout) or args.timeout <= 0:
+            parser.error('--timeout must be finite and positive')
+        if args.goal_json is None:
+            parser.error('--goal-json is required without --serve')
+        try:
+            goal = validate_goal(args.kind, args.goal_json)
+        except ValueError as error:
+            parser.error(str(error))
     stop = {'reason': None}
     output_failed = False
 
@@ -467,6 +669,8 @@ def main(argv=None):
         nonlocal output_failed
         if output_failed:
             return
+        if args.serve:
+            row.setdefault('request_id', None)
         try:
             print(json.dumps(dict(time_ns=time.time_ns(), **row), allow_nan=False), flush=True)
         except (BrokenPipeError, OSError):
@@ -481,11 +685,16 @@ def main(argv=None):
     try:
         check_lease(args.lease_file, time.monotonic())
         transport = RosaTransport(args.kind)
+        if args.serve:
+            transport.validate_session_api()
         emit(event='native_api', fingerprints=transport.api_fingerprints,
              reviewed_source='20260921T112801Z_FRONT_NATIVE_INTEGRATION_AUDIT')
         # Install after rosa.init(), which may install its own signal handlers.
         for number in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
             previous[number] = signal.signal(number, on_signal)
+        if args.serve:
+            return run_session(transport, args.kind, SessionInput(sys.stdin), emit,
+                               interrupted=lambda: stop['reason'], lease_file=args.lease_file)
         return run_action(transport, args.kind, goal, args.timeout, emit,
                           interrupted=lambda: stop['reason'], lease_file=args.lease_file)
     except Exception as error:

@@ -19,6 +19,9 @@ STAGES = (
 )
 STOP_AFTER = ('verify_held', 'verify_home')
 BOX_STATES = ('empty', 'held', 'released', 'unknown')
+CONFIRMATION_POLICIES = ('ask', 'assume', 'sensors')
+_VERIFICATION_SOURCES = {'ask': 'operator', 'assume': 'assumed', 'sensors': 'sensors'}
+_BOX_VERIFICATIONS = {'verify_held': 'held', 'verify_released': 'released'}
 COMPATIBILITY = ('verified', 'operator_assumed_existing', 'pending', 'incompatible')
 _ACCEPTED_COMPATIBILITY = ('verified', 'operator_assumed_existing')
 _TASKS = {
@@ -33,6 +36,7 @@ _CHECKPOINT_KEYS = {
     'version', 'profile_id', 'profile_sha256', 'stop_after', 'completed',
     'in_flight', 'box_state', 'failure',
 }
+_CHECKPOINT_V2_KEYS = _CHECKPOINT_KEYS | {'policy', 'confirmations'}
 
 
 def _keys(value, expected, label):
@@ -60,6 +64,29 @@ def _finite_json(value):
 def _stop_after(value):
     if value not in STOP_AFTER:
         raise ValueError('Unknown stop_after')
+
+
+def _policy(value):
+    if type(value) is not str or value not in CONFIRMATION_POLICIES:
+        raise ValueError('Unknown confirmation policy')
+
+
+def _box_evidence(policy, box, source, sensor_evidence):
+    """Record provenance; the runtime must validate actual fresh sensor reports.
+
+    An assumption remains an assumption even if the state machine permits the
+    next stage. This contract cannot establish freshness or sensor validity.
+    """
+    _policy(policy)
+    if source != _VERIFICATION_SOURCES[policy]:
+        raise ValueError('Box evidence source does not match confirmation policy')
+    if policy == 'sensors':
+        if not isinstance(sensor_evidence, dict) or not sensor_evidence:
+            raise ValueError('Sensor policy requires a nonempty validated sensor report')
+        _finite_json(sensor_evidence)
+    elif sensor_evidence is not None:
+        raise ValueError('Operator/assumed evidence cannot be labeled as sensor measurements')
+    return dict(box_state=box, source=source, sensor_evidence=copy.deepcopy(sensor_evidence))
 
 
 def validate_profile(profile, *, stop_after='verify_home'):
@@ -99,20 +126,23 @@ def _profile_hash(profile):
                                     allow_nan=False).encode()).hexdigest()
 
 
-def new_checkpoint(profile, *, stop_after='verify_home'):
+def new_checkpoint(profile, *, stop_after='verify_home', policy='ask'):
     profile = validate_profile(profile, stop_after=stop_after)
-    return dict(version=1, profile_id=profile['id'], profile_sha256=_profile_hash(profile),
+    _policy(policy)
+    return dict(version=2, profile_id=profile['id'], profile_sha256=_profile_hash(profile),
                 stop_after=stop_after, completed=[], in_flight=None,
-                box_state='empty', failure=None)
+                box_state='empty', failure=None, policy=policy, confirmations={})
 
 
 def validate_checkpoint(checkpoint, profile=None):
     """Validate the exact ordered prefix and box-state consistency; copy on return."""
-    _keys(checkpoint, _CHECKPOINT_KEYS, 'Checkpoint')
+    if (not isinstance(checkpoint, dict) or type(checkpoint.get('version')) is not int
+            or checkpoint['version'] not in (1, 2)):
+        raise ValueError('Unsupported checkpoint version')
+    _keys(checkpoint, _CHECKPOINT_V2_KEYS if checkpoint['version'] == 2 else _CHECKPOINT_KEYS,
+          'Checkpoint')
     _finite_json(checkpoint)
     cp = checkpoint
-    if type(cp['version']) is not int or cp['version'] != 1:
-        raise ValueError('Unsupported checkpoint version')
     _stop_after(cp['stop_after'])
     if (type(cp['profile_id']) is not str or
             re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,79}', cp['profile_id']) is None or
@@ -124,6 +154,15 @@ def validate_checkpoint(checkpoint, profile=None):
     if (not isinstance(completed, list) or len(completed) > limit or
             completed != list(STAGES[:len(completed)])):
         raise ValueError('Checkpoint is not a completed ordered prefix')
+    if cp['version'] == 2:
+        _policy(cp['policy'])
+        required = set(completed) & set(_BOX_VERIFICATIONS)
+        _keys(cp['confirmations'], required, 'Box evidence records')
+        for stage, record in cp['confirmations'].items():
+            _keys(record, {'box_state', 'source', 'sensor_evidence'}, 'Box evidence record')
+            if record['box_state'] != _BOX_VERIFICATIONS[stage]:
+                raise ValueError('Box evidence contradicts its verification stage')
+            _box_evidence(cp['policy'], record['box_state'], record['source'], record['sensor_evidence'])
     expected = STAGES[len(completed)] if len(completed) < limit else None
     if cp['in_flight'] is not None and cp['in_flight'] != expected:
         raise ValueError('Invalid in-flight stage')
@@ -167,16 +206,29 @@ def begin_stage(checkpoint, stage):
     return cp
 
 
-def complete_stage(checkpoint, stage, *, confirmed_box=None, home_verified=False):
-    """Caller has validated the action; explicit postconditions gate transitions."""
+def complete_stage(checkpoint, stage, *, confirmed_box=None, home_verified=False,
+                   verification_source='operator', sensor_evidence=None):
+    """Record completed action/postcondition without upgrading its evidence.
+
+    Existing callers retain interactive ``ask`` behavior. Sensor callers must
+    supply their freshly validated report; setting a boolean cannot create a
+    sensor record. Non-box stages have no box-verification source to override.
+    """
     cp = validate_checkpoint(checkpoint)
     if cp['failure'] is not None or stage not in STAGES or cp['in_flight'] != stage:
         raise ValueError('Cannot complete a stage that is not in flight')
-    required_box = {'verify_held': 'held', 'verify_released': 'released'}.get(stage)
+    required_box = _BOX_VERIFICATIONS.get(stage)
     if confirmed_box != required_box:
         raise ValueError('Box postcondition missing or inappropriate for this stage')
     if type(home_verified) is not bool or home_verified != (stage == 'verify_home'):
         raise ValueError('Fresh HOME verification required only at verify_home')
+    if required_box is not None:
+        record = _box_evidence(cp.get('policy', 'ask'), required_box,
+                               verification_source, sensor_evidence)
+        if cp['version'] == 2:
+            cp['confirmations'][stage] = record
+    elif verification_source != 'operator' or sensor_evidence is not None:
+        raise ValueError('Box evidence is only appropriate at box verification stages')
     cp['completed'].append(stage)
     cp['in_flight'] = None
     cp['box_state'] = _BOX_AFTER[STAGES.index(stage)]
@@ -195,14 +247,22 @@ def fail_stage(checkpoint, stage, reason):
 
 
 def resume_checkpoint(checkpoint, profile, *, confirmed_box, state_reconfirmed,
-                      stop_after='verify_home'):
-    """Resume only a clean verified-held/released checkpoint, after fresh checks.
+                      stop_after='verify_home', policy='ask',
+                      verification_source='operator', sensor_evidence=None):
+    """Resume a clean held/released checkpoint under its unchanged policy.
 
     state_reconfirmed is the caller's explicit attestation of fresh runtime and
     physical checks, not a timestamp or a persisted authorization to reuse later.
+    Legacy v1 checkpoints belong to ``ask``. A v2 sensor checkpoint needs a fresh
+    validated sensor report on resume. Assumed evidence is never automatically
+    promoted to operator or sensor evidence. The last box record is refreshed
+    with the new reconfirmation; callers retain prior journal/checkpoint evidence.
     """
     cp = validate_checkpoint(checkpoint, profile)
     profile = validate_profile(profile, stop_after=stop_after)
+    _policy(policy)
+    if cp.get('policy', 'ask') != policy:
+        raise ValueError('Resume cannot change the checkpoint confirmation policy')
     if state_reconfirmed is not True:
         raise ValueError('Fresh state reconfirmation required')
     if (cp['in_flight'] is not None or cp['failure'] is not None or
@@ -210,9 +270,12 @@ def resume_checkpoint(checkpoint, profile, *, confirmed_box, state_reconfirmed,
         raise ValueError('Resume requires a clean verified-held/released checkpoint')
     if cp['box_state'] not in ('held', 'released') or confirmed_box != cp['box_state']:
         raise ValueError('Current box state was not reconfirmed')
+    record = _box_evidence(policy, confirmed_box, verification_source, sensor_evidence)
     if STAGES.index(stop_after) < len(cp['completed']) - 1:
         raise ValueError('Cannot resume before the completed checkpoint')
     cp['stop_after'] = stop_after
+    if cp['version'] == 2:
+        cp['confirmations'][cp['completed'][-1]] = record
     return validate_checkpoint(cp, profile)
 
 

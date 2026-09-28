@@ -201,6 +201,174 @@ class CheckpointTest(unittest.TestCase):
                 validate_checkpoint(item)
 
 
+class ConfirmationPolicyTest(unittest.TestCase):
+    sources = {'ask': 'operator', 'assume': 'assumed', 'sensors': 'sensors'}
+
+    def report(self, stamp=100):
+        # Only provenance transport is tested here. Runtime sensor validators
+        # must establish actual schema, timestamps, meaning and postconditions.
+        return {'sample_stamp_ns': stamp, 'classification': 'runtime_checked'}
+
+    def through(self, stage, policy, stop_after='verify_home'):
+        cp = new_checkpoint(profile(), stop_after=stop_after, policy=policy)
+        for current in STAGES[:STAGES.index(stage) + 1]:
+            started = begin_stage(cp, current)
+            kwargs = dict(home_verified=current == 'verify_home')
+            if current in ('verify_held', 'verify_released'):
+                kwargs.update(confirmed_box='held' if current == 'verify_held' else 'released',
+                              verification_source=self.sources[policy],
+                              sensor_evidence=self.report() if policy == 'sensors' else None)
+            cp = complete_stage(started, current, **kwargs)
+        return cp
+
+    def test_new_default_is_v2_ask_with_no_premature_box_evidence(self):
+        cp = new_checkpoint(profile())
+        self.assertEqual(cp['version'], 2)
+        self.assertEqual(cp['policy'], 'ask')
+        self.assertEqual(cp['confirmations'], {})
+        self.assertEqual(self.through('grasp', 'assume')['confirmations'], {})
+        for unknown in ('automatic', '', None, True, 2):
+            with self.subTest(policy=unknown), self.assertRaises(ValueError):
+                new_checkpoint(profile(), policy=unknown)
+
+    def test_all_policies_preserve_evidence_distinction_through_full_cycle(self):
+        for policy, source in self.sources.items():
+            with self.subTest(policy=policy):
+                cp = self.through('verify_home', policy)
+                self.assertIsNone(next_stage(cp))
+                self.assertEqual(set(cp['confirmations']), {'verify_held', 'verify_released'})
+                for stage, box in (('verify_held', 'held'), ('verify_released', 'released')):
+                    record = cp['confirmations'][stage]
+                    self.assertEqual(record['source'], source)
+                    self.assertEqual(record['box_state'], box)
+                    self.assertEqual(record['sensor_evidence'], self.report() if policy == 'sensors' else None)
+                self.assertEqual(validate_checkpoint(json.loads(json.dumps(cp))), cp)
+
+    def test_assumed_is_not_recorded_as_operator_or_measured(self):
+        cp = self.through('verify_held', 'assume')
+        record = cp['confirmations']['verify_held']
+        self.assertEqual(record, dict(box_state='held', source='assumed', sensor_evidence=None))
+        self.assertEqual(next_stage(cp), 'retreat')
+        self.assertEqual(cp['policy'], 'assume')
+
+    def test_completion_cannot_use_another_policys_evidence_source(self):
+        for policy, expected in self.sources.items():
+            started = begin_stage(self.through('grasp', policy), 'verify_held')
+            for source in (*self.sources.values(), 'measured', True, None):
+                if source == expected:
+                    continue
+                with self.subTest(policy=policy, source=source), self.assertRaises(ValueError):
+                    complete_stage(started, 'verify_held', confirmed_box='held',
+                                   verification_source=source,
+                                   sensor_evidence=self.report() if source == 'sensors' else None)
+
+    def test_sensor_source_and_boolean_alone_cannot_create_measurement_evidence(self):
+        started = begin_stage(self.through('grasp', 'sensors'), 'verify_held')
+        for evidence in (None, True, False, {}, [], 'verified', {'value': math.nan}):
+            with self.subTest(evidence=evidence), self.assertRaises(ValueError):
+                complete_stage(started, 'verify_held', confirmed_box='held',
+                               verification_source='sensors', sensor_evidence=evidence)
+        with self.assertRaises(ValueError):
+            complete_stage(started, 'verify_held', confirmed_box='held', home_verified=True,
+                           verification_source='sensors', sensor_evidence=self.report())
+
+    def test_operator_and_assumption_cannot_smuggle_sensor_measurements(self):
+        for policy in ('ask', 'assume'):
+            started = begin_stage(self.through('grasp', policy), 'verify_held')
+            with self.subTest(policy=policy), self.assertRaises(ValueError):
+                complete_stage(started, 'verify_held', confirmed_box='held',
+                               verification_source=self.sources[policy], sensor_evidence=self.report())
+
+    def test_evidence_is_copied_and_only_allowed_at_box_checks(self):
+        started = begin_stage(self.through('grasp', 'sensors'), 'verify_held')
+        original = copy.deepcopy(started)
+        evidence = self.report()
+        completed = complete_stage(started, 'verify_held', confirmed_box='held',
+                                   verification_source='sensors', sensor_evidence=evidence)
+        evidence['sample_stamp_ns'] = 999
+        self.assertEqual(completed['confirmations']['verify_held']['sensor_evidence']['sample_stamp_ns'], 100)
+        self.assertEqual(started, original)
+        with self.assertRaises(ValueError):
+            complete_stage(begin_stage(completed, 'retreat'), 'retreat',
+                           verification_source='sensors', sensor_evidence=self.report())
+
+    def test_checkpoint_requires_exact_box_records_matching_completed_prefix(self):
+        cp = self.through('verify_held', 'assume')
+        variants = []
+        item = copy.deepcopy(cp); item['confirmations'] = {}; variants.append(item)
+        item = copy.deepcopy(cp); item['confirmations']['verify_released'] = dict(
+            box_state='released', source='assumed', sensor_evidence=None); variants.append(item)
+        item = copy.deepcopy(cp); item['confirmations']['verify_held']['source'] = 'operator'; variants.append(item)
+        item = copy.deepcopy(cp); item['confirmations']['verify_held']['measured'] = True; variants.append(item)
+        item = copy.deepcopy(cp); item['confirmations']['verify_held']['box_state'] = 'released'; variants.append(item)
+        item = copy.deepcopy(cp); item['policy'] = 'sensors'; variants.append(item)
+        for item in variants:
+            with self.subTest(checkpoint=item), self.assertRaises(ValueError):
+                validate_checkpoint(item)
+
+    def test_resume_keeps_policy_and_requires_matching_fresh_evidence(self):
+        for policy, source in self.sources.items():
+            cp = self.through('verify_held', policy, stop_after='verify_held')
+            original = copy.deepcopy(cp)
+            evidence = self.report(200) if policy == 'sensors' else None
+            resumed = resume_checkpoint(cp, profile(), confirmed_box='held', state_reconfirmed=True,
+                                        policy=policy, verification_source=source, sensor_evidence=evidence)
+            self.assertEqual(next_stage(resumed), 'retreat')
+            self.assertEqual(resumed['policy'], policy)
+            self.assertEqual(resumed['confirmations']['verify_held']['source'], source)
+            self.assertEqual(resumed['confirmations']['verify_held']['sensor_evidence'], evidence)
+            self.assertEqual(cp, original)
+            for other_policy in self.sources:
+                if other_policy != policy:
+                    with self.subTest(policy=policy, other=other_policy), self.assertRaises(ValueError):
+                        resume_checkpoint(cp, profile(), confirmed_box='held', state_reconfirmed=True,
+                                          policy=other_policy, verification_source=self.sources[other_policy],
+                                          sensor_evidence=self.report() if other_policy == 'sensors' else None)
+
+    def test_sensor_resume_does_not_reuse_persisted_report_implicitly(self):
+        cp = self.through('verify_held', 'sensors', stop_after='verify_held')
+        for evidence in (None, {}, True):
+            with self.subTest(evidence=evidence), self.assertRaises(ValueError):
+                resume_checkpoint(cp, profile(), confirmed_box='held', state_reconfirmed=True,
+                                  policy='sensors', verification_source='sensors', sensor_evidence=evidence)
+        with self.assertRaises(ValueError):
+            resume_checkpoint(cp, profile(), confirmed_box='held', state_reconfirmed=1,
+                              policy='sensors', verification_source='sensors', sensor_evidence=self.report(200))
+
+    def test_failed_or_inflight_checkpoints_remain_blocked_under_every_policy(self):
+        for policy in self.sources:
+            cp = self.through('grasp', policy)
+            started = begin_stage(cp, 'verify_held')
+            failed = fail_stage(started, 'verify_held', 'postcondition unavailable')
+            self.assertEqual(failed['box_state'], 'unknown')
+            self.assertEqual(failed['confirmations'], {})
+            for checkpoint in (started, failed):
+                with self.subTest(policy=policy), self.assertRaises(ValueError):
+                    resume_checkpoint(checkpoint, profile(), confirmed_box='held', state_reconfirmed=True,
+                                      policy=policy, verification_source=self.sources[policy],
+                                      sensor_evidence=self.report() if policy == 'sensors' else None)
+
+    def test_legacy_v1_works_only_with_original_interactive_policy(self):
+        cp = new_checkpoint(profile(), stop_after='verify_held')
+        cp['version'] = 1
+        del cp['policy']; del cp['confirmations']
+        for stage in STAGES[:STAGES.index('verify_held') + 1]:
+            cp = finish(cp, stage)
+        self.assertEqual(cp['version'], 1)
+        self.assertNotIn('confirmations', cp)
+        resumed = resume_checkpoint(cp, profile(), confirmed_box='held', state_reconfirmed=True)
+        self.assertEqual(next_stage(resumed), 'retreat')
+        self.assertEqual(resumed['version'], 1)
+        for policy in ('assume', 'sensors'):
+            with self.subTest(policy=policy), self.assertRaises(ValueError):
+                resume_checkpoint(cp, profile(), confirmed_box='held', state_reconfirmed=True,
+                                  policy=policy, verification_source=self.sources[policy],
+                                  sensor_evidence=self.report() if policy == 'sensors' else None)
+        changed = copy.deepcopy(cp); changed['policy'] = 'ask'
+        with self.assertRaises(ValueError):
+            validate_checkpoint(changed)
+
+
 class ResultTest(unittest.TestCase):
     def test_structured_motion_success_is_independent_and_not_just_status_four(self):
         payload = terminal()

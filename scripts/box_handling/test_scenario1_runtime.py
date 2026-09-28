@@ -72,6 +72,25 @@ def advance(machine, stop='verify_home'):
 
 
 class RuntimeTest(unittest.TestCase):
+    def test_action_status_uses_existing_auto_qos_while_telemetry_is_volatile(self):
+        machine = runtime.Runtime({'checkpoint': contract.new_checkpoint(PROFILE)})
+        machine.ros_container = 'fake-ros'
+        machine.docker = Mock(return_value='status_list: []')
+        machine.topic('/mc/manipulation/action/_action/status')
+        status_args = machine.docker.call_args.args[1]
+        self.assertNotIn('--qos-durability', status_args)
+        self.assertIn('--no-daemon', status_args)
+        machine.topic('/emb/estop_key_state')
+        telemetry_args = machine.docker.call_args.args[1]
+        self.assertEqual(telemetry_args[telemetry_args.index('--qos-durability')+1], 'volatile')
+
+    def test_topic_failure_identifies_the_failing_endpoint(self):
+        machine = runtime.Runtime({'checkpoint': contract.new_checkpoint(PROFILE)})
+        machine.ros_container = 'fake-ros'
+        machine.docker = Mock(side_effect=RuntimeError('rc=124'))
+        with self.assertRaisesRegex(RuntimeError, 'TOPIC_READ_FAILED /emb/battery_state.*124'):
+            machine.topic('/emb/battery_state')
+
     def test_full_cycle_exact_geometry_and_measured_home(self):
         with tempfile.TemporaryDirectory() as directory:
             machine = SimulatedRuntime(directory)
@@ -162,26 +181,20 @@ class RuntimeTest(unittest.TestCase):
                 machine.stage(dict(stage='navigate_get1'))
             self.assertEqual(machine.calls, [])
 
-    def test_home_telemetry_uses_best_effort_and_rejects_old_samples(self):
+    def test_home_rejects_old_samples_even_from_persistent_worker(self):
         with tempfile.TemporaryDirectory() as directory:
             machine = runtime.Runtime({'checkpoint': contract.new_checkpoint(PROFILE)})
             machine.native_container = 'fake'
             machine.ros_container = 'fake-ros'
-            controllers = "Response(controller=[{'name':'manipulation_controller','state':'running'}, {'name':'sdk_controller','state':'initialized'}, {'name':'vla_sdk_controller','state':'initialized'}])"
-            calls = []
-            def native(args, timeout=12):
-                calls.append(args)
-                if 'list_controllers' in ' '.join(args):
-                    return controllers
-                return json.dumps({'header': {'stamp': {'sec': 1, 'nanosec': 0}}})
-            machine.native = native
-            machine.topic = lambda topic: 'status_list: []' if topic.endswith('/status') else (
-                'batteries:\n- batsoc: 90\n- batsoc: 90' if topic.endswith('battery_state') else 'data: 0')
+            machine.health_request = Mock(return_value=dict(
+                controller={'controller': [{'name':'manipulation_controller','state':'running'},
+                    {'name':'sdk_controller','state':'initialized'}, {'name':'vla_sdk_controller','state':'initialized'}]},
+                status={'status_list': []}, safety={'estop': {'data': 0}, 'servo': {'data': 0},
+                    'charger': {'data': 0}, 'battery': {'batteries': [{'batsoc': 90}, {'batsoc': 90}]}},
+                actuator=[{'header': {'stamp': {'sec': 1, 'nanosec': 0}}}]*2))
             with self.assertRaisesRegex(RuntimeError, 'antigua'):
                 machine.health()
-            telemetry = calls[-1]
-            self.assertEqual(telemetry[telemetry.index('--qos-reliability')+1], 'best_effort')
-            self.assertEqual(telemetry[telemetry.index('--qos-durability')+1], 'volatile')
+            machine.health_request.assert_called_once_with('health', require_home=False)
 
     def test_duplicate_results_or_failure_return_code_never_advance(self):
         result = json.dumps(dict(event='result', status=4, result={'state': {'desc':'SUCCEED','state':1101001}}))+'\n'
@@ -214,6 +227,40 @@ class CliTest(unittest.TestCase):
                 patch('sys.stdout', io.StringIO()) as output:
             self.assertEqual(cli.main(['--plan']), 0)
         self.assertIn('operator_assumed_existing', output.getvalue())
+
+    def test_read_only_entry_failures_do_not_imply_movement_or_recovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            missing_profile = str(Path(directory)/'missing-profile.json')
+            for mode in ([], ['--check'], ['--plan']):
+                with self.subTest(mode=mode), \
+                        patch.object(cli.subprocess, 'Popen') as network, \
+                        patch('sys.stderr', io.StringIO()) as output:
+                    self.assertEqual(cli.entrypoint(mode+['--profile', missing_profile]), 78)
+                    network.assert_not_called()
+                    self.assertIn('CHECK_FALLIDO:', output.getvalue())
+                    self.assertIn('No se envió ninguna orden de movimiento.', output.getvalue())
+                    self.assertNotIn('ESCENARIO_INTERRUMPIDO', output.getvalue())
+                    self.assertNotIn('recuperación', output.getvalue())
+
+    def test_discovery_error_entry_uses_mode_and_parses_once(self):
+        for mode in ([], ['--check'], ['--run'], ['--resume', 'checkpoint.json']):
+            arguments = cli.parser()
+            with self.subTest(mode=mode), patch.object(cli, 'parser', return_value=arguments), \
+                    patch.object(arguments, 'parse_args', wraps=arguments.parse_args) as parse, \
+                    patch.object(cli, '_main', side_effect=RuntimeError(
+                        'Require exactly one running Motion and ROS2 container')), \
+                    patch.object(cli.subprocess, 'Popen') as network, \
+                    patch('sys.stderr', io.StringIO()) as output:
+                self.assertEqual(cli.entrypoint(mode), 78)
+                parse.assert_called_once_with(mode)
+                network.assert_not_called()
+                if '--run' in mode or '--resume' in mode:
+                    self.assertIn('ESCENARIO_INTERRUMPIDO:', output.getvalue())
+                    self.assertIn('estado indeterminado requiere recuperación', output.getvalue())
+                    self.assertNotIn('No se envió ninguna orden', output.getvalue())
+                else:
+                    self.assertIn('CHECK_FALLIDO:', output.getvalue())
+                    self.assertNotIn('recuperación', output.getvalue())
 
     def test_resume_source_consumed_once_even_after_new_run_failure(self):
         with tempfile.TemporaryDirectory() as directory:
