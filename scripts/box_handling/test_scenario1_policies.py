@@ -2,6 +2,7 @@
 import copy
 import io
 import json
+import queue
 from pathlib import Path
 import tempfile
 import unittest
@@ -103,6 +104,23 @@ class PolicyRuntimeTest(unittest.TestCase):
 
 
 class AutomaticCliTest(unittest.TestCase):
+    def test_blocked_correction_without_attempt_displays_residual_and_preserves_error(self):
+        connection = cli.Connection.__new__(cli.Connection)
+        connection.events = queue.Queue()
+        revoked = dict(runtime.nav_correction.qualification_report(), motion_enabled=False,
+                       status='blocked', reason_code='GET1_CORRECTION_UNQUALIFIED', reason='synthetic revocation')
+        connection.events.put(dict(event='get1_correction', phase='blocked_before_dispatch',
+            qualification=revoked,
+            measurements=[dict(distance_m=.027319, yaw_error_deg=.385),
+                          dict(distance_m=.027318, yaw_error_deg=.387)]))
+        connection.events.put(dict(event='error', reason='GET1_CORRECTION_UNQUALIFIED: test'))
+        with patch('sys.stdout', io.StringIO()) as output, \
+                self.assertRaisesRegex(RuntimeError, 'GET1_CORRECTION_UNQUALIFIED'):
+            connection.wait('stage_complete', timeout=1)
+        self.assertIn('Ajuste get1 no enviado', output.getvalue())
+        self.assertIn('27.32 mm / 0.387 grados', output.getvalue())
+        self.assertIn('Agarre no iniciado', output.getvalue())
+
     def test_pending_sensor_calibration_stops_before_any_network_or_motion(self):
         with patch.object(cli, 'Connection') as connection, patch.object(cli.subprocess, 'run') as command, \
                 patch('builtins.input', side_effect=AssertionError('Unexpected prompt')):
@@ -118,6 +136,15 @@ class AutomaticCliTest(unittest.TestCase):
                     patch('sys.stdout', io.StringIO()) as output:
                 self.assertEqual(cli.main(['--plan'], policy=policy), 0)
                 self.assertIn('"policy": "'+policy+'"', output.getvalue())
+                report = json.loads(output.getvalue()[output.getvalue().index('{'):])
+                correction = report['get1_correction']
+                self.assertIs(correction['motion_enabled'], True)
+                self.assertEqual(correction['status'], 'enabled_for_validation')
+                self.assertEqual(correction['physical_validation'], 'pending')
+                self.assertEqual(correction['policy']['action_timeout_s'], 30)
+                self.assertEqual(correction['policy']['total_budget_s'], 70)
+                self.assertEqual(correction['policy']['max_approach_angular_speed_rad_s'], .6)
+                self.assertEqual(correction['policy']['max_angular_speed_rad_s'], 1.2)
 
     def simulate_automatic_cli(self, policy):
         with tempfile.TemporaryDirectory() as directory:

@@ -201,7 +201,7 @@ class ArrivalAndMapChecks(unittest.TestCase):
 
     def arrival(self, pose=None, **kwargs):
         arguments = dict(payload=nav_pose() if pose is None else pose, expected=self.target,
-                         started_at=100., now=100.2)
+                         started_at=100., now=100.2, point='get1')
         arguments.update(kwargs)
         return validate_nav_pose(**arguments)
 
@@ -231,6 +231,66 @@ class ArrivalAndMapChecks(unittest.TestCase):
         result = self.arrival(nav_pose(yaw=-math.pi+.01),
                               expected=dict(point_x=1., point_y=2., point_yaw=math.pi-.01))
         self.assertAlmostEqual(result['yaw_error_deg'], math.degrees(.02))
+
+    def test_each_destination_requires_its_radial_distance_limit(self):
+        origin = dict(point_x=0., point_y=0., point_yaw=0.)
+        for point, maximum in (('get1', .02), ('put1', .05)):
+            with self.subTest(point=point):
+                inside = maximum - 1e-8
+                result = self.arrival(nav_pose(x=.6*inside, y=.8*inside),
+                                      point=point, expected=origin)
+                self.assertAlmostEqual(result['distance_m'], inside)
+                self.assertEqual(result['distance_tolerance_m'], maximum)
+                # This axis-aligned boundary is exactly representable by the
+                # same float threshold, without subtracting a large map origin.
+                self.arrival(nav_pose(x=maximum, y=0), point=point, expected=origin)
+                # A nonzero map origin must not reject an inclusive boundary
+                # solely because subtraction introduces float roundoff.
+                self.arrival(nav_pose(x=1.+maximum), point=point)
+                outside = maximum + 1e-8
+                with self.assertRaisesRegex(ValueError, 'outside'):
+                    self.arrival(nav_pose(x=.6*outside, y=.8*outside),
+                                 point=point, expected=origin)
+                # Per-axis checks would wrongly accept this diagonal error.
+                with self.assertRaisesRegex(ValueError, 'outside'):
+                    self.arrival(nav_pose(x=.8*maximum, y=.8*maximum),
+                                 point=point, expected=origin)
+
+    def test_each_destination_requires_its_yaw_limit_in_both_directions(self):
+        for point, maximum_deg in (('get1', 2.), ('put1', 3.)):
+            for sign in (-1, 1):
+                with self.subTest(point=point, sign=sign):
+                    result = self.arrival(nav_pose(yaw=math.radians(sign*(maximum_deg-1e-6))),
+                                          point=point)
+                    self.assertAlmostEqual(result['yaw_error_deg'], maximum_deg-1e-6)
+                    self.assertEqual(result['yaw_tolerance_deg'], maximum_deg)
+                    self.arrival(nav_pose(yaw=math.radians(sign*maximum_deg)), point=point)
+                    with self.assertRaisesRegex(ValueError, 'outside'):
+                        self.arrival(nav_pose(yaw=math.radians(sign*(maximum_deg+1e-6))),
+                                     point=point)
+
+    def test_get1_rejects_22mm_and_2_2deg_that_put1_still_accepts(self):
+        for pose in (nav_pose(x=1.022), nav_pose(yaw=math.radians(2.2))):
+            with self.subTest(pose=pose):
+                with self.assertRaisesRegex(ValueError, 'outside'):
+                    self.arrival(pose, point='get1')
+                self.arrival(pose, point='put1')
+
+    def test_destination_is_required_and_unknown_names_fail(self):
+        with self.assertRaises(TypeError):
+            validate_nav_pose(nav_pose(), self.target, 100., 100.2)
+        for point in ('', 'get2', 'GET1', 'navigation_get1', None, True, []):
+            with self.subTest(point=point), self.assertRaises(ValueError):
+                self.arrival(point=point)
+
+    def test_stricter_destination_still_rejects_stale_and_repeated_poses(self):
+        for point in ('get1', 'put1'):
+            with self.subTest(point=point):
+                with self.assertRaises(ValueError):
+                    self.arrival(nav_pose(sec=98), point=point)
+                first = self.arrival(point=point)
+                with self.assertRaises(ValueError):
+                    self.arrival(previous_stamp=first['stamp'], point=point)
 
     def test_map_preserves_logo_and_marker_geometry(self):
         result = validate_map_points(map_response())

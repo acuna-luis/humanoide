@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 import fcntl
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import queue
@@ -25,6 +26,8 @@ if __package__:
     from . import scenario1_checks as checks, scenario1_contract as contract
     from . import scenario1_sensors as sensors
     from . import scenario1_dependencies as dependencies
+    from . import scenario1_nav_correction as nav_correction
+    from . import scenario1_resume as resume
     from .scenario1_session import ProcessSession
     from scripts.lib.cruzr_home_posture_gate import classify
     from .front_sps_session import check_sps_discovery
@@ -33,6 +36,8 @@ else:
     import scenario1_contract as contract
     import scenario1_sensors as sensors
     import scenario1_dependencies as dependencies
+    import scenario1_nav_correction as nav_correction
+    import scenario1_resume as resume
     from scenario1_session import ProcessSession
     from cruzr_home_posture_gate import classify
     from front_sps_session import check_sps_discovery
@@ -134,6 +139,13 @@ class Runtime:
         self.sensor_min_stamp_ns = 0
         self.action_sessions = {}
         self.health_session = None
+        self.resume_plan = None
+        self.resume_validated = False
+        if payload.get('resume_plan') is not None:
+            self.resume_plan = resume.plan_resume(payload['resume_source_checkpoint'], payload['profile'],
+                                                 **payload['resume_options'])
+            if self.resume_plan != payload['resume_plan'] or self.resume_plan['checkpoint'] != self.checkpoint:
+                raise ValueError('RESUME_PLAN_CHANGED: origen o segmento no coinciden')
 
     def timed(self, label, function, *args, **kwargs):
         started = time.monotonic()
@@ -371,9 +383,14 @@ class Runtime:
             measurements.append(measurement)
         self.emit('health', safety=health, posture=measurements, home_required=require_home)
 
-    def action(self, kind, goal, timeout):
+    def action(self, kind, goal, timeout, *, correction=None):
         # A session is created before preflight. Reuse each endpoint's client;
         # keep one-shot mode for isolated diagnostics without a session.
+        if correction is not None:
+            if kind != 'navigation' or self.session is None:
+                raise RuntimeError('CORRECTION_REQUIRES_GUARDED_NAVIGATION_SESSION')
+            nav_correction.validate_spec(correction, goal=goal)
+            nav_correction.require_motion_qualified()
         if self.session is not None:
             self.connected()
             if kind not in self.action_sessions:
@@ -382,7 +399,10 @@ class Runtime:
                 self.action_sessions[kind] = ProcessSession(['docker', 'exec', '-i', self.native_container,
                     'bash', '-lc', SETUP+'exec '+shlex.join(command)],
                     lambda detail: self.emit('action', kind=kind, detail=detail))
-            rows = self.action_sessions[kind].call({'goal': goal, 'timeout': timeout}, timeout=timeout+18)
+            request = {'goal': goal, 'timeout': timeout}
+            if correction is not None:
+                request['correction'] = correction
+            rows = self.action_sessions[kind].call(request, timeout=timeout+18)
             results = [row for row in rows if row['event'] == 'result']
             if len(results) != 1:
                 raise RuntimeError('ACTION_UNCONFIRMED: resultado terminal ausente o duplicado')
@@ -478,7 +498,9 @@ class Runtime:
             started = time.monotonic()
             self.timed('containers', self.discover)
             self.timed('dependencies', self.hashes)
-            self.timed('health', self.health, require_home=not self.checkpoint['completed'])
+            self.timed('health', self.health,
+                       require_home=(self.resume_plan['requirements']['home'] if self.resume_plan is not None
+                                     else not self.checkpoint['completed']))
             if self.timed('map_state', self.map_state) != expected_map_state:
                 raise RuntimeError('MAP_STATE_CHANGED_DURING_CHECK')
             if expected_map_state == ('utars_nav_map', 'FSM_WAITNAVIGATE'):
@@ -518,22 +540,181 @@ class Runtime:
                   publisher_count=report.get('publisher_count'), arrival_verified=False)
         return poses, started
 
+    def check_resume_entry(self, *, refresh_health=False):
+        """Read-only gates for an explicit entry; never repeats a physical task."""
+        if self.resume_plan is None:
+            raise RuntimeError('RESUME_PLAN_REQUIRED')
+        self.resume_validated = False
+        requirements = self.resume_plan['requirements']
+        self.connected()
+        if refresh_health:
+            self.timed('resume_containers', self.discover)
+            self.timed('resume_dependencies', self.hashes)
+            self.timed('resume_health', self.health, require_home=requirements['home'])
+            self.map_points()
+        if self.map_state() != ('utars_nav_map', 'FSM_WAITNAVIGATE'):
+            raise RuntimeError('RESUME_MAP_NOT_READY')
+        self.create_session()
+        command = code_command(self.payload['resume_worker'],
+                               ['--lease-file', str(self.session/'control-lease.json')])
+        output = self.timed('resume_base', self.native, command, timeout=10)
+        reports = [json.loads(line) for line in output.splitlines() if line.lstrip().startswith('{')]
+        if (len(reports) != 1 or reports[0].get('event') != 'resume_base_check' or
+                reports[0].get('stationary') is not True or
+                type(reports[0].get('publishers')) is not int or reports[0]['publishers'] != 1):
+            raise RuntimeError('RESUME_BASE_NOT_STATIONARY')
+        self.emit('resume_base_check', report=reports[0])
+        waypoint = requirements['waypoint']
+        poses, started = self.read_poses()
+        if waypoint:
+            measurements, outside = self.arrival_measurements(waypoint,
+                self.points[waypoint]['_expected_pose'], poses, started)
+            if outside:
+                raise RuntimeError('RESUME_WAYPOINT_NOT_CONFIRMED: '+str(outside[0]))
+            self.emit('resume_arrival', point=waypoint, measurements=measurements)
+        box = requirements['box_state']
+        if self.policy == 'sensors' and box in ('held', 'released'):
+            # A posture without qualified references stays blocked. Never
+            # relabel the operator's selection as fresh sensor evidence.
+            self.verify_sensors(box)
+        self.resume_validated = True
+        self.emit('resume_checked', stage=self.resume_plan['stage'], requirements=requirements,
+                  source_sha256=self.resume_plan['source_sha256'], physical_commands_sent=0)
+
+    def arrival_measurements(self, point, expected, poses, started):
+        """Validate both samples even when the first has a correctable residual."""
+        if len(poses) != 2:
+            raise RuntimeError('Se requieren dos poses nuevas de navegación')
+        measurements, outside, previous = [], [], None
+        for pose in poses:
+            try:
+                measured = checks.validate_nav_pose(pose, expected, started, time.time(), previous,
+                                                   point=point)
+            except checks.ArrivalOutsideTolerance as exc:
+                measured = exc.measurement
+                outside.append(exc)
+            previous = measured['stamp']
+            measurements.append(measured)
+        return measurements, outside
+
+    def correction_preflight(self, expected):
+        # Never relocalize, change a map, or recover a failed action here.
+        self.connected()
+        self.timed('correction_containers', self.discover)
+        self.timed('correction_dependencies', self.hashes)
+        self.timed('correction_health', self.health, require_home=True)
+        if self.map_state() != ('utars_nav_map', 'FSM_WAITNAVIGATE'):
+            raise RuntimeError('GET1_CORRECTION_MAP_NOT_READY')
+        self.map_points()
+        if self.points['get1']['_expected_pose'] != expected:
+            raise RuntimeError('MAP_POINTS_CHANGED: no continuar con otro destino')
+        return self.read_poses()
+
+    @staticmethod
+    def correction_envelope(measurements):
+        if any(row['distance_m'] > nav_correction.POLICY['max_initial_distance_m'] + 1e-12 or
+               row['yaw_error_deg'] > nav_correction.POLICY['max_initial_yaw_deg'] + 1e-12
+               for row in measurements):
+            raise ValueError('Arrival outside automatic correction envelope (0.05m / 5 degrees)')
+
+    @staticmethod
+    def correction_score(measurements):
+        return max(max(row['distance_m']/row['distance_tolerance_m'],
+                       row['yaw_error_deg']/row['yaw_tolerance_deg']) for row in measurements)
+
+    def correct_get1(self, expected, measurements):
+        policy = nav_correction.POLICY
+        deadline = time.monotonic() + policy['total_budget_s']
+        self.correction_envelope(measurements)
+        previous_score = None
+        for attempt in range(1, policy['max_corrections']+1):
+            if time.monotonic() >= deadline:
+                raise RuntimeError('GET1_CORRECTION_TOTAL_BUDGET_EXCEEDED')
+            poses, started = self.correction_preflight(expected)
+            measurements, outside = self.arrival_measurements('get1', expected, poses, started)
+            if time.monotonic() >= deadline:
+                raise RuntimeError('GET1_CORRECTION_TOTAL_BUDGET_EXCEEDED')
+            if not outside:
+                return measurements  # Fresh measurements can settle without another command.
+            self.correction_envelope(measurements)
+            try:
+                nav_correction.require_motion_qualified()
+            except RuntimeError as error:
+                self.emit('get1_correction', phase='blocked_before_dispatch',
+                          measurements=measurements,
+                          qualification=nav_correction.qualification_report())
+                distance_mm = max(row['distance_m'] for row in measurements) * 1000
+                yaw_deg = max(row['yaw_error_deg'] for row in measurements)
+                raise RuntimeError('%s Llegada medida: %.2f mm / %.3f grados; '
+                                   'agarre no iniciado.' % (error, distance_mm, yaw_deg)) from error
+            score = self.correction_score(measurements)
+            if previous_score is not None and previous_score-score < .1-1e-12:
+                raise RuntimeError('GET1_CORRECTION_NO_IMPROVEMENT')
+            references, previous = [], None
+            for pose in poses:
+                measured = checks.validate_pose_sample(pose, started, time.time(), previous)
+                previous = measured['stamp']
+                references.append({key: measured[key] for key in ('x', 'y', 'yaw', 'stamp_ns')})
+            first, last = references
+            yaw_change = abs(math.atan2(math.sin(last['yaw']-first['yaw']),
+                                        math.cos(last['yaw']-first['yaw'])))
+            if (math.hypot(last['x']-first['x'], last['y']-first['y']) > .005+1e-12 or
+                    yaw_change > math.radians(1)+1e-12):
+                raise RuntimeError('GET1_CORRECTION_POSE_UNSTABLE')
+            spec = nav_correction.make_spec(expected, last, attempt)
+            target = dict(expected, map_name='utars_nav_map', mode='free_nav', level=1,
+                          speed={'linear': {'x': .05, 'y': .01, 'z': 0.},
+                                 'angular': {'x': 0., 'y': 0., 'z': .15}})
+            # The request speed is not trusted as a controller guarantee: the
+            # action client independently monitors actual map/odom telemetry.
+            goal = {'command': 'navigation_start', 'arg_json': json.dumps({'target_point': target})}
+            if self.session is None:
+                raise RuntimeError('CORRECTION_REQUIRES_GUARDED_NAVIGATION_SESSION')
+            atomic_json(self.session/'get1-correction.json', dict(phase='in_flight', spec=spec))
+            self.emit('get1_correction', attempt=attempt, phase='start',
+                      measurements=measurements, spec=spec)
+            remaining = deadline-time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError('GET1_CORRECTION_TOTAL_BUDGET_EXCEEDED')
+            result = self.action('navigation', goal, min(policy['action_timeout_s'], remaining),
+                                 correction=spec)
+            contract.validate_navigation_result(result)
+            if self.map_state() != ('utars_nav_map', 'FSM_WAITNAVIGATE'):
+                raise RuntimeError('GET1_CORRECTION_MAP_NOT_READY')
+            poses, started = self.read_poses()
+            measurements, outside = self.arrival_measurements('get1', expected, poses, started)
+            if time.monotonic() >= deadline:
+                raise RuntimeError('GET1_CORRECTION_TOTAL_BUDGET_EXCEEDED')
+            atomic_json(self.session/'get1-correction.json', dict(
+                phase='measured', spec=spec, measurements=measurements, within_tolerance=not outside))
+            self.emit('get1_correction', attempt=attempt, phase='measured',
+                      measurements=measurements, within_tolerance=not outside)
+            if not outside:
+                return measurements
+            self.correction_envelope(measurements)
+            if score-self.correction_score(measurements) < .1-1e-12:
+                raise RuntimeError('GET1_CORRECTION_NO_IMPROVEMENT')
+            previous_score = score
+        raise RuntimeError('GET1_CORRECTION_LIMIT: no se alcanzaron 2 cm / 2 grados')
+
     def navigate(self, point):
         self.prepare_map()
         self.map_points()
         self.timed('pose', self.read_poses)  # Broken telemetry must block before motion.
         target = dict(self.points[point])
-        expected = target.pop('_expected_pose')
+        expected = dict(target.pop('_expected_pose'))
         result = self.action('navigation', {'command': 'navigation_start',
             'arg_json': json.dumps({'target_point': target})}, 180)
         contract.validate_navigation_result(result)
         if self.map_state() != ('utars_nav_map', 'FSM_WAITNAVIGATE'):
             raise RuntimeError('Estado después de navegación no confirmado')
-        previous = None
         poses, started = self.read_poses()
-        for pose in poses:
-            measured = checks.validate_nav_pose(pose, expected, started, time.time(), previous)
-            previous = measured['stamp']
+        measurements, outside = self.arrival_measurements(point, expected, poses, started)
+        if outside:
+            if point != 'get1':
+                raise outside[0]
+            measurements = self.correct_get1(expected, measurements)
+        for measured in measurements:
             self.emit('arrival', point=point, measurement=measured)
 
     def start_adapters(self):
@@ -570,16 +751,31 @@ class Runtime:
         self.save()  # Durable intent before an action is sent.
         try:
             self.connected()
-            logical_assumption = self.policy == 'assume' and stage in ('verify_held', 'verify_released')
+            resume_entry = self.resume_plan is not None and not self.checkpoint['completed']
+            logical_assumption = (self.policy == 'assume' and stage in ('verify_held', 'verify_released')
+                                  and not resume_entry)
             if not logical_assumption:
                 self.timed('containers', self.discover)
                 self.timed('dependencies', self.hashes)
-                self.timed('health', self.health, require_home=stage == 'verify_home')
+                self.timed('health', self.health, require_home=stage == 'verify_home' or
+                           bool(resume_entry and self.resume_plan['requirements']['home']))
+            if resume_entry:
+                # Interactive confirmation or local file checks may have taken
+                # time since ready/arm. Entry conditions must still hold now.
+                self.check_resume_entry()
             if self.policy == 'sensors' and stage in ('retreat', 'navigate_put1', 'deposit', 'home'):
                 self.verify_sensors('released' if stage == 'home' else 'held')
             if stage.startswith('navigate_'):
                 self.navigate(stage.removeprefix('navigate_'))
             elif stage in TASKS:
+                if (stage == 'grasp' and self.resume_plan is not None and
+                        self.resume_plan['requirements']['vision_prep'] and not self.checkpoint['completed']):
+                    # A new session needs vision readiness even when entry skips
+                    # enable_vision. This preparation is journaled after arming.
+                    task, timeout = TASKS['enable_vision']
+                    self.emit('resume_prerequisite', stage=stage, task=task)
+                    contract.validate_motion_result(self.action('motion',
+                        {'task_name': task, 'yaml_args': '{}'}, timeout))
                 task, timeout = TASKS[stage]
                 result = self.action('motion', {'task_name': task, 'yaml_args': '{}'}, timeout)
                 contract.validate_motion_result(result)
@@ -624,7 +820,9 @@ class Runtime:
             self.timed('dependencies', self.hashes)
             check_sps_discovery(lambda command: subprocess.run(['docker', 'exec', self.native_container,
                 'bash', '-lc', SETUP+'timeout 8 rosa '+command], capture_output=True, text=True, timeout=12))
-            self.timed('health', self.health, require_home=not self.checkpoint['completed'])
+            require_home = (self.resume_plan['requirements']['home'] if self.resume_plan is not None
+                            else not self.checkpoint['completed'])
+            self.timed('health', self.health, require_home=require_home)
             points = self.map_points()
             map_name, nav_state = self.map_state()
             if (map_name, nav_state) == ('utars_nav_map', 'FSM_WAITNAVIGATE'):
@@ -639,6 +837,10 @@ class Runtime:
                 raise RuntimeError('RESUME_CONTEXT_CHANGED: robot reiniciado, tareas/contenedores/mapa cambiados')
             if self.policy == 'sensors':
                 self.start_sensors()
+            if self.resume_plan is not None:
+                self.check_resume_entry()
+                if self.payload['mode'] != 'check':
+                    self.resume_validated = False  # Require the explicit resume handshake before arm.
             if self.payload.get('check_repetitions'):
                 self.benchmark_checks(self.payload['check_repetitions'], (map_name, nav_state))
             self.emit('ready', points=points, map_name=map_name, nav_state=nav_state,
@@ -657,18 +859,19 @@ class Runtime:
                 if message == {'command': 'finish'}:
                     return 0
                 if message.get('command') == 'resume' and not self.armed:
-                    state = self.checkpoint['box_state']
-                    resumed = contract.resume_checkpoint(self.checkpoint, self.payload['profile'],
-                        confirmed_box=state, state_reconfirmed=True, policy=self.policy,
-                        verification_source={'ask': 'operator', 'assume': 'assumed', 'sensors': 'sensors'}[self.policy],
-                        sensor_evidence=self.verify_sensors(state) if self.policy == 'sensors' else None,
-                        stop_after=message['stop_after'])
-                    self.checkpoint = resumed
+                    if self.resume_plan is None or message['stop_after'] != self.checkpoint['stop_after']:
+                        raise RuntimeError('RESUME_PLAN_REQUIRED')
+                    self.check_resume_entry(refresh_health=True)
                     self.emit('resume_ready', checkpoint=self.checkpoint)
                     continue
                 if message == {'command': 'arm'} and not self.armed:
+                    if self.resume_plan is not None and not self.resume_validated:
+                        raise RuntimeError('RESUME_ENTRY_NOT_CHECKED')
                     self.create_session()
-                    self.start_adapters()
+                    remaining = contract.STAGES[contract.progress_index(self.checkpoint):
+                                                contract.STAGES.index(self.checkpoint['stop_after'])+1]
+                    if 'grasp' in remaining:
+                        self.start_adapters()
                     self.armed = True
                     self.save()
                     self.emit('armed', remote_evidence=str(self.session))

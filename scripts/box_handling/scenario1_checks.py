@@ -12,6 +12,16 @@ import re
 EXPECTED_HW_TYPE = 'cruzr_s2_v1'
 EXPECTED_IMAGE_FRAGMENT = 'utars-integration:zs2_motion-v0.2.0'
 MIN_BATTERY_SOC = 20.0
+# Measured arrival limits (planar metres, absolute yaw degrees); these do not
+# configure the navigation controller or request corrective movements.
+ARRIVAL_TOLERANCES = {'get1': (0.02, 2.0), 'put1': (0.05, 3.0)}
+
+
+class ArrivalOutsideTolerance(ValueError):
+    """Valid telemetry with a geometric residual, never a sensor/transport fault."""
+    def __init__(self, message, measurement):
+        super().__init__(message)
+        self.measurement = dict(measurement)
 
 
 def _object_pairs(pairs):
@@ -297,8 +307,11 @@ def validate_pose_sample(payload, started_at, now, previous_stamp=None):
         raise ValueError('Malformed navigation pose') from exc
 
 
-def validate_nav_pose(payload, expected, started_at, now, previous_stamp=None):
+def validate_nav_pose(payload, expected, started_at, now, previous_stamp=None, *, point):
     """Validate one fresh arrival sample; caller requires two advancing samples."""
+    if not isinstance(point, str) or point not in ARRIVAL_TOLERANCES:
+        raise ValueError('Unsupported arrival waypoint')
+    max_distance, max_yaw_deg = ARRIVAL_TOLERANCES[point]
     measured = validate_pose_sample(payload, started_at, now, previous_stamp)
     try:
         target = {k: _number(expected[k], 'Target pose') for k in ('point_x', 'point_y', 'point_yaw')}
@@ -307,10 +320,16 @@ def validate_nav_pose(payload, expected, started_at, now, previous_stamp=None):
     distance = math.hypot(measured['x'] - target['point_x'], measured['y'] - target['point_y'])
     angle = abs(math.atan2(math.sin(measured['yaw'] - target['point_yaw']),
                            math.cos(measured['yaw'] - target['point_yaw'])))
-    if distance > 0.05 or angle > math.radians(3):
-        raise ValueError('Arrival outside 0.05m / 3 degree tolerance')
-    return {'stamp': measured['stamp'], 'stamp_ns': measured['stamp_ns'],
-            'distance_m': distance, 'yaw_error_deg': math.degrees(angle)}
+    measurement = {'stamp': measured['stamp'], 'stamp_ns': measured['stamp_ns'],
+                   'distance_m': distance, 'yaw_error_deg': math.degrees(angle),
+                   'distance_tolerance_m': max_distance, 'yaw_tolerance_deg': max_yaw_deg}
+    # Preserve inclusive limits despite floating-point subtraction/rotation.
+    if distance > max_distance + 1e-12 or angle > math.radians(max_yaw_deg) + 1e-12:
+        raise ArrivalOutsideTolerance('Arrival at %s outside %.3fm / %g degree tolerance '
+                         '(measured %.6fm / %.4f degrees)' %
+                         (point, max_distance, max_yaw_deg, distance, math.degrees(angle)),
+                         measurement)
+    return measurement
 
 
 def validate_map_points(response):

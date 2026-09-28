@@ -1,5 +1,73 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**28-09-2026 14:02 CEST — get1: ajuste supervisado reactivado por autorización del operador.**
+Hasta2ajustes con giro medido0,60rad/s;1,20 sólo junto al destino y con poca
+traslación. Presupuestos de giro por geometría consideran la curva nativa y
+orientación final. Se conservan llegada2cm/2°, controles de salud/reposo y
+límites de traslación; sólo HOME con caja vacía. Sustituye el bloqueo anterior.
+Pruebas offline documentadas, comportamiento físico PENDIENTE. Sólo cambios PC.
+[Configuración, límites y ensayo acotado](../box_handling/FORCE_IMPROVED_SCENARIO1.md#reactivación-supervisada-del-ajuste-get1--28-09-2026).
+
+**28-09-2026 13:29 CEST — get1: corrección free_nav retirada del flujo físico.**
+El ensayo112349 superó el límite angular del monitor pese a pedir menor
+velocidad. La vía correctiva queda bloqueada antes de despachar: si una nueva
+lectura continúa fuera de2cm/2°, informa residual y no inicia agarre. Llegadas
+dentro de tolerancia continúan sin cambios. No se amplían límites ni se elimina
+vigilancia. Corrige la disponibilidad indicada en las entradas históricas;
+otro controlador validado sigue PENDIENTE. Sólo cambios/test PC, sin movimiento.
+[Incidencia y receta](../box_handling/FORCE_IMPROVED_SCENARIO1.md#bloqueo-de-corrección-free_nav-por-velocidad--28-09-2026).
+
+**28-09-2026 13:12 CEST — reanudación explícita por etapa disponible.**
+--resume admite --from-stage para las diez etapas, --plan local y --check sin
+mover/consumir origen. Un fallo, interrupción o salto requiere caja declarada y
+--recovery-confirmed; controles técnicos y postura/posición vigentes siguen
+obligatorios. Se conserva el fallo original y se registra un segmento v3, sin
+inventar etapas omitidas. Entrada retreat del incidente 104306 comprobada en
+lectura: get1 a 11,240 mm/0,156°, base estacionaria, rc0. No se ha ejecutado la
+continuación física. Retreat sigue siendo un retroceso completo de 20 cm, no el
+resto de un movimiento interrumpido. Esta capacidad sustituye la prohibición
+general de recuperación del párrafo histórico siguiente.
+[Uso y evidencia](../box_handling/FORCE_IMPROVED_SCENARIO1.md#reanudación-por-etapa--28-09-2026).
+
+**28-09-2026 12:50 CEST — parada antes del retroceso, caja sujeta según operador.**
+El ciclo 104306 completa el agarre, pero la lectura articular interrumpe retreat
+antes de enviar su orden. No atribuir el fallo al ajuste de get1: la llegada
+cumplió ≈14,11 mm/0,29° y no hubo correcciones. El lector ahora descarta únicamente
+duplicados articulares idénticos sin contar muestras nuevas ni refrescar edad;
+regresiones, conflictos y datos congelados siguen bloqueando. El fallo exacto
+no se reprodujo en lectura; checkpoint fallido conservado, --resume no admitido.
+La recuperación debe partir de caja sujeta/separada, confirmada por usuario,
+sin repetir el ciclo completo ni HOME. No se movió el robot en esta intervención.
+[Diagnóstico y evidencia](../box_handling/FORCE_IMPROVED_SCENARIO1.md#sello-articular-repetido-o-regresivo-antes-de-retreat--28-09-2026).
+
+**28-09-2026 12:35 CEST — get1: ajuste automático acotado implementado.**
+Las tres entradas mejoradas pueden corregir hasta dos veces un residual de
+llegada 2 cm/2°, únicamente tras éxito técnico y dentro de 5 cm/5°. Usan el
+mismo navegador y punto guardado, con vigilancia de mapa/odometría y reposo
+posterior; no habilitan alineación AprilTag ni el avance corto descalificado.
+Si ya cumple, continúa sin otra maniobra. Datos/fallos anómalos impiden continuar
+hacia visión/agarre. Pruebas offline y lectura nativa verificadas; corrección
+física PENDIENTE. Esta política sustituye el rechazo geométrico sin corrección
+descrito abajo; put1 conserva 5 cm/3°.
+[Receta, límites y evidencia](../box_handling/FORCE_IMPROVED_SCENARIO1.md#ajuste-automático-acotado-de-get1--28-09-2026).
+
+**28-09-2026 12:19 CEST — ensayo exclusivo get1 VERIFICADO.**
+`force_improved_scenario1.sh --run --stop-after get1` completa una única
+navegación, sin iniciar SPS ni ejecutar recogida. Error al llegar ≈3,88 mm/0,44°;
+lectura posterior ≈3,92 mm/0,28°, HOME20D medido. Cumple la comprobación 2 cm/2°
+en este ensayo; no prueba repetibilidad ni precisión física externa. Persiste
+el aviso auxiliar VSLAM; no se ha reparado la localización visual. Receta,
+estado y evidencia en la [guía del ejecutor](../box_handling/FORCE_IMPROVED_SCENARIO1.md#prueba-de-navegación-exclusiva-a-get1--28-09-2026).
+
+**28-09-2026 — BOX-01-EXEC-IMPROVED: llegada a get1 de 2 cm/2°.**
+Las tres entradas del ejecutor mejorado (`ask`, `force`, `autochecked`) exigen
+ahora ≤2 cm de error planar y ≤2° de giro en ambas muestras de llegada a `get1`.
+`put1` mantiene 5 cm/3°. Se conserva el flujo de consultas y no se añade una
+fase de alineación AprilTag ni correcciones de chasis. Fuera de tolerancia se
+interrumpe antes del agarre. Cambio local, sin conexión ni movimiento del robot;
+ensayo físico PENDIENTE. Los ejecutores anteriores conservan sus contratos.
+[Configuración y pruebas](../box_handling/FORCE_IMPROVED_SCENARIO1.md#tolerancia-de-get1-de-2-cm-y-2--28-09-2026).
+
 **22-09-2026 — BOX-01-ORIGINAL-SCRIPT: variante local con tareas anteriores.**
 Creado por petición explícita [force_excenario1.original.sh](../../scripts/force_excenario1.original.sh)
 (nombre exacto solicitado, excenario). Deriva del force_escenario1.sh de HEAD

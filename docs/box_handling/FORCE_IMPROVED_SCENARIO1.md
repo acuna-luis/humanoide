@@ -1,6 +1,30 @@
 # Ejecutor mejorado del escenario 1
 
 28-09-2026, Europe/Madrid. **BOX-01-EXEC-IMPROVED — implementado en el PC.**
+Reanudación vigente: `--resume CHECKPOINT --from-stage ETAPA`, con `--plan`
+y `--check` de sólo lectura. Admite las diez etapas; una entrada tras fallo,
+interrupción o salto exige estado de caja y recuperación declarados explícitamente,
+además de comprobar técnicamente la entrada. El origen se conserva y la nueva
+ejecución registra sólo su segmento real.
+[Uso y condiciones](#reanudación-por-etapa--28-09-2026).
+Incidencia anterior: interrupción en salud antes de `retreat`, sin enviarlo;
+caja sujeta y separada según confirmación del usuario. El lector diferencia
+duplicados idénticos de regresiones/conflictos; fallo original no reproducido
+en lectura. Checkpoint fallido conservado; su entrada en retreat ya pasa
+`--resume --check`, pero la continuación física sigue PENDIENTE.
+[Estado y evidencia](#sello-articular-repetido-o-regresivo-antes-de-retreat--28-09-2026).
+La prueba exclusiva `--stop-after get1` está verificada: una navegación con
+lectura posterior de **3,92 mm/0,28°** respecto al punto guardado, sin agarre.
+[Resultado y receta](#prueba-de-navegación-exclusiva-a-get1--28-09-2026).
+La comprobación vigente de llegada exige **2 cm/2° en get1** y **5 cm/3° en
+put1**. **Ajuste automático reactivado por autorización del operador:**
+hasta dos maniobras nativas supervisadas, con nuevos límites para la curva de
+aproximación y el giro final. Se vuelve a medir antes de ajustar y sólo continúa
+al confirmar las dos poses dentro de 2 cm/2° y reposo. La velocidad JSON no se
+considera un techo efectivo del proveedor. Si ya cumple, conserva las mismas
+lecturas sin ajustes ni esperas adicionales. Nuevo perfil comprobado offline;
+convergencia y frenado físicos PENDIENTES.
+[Comportamiento vigente y límites](#reactivación-supervisada-del-ajuste-get1--28-09-2026).
 La supervisión optimizada y la corrección del lector de pose están verificadas
 en lectura; el ciclo físico posterior sigue PENDIENTE. Los resultados históricos inferiores corresponden a sus
 respectivas versiones, incluido un ciclo anterior ejecutado por el usuario.
@@ -48,6 +72,9 @@ Desde la raíz del repositorio:
 # Sin argumentos equivale a --check: comprobaciones, sin movimiento:
 ./scripts/force_improved_scenario1.sh --check
 
+# Sólo navegación a get1 y medición de llegada, sin recogida:
+./scripts/force_improved_scenario1.sh --run --stop-after get1
+
 # Ejecución con preguntas presenciales:
 ./scripts/ask_improved_scenario1.sh --run
 
@@ -66,6 +93,14 @@ Desde la raíz del repositorio:
 
 # Continuación de una pausa limpia, siempre mediante la misma entrada/política:
 ./scripts/force_improved_scenario1.sh --resume /ruta/de/evidencia/checkpoint.json
+
+# Revisar una recuperación desde retreat, sin conectar ni mover:
+./scripts/force_improved_scenario1.sh --resume /ruta/de/evidencia/checkpoint.json \
+  --from-stage retreat --box-state held --recovery-confirmed --plan
+
+# Comprobar esa entrada en lectura; no consume el origen:
+./scripts/force_improved_scenario1.sh --resume /ruta/de/evidencia/checkpoint.json \
+  --from-stage retreat --box-state held --recovery-confirmed --check
 ```
 
 `--wifi` añade el salto SSH conocido. Reutiliza el ASKPASS existente y exige la
@@ -108,7 +143,9 @@ ejecutor no introduce una parada entre el descenso y esa apertura.
 
 - Intención y resultado de cada etapa se guardan atómicamente, con fsync, en PC
   y Motion. Un fallo/interrupción deja estado indeterminado y bloquea continuidad.
-- Los checkpoints nuevos usan versión2 y guardan `policy` y `confirmations`.
+- Los ciclos desde el inicio usan versión2; las reanudaciones usan versión3
+  con etapa de entrada, procedencia y segmento realmente ejecutado. Guardan
+  `policy` y `confirmations`.
   Cada verificación de caja registra `box_state`, `source` (`operator`, `assumed`
   o `sensors`) y, cuando corresponde, `sensor_evidence`. Un checkpoint antiguo
   versión1 sólo puede continuar con `ask`; no se convierte en evidencia de sensores.
@@ -130,9 +167,10 @@ ejecutor no introduce una parada entre el descenso y esa apertura.
 - HOME final requiere dos muestras20D recientes con velocidad/consigna dentro
   del contrato existente y posición absoluta<0,02rad. Un resultado exitoso de
   `cruzr/home` por sí solo no completa el ciclo.
-- Se puede reanudar únicamente desde un checkpoint limpio cuya última etapa sea
-  `verify_held` o `verify_released`, con estado reconfirmado según la misma política
-  y mismo perfil, arranque,
+- Se puede seleccionar cualquiera de las diez etapas, con el estado físico
+  requerido y comprobaciones nuevas. Un origen fallido, interrumpido o un salto
+  requiere `--box-state` y `--recovery-confirmed`; no se infiere su resultado.
+  Se conserva la misma política, perfil, arranque,
   contenedores, dependencias y puntos del mapa. El origen se marca consumido antes
   de armar la continuación; no se publica otra copia limpia antes de reclamarlo.
   Un intento fallido después de reclamarlo exige revisión de la evidencia nueva;
@@ -710,3 +748,695 @@ esta reversión. Backup fuente:
 Trabajo descartado, hashes y resultado:
 `../Humanoide-vla-evidence/20260928T090823Z_SCENARIO1_TABLE73_ROLLBACK/`.
 La investigación geométrica queda histórica, sin adaptación activa.
+
+
+## Tolerancia de get1 de 2 cm y 2° — 28-09-2026
+
+Esta sección registra el cambio inicial. La corrección automática posterior
+se rige por el [perfil supervisado vigente](#reactivación-supervisada-del-ajuste-get1--28-09-2026);
+el umbral de aceptación y los fallos de telemetría se conservan.
+
+Petición: exigir una llegada más estricta usando las comprobaciones actuales,
+sin una nueva fase de alineación. Instalado en fuentes PC; activación en robot
+y ensayo físico PENDIENTES. No se ha conectado ni movido el robot al aplicar
+este cambio.
+
+La configuración está en `ARRIVAL_TOLERANCES` de
+[`scenario1_checks.py`](../../scripts/box_handling/scenario1_checks.py):
+
+```python
+ARRIVAL_TOLERANCES = {'get1': (0.02, 2.0), 'put1': (0.05, 3.0)}
+```
+
+Cada pareja contiene **distancia planar en metros** y **giro en grados**. La
+misma función se utiliza desde `Runtime.navigate` con el destino explícito;
+no se acepta un destino desconocido ni se selecciona un umbral por omisión.
+La distancia es radial `hypot(dx, dy)`, no 2 cm por eje. El giro usa el menor
+ángulo entre orientación medida y objetivo. Se incluyen los límites exactos,
+con margen numérico de 1e-12 exclusivamente para redondeo de coma flotante.
+
+Ambas muestras deben cumplir el umbral. Conservan marco `map`, frescura,
+marcas crecientes y cuaternión válido. Cada evento `arrival` archiva el error
+medido y las tolerancias aplicadas; el error por rechazo incluye destino,
+medición y límite. Una llegada a 2,2 cm se rechaza en `get1`, aunque antes se
+aceptase; el mismo error sigue siendo admisible en `put1`.
+
+Las tres entradas mejoradas (`ask_improved_scenario1.sh`,
+`force_improved_scenario1.sh`, `force_improved_scenario1_autochecked.sh`) cargan
+este módulo automáticamente en su siguiente invocación. No requiere instalar
+XML/YAML ni reiniciar servicios. `--plan` permite revisar la secuencia local;
+`--check` comprueba telemetría y preparación sin certificar llegada a get1.
+Los ejecutores anteriores, incluido `force_escenario1.sh`, no cambian.
+
+El fallo queda en `navigate_get1`: no se habilita visión ni se envía agarre,
+HOME o reintento automático. Mantiene el tratamiento de checkpoint fallido y
+la recuperación existente. La comprobación más estricta no modifica el
+controlador de navegación, velocidades, mapa ni posición guardada; no ordena
+una corrección. No añade lecturas, pausas ni etapas. La duración física y la
+repetibilidad con esta exigencia están PENDIENTES de ensayo.
+
+Respaldo previo, fuentes finales, hashes, pruebas e inventario:
+`../Humanoide-vla-evidence/20260928T101004Z_SCENARIO1_GET1_TOLERANCE/`.
+VERIFICADO: 259 pruebas de regresión del ejecutor pasan, incluidas 35 pruebas
+de comprobaciones y navegación. Cubren límites inclusivos, distancia radial,
+ángulos positivos/negativos, selección por destino, frescura, fallo de cualquiera
+de las dos muestras y bloqueo de visión/agarre sin reintento. Sintaxis, `--help`,
+`--plan` y `git diff --check` correctos. Las pruebas no acceden al robot;
+los tests no versionados del trabajo de depósito pendiente quedan fuera de
+esta suite y no se han modificado.
+Receta de comprobación offline de los límites y la interrupción antes del
+agarre:
+
+```bash
+python3 -B -m unittest scripts.box_handling.test_scenario1_checks \
+  scripts.box_handling.test_scenario1_pose_preflight
+./scripts/force_improved_scenario1.sh --plan
+```
+
+Reversión: restaurar selectivamente los archivos enumerados en
+`before-sha256.json` desde `before/`, conservando cambios posteriores y ajenos.
+Eso devuelve el criterio previo de 5 cm/3°; no hay configuración remota ni
+estado físico que restaurar. La evidencia identifica también los archivos
+locales pendientes ajenos a este cambio; no se han integrado ni retirado.
+
+
+## Prueba de navegación exclusiva a get1 — 28-09-2026
+
+Petición autorizada: ir una vez a `get1` y medir su distancia respecto al robot.
+El operador confirmó de nuevo HOME, abrazaderas instaladas/vacías, cargador
+fuera, ambos paros liberados, ruedas habilitadas, automático, recorrido libre,
+sin otros mandos y persona junto al paro. La confirmación es de este ensayo;
+no constituye autorización física permanente para otro estado del robot.
+
+Añadido `--stop-after get1` a la CLI y `navigate_get1` a las paradas del contrato.
+El supervisor mantiene todos sus preflight, leases, bloqueos, estados y dos
+muestras de llegada, pero no inicia los adaptadores SPS para este modo. Sólo
+puede completar `navigate_get1`; el checkpoint termina vacío y no permite
+reanudar hacia visión/agarre. Las otras paradas conservan su secuencia y SPS.
+El mensaje final es `GET1_ALCANZADO`, sin afirmar que se ejecutó un ciclo de caja.
+
+Receta versionada, desde la raíz del repositorio:
+
+```bash
+./scripts/force_improved_scenario1.sh --plan --stop-after get1
+./scripts/force_improved_scenario1.sh --check --stop-after get1
+# Sólo con autorización y estado físico actual comprobado:
+./scripts/force_improved_scenario1.sh --run --stop-after get1
+# Lectura posterior, sin movimiento:
+./scripts/force_improved_scenario1.sh --check --stop-after get1
+```
+
+VERIFICADO: 269 tests del ejecutor pasan (suite versionada y nueva prueba
+`test_scenario1_navigation_only.py`); plan de una etapa y diffcheck correctos.
+Los archivos locales de depósito pendiente no se integran ni se modifican en
+este ensayo. Sus tests siguen fuera de esta suite: una ejecución ampliada del
+agente informó 17 errores en el instalador pendiente, ajenos al modo de navegación.
+
+Ensayo real, 12:19 CEST, goal `3e98a8d1-9908-42b5-b308-c1bd22acf457`:
+
+| Lectura | Distancia a get1 | Diferencia de giro |
+| --- | ---: | ---: |
+| Llegada, primera muestra | 3,882 mm | 0,439° |
+| Llegada, segunda muestra | 3,883 mm | 0,440° |
+| Postcheck, dos muestras coincidentes | 3,923 mm | 0,284° |
+
+Ambas lecturas de llegada cumplen 20 mm/2°. En el último postcheck, el punto
+queda aproximadamente 3,67 mm delante y 1,38 mm a la izquierda del origen de
+la pose del robot. Son coordenadas calculadas de `/nav/robot_pose` y del punto
+guardado en `map`; no miden externamente el chasis ni la caja. La diferencia
+entre llegada y postcheck no permite atribuir deriva al robot o al estimador.
+Una sola prueba no demuestra repetibilidad ni que endurecer el filtro mejore
+el controlador: no se ha cambiado ese controlador.
+
+Aceptación→resultado de navegación: **12,086 s**. Etapa completa, incluidos
+chequeos y lectura: **15,832 s**. Estos son tiempos del ensayo, no el coste
+incremental de la tolerancia más estricta. El resultado contiene
+`navigation_start SUCCEEDED` y aviso auxiliar `VSLAM_LOCATION_LOST`, conservado
+en evidencia. La llegada se acepta por las poses frescas y el contrato vigente;
+no se declara reparada la localización visual ni certificada precisión absoluta.
+
+Precheck y postcheck retornaron 0. Lectura final: HOME20D, velocidades articulares
+cero, paros0/0, cargador0, baterías61,0/62,1%. No se envió ninguna acción Motion,
+agarre, apertura, HOME, reintento, edición de mapa ni relocalización explícita.
+Los procesos temporales de lectura y supervisión terminaron. El chasis queda
+junto al punto `get1`; cualquier tarea posterior requiere revalidar su estado.
+
+Evidencia y backup:
+`../Humanoide-vla-evidence/20260928T101642Z_SCENARIO1_GET1_TRIAL/`.
+Incluye `authorization.json`, `check/`, `run/`, `postcheck/`,
+`arrival-report.json`, pruebas, fuentes y SHA256 antes/después. La comprobación
+inicial anterior al nuevo modo está en
+`../Humanoide-vla-evidence/20260928T101642Z_IMPROVED_SCENARIO1_803752/`.
+Las consultas generan sesiones temporales `/tmp/cruzr-scenario1-*` en Motion;
+no hay instalación persistente en contenedores ni cambios del SDK.
+
+Reversión de software: restaurar selectivamente CLI, contrato, runtime y tests
+modificados desde `before/` y retirar sólo `test_scenario1_navigation_only.py`;
+conservar cambios posteriores y los límites 2 cm/2° respaldados previamente.
+
+## Ajuste automático acotado de get1 — 28-09-2026
+
+**Registro histórico: límites iniciales sustituidos.**
+Los límites y el algoritmo siguientes se conservan para análisis y pruebas
+offline; no representan una capacidad física habilitada. Consultar el
+[perfil vigente](#reactivación-supervisada-del-ajuste-get1--28-09-2026).
+
+**BOX-01-EXEC-IMPROVED, 12:35 CEST, Europe/Madrid.** Petición: corregir el
+posicionamiento cuando no cumpla 2 cm/2° y seguir con el flujo. Instalado en
+fuentes PC, cargado temporalmente para comprobaciones de lectura; prueba de
+movimiento correctivo **PENDIENTE**. El ensayo físico de las 12:19 sólo probó
+la llegada normal, que ya cumplía; no valida estas nuevas maniobras.
+
+El comportamiento se aplica automáticamente a las tres entradas mejoradas,
+incluido `force_improved_scenario1.sh --run`. No añade preguntas a `force` ni a
+`autochecked`; esta última conserva la exigencia de referencias FT cualificadas.
+
+1. La navegación inicial y sus dos muestras de llegada se mantienen.
+   Ambas deben tener datos frescos, marcas crecientes y marco `map` válido.
+   Si ambas cumplen 2 cm/2°, continúa sin nuevas consultas ni esperas.
+2. Sólo un resultado de navegación exitoso con residual geométrico puede
+   entrar en corrección. Error máximo admisible de entrada: **5 cm y 5°**.
+   Los fallos de navegación, localización/telemetría, mapa o contenedores
+   interrumpen el ciclo; no se transforman en un ajuste.
+3. Antes de cada ajuste redescubre contenedores y verifica hashes, salud,
+   HOME20D, mapa/FSM y que los puntos guardados no hayan cambiado. Lee otra
+   pareja de poses: si ya cumple, evita enviar un movimiento. Si no, exige
+   estabilidad ≤5 mm/1° entre ambas y prepara dos muestras nativas nuevas de
+   mapa y odometría, con chasis estacionario.
+4. Solicita `navigation_start` al **mismo x/y/yaw guardado de get1**, como
+   `free_nav` explícito. Conserva el navegador y sus controles de obstáculos;
+   no publica `/cmd_vel`, no cambia parámetros, no relocaliza durante el ajuste
+   y no utiliza `front_nudge.py`, cuya prueba de retroceso sigue descalificada.
+5. Después del resultado exige reposo del chasis con datos nuevos y las dos
+   poses de llegada dentro de **2 cm/2°** antes de habilitar visión y agarre.
+   Hay como máximo **dos ajustes adicionales**. El segundo requiere reducción
+   de al menos 0,1 en `max(error_m/0,02, error_deg/2)`; la falta de progreso,
+   un timeout o cualquier fallo detienen el flujo sin otro intento ni HOME.
+
+La configuración de aceptación permanece en `ARRIVAL_TOLERANCES` de
+[`scenario1_checks.py`](../../scripts/box_handling/scenario1_checks.py).
+Los límites de vigilancia están en `POLICY` de
+[`scenario1_nav_correction.py`](../../scripts/box_handling/scenario1_nav_correction.py):
+
+| Límite | Valor |
+| --- | --- |
+| Ajustes adicionales / entrada máxima | 2 / 5 cm y 5° |
+| Plazo por acción, incluida preparación | 15 s |
+| Presupuesto global para admitir ajustes y fijar sus plazos | 40 s |
+| Excursión / recorrido por intento, en cada marco | 8 cm / 12 cm |
+| Empeoramiento respecto a la mejor distancia medida | 5 mm |
+| Velocidad real lineal / angular máxima | 0,10 m/s / 0,25 rad/s |
+| Excursión angular máxima por intento | 10° |
+| Edad máxima de fuente y recepción de telemetría | 0,5 s |
+| Sin mejora significativa mientras sigue fuera de tolerancia | 4 s |
+| Estacionario al preparar y terminar | ≤0,003 m/s y ≤0,01 rad/s |
+| Observación de reposo después del resultado, dentro de los 15 s | Hasta 1,5 s |
+
+Se solicita velocidad lineal X 0,05 m/s y yaw 0,15 rad/s. No se presupone que
+el controlador Arc respete esos campos en todas sus fases: se vigila velocidad
+real y desviación. Mapa y odometría se comparan sólo contra sus propias
+referencias, sin restar coordenadas de marcos diferentes. Los límites anteriores
+son umbrales de detección/aborto, no una garantía de distancia física de frenado.
+La petición de cancelación se dirige exclusivamente al UUID activo y se observa
+su resultado hasta 8 s; incluso un éxito tardío mantiene la interrupción.
+Los 40 s no son un plazo garantizado hasta quedar físicamente detenido:
+las consultas y la observación final de cancelación pueden acabar después.
+Tiempo añadido por corrección y repetibilidad: PENDIENTES de ensayo.
+
+`navigate_get1` permanece en curso en el checkpoint durante todos los ajustes.
+Antes de enviarlos persiste `get1-correction.json`; el diario añade
+`get1_correction` y `correction_guard`, con intento, UUID, errores y medidas.
+`arrival` sólo se emite cuando ambas muestras finales cumplen. Un checkpoint
+fallido no permite reanudar hacia visión/agarre ni repetir automáticamente el
+ciclo. `--stop-after get1` mantiene su terminación antes de SPS/recogida, también
+si necesitó corregir. `put1` no incorpora ajustes y conserva 5 cm/3°.
+En `--plan`, `automatic_retries: 0` se refiere a fallos de acción; el bloque
+`get1_correction` describe por separado estos ajustes tras éxito técnico.
+
+Fuentes de ejecución bajo `scripts/box_handling/`: `scenario1_checks.py`,
+`scenario1_runtime.py`, `scenario1_action_client.py`, `scenario1_cli.py` y nuevo
+`scenario1_nav_correction.py`. El CLI incorpora el módulo de vigilancia tanto
+en el supervisor como en el proceso nativo de acciones. Activación automática
+en la próxima invocación, sin instalación persistente ni reinicio del robot.
+Dependencias nuevas de lectura: `/mc/odom` (`nav_msgs/msg/Odometry`); se conserva
+`/nav/robot_pose` (`geometry_msgs/msg/PoseStamped`) y la API ROSA ya comprobada.
+
+Comprobación local reproducible, sin conexión:
+
+```bash
+python3 -B -m unittest \
+  scripts.box_handling.test_scenario1_nav_correction \
+  scripts.box_handling.test_scenario1_correction_transport \
+  scripts.box_handling.test_scenario1_navigation_correction \
+  scripts.box_handling.test_scenario1_pose_preflight \
+  scripts.box_handling.test_scenario1_navigation_only
+./scripts/force_improved_scenario1.sh --plan
+```
+
+Comprobación técnica de lectura: `./scripts/force_improved_scenario1.sh --check`.
+El ensayo correctivo requiere una nueva prueba autorizada y comprobar el
+estado físico actual; no se reutiliza la confirmación del ensayo de las 12:19.
+
+**Evidencia:**
+`../Humanoide-vla-evidence/20260928T102716Z_SCENARIO1_GET1_CORRECTION/`.
+`check/` y `check-final/` contienen --check real rc0, mapa/FSM preparados y dos poses nuevas.
+`probe.stdout` recoge una prueba nativa del vigilante sin enviar objetivos:
+2 publicadores de pose y 1 de odometría, marcos `map` y
+`odom→base_footprint`, 12/86 muestras, velocidades y recorrido cero. El monitor
+se armó sólo para leer; armar este objeto no envía comandos. La posición estaba
+a 3,776 mm/0,293° de get1, por lo que no había corrección que ejecutar.
+`probe-final.stdout` verifica además el modo de observación de reposo: 14/101
+muestras de mapa/odometría, `settled=true` tras 0,165 s, recorrido y velocidades
+cero, sin objetivo ni resultado físico de acción. Es validación del lector y
+sus condiciones, no una prueba de desaceleración real. Distancia final medida
+4,164 mm/0,294°; no se movió deliberadamente al robot para forzar una corrección.
+**355 pruebas offline pasan**, incluida la carga del módulo en el proceso
+nativo embebido, cancelación por UUID, reposo posterior y bloqueo del agarre
+ante cualquier fallo. Sintaxis, los tres planes y `git diff --check` correctos.
+`unit-tests.txt` y `verification.json` documentan las pruebas finales y alcance;
+quedan fuera los tests no versionados del trabajo de depósito pendiente.
+
+Backup previo en `before/` conserva los cambios de tolerancia y navegación
+exclusiva anteriores; `before-sha256.json`, `after-sha256.json` y
+`changed-files.json` identifican versiones exactas sin depender de un commit.
+Reversión: restaurar selectivamente los archivos cambiados desde `before/` y
+retirar sólo los tres tests nuevos de corrección y `scenario1_nav_correction.py`,
+preservando cualquier trabajo posterior. No usar `git reset` ni restaurar todo
+desde v0.0.1: se perderían los cambios anteriores. Los procesos de lectura se
+terminaron; no hay configuración operativa remota que revertir. Tag v0.0.1,
+altura de depósito pendiente y trabajo ajeno conservados; sin commit ni push.
+
+## Sello articular repetido o regresivo antes de retreat — 28-09-2026
+
+Esta sección conserva la situación anterior a implementar reanudación por
+etapa. La recuperación explícita disponible ahora se describe
+[más abajo](#reanudación-por-etapa--28-09-2026); el fallo original permanece archivado.
+
+**BOX-01-EXEC-IMPROVED, 12:50 CEST, Europe/Madrid.** El ciclo del usuario
+`20260928T104306Z_IMPROVED_SCENARIO1_886744` termina el agarre `c0654cd5…`
+con `SUCCEED` y completa `verify_held` bajo política `assume`. Entra en
+`retreat`, descubre contenedores y comprueba dependencias; falla la petición 8
+de salud con `Nonadvancing actuator source timestamp` después de 2,05 s.
+El diario no contiene un despacho de retroceso, depósito ni HOME posterior.
+El tiempo mostrado para `health` es duración de la consulta hasta fallar,
+no confirmación de salud correcta. La llegada a get1 cumplió 14,11 mm/0,29°;
+no se activó ninguna corrección automática.
+
+El usuario confirma **caja sujeta y completamente separada de la pila**.
+Es confirmación presencial, no conclusión extraída de la foto o del éxito
+técnico del agarre. El archivo final conserva `failure: retreat` y
+`box_state: unknown` conforme al contrato de interrupción. No se ha editado
+ni sustituido por el checkpoint limpio anterior. `--resume` no admite este
+estado y `--run` iniciaría de nuevo el ciclo; la recuperación física debe
+prepararse específicamente desde caja sujeta, sin repetir agarre ni HOME.
+En esta intervención no se enviaron movimientos.
+
+El error antiguo usa una única condición `stamp <= last_stamp` y no registra
+el sello anterior/actual: **no se puede determinar si el incidente fue una
+duplicación o un retroceso**. Una captura posterior de 10 s recibió 500 mensajes
+con un único publicador y ningún duplicado/regresión. Cinco peticiones
+posteriores de salud también finalizaron correctamente; no demuestran que
+el incidente original esté resuelto. No se declara fallo mecánico ni avería
+permanente del sensor a partir de ese mensaje.
+
+Se endurece y precisa el tratamiento en
+[`scenario1_health_worker.py`](../../scripts/box_handling/scenario1_health_worker.py):
+
+- Sólo para `actuator`, mismo sello y contenido completo idéntico en JSON
+  canónico se descarta sin añadir muestra, cambiar `last_stamp` ni renovar
+  recepción/edad. El informe registra `actuator_duplicates_ignored`.
+- Mismo sello con contenido distinto, cualquier retroceso y sellos inválidos,
+  futuros o caducados siguen rechazados. Los errores incluyen ambos sellos,
+  diferencia temporal y hashes del contenido para distinguir causas.
+- Datos anteriores al inicio sólo se ignoran antes de recibir la primera
+  muestra nueva; una regresión posterior ya no se oculta como cola antigua.
+- Siguen siendo necesarias dos muestras distintas posteriores a la petición,
+  ambas con edad ≤2 s, salud completa y publicadores únicos. Esperar al controlador
+  no permite mantener válidas muestras congeladas. El timeout máximo sigue 12 s.
+  La política de marcas repetidas de `pose` no se relaja.
+
+Cambios sólo en fuentes PC: módulo anterior y
+[`test_scenario1_health_worker.py`](../../scripts/box_handling/test_scenario1_health_worker.py),
+más registro global y guías. Las tres entradas incorporan el módulo en memoria
+en su próxima invocación; no requieren instalación, reinicio ni modificar SDK,
+mapa, sensores o tareas del robot. Comprobación offline reproducible:
+
+```bash
+python3 -B -m unittest scripts.box_handling.test_scenario1_health_worker
+./scripts/force_improved_scenario1.sh --plan
+```
+
+VERIFICADO: 31 pruebas del lector, incluidos duplicados sin renovación, contenido
+conflictivo, regresión previa al inicio, congelación durante espera del
+controlador y timeout de 12 s con reloj simulado. Regresión completa: **364 pruebas pasan**. Detalle
+en `unit-tests.txt`/`verification.json` de la evidencia.
+Lectura real del módulo nuevo: cinco consultas `health(require_home=False)`,
+3,42–4,94 s, dos sellos nuevos por consulta y cero duplicados ignorados.
+Paros 0/0 y cargador 0, baterías 56,5% y 57,5–57,8%, velocidad articular 0,
+`MEASURED_HOME=0`; controlador/acción libre verificados por el lector.
+No se usó `--check` inicial, que exige HOME, ni se ordenó HOME para satisfacerlo.
+Esto comprueba la lectura desde la postura actual, no autoriza retirada ni
+demuestra la sujeción por fuerza. La confirmación de caja corresponde al usuario.
+
+Evidencia:
+`../Humanoide-vla-evidence/20260928T104807Z_SCENARIO1_ACTUATOR_TIMESTAMP/`.
+Incluye `incident-reference.json` (rutas/hashes del incidente original),
+`incident-checkpoint.json`, `incident-events-summary.json`, `stamp-probe.json`,
+`health-qualification.json`, fuentes exactas de los colectores y sus hashes,
+`before/`, `after/`, `before-sha256.json`, `after-sha256.json`,
+`changed-files.json`, `verification.json` y `unit-tests.txt`.
+Los procesos nativos de lectura en Motion 192.168.11.2 se terminaron; ningún
+publicador/cliente de acciones ni cambio persistente remoto. Roles redescubiertos
+en ambas consultas; no se asumen nombres de contenedor a partir del histórico.
+
+Reversión: restaurar selectivamente módulo/test desde `before/`, preservando
+los cambios previos de get1 y cualquier trabajo posterior; actualizar estas
+notas al revertir. Sin rollback de configuración remota. Causa exacta y ensayo
+de ciclo posterior PENDIENTES; recuperación física desde la caja sujeta también
+PENDIENTE. Checkpoint, tag v0.0.1 y trabajo de altura ajeno conservados; sin commit/push.
+
+## Reanudación por etapa — 28-09-2026
+
+**BOX-01-EXEC-IMPROVED, 13:12 CEST, Europe/Madrid.** Implementado por petición
+del usuario. `--resume` acepta checkpoints v1/v2/v3 y puede entrar por cualquiera
+de las diez etapas. El perfil, política, arranque, contenedores, dependencias y
+puntos del mapa deben coincidir con el contexto del origen. Un cambio de contexto
+exige otra preparación; seleccionar una etapa no lo omite.
+
+```bash
+# Caso actual: revisar la recuperación, sin mover ni consumir el checkpoint:
+./scripts/force_improved_scenario1.sh \
+  --resume ../Humanoide-vla-evidence/20260928T104306Z_IMPROVED_SCENARIO1_886744/checkpoint.json \
+  --from-stage retreat --box-state held --recovery-confirmed --check
+```
+
+`--plan` muestra la entrada, etapas pendientes y requisitos sin conexión.
+`--check` comprueba el estado actual sin armar, consumir el origen ni crear un
+checkpoint ejecutable nuevo. **Quitar `--check` ejecuta la continuación**;
+no requiere añadir `--run`. La declaración `held` significa caja completamente
+separada, sujeta y estable; `released`, caja apoyada y liberada; `empty`,
+abrazaderas vacías. No son mediciones sensoriales.
+
+Sin `--from-stage`, selecciona la siguiente etapa del origen, incluso al acabar
+una parada en get1/agarre. Un ciclo ya completo requiere selección explícita.
+Una frontera limpia con caja conocida permite inferir ese estado bajo la misma
+política; fallo, etapa en curso, caja indeterminada, salto o repetición requieren
+**`--box-state` y `--recovery-confirmed`**. Esta última declara que el operador
+ha resuelto el estado físico y que la etapa/recorrido elegidos son adecuados.
+No desactiva ningún control ni autoriza por sí sola a mover durante un check.
+Antes de ejecutar deben estar comprobadas las condiciones físicas actuales
+del proyecto: efector, carga, postura, batería/cargador, paros, ruedas, modo,
+zona libre, mando exclusivo y persona junto al paro. `force` no añade preguntas;
+`ask` conserva sus confirmaciones presenciales.
+
+| Etapa | Caja requerida | Condición adicional de entrada |
+| --- | --- | --- |
+| `navigate_get1` | `empty` | HOME20D |
+| `enable_vision` | `empty` | HOME20D y get1 ≤2 cm/2° |
+| `grasp` | `empty` | HOME20D y get1; prepara visión y SPS nuevo antes de agarrar |
+| `verify_held` | `held` | get1; verifica sujeción sin repetir agarre |
+| `retreat` | `held` | get1 y espacio trasero libre |
+| `navigate_put1` | `held` | Caja libre para navegar hacia put1 |
+| `deposit` | `held` | put1 ≤5 cm/3° y apoyo compatible |
+| `verify_released` | `released` | Verifica liberación sin repetir depósito |
+| `home` | `released` | Trayectoria HOME libre |
+| `verify_home` | `released` | HOME20D medido, sin nueva orden HOME |
+
+Todas las entradas comprueban salud articular, acción libre, mapa/FSM listos y
+**chasis detenido**. El helper nativo nuevo lee dos muestras de `/mc/odom`
+posteriores a la petición: un publicador, marcos estables, edad ≤0,5 s,
+velocidad ≤0,003 m/s y 0,01 rad/s, variación ≤5 mm/1°. Plazo máximo 5 s y lease vigente;
+sin servicios ni publicadores de mando. El waypoint usa dos poses frescas y no
+intenta corregir automáticamente una entrada de recuperación mal situada.
+Se vuelve a comprobar la entrada justo al iniciar la primera etapa, después
+de persistir su intención y antes de cualquier acción, aunque las confirmaciones
+anteriores se hayan demorado. También exige el handshake de resume antes de arm.
+
+**Retreat sigue ordenando 20 cm completos relativos hacia atrás.** No calcula
+el recorrido pendiente de una retirada parcial. Estar otra vez dentro de la
+tolerancia de get1 no demuestra que nunca retrocedió unos milímetros. Tras una
+acción incierta, el operador debe resolver esa situación antes de elegir
+`retreat`; puede seleccionar `navigate_put1` cuando la caja y el espacio ya
+permitan esa navegación. No se deduce “no enviado” de la mera ausencia de un
+evento de despacho. El incidente 104306 sí tiene fallo documentado durante salud,
+antes de la llamada de movimiento; su elección actual no repite un agarre.
+
+`autochecked` mantiene perfil cualificado y medidas FT/articulares para entradas
+`held/released`. Una postura sin referencias compatibles sigue bloqueada; la
+declaración de caja nunca se convierte en evidencia de sensores. Esto puede
+impedir alguna entrada hasta disponer de calibración para esa postura.
+
+El checkpoint versión3 comienza con `completed: []`, `entry_stage`,
+`entry_box_state` y `origin`. No inventa éxitos de etapas omitidas. Cada etapa
+completada se añade al segmento real; fallos nuevos quedan en la nueva evidencia.
+`origin` conserva hash del checkpoint de origen, fallo/etapa en curso, selección,
+declaraciones y etapas saltadas/repetidas. El CLI archiva el origen dentro de un
+contenedor JSON `resume_source_snapshot` **no ejecutable como checkpoint**,
+el plan y su contexto. Recalcula el plan en Motion y relee el origen antes de
+consumirlo; cualquier cambio aborta antes de arm. El marcador
+`checkpoint.json.consumed.json` se crea sólo al ejecutar, antes de armar.
+Una prueba o cancelación previa no fabrica otra copia limpia reutilizable.
+SPS sólo se inicia si el segmento pendiente incluye agarre.
+
+Fuentes bajo `scripts/box_handling/`: `scenario1_cli.py`,
+`scenario1_contract.py`, `scenario1_runtime.py`, nuevos `scenario1_resume.py`
+y `scenario1_resume_worker.py`. Se cargan desde PC en la siguiente invocación;
+no hay instalación persistente, modificación del SDK/XML/YAML ni reinicio.
+Pruebas reproducibles sin conexión:
+
+```bash
+python3 -B -m unittest \
+  scripts.box_handling.test_scenario1_resume \
+  scripts.box_handling.test_scenario1_resume_worker \
+  scripts.box_handling.test_scenario1_resume_runtime
+```
+
+**418 pruebas offline pasan**, incluidas compatibilidad previa, diez entradas,
+fallos de salud/pose/odometría, ausencia de comandos en check, procedencia,
+consumo y revalidación antes de actuar. Sintaxis, ayudas, planes y diff correctos.
+
+Lectura real `--resume ... --from-stage retreat ... --check`: **rc0**, base
+quieta y dos poses a 11,240 mm/0,156° de get1, dentro del criterio. No hubo arm,
+etapas, SPS ni objetivos físicos; el origen sigue sin consumir. Es prueba de
+preparación técnica, no de continuación física. La autorización para programar
+la función no se utilizó como autorización para mover al robot.
+
+Evidencia y versiones exactas:
+`../Humanoide-vla-evidence/20260928T110310Z_SCENARIO1_RESUME_STAGES/`
+(`before/`, `after/`, `before-sha256.json`, `after-sha256.json`,
+`changed-files.json`, `unit-tests.txt`, `verification.json`, `check-retreat/`, `check-final/`).
+El respaldo conserva las modificaciones anteriores de get1 y sellos articulares.
+Reversión selectiva de CLI/contrato/runtime desde `before/`, retirar únicamente
+los dos módulos y tres tests nuevos de resume; conservar trabajo posterior.
+Sin rollback operativo remoto. No consumir/borrar marcadores como forma de
+repetir acciones. Continuación física PENDIENTE; tag v0.0.1 y trabajo de altura
+ajeno conservados, sin commit/push.
+Reversión física: no automática; no se ordenó volver al punto de salida ni HOME.
+
+
+## Bloqueo de corrección free_nav por velocidad — 28-09-2026
+
+**Registro histórico: bloqueo sustituido por la
+[reactivación supervisada](#reactivación-supervisada-del-ajuste-get1--28-09-2026).**
+La mitigación descrita aquí bloqueaba la corrección física automática. Sustituyó la disponibilidad de hasta dos ajustes descrita en la
+sección histórica de las 12:35. La navegación inicial y llegada exigida siguen
+siendo 2 cm/2° en get1 y 5 cm/3° en put1. No se cambian velocidades originales
+del recorrido, XML/YAML, mapa, abrazaderas ni altura de depósito.
+
+### Causa observada y límites del diagnóstico
+
+El intento del usuario `20260928T112349Z_IMPROVED_SCENARIO1_1010309` llegó a
+get1 con residual de 27,32 mm/0,385°. La primera corrección `free_nav` pidió
+0,05 m/s lineal y 0,15 rad/s angular, pero el guard midió **0,261430929 rad/s**,
+por encima de 0,25 rad/s. Velocidad lineal máxima 0,007283259 m/s, inferior al
+límite de 0,10. El guard estaba activo, no preparando ni comprobando reposo.
+
+El evento 243 de `events.jsonl` registra el error; 244 contiene los máximos;
+245 solicita cancelar UUID `7a0f4969-80ba-4262-bd56-57544cc204b6`; 252 devuelve
+status 5/cancelado. `LOCATION_LOST` aparece después de solicitar cancelar:
+no fue la condición que disparó esta cancelación. No se ha reparado ni dado
+por válido el subsistema visual. Ningún objetivo Motion de agarre se envió en
+este intento. Una respuesta cancelada no prueba por sí sola reposo físico.
+
+El máximo angular es la norma XYZ del twist. La muestra causante no se guardó
+completa en aquella versión: eje/signo exacto y subfase nativa, PENDIENTES.
+El [análisis local del proveedor](ARC_PRECISE_ARRANQUE_20260922.md) demuestra que
+ArcPrecise no aplica `setNaviSpeed`/`level` y tiene un límite angular interno
+propio; el giro final usa otro límite en el árbol. Por tanto, bajar sólo el
+campo `speed` no es una solución demostrada. No se han vuelto a consultar
+configuraciones remotas en esta intervención ni se atribuye una subfase
+concreta sin sus registros internos.
+
+### Comportamiento actual
+
+- Una llegada ya dentro de tolerancia conserva exactamente sus consultas y
+  continúa el flujo. No se añaden preguntas.
+- Dentro de la antigua envolvente correctiva, se conserva el preflight y una
+  nueva pareja de poses: si se estabilizan dentro, continúa sin otro objetivo.
+- Si siguen fuera, registra `get1_correction/blocked_before_dispatch`, muestra
+  distancia y ángulo medidos y falla con `GET1_CORRECTION_UNQUALIFIED` antes de
+  escribir una intención correctiva o enviar una segunda navegación. No abre
+  abrazaderas ni ejecuta agarre, HOME o reintentos por este fallo.
+- Hay bloqueo adicional en `Runtime.action` y en el cliente nativo antes de
+  armar/enviar una corrección. No hay flag CLI, JSON o variable de entorno para
+  saltarlo. `--plan` publica `motion_enabled:false`; las tres entradas avisan
+  del estado al iniciar. `--check` correcto verifica infraestructura, no
+  cualifica automáticamente el ajuste fino.
+- Se mantienen todos los límites del monitor, incluida velocidad angular
+  0,25 rad/s. Si se usa en simulación, el error de velocidad ahora distingue
+  preparación/actividad/reposo final y guarda magnitudes, límites, sellos y
+  copia de la muestra causante en `velocity_violation`.
+
+### Reproducir y revertir
+
+```bash
+./scripts/force_improved_scenario1.sh --plan
+python3 -B -m unittest \
+  scripts.box_handling.test_scenario1_nav_correction \
+  scripts.box_handling.test_scenario1_navigation_correction \
+  scripts.box_handling.test_scenario1_correction_transport
+```
+
+Las pruebas del algoritmo retirado sólo lo habilitan con mocks explícitos
+locales, sin ROS ni transporte físico. Las regresiones operativas ejercitan el
+bloqueo real sin esos mocks y verifican ausencia de segundo objetivo, intención
+correctiva y continuación hacia agarre. La inyección de la velocidad observada
+sigue causando fallo; no se amplió el umbral para ocultarlo.
+
+Respaldo anterior, fuentes posteriores, hashes y resultados en
+`../Humanoide-vla-evidence/20260928T112641Z_SCENARIO1_CORRECTION_VELOCITY/`
+(`before/`, `after/`, `before-sha256.json`, `after-sha256.json`,
+`changed-files.json`, `incident-summary.json`, `unit-tests.txt`, `verification.json`).
+La reversión técnica es selectiva desde `before/`, preservando otros cambios,
+pero reactivaría una maniobra cuya incompatibilidad ya fue observada; no es la
+solución de la incidencia. Ningún cambio o rollback operativo remoto.
+
+**Punto pendiente:** preparar y validar un controlador/árbol de ajuste cuyo
+límite efectivo cubra todas las fases, con comprobación de frenado y llegada.
+La mitigación evita relanzar la maniobra incompatible, no recupera todavía la
+capacidad de corregir automáticamente todos los residuales. No se ha movido el
+robot ni probado físicamente esta versión. VERIFICADO: 428 pruebas offline
+sin fallos, AST/bash y --help/--plan de las tres entradas; detalle en
+`verification.json`. Estado físico actual PENDIENTE.
+
+
+## Reactivación supervisada del ajuste get1 — 28-09-2026
+
+**Estado: habilitado en fuentes PC por petición explícita del operador de
+relajar límites cuando ayude a posicionarse. Validación física PENDIENTE.**
+Sustituye el bloqueo total anterior. La política de confirmación de caja no
+cambia y no se añaden preguntas. Se aplica con el siguiente inicio de cualquiera
+de las tres entradas mejoradas; no modifica el script antiguo.
+
+### Motivo y decisión
+
+El intento `20260928T114539Z_IMPROVED_SCENARIO1_1076787` llegó a 28,966 mm y
+0,352°; no se envió corrección. Respecto al robot: destino 16,656 mm delante y
+23,698 mm a la izquierda, dirección ≈54,898°. Elevar sólo 0,25 a 0,35 rad/s
+seguiría cortando una maniobra que ArcPrecise permite hasta 0,5 rad/s y cuyo
+orientador final tiene un límite separado de 1,1 rad/s.
+
+El [análisis del binario capturado](ARC_PRECISE_ARRANQUE_20260922.md) muestra
+`R=abs(distancia/(2*sin(alpha)))`, limitado a [0,01;5] m, y giro angular
+recortado a ±0,5 rad/s. Una curva circular ideal hasta el destino cambia el
+rumbo en **2×alpha**, no sólo alpha: para el residual observado, radio ≈17,70 mm,
+arco ≈109,80° y longitud ≈33,92 mm. Es un cálculo geométrico, no simulación
+física ni demostración del recorrido que elegirá el robot. El control discreto,
+retroceso inicial, saturación y tolerancia de salida pueden cambiarlo.
+
+### Límites del supervisor
+
+Configuración versionada en
+[`scenario1_nav_correction.py`](../../scripts/box_handling/scenario1_nav_correction.py),
+`POLICY`, `yaw_limits()` y `Guard.angular_limit()`. Son límites de detección y
+cancelación sobre datos medidos, no consignas ni garantía de distancia de frenado.
+La orden conserva 0,05 m/s lineal y 0,15 rad/s angular solicitados al navegador.
+
+| Condición | Límite vigente |
+| --- | --- |
+| Entrada a corrección | Residual máximo 5 cm y 5°, HOME fresco y chasis quieto |
+| Llegada aceptada | Dos poses nuevas en get1 dentro de 2 cm y 2° |
+| Velocidad lineal medida | 0,10 m/s, conservada |
+| Velocidad angular al aproximar | 0,60 rad/s |
+| Velocidad angular junto al destino | 1,20 rad/s sólo con las dos últimas poses frescas a ≤2 cm y velocidad lineal medida ≤0,02 m/s; en otro caso vuelve a 0,60 |
+| Excursión angular | `2×bearing cercano + error yaw final +15°`, mínimo10°, máximo195° |
+| Giro acumulado absoluto | `2×excursión permitida +10°`, máximo400° |
+| Excursión del centro / recorrido acumulado | 8 cm / 12 cm por intento, conservados e independientes para mapa y odometría |
+| Empeoramiento transitorio de distancia | Hasta15 mm respecto a la mejor distancia registrada |
+| Tiempo | Hasta30 s por acción, hasta70 s de presupuesto de correcciones; máximo2 intentos |
+| Telemetría / progreso / reposo final | Edad0,5 s;4 s sin progreso;1,5 s para confirmar reposo final, conservados |
+
+La cota angular depende de cada geometría, considerando la dirección más cercana
+con avance o retroceso: el caso114539 permite ≈125,15° de excursión y260,30°
+acumulados. Se integra giro firmado entre muestras para medir excursión sin
+perder vueltas al cruzar ±180°; acumular sólo `wrap(yaw−origen)` haría ineficaz
+un umbral195°. El acumulado absoluto limita oscilaciones de ida y vuelta.
+El cuerpo y los brazos barren espacio al girar:8 cm limita el centro, no el
+volumen del robot. Sigue siendo necesario un recorrido libre para el giro,
+abrazaderas vacías y HOME; no trasladar estos límites a transporte con caja.
+
+El margen15 mm permite el arranque inverso conocido de Arc (ensayo anterior
+7,503 mm; cálculo de primeras consignas ≈10 mm). No se ignora un alejamiento
+indefinido: siguen el límite respecto al mejor valor, excursión, camino,
+progreso y tiempo. 30 s no garantiza agotar todos los plazos máximos del proveedor
+(25 s de control preciso más20 s del orientador); es un presupuesto menor
+intencionado para un ajuste local.
+
+El permiso de1,20rad/s exige además dos poses compatibles con el sello fuente
+de la velocidad; posiciones posteriores no autorizan retroactivamente un giro
+anterior. Un historial acotado permite asociar los streams aunque DDS entregue
+odometría con retraso. Cada avance real de2mm reancla la referencia angular
+para que el regreso lento tras la curva cuente como progreso.
+
+El watchdog cuenta progreso geométrico: antes de entrar a2 cm, orientarse hacia
+el desplazamiento más cercano y reducir distancia; al entrar, orientarse al yaw
+final. La entrada a esa fase sólo reinicia su referencia una vez; oscilar sobre
+el umbral no renueva indefinidamente el plazo. No se fuerza una trayectoria
+«giro, recta, giro»: el navegador conserva su planificador y anticolisión.
+
+### Qué se ha verificado
+
+VERIFICADO: **446 pruebas offline**, sin fallos ni omisiones; AST/bash y
+--help/--plan de las tres entradas.
+
+Pruebas offline del residual observado y arco ideal, giro previo, orientación
+final y reposo. La antigua velocidad0,261430929 se admite; superar0,60 lejos,
+1,20 cerca o el límite lineal cancela. Regresiones de mapas caducados, una sola
+pose cercana, traslación excesiva, cambio de marcos, watchdog, lease, oscilación,
+plazos y cancelación por UUID siguen obligatorias. Se conservan llegada2cm/2°
+y fallo duradero; no se reintenta un fallo técnico ni se ordena HOME por error.
+
+`qualification_report()` distingue `motion_enabled:true` y
+`physical_validation:pending`: habilitar el perfil por petición del operador
+no equivale a certificarlo físicamente. Los simuladores recorren ahora la vía
+habilitada real; las pruebas del bloqueo utilizan una indisponibilidad inyectada.
+Una llegada inicial ya válida no añade consultas ni maniobras.
+
+```bash
+./scripts/force_improved_scenario1.sh --plan
+python3 -B -m unittest \
+  scripts.box_handling.test_scenario1_nav_correction \
+  scripts.box_handling.test_scenario1_navigation_correction \
+  scripts.box_handling.test_scenario1_correction_transport \
+  scripts.box_handling.test_scenario1_policies
+```
+
+La prueba física acotada utiliza primero `--check` y después
+`--run --stop-after get1`, con estado físico actualizado y zona libre también
+para girar. Ese modo no inicia agarre. El ciclo normal emplea el mismo ajuste y
+continúa únicamente tras la llegada confirmada. No se ha ejecutado ninguna de
+esas órdenes de movimiento en esta intervención; no asumir el estado físico de
+los registros anteriores. Convergencia, duración real y frenado PENDIENTES.
+
+### Evidencia y reversión
+
+Destino: fuentes PC del ejecutor, sin cambios persistentes de robot, SDK,
+configuración nativa, mapas ni XML/YAML. Backup incluye los cambios locales
+previos sin commit. Fuentes/hashes antes y después, cálculo del residual y
+resultados en
+`../Humanoide-vla-evidence/20260928T115136Z_SCENARIO1_CORRECTION_REENABLE/`
+(`before/`, `after/`, `before-sha256.json`, `after-sha256.json`,
+`incident-summary.json`, `changed-files.json`, `unit-tests.txt`, `verification.json`).
+Reversión selectiva desde `before/` devuelve el bloqueo total y los límites
+anteriores, preservando trabajo ajeno; actualizar estado en guías/índice. No
+rollback remoto ni reproducción de estados transitorios. Sin commit/push.

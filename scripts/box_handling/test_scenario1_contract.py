@@ -72,6 +72,24 @@ class ProfileTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             resume_checkpoint(cp, item, confirmed_box='held', state_reconfirmed=True)
 
+    def test_get1_only_allows_pending_deposit_without_weakening_other_profiles(self):
+        for compatibility in ('pending', 'incompatible'):
+            with self.subTest(compatibility=compatibility):
+                item = profile()
+                item['deposit']['compatibility'] = compatibility
+                original = copy.deepcopy(item)
+                cp = new_checkpoint(item, stop_after='navigate_get1')
+                self.assertEqual(cp['stop_after'], 'navigate_get1')
+                self.assertEqual(next_stage(cp), 'navigate_get1')
+                self.assertEqual(item, original)
+                with self.assertRaises(ValueError):
+                    new_checkpoint(item, stop_after='verify_home')
+                # Navigation-only does not relax the accepted grasp/profile
+                # schema or turn an incompatible grasp into an approved one.
+                item['grasp']['compatibility'] = compatibility
+                with self.assertRaises(ValueError):
+                    new_checkpoint(item, stop_after='navigate_get1')
+
     def test_unknown_keys_modes_tasks_or_compatibility_are_rejected(self):
         variants = []
         item = profile(); item['unused'] = True; variants.append(item)
@@ -87,9 +105,84 @@ class ProfileTest(unittest.TestCase):
                 validate_profile(item)
         with self.assertRaises(ValueError):
             validate_profile(profile(), stop_after='grasp')
+        with self.assertRaises(ValueError):
+            validate_profile(profile(), stop_after='get1')  # CLI alias is not a checkpoint stage.
 
 
 class CheckpointTest(unittest.TestCase):
+    def test_get1_only_completes_empty_after_exactly_one_stage(self):
+        for policy in ('ask', 'assume', 'sensors'):
+            with self.subTest(policy=policy):
+                initial = new_checkpoint(profile(), stop_after='navigate_get1', policy=policy)
+                started = begin_stage(initial, 'navigate_get1')
+                self.assertEqual(started['completed'], [])
+                self.assertEqual(started['in_flight'], 'navigate_get1')
+                completed = complete_stage(started, 'navigate_get1')
+                self.assertEqual(completed['completed'], ['navigate_get1'])
+                self.assertEqual(completed['box_state'], 'empty')
+                self.assertEqual(completed['confirmations'], {})
+                self.assertIsNone(completed['in_flight'])
+                self.assertIsNone(completed['failure'])
+                self.assertIsNone(next_stage(completed))
+                self.assertEqual(validate_checkpoint(json.loads(json.dumps(completed)), profile()), completed)
+                self.assertEqual(initial['completed'], [])
+                self.assertIsNone(initial['in_flight'])
+                # Neither another get1 goal nor any manipulation stage is
+                # authorized after the sole permitted navigation stage.
+                for stage in STAGES:
+                    with self.subTest(next_stage=stage), self.assertRaises(ValueError):
+                        begin_stage(completed, stage)
+
+    def test_get1_only_cannot_skip_navigation_or_forge_box_postconditions(self):
+        initial = new_checkpoint(profile(), stop_after='navigate_get1')
+        for stage in STAGES[1:]:
+            with self.subTest(stage=stage), self.assertRaises(ValueError):
+                begin_stage(initial, stage)
+        started = begin_stage(initial, 'navigate_get1')
+        for kwargs in ({'confirmed_box': 'empty'}, {'confirmed_box': 'held'},
+                       {'home_verified': True}, {'verification_source': 'assumed'},
+                       {'sensor_evidence': {'measured': True}}):
+            with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
+                complete_stage(started, 'navigate_get1', **kwargs)
+
+    def test_get1_only_checkpoint_cannot_be_extended_by_resume(self):
+        cp = through('navigate_get1', stop_after='navigate_get1')
+        original = copy.deepcopy(cp)
+        for stop_after in ('navigate_get1', 'verify_held', 'verify_home'):
+            for box in ('empty', 'held', 'released'):
+                with self.subTest(stop_after=stop_after, box=box), self.assertRaisesRegex(
+                        ValueError, 'clean verified-held/released'):
+                    resume_checkpoint(cp, profile(), confirmed_box=box,
+                                      state_reconfirmed=True, stop_after=stop_after)
+        self.assertEqual(cp, original)
+
+    def test_get1_only_rejects_completed_or_inflight_stages_beyond_stop(self):
+        cp = through('navigate_get1', stop_after='navigate_get1')
+        variants = []
+        item = copy.deepcopy(cp); item['completed'].append('enable_vision'); variants.append(item)
+        item = copy.deepcopy(cp); item['in_flight'] = 'enable_vision'; variants.append(item)
+        item = copy.deepcopy(cp); item['in_flight'] = 'navigate_get1'; variants.append(item)
+        item = copy.deepcopy(cp); item['box_state'] = 'held'; variants.append(item)
+        for item in variants:
+            with self.subTest(checkpoint=item), self.assertRaises(ValueError):
+                validate_checkpoint(item)
+
+    def test_failed_or_interrupted_get1_only_never_becomes_complete_or_resumable(self):
+        initial = new_checkpoint(profile(), stop_after='navigate_get1')
+        started = begin_stage(initial, 'navigate_get1')
+        failed = fail_stage(started, 'navigate_get1', 'Arrival outside get1 tolerance')
+        self.assertEqual(failed['completed'], [])
+        self.assertEqual(failed['box_state'], 'unknown')
+        self.assertEqual(failed['failure']['stage'], 'navigate_get1')
+        for cp in (started, failed):
+            with self.subTest(checkpoint=cp):
+                with self.assertRaises(ValueError):
+                    next_stage(cp)
+                with self.assertRaises(ValueError):
+                    resume_checkpoint(cp, profile(), confirmed_box='empty', state_reconfirmed=True)
+        with self.assertRaises(ValueError):
+            complete_stage(failed, 'navigate_get1')
+
     def test_full_cycle_needs_each_postcondition_and_does_not_mutate_input(self):
         cp = new_checkpoint(profile())
         for stage in STAGES:

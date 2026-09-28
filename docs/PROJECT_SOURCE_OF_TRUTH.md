@@ -1,5 +1,93 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**28-09-2026 14:02 CEST — BOX-01-EXEC-IMPROVED: ajuste get1 reactivado con límites supervisados.**
+Por petición explícita de permitir posicionamiento y relajar límites razonados,
+se sustituye el bloqueo total. Giro medido0,60rad/s al aproximar;1,20 sólo con
+2posesfrescas≤2cm y traslación≤0,02m/s. Curva nativa requiere margen de rumbo:
+excursión2×bearing+errorfinal+15° (hasta195°), giro acumulado acotado. Conserva
+llegada2cm/2°, salud/HOME, reposo, watchdogs, cancelación, mapa/odom y anticolisión.
+Máximo2ajustes; VERIFICADO:446 pruebas offline y planes/sintaxis. Física PENDIENTE.
+No conexiones ni movimiento del agente. Estado vigente sustituye entrada13:29.
+[Motivo, límites y verificación](box_handling/FORCE_IMPROVED_SCENARIO1.md#reactivación-supervisada-del-ajuste-get1--28-09-2026).
+
+**28-09-2026 13:29 CEST — BOX-01-EXEC-IMPROVED: ajuste free_nav bloqueado tras exceso angular.**
+OBSERVADO en intento112349: residual27,32mm; corrección solicitada0,15rad/s,
+norma angular medida0,26143 supera monitor0,25. Cancelación por velocidad;
+LOCATION_LOST posterior no fue el disparador. Fuentes PC mitigan bloqueando la
+corrección antes de enviarla en ejecutor y cliente; se conservan llegada2cm/2°,
+flujo normal dentro de tolerancia y relectura sin mover. No hay corrección
+automática disponible hasta cualificar controlador compatible. Diagnóstico
+registra fase, valores, límites y muestra ante exceso; límites intactos.
+VERIFICADO: 428 pruebas offline, sintaxis y planes; sin conexión, cambios remotos ni movimientos
+del agente. La disponibilidad histórica de ajustes de12:35 queda sustituida.
+[Causa, alcance, pruebas y pendiente](box_handling/FORCE_IMPROVED_SCENARIO1.md#bloqueo-de-corrección-free_nav-por-velocidad--28-09-2026).
+
+**28-09-2026 13:12 CEST — BOX-01-EXEC-IMPROVED: reanudación por cualquiera de las diez etapas.**
+Implementado `--resume CHECKPOINT --from-stage ETAPA`, compatible con --plan y
+--check de sólo lectura. Fallo/interrupción/salto exige estado de caja declarado
+y --recovery-confirmed; la entrada vuelve a comprobar salud, postura, base
+detenida y waypoint cuando corresponde. Se conserva el origen y sólo se registra
+el segmento realmente ejecutado en checkpoint v3, sin fabricar etapas completas.
+VERIFICADO: 418 pruebas offline, plan y check real del incidente 104306 desde retreat, base quieta y
+get1 a 11,240 mm/0,156°, rc0; origen sin consumir, sin arm/SPS/objetivos físicos.
+Archivo histórico no ejecutable y consumo sólo antes de arm. Primera etapa
+revalida entrada para no utilizar comprobaciones previas a una espera prolongada.
+Continuación física PENDIENTE. Esta entrada sustituye la limitación histórica
+de --resume a pausas limpias verify_held/verify_released descrita abajo.
+[Receta, condiciones y evidencia](box_handling/FORCE_IMPROVED_SCENARIO1.md#reanudación-por-etapa--28-09-2026).
+
+**28-09-2026 12:50 CEST — BOX-01-EXEC-IMPROVED: interrupción antes de retreat por sello articular.**
+OBSERVADO: ciclo del usuario `20260928T104306Z_IMPROVED_SCENARIO1_886744`
+completa agarre/verify_held y falla en la lectura de salud de retreat; no se
+envió retroceso. El usuario confirma caja sujeta y completamente separada.
+Checkpoint fallido conservado; no admite --resume ni debe reiniciarse el ciclo.
+El mensaje antiguo no distingue duplicación de regresión y no guardó las dos
+muestras causantes. Causa exacta PENDIENTE: captura actual de 500 muestras y cinco
+consultas de salud no reprodujeron el fallo. Ajuste local: ignorar sólo paquetes
+articulares idénticos con sello igual, sin contarlos ni renovar edad; mantener
+rechazo de regresión, conflicto y datos congelados. Diagnóstico nuevo registra
+sellos/delta/hashes. VERIFICADO: 364 pruebas offline. Lectura real verifica
+articulaciones inmóviles, no HOME, paros 0/0 y cargador 0; no autoriza movimientos. Sólo consultas del agente, sin
+retroceso, reapertura, HOME ni modificación del checkpoint.
+[Alcance, pruebas y evidencia](box_handling/FORCE_IMPROVED_SCENARIO1.md#sello-articular-repetido-o-regresivo-antes-de-retreat--28-09-2026).
+
+**28-09-2026 12:35 CEST — BOX-01-EXEC-IMPROVED: ajuste automático acotado en get1.**
+Fuentes PC actualizadas por petición del usuario: después de una navegación
+exitosa, un residual dentro de 5 cm/5° permite hasta dos ajustes al mismo punto.
+Sólo continúa al verificar las dos poses dentro de 2 cm/2°. No reintenta fallos
+de navegación, datos, mapa o vigilancia; put1 conserva su comportamiento.
+Vigila mapa/odometría, velocidad, recorrido y progreso; exige inmovilidad tras
+cada corrección. La llegada normal conserva sus consultas y duración de espera.
+VERIFICADO: 355 pruebas offline y lectura real --check rc0; lectores nativos con
+dos publicadores de pose y uno de odometría; cero objetivos físicos enviados.
+Los módulos se cargan temporalmente desde PC, sin instalar tareas ni modificar
+el controlador. Maniobra correctiva física y tiempo añadido PENDIENTES.
+Esta entrada sustituye sólo el rechazo geométrico sin corrección descrito en
+las entradas históricas inferiores.
+[Límites, fuentes, pruebas y reversión](box_handling/FORCE_IMPROVED_SCENARIO1.md#ajuste-automático-acotado-de-get1--28-09-2026).
+
+**28-09-2026 12:19 CEST — BOX-01-EXEC-IMPROVED: ensayo exclusivo a get1 completado.**
+VERIFICADO: nuevo `--stop-after get1`, 269 pruebas del ejecutor y una navegación
+real autorizada, sin SPS, agarre, depósito ni orden HOME. Llegada en dos muestras:
+3,882/3,883 mm y 0,439/0,440°; lectura posterior: 3,923 mm y 0,284°, dentro de
+2 cm/2°. Navegación aceptación→resultado 12,086 s; etapa completa 15,832 s.
+Postcheck rc0, HOME20D medido, velocidad articular cero, ambos paros y cargador
+en 0. Son errores respecto al mapa según localización, no medición física
+externa; persiste el aviso auxiliar `VSLAM_LOCATION_LOST`. La nueva parada
+termina con caja vacía y checkpoint no reanudable hacia agarre. Sin reintentos.
+[Receta, límites y evidencia](box_handling/FORCE_IMPROVED_SCENARIO1.md#prueba-de-navegación-exclusiva-a-get1--28-09-2026).
+
+**28-09-2026 12:10 CEST — BOX-01-EXEC-IMPROVED: llegada a get1 de 2 cm/2°.**
+Por petición del usuario, el ejecutor mejorado exige error planar ≤0,02 m y
+giro ≤2° en las dos muestras nuevas posteriores a navegar a `get1`; `put1`
+conserva 0,05 m/3°. Se utilizan las mismas lecturas y no se añaden pausas,
+alineación visual, movimientos correctivos ni reintentos. Una muestra fuera
+del límite interrumpe `navigate_get1` antes de habilitar visión/agarre. Cambio
+en fuentes PC; VERIFICADO con 259 pruebas offline, sin conexión al robot;
+prueba física PENDIENTE. Las tolerancias históricas inferiores
+corresponden a versiones anteriores.
+[Configuración, verificación y evidencia](box_handling/FORCE_IMPROVED_SCENARIO1.md#tolerancia-de-get1-de-2-cm-y-2--28-09-2026).
+
 **28-09-2026 11:08 CEST — BOX-01-EXEC-IMPROVED: adaptación a mesa de 73 cm revertida.**
 Por petición del usuario se cancela esa adaptación y se restaura exactamente,
 por SHA256, el ejecutor anterior: depósito `wrc_cruzr/put_cruzr_wrc_low`,

@@ -6,6 +6,7 @@ import threading
 import time
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 try:
     from . import scenario1_health_worker as worker
@@ -77,6 +78,7 @@ class AcquisitionTests(unittest.TestCase):
         self.assertTrue(result['status_retained'])
         self.assertEqual(len(result['actuator']), 2)
         self.assertEqual(set(result['safety']), set(worker.SAFETY))
+        self.assertEqual(result['actuator_duplicates_ignored'], 0)
 
     def test_pre_request_receipts_cannot_satisfy_health(self):
         collector = acquisition()
@@ -104,13 +106,86 @@ class AcquisitionTests(unittest.TestCase):
         self.assertEqual(len(result['poses']), 2)
         self.assertNotIn('controller', result)
 
-    def test_frozen_and_regressing_source_fail_instead_of_reusing(self):
+    def test_regressing_source_fails_even_before_request_after_new_sample(self):
         for key, command in (('actuator', 'health'), ('pose', 'pose')):
-            for second in (START+2, START+1):
+            for second in (START+1, START-1):
                 collector = acquisition(command)
                 collector.add(key, stamped(START+2), START+2, 101)
-                with self.subTest(key=key, second=second), self.assertRaises(ValueError):
+                with self.subTest(key=key, second=second), self.assertRaisesRegex(ValueError, 'Nonadvancing'):
                     collector.add(key, stamped(second), START+3, 102)
+
+    def test_same_pose_timestamp_still_fails_even_with_identical_content(self):
+        collector = acquisition('pose')
+        collector.add('pose', stamped(START+1), START+1, 101)
+        with self.assertRaisesRegex(ValueError, 'Nonadvancing pose source timestamp'):
+            collector.add('pose', stamped(START+1), START+2, 102)
+
+    def test_identical_actuator_duplicate_does_not_refresh_sample_or_receipt(self):
+        collector = acquisition()
+        fill_health(collector)
+        samples = list(collector.samples)
+        receipts = dict(collector.receipts)
+        # Object order/JSON whitespace differ; all fields and their types agree.
+        duplicate = {'value': [1, 2], 'header': {'stamp': {'nanosec': 2, 'sec': 10}}}
+        collector.add('actuator', json.dumps(duplicate, indent=2), START+100, 200)
+        self.assertEqual(list(collector.samples), samples)
+        self.assertEqual(collector.receipts, receipts)
+        self.assertEqual(collector.last_stamp, START+2)
+        self.assertEqual(collector.duplicates_ignored, 1)
+        self.assertEqual(collector.complete(START+101, {}, {})['actuator_duplicates_ignored'], 1)
+
+    def test_duplicates_never_substitute_for_a_second_new_source(self):
+        collector = acquisition()
+        for key in worker.SAFETY:
+            collector.add(key, {'data': 0}, START+1, 101)
+        collector.add('actuator', stamped(START+1), START+1, 101)
+        for offset in range(2, 102):
+            collector.add('actuator', stamped(START+1), START+offset, 100+offset)
+            self.assertIsNone(collector.complete(START+offset, {}, {}))
+        self.assertEqual(len(collector.samples), 1)
+        self.assertEqual(collector.duplicates_ignored, 100)
+        collector.add('actuator', stamped(START+102), START+102, 202)
+        result = collector.complete(START+103, {}, {})
+        self.assertEqual([worker.source_stamp_ns(row) for row in result['actuator']], [START+1, START+102])
+        self.assertEqual(result['actuator_duplicates_ignored'], 100)
+
+    def test_same_actuator_stamp_with_different_payload_is_a_conflict(self):
+        # Python's True == 1 and 1.0 == 1 must not hide changed field types.
+        for changed in ([1, 3], [True, 2], [1.0, 2], [2, 1]):
+            collector = acquisition()
+            collector.add('actuator', stamped(START+1), START+1, 101)
+            duplicate = stamped(START+1)
+            duplicate['value'] = changed
+            with self.subTest(changed=changed), self.assertRaisesRegex(ValueError, 'Conflicting actuator samples'):
+                collector.add('actuator', duplicate, START+2, 102)
+            self.assertEqual(collector.duplicates_ignored, 0)
+
+    def test_stale_duplicate_is_rejected_before_it_can_be_ignored(self):
+        collector = acquisition()
+        collector.add('actuator', stamped(START+1), START+1, 101)
+        with self.assertRaisesRegex(ValueError, 'Stale or future actuator source timestamp'):
+            collector.add('actuator', stamped(START+1), START+worker.MAX_AGE_NS+2, 102)
+        self.assertEqual(collector.duplicates_ignored, 0)
+
+    def test_two_frozen_sources_cannot_pass_when_controller_is_slow(self):
+        for controller in (None, {'controller': []}):
+            collector = acquisition()
+            fill_health(collector)
+            collector.add('actuator', stamped(START+2), START+worker.MAX_AGE_NS, 1000)
+            now = START+worker.MAX_AGE_NS+3
+            for key in worker.SAFETY:
+                collector.add(key, {'data': 0}, now, 1001)
+            with self.subTest(controller=controller), self.assertRaisesRegex(ValueError, 'source samples became stale'):
+                collector.complete(now, controller, {'status_list': []})
+            self.assertEqual(collector.receipts['actuator'], START+2)
+
+    def test_initial_queued_actuator_data_does_not_count_as_a_duplicate(self):
+        collector = acquisition()
+        for offset in (-2, -1):
+            collector.add('actuator', stamped(START+offset), START+1, 101)
+        self.assertEqual(len(collector.samples), 0)
+        self.assertEqual(collector.duplicates_ignored, 0)
+        self.assertIsNone(collector.last_stamp)
 
     def test_stale_and_future_sources_fail(self):
         for source, receipt in ((START+1, START+worker.MAX_AGE_NS+2), (START+5, START+1)):
@@ -124,6 +199,18 @@ class AcquisitionTests(unittest.TestCase):
             collector.add('actuator', stamped(START+offset), START+offset, 100+offset)
         rows = collector.complete(START+100, {}, {})['actuator']
         self.assertEqual([worker.source_stamp_ns(row) for row in rows], [START+98, START+99])
+
+    def test_advancing_stream_survives_controller_delay_longer_than_source_age(self):
+        collector = acquisition()
+        for step in range(1, 13):
+            now = START+step*250_000_000
+            for key in worker.SAFETY:
+                collector.add(key, {'data': 0}, now, 100+step)
+            collector.add('actuator', stamped(now), now, 100+step)
+            self.assertIsNone(collector.complete(now, None, {'status_list': []}))
+        rows = collector.complete(now, {}, {})['actuator']
+        self.assertEqual([worker.source_stamp_ns(row) for row in rows],
+                         [START+2_750_000_000, START+3_000_000_000])
 
     def test_stale_safety_cannot_be_hidden_by_new_actuators(self):
         collector = acquisition()
@@ -275,6 +362,37 @@ class NativeHandshakeTests(unittest.TestCase):
         request = worker.validate_request({'request_id': 'pose-empty', 'command': 'pose', 'timeout': .005})
         with self.assertRaisesRegex(TimeoutError, '"fresh_samples": 0.*"pose": 2'):
             native.acquire(request, lambda: None)
+
+    def test_frozen_single_source_then_silence_times_out_within_twelve_seconds(self):
+        native, calls = self.make_native()
+        elapsed = {'ns': 0}
+        collectors, checks = [], []
+        clock = SimpleNamespace(time_ns=lambda: START+elapsed['ns'],
+                                monotonic_ns=lambda: 100+elapsed['ns'],
+                                monotonic=lambda: elapsed['ns']/1e9)
+
+        def spin():
+            elapsed['ns'] += 250_000_000
+            current = native.acquisition
+            collectors.append(current)
+            now = clock.time_ns()
+            for key in worker.SAFETY:
+                current.add(key, {'data': 0}, now, clock.monotonic_ns())
+            if elapsed['ns'] <= 1_000_000_000:
+                current.add('actuator', stamped(START+250_000_000), now, clock.monotonic_ns())
+
+        native.spin = spin
+        request = worker.validate_request({'request_id': 'frozen-source', 'command': 'health', 'timeout': 12})
+        with patch.object(worker, 'time', clock):
+            with self.assertRaisesRegex(TimeoutError, '"fresh_samples": 1'):
+                native.acquire(request, lambda: checks.append(clock.monotonic()))
+        self.assertEqual(elapsed['ns'], 12_000_000_000)
+        self.assertEqual(collectors[-1].duplicates_ignored, 3)
+        self.assertEqual(len(collectors[-1].samples), 1)
+        self.assertEqual(calls, [('wait', 0), ('call', '{}')])
+        self.assertGreater(len(checks), 1)
+        self.assertTrue(all(instant <= 12 for instant in checks))
+        self.assertIsNone(native.acquisition)
 
 
 if __name__ == '__main__':

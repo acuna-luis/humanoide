@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "id": "scenario1_put1_table_v1",
+  "surface_height_m": 0.74,
+  "surface_pitch_deg": 0,
+  "box_size_m": [0.603, 0.397, 0.22],
+  "calibration_mode": "vendor_final_reference",
+  "reference_vendor_box_bottom_above_floor_m": null,
+  "reference_vendor_position_reached_verified": false,
+  "reference_box_bottom_above_floor_m": null,
+  "reference_left_hand_motion_z_m": null,
+  "reference_right_hand_motion_z_m": null,
+  "horizontal_alignment_verified": false,
+  "release_clearance_verified": false,
+  "evidence": null
+}

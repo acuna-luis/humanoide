@@ -2,8 +2,9 @@
 
 The caller must durably persist begin_stage's returned checkpoint BEFORE sending
 an action, and persist completion only AFTER validating its result/postcondition.
-An interrupted or failed stage cannot be resumed by this module. Operator-assumed
-compatibility is an explicit assumption, never evidence of physical validation.
+The legacy resume API accepts only clean box-verification boundaries. Explicit
+recovery plans use v3 segments and retain their source provenance separately.
+Operator-assumed compatibility is never evidence of physical validation.
 """
 import ast
 import copy
@@ -17,7 +18,7 @@ STAGES = (
     'navigate_get1', 'enable_vision', 'grasp', 'verify_held', 'retreat',
     'navigate_put1', 'deposit', 'verify_released', 'home', 'verify_home',
 )
-STOP_AFTER = ('verify_held', 'verify_home')
+STOP_AFTER = ('navigate_get1', 'verify_held', 'verify_home')
 BOX_STATES = ('empty', 'held', 'released', 'unknown')
 CONFIRMATION_POLICIES = ('ask', 'assume', 'sensors')
 _VERIFICATION_SOURCES = {'ask': 'operator', 'assume': 'assumed', 'sensors': 'sensors'}
@@ -37,6 +38,56 @@ _CHECKPOINT_KEYS = {
     'in_flight', 'box_state', 'failure',
 }
 _CHECKPOINT_V2_KEYS = _CHECKPOINT_KEYS | {'policy', 'confirmations'}
+_CHECKPOINT_V3_KEYS = _CHECKPOINT_V2_KEYS | {'entry_stage', 'entry_box_state', 'origin'}
+ENTRY_BOX_STATES = dict(zip(STAGES, ('empty', 'empty', 'empty', 'held', 'held',
+                                    'held', 'held', 'released', 'released', 'released')))
+_ORIGIN_KEYS = {'source_sha256', 'source_next_stage', 'source_failure', 'source_in_flight',
+                'requested_stage', 'explicit_state', 'recovery_confirmed',
+                'skipped_stages', 'repeated_stages'}
+
+
+def _entry_index(cp):
+    return STAGES.index(cp['entry_stage']) if cp['version'] == 3 else 0
+
+
+def _progress_index(cp):
+    return _entry_index(cp) + len(cp['completed'])
+
+
+def _validate_origin(origin, entry_stage):
+    """Validate the recorded plan, not the physical truth of an acknowledgement."""
+    _keys(origin, _ORIGIN_KEYS, 'Resume origin')
+    if (type(origin['source_sha256']) is not str or
+            re.fullmatch(r'[0-9a-f]{64}', origin['source_sha256']) is None):
+        raise ValueError('Invalid resume source hash')
+    following = origin['source_next_stage']
+    if following is not None and following not in STAGES:
+        raise ValueError('Invalid source next stage')
+    requested = origin['requested_stage']
+    if requested is not None and requested != entry_stage:
+        raise ValueError('Requested resume stage differs from segment entry')
+    if requested is None and following != entry_stage:
+        raise ValueError('Implicit resume must enter at the source next stage')
+    for key in ('explicit_state', 'recovery_confirmed'):
+        if type(origin[key]) is not bool:
+            raise ValueError('Resume acknowledgement fields must be booleans')
+    failed, active = origin['source_failure'], origin['source_in_flight']
+    if active is not None and (following is None or active != following):
+        raise ValueError('Invalid source in-flight stage')
+    if failed is not None:
+        _keys(failed, {'stage', 'reason'}, 'Source failure')
+        if (following is None or failed['stage'] != following or active is not None or
+                type(failed['reason']) is not str or not failed['reason'].strip()):
+            raise ValueError('Invalid source failure')
+    source_index = STAGES.index(following) if following is not None else len(STAGES)
+    entry_index = STAGES.index(entry_stage)
+    skipped = list(STAGES[source_index:entry_index]) if entry_index > source_index else []
+    repeated = list(STAGES[entry_index:source_index]) if entry_index < source_index else []
+    if origin['skipped_stages'] != skipped or origin['repeated_stages'] != repeated:
+        raise ValueError('Resume skipped/repeated stages contradict the requested segment')
+    if ((failed is not None or active is not None or entry_stage != following) and
+            not (origin['explicit_state'] and origin['recovery_confirmed'])):
+        raise ValueError('Recovery requires explicit box state and confirmation')
 
 
 def _keys(value, expected, label):
@@ -92,8 +143,9 @@ def _box_evidence(policy, box, source, sensor_evidence):
 def validate_profile(profile, *, stop_after='verify_home'):
     """Return an independent profile copy, or block incompatible execution.
 
-    A grasp-only run may retain a pending/incompatible deposit profile because
-    no deposit is authorized. Completing the cycle requires both compatibilities.
+    A get1-only or grasp-only run may retain a pending/incompatible deposit
+    profile because no deposit is authorized. Completing the cycle requires both
+    compatibilities. The existing grasp/profile restrictions remain unchanged.
     """
     _stop_after(stop_after)
     _keys(profile, {'id', 'box_size_m', 'intended_use', 'grasp', 'deposit'}, 'Profile')
@@ -134,12 +186,22 @@ def new_checkpoint(profile, *, stop_after='verify_home', policy='ask'):
                 box_state='empty', failure=None, policy=policy, confirmations={})
 
 
+def new_resume_checkpoint(profile, *, entry_stage, entry_box_state, origin,
+                          stop_after='verify_home', policy='assume'):
+    """Create an empty execution segment without inventing completed stages."""
+    cp = new_checkpoint(profile, stop_after=stop_after, policy=policy)
+    cp.update(version=3, entry_stage=entry_stage, entry_box_state=entry_box_state,
+              origin=copy.deepcopy(origin), box_state=entry_box_state)
+    return validate_checkpoint(cp, profile)
+
+
 def validate_checkpoint(checkpoint, profile=None):
-    """Validate the exact ordered prefix and box-state consistency; copy on return."""
+    """Validate an exact prefix (v1/v2) or real contiguous segment (v3)."""
     if (not isinstance(checkpoint, dict) or type(checkpoint.get('version')) is not int
-            or checkpoint['version'] not in (1, 2)):
+            or checkpoint['version'] not in (1, 2, 3)):
         raise ValueError('Unsupported checkpoint version')
-    _keys(checkpoint, _CHECKPOINT_V2_KEYS if checkpoint['version'] == 2 else _CHECKPOINT_KEYS,
+    _keys(checkpoint, {1: _CHECKPOINT_KEYS, 2: _CHECKPOINT_V2_KEYS,
+                      3: _CHECKPOINT_V3_KEYS}[checkpoint['version']],
           'Checkpoint')
     _finite_json(checkpoint)
     cp = checkpoint
@@ -151,10 +213,17 @@ def validate_checkpoint(checkpoint, profile=None):
         raise ValueError('Invalid checkpoint profile identity')
     completed = cp['completed']
     limit = STAGES.index(cp['stop_after']) + 1
-    if (not isinstance(completed, list) or len(completed) > limit or
-            completed != list(STAGES[:len(completed)])):
+    if cp['version'] == 3:
+        if cp['entry_stage'] not in STAGES:
+            raise ValueError('Invalid resume segment entry stage')
+        if cp['entry_box_state'] != ENTRY_BOX_STATES[cp['entry_stage']]:
+            raise ValueError('Resume entry box state contradicts its stage')
+        _validate_origin(cp['origin'], cp['entry_stage'])
+    start = _entry_index(cp)
+    if (not isinstance(completed, list) or start >= limit or start + len(completed) > limit or
+            completed != list(STAGES[start:start+len(completed)])):
         raise ValueError('Checkpoint is not a completed ordered prefix')
-    if cp['version'] == 2:
+    if cp['version'] >= 2:
         _policy(cp['policy'])
         required = set(completed) & set(_BOX_VERIFICATIONS)
         _keys(cp['confirmations'], required, 'Box evidence records')
@@ -163,7 +232,8 @@ def validate_checkpoint(checkpoint, profile=None):
             if record['box_state'] != _BOX_VERIFICATIONS[stage]:
                 raise ValueError('Box evidence contradicts its verification stage')
             _box_evidence(cp['policy'], record['box_state'], record['source'], record['sensor_evidence'])
-    expected = STAGES[len(completed)] if len(completed) < limit else None
+    index = start + len(completed)
+    expected = STAGES[index] if index < limit else None
     if cp['in_flight'] is not None and cp['in_flight'] != expected:
         raise ValueError('Invalid in-flight stage')
     if cp['box_state'] not in BOX_STATES:
@@ -175,7 +245,7 @@ def validate_checkpoint(checkpoint, profile=None):
                 cp['in_flight'] is not None or cp['box_state'] != 'unknown'):
             raise ValueError('Invalid failed checkpoint')
     else:
-        expected_box = _BOX_AFTER[len(completed) - 1] if completed else 'empty'
+        expected_box = _BOX_AFTER[index - 1] if completed else cp.get('entry_box_state', 'empty')
         if cp['in_flight'] in ('grasp', 'deposit'):
             expected_box = 'unknown'
         if cp['box_state'] != expected_box:
@@ -187,11 +257,16 @@ def validate_checkpoint(checkpoint, profile=None):
     return copy.deepcopy(cp)
 
 
+def progress_index(checkpoint):
+    """Absolute next-stage index; v3 completed contains only its real segment."""
+    return _progress_index(validate_checkpoint(checkpoint))
+
+
 def next_stage(checkpoint):
     cp = validate_checkpoint(checkpoint)
     if cp['failure'] is not None or cp['in_flight'] is not None:
         raise ValueError('Incomplete/failed stage requires recovery, not continuation')
-    index = len(cp['completed'])
+    index = _progress_index(cp)
     return None if index > STAGES.index(cp['stop_after']) else STAGES[index]
 
 
@@ -225,7 +300,7 @@ def complete_stage(checkpoint, stage, *, confirmed_box=None, home_verified=False
     if required_box is not None:
         record = _box_evidence(cp.get('policy', 'ask'), required_box,
                                verification_source, sensor_evidence)
-        if cp['version'] == 2:
+        if cp['version'] >= 2:
             cp['confirmations'][stage] = record
     elif verification_source != 'operator' or sensor_evidence is not None:
         raise ValueError('Box evidence is only appropriate at box verification stages')
@@ -238,7 +313,7 @@ def complete_stage(checkpoint, stage, *, confirmed_box=None, home_verified=False
 def fail_stage(checkpoint, stage, reason):
     """Latch failure and unknown box state; never translate failure into success."""
     cp = validate_checkpoint(checkpoint)
-    index = len(cp['completed'])
+    index = _progress_index(cp)
     if (cp['failure'] is not None or index > STAGES.index(cp['stop_after']) or
             stage != STAGES[index] or type(reason) is not str or not reason.strip()):
         raise ValueError('Invalid failed stage or reason')
@@ -271,10 +346,10 @@ def resume_checkpoint(checkpoint, profile, *, confirmed_box, state_reconfirmed,
     if cp['box_state'] not in ('held', 'released') or confirmed_box != cp['box_state']:
         raise ValueError('Current box state was not reconfirmed')
     record = _box_evidence(policy, confirmed_box, verification_source, sensor_evidence)
-    if STAGES.index(stop_after) < len(cp['completed']) - 1:
+    if STAGES.index(stop_after) < _progress_index(cp) - 1:
         raise ValueError('Cannot resume before the completed checkpoint')
     cp['stop_after'] = stop_after
-    if cp['version'] == 2:
+    if cp['version'] >= 2:
         cp['confirmations'][cp['completed'][-1]] = record
     return validate_checkpoint(cp, profile)
 

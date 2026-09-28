@@ -3502,3 +3502,275 @@ No hay estado operativo remoto que restaurar. No reactivar automáticamente el
 perfil retirado; un trabajo futuro requiere completar su registro geométrico y
 una nueva petición del usuario. La prueba de73cm está cancelada. Detalle y punto
 vigente de uso en la [guía](box_handling/FORCE_IMPROVED_SCENARIO1.md#adaptación-a-mesa-de-73-cm-revertida--28-09-2026).
+
+
+### BOX-01-EXEC-IMPROVED — llegada get1 2 cm/2°, 28-09-2026 12:10 CEST, Europe/Madrid
+
+Estado vigente: instalado en fuentes PC; cargado en robot y probado físicamente
+PENDIENTES. Objetivo autorizado: endurecer exclusivamente el criterio de llegada
+a `get1`, utilizando las dos muestras ya existentes. Distancia planar ≤0,02 m,
+giro ≤2°; `put1` conserva ≤0,05 m/3°. Un fallo interrumpe antes de visión/agarre;
+no añade correcciones, reintentos, lecturas ni pausas.
+
+Destino exacto PC bajo `/home/lacuna/proyectos/Robots/Humanoide/`:
+`scripts/box_handling/scenario1_checks.py`, `scenario1_runtime.py`,
+`test_scenario1_checks.py`, `test_scenario1_pose_preflight.py`; fuente global,
+guía de transferencia y [guía/receta específica](box_handling/FORCE_IMPROVED_SCENARIO1.md#tolerancia-de-get1-de-2-cm-y-2--28-09-2026).
+Constante reproducible `ARRIVAL_TOLERANCES`; todos los destinos se pasan
+explícitamente al validador. Eventos y errores registran los límites aplicados.
+
+Dependencias: lector de pose, supervisión y contratos existentes; ningún cambio
+de SDK, mapa, localización, XML/YAML, parámetros de navegación o robot. Las tres
+entradas mejoradas usan automáticamente las fuentes en su siguiente invocación;
+no hay recarga de servicios. Las entradas antiguas conservan su criterio.
+VERIFICADO: 259 pruebas locales, sintaxis, ayuda, plan y `git diff --check`.
+Resultado exacto y alcance en `verification.json` y `unit-tests.txt`
+del directorio de evidencia. No se ejecutaron consultas remotas ni movimientos.
+
+Backup de contenido anterior, HEAD de referencia, estado Git, fuentes finales
+y SHA256 completos en
+`../Humanoide-vla-evidence/20260928T101004Z_SCENARIO1_GET1_TOLERANCE/`
+(`before/`, `after/`, `before-sha256.json`, `after-sha256.json`,
+`changed-files.json`, `verification.json`). Reversión selectiva desde `before/`
+conservando cambios ajenos/posteriores; no hay rollback remoto. No se modifican
+el tag `v0.0.1` ni los archivos no versionados del trabajo de altura pendiente.
+Punto de reanudación: comprobar el estado físico actual y efectuar un ensayo
+de llegada autorizado antes de declarar repetibilidad o tiempos físicos.
+
+
+### BOX-01-EXEC-IMPROVED — navegación exclusiva a get1, 28-09-2026 12:19 CEST, Europe/Madrid
+
+Estado: instalado en fuentes PC, cargado temporalmente y PROBADO FÍSICAMENTE
+para una navegación exclusiva. Nueva opción `--stop-after get1`; una única
+etapa, mantiene preflight/lease/locks/doble muestra y omite arranque SPS. No
+permite continuar desde ese checkpoint hacia agarre. Motivo: medir el error de
+llegada 2 cm/2° sin ejecutar la recogida.
+
+Destinos PC bajo `/home/lacuna/proyectos/Robots/Humanoide/`:
+`scripts/box_handling/scenario1_cli.py`, `scenario1_contract.py`,
+`scenario1_runtime.py`, `test_scenario1_contract.py` y nuevo
+`test_scenario1_navigation_only.py`; fuente global y guías de transferencia/ejecutor.
+Dependencias: las mismas de la supervisión vigente, sin instalar tareas/SDK ni
+cambiar mapa/controladores. Activación, receta y rollback en la
+[guía](box_handling/FORCE_IMPROVED_SCENARIO1.md#prueba-de-navegación-exclusiva-a-get1--28-09-2026).
+
+VERIFICADO: 269 pruebas del ejecutor, plan, diffcheck; check y postcheck reales
+rc0. Una navegación autorizada goal3e98a8d1… da dos errores3,882/3,883mm y
+0,439/0,440°. Postcheck3,923mm/0,284°, HOME20D/velocidad articular0,
+paros0/0/cargador0. Acción12,086s; etapa15,832s. Medición por localización del
+mapa, sin referencia física externa; repetibilidad PENDIENTE. Persiste aviso
+auxiliarVSLAM_LOCATION_LOST. No inferir reparación de visión ni mejora del
+controlador a partir de este único ensayo.
+
+Destino en ejecución: Motion192.168.11.2, contenedores redescubiertos e
+identificados en `run/context.json`; scripts/procesos temporales
+`/tmp/cruzr-scenario1-*`, terminados. Sólo una navigation_start, sin agarre,
+apertura, HOME, SPS, reintentos, edición de mapa ni relocalización explícita.
+Robot termina junto a get1; no se restaura automáticamente su posición inicial.
+
+Backup previo que conserva el cambio2cm/2°, fuentes finales/hashes, autorización
+y evidencia en
+`../Humanoide-vla-evidence/20260928T101642Z_SCENARIO1_GET1_TRIAL/`
+(`before/`, `after/`, `before-sha256.json`, `after-sha256.json`,
+`changed-files.json`, `verification.json`, `arrival-report.json`,
+`check/`, `run/`, `postcheck/`). Software reversible selectivamente desde
+`before/`, retirando sólo el test nuevo y preservando cambios ajenos. Sin
+rollback remoto persistente ni recuperación física automática. Punto de
+reanudación: consultar estado fresco antes de una siguiente tarea autorizada.
+
+
+### BOX-01-EXEC-IMPROVED — ajuste acotado de get1, 28-09-2026 12:35 CEST, Europe/Madrid
+
+Estado vigente: instalado en fuentes PC; supervisor/lectores cargados
+temporalmente y verificados en lectura; maniobra correctiva física PENDIENTE.
+Motivo autorizado: corregir automáticamente un residual de get1 y continuar
+únicamente cuando las dos poses cumplan 2 cm/2°. Hasta dos ajustes después de
+un resultado exitoso, entrada máxima5cm/5°, vigilancia de posición/odometría,
+velocidad, recorrido, progreso y reposo final. Fallos técnicos no reintentables;
+put1 conserva su comportamiento. La llegada que ya cumple no añade consultas.
+
+Destino PC exacto bajo `/home/lacuna/proyectos/Robots/Humanoide/`:
+`scripts/box_handling/scenario1_checks.py`, `scenario1_runtime.py`,
+`scenario1_action_client.py`, `scenario1_cli.py`, nuevo
+`scenario1_nav_correction.py`; tests nuevos `test_scenario1_nav_correction.py`,
+`test_scenario1_correction_transport.py`, `test_scenario1_navigation_correction.py`
+y ajuste de `test_scenario1_pose_preflight.py`. Documentación global, guía de
+transferencia y [fuente/receta especializada](box_handling/FORCE_IMPROVED_SCENARIO1.md#ajuste-automático-acotado-de-get1--28-09-2026).
+Dependencias: supervisión previa, API ROSA revisada y topics nativos
+`/nav/robot_pose` y `/mc/odom`. El CLI incorpora el guard en memoria en ambos
+procesos; se activa con la próxima invocación de cualquiera de las tres entradas.
+Sin cambios persistentes de robot, SDK, XML/YAML, mapa o controlador.
+
+Verificación: 355 pruebas offline en `unit-tests.txt`/`verification.json`,
+plan local y --check remoto rc0; prueba de lectores con dos publicadores de mapa
+y uno de odometría, datos nuevos/estacionarios y guard de reposo satisfecho,
+sin objetivos físicos. Motion
+192.168.11.2, roles redescubiertos en `check/context.json`; supervisor bajo
+`/tmp/cruzr-scenario1-*` y colector nativo en memoria, ambos finalizados.
+No ejecución física de correcciones ni de ciclo/agarre/HOME en esta intervención.
+La precisión se refiere a la localización del mapa, sin medición externa.
+
+Evidencia y hashes completos:
+`../Humanoide-vla-evidence/20260928T102716Z_SCENARIO1_GET1_CORRECTION/`
+(`before/`, `after/`, `before-sha256.json`, `after-sha256.json`,
+`changed-files.json`, `verification.json`, `unit-tests.txt`, `check/`,
+`probe.stdout`, `probe-final.stdout`, `probe-final-source-hashes.json`). El respaldo incluye cambios locales
+previos. Reversión selectiva desde `before/`, retirar sólo módulo/tests nuevos
+de esta adaptación y conservar trabajo posterior; sin rollback operativo remoto.
+No tocar v0.0.1 ni la adaptación de altura pendiente. Punto de reanudación:
+ensayo correctivo autorizado con estado físico fresco; cancelación/alcance de
+frenado y tiempo real siguen pendientes. Receta y límites en la guía enlazada.
+
+
+### BOX-01-EXEC-IMPROVED — sello articular, 28-09-2026 12:50 CEST, Europe/Madrid
+
+Estado: instalado en fuentes PC y cargado temporalmente en Motion para lectura;
+ciclo físico corregido y causa exacta del fallo PENDIENTES. Motivo: usuario
+reporta `Nonadvancing actuator source timestamp` en salud de retreat después
+del agarre. Diario104306 confirma cero despachos posteriores al agarre. Usuario
+confirma caja sujeta/separada; se conserva checkpoint fallido, no reanudable.
+
+Destino PC bajo `/home/lacuna/proyectos/Robots/Humanoide/`:
+`scripts/box_handling/scenario1_health_worker.py`,
+`scripts/box_handling/test_scenario1_health_worker.py`, registro global y guías.
+Fuente, receta, dependencias y límites en la
+[guía especializada](box_handling/FORCE_IMPROVED_SCENARIO1.md#sello-articular-repetido-o-regresivo-antes-de-retreat--28-09-2026).
+Descarta sólo duplicados articulares idénticos sin renovar frescura ni contar
+otra muestra. Conserva bloqueo de regresiones/conflictos/congelación y añade
+diagnóstico de sellos/hashes. Activación en próxima invocación de las tres
+entradas, a través del módulo embebido; no instalación ni reinicio remoto.
+
+Verificación: 31 tests del lector y 364 pruebas de regresión completa en evidencia; 10 s/500 mensajes
+nativos y 5 peticiones salud no reproducen fallo. Nuevo lector exige dos muestras
+nuevas por petición, valida salud/controlador, observa velocidad 0/no HOME.
+No se ejecutó --check inicial con requisito HOME ni se movió el robot.
+Destino temporal: Motion 192.168.11.2/contenedor redescubierto en
+`stamp-probe.stdout` y `health-qualification.stdout`; procesos de sólo lectura
+en memoria terminados. Sin modificaciones persistentes de robot/SDK/tareas.
+
+Respaldo previo que preserva ajustes get1, fuentes finales, hashes y resultados:
+`../Humanoide-vla-evidence/20260928T104807Z_SCENARIO1_ACTUATOR_TIMESTAMP/`
+(`before/`, `after/`, `before-sha256.json`, `after-sha256.json`,
+`changed-files.json`, `verification.json`, `unit-tests.txt`,
+`incident-reference.json`, `stamp-probe.json`, `health-qualification.json`).
+Reversión selectiva del módulo/test desde `before/`, conservar trabajo posterior
+y actualizar documentación; sin rollback operativo remoto. Causa original no
+distinguible con el antiguo diagnóstico. Reanudar mediante preparación específica
+de recuperación desde caja sujeta, con estado físico fresco y autorización de
+movimiento; no editar checkpoint para ocultar su fallo ni reiniciar ciclo/HOME.
+
+
+### BOX-01-EXEC-IMPROVED — resume por etapa, 28-09-2026 13:12 CEST, Europe/Madrid
+
+Estado vigente: instalado en PC y cargado temporalmente en Motion para --check;
+continuación física PENDIENTE. Motivo autorizado: permitir --resume desde
+cualquier etapa. Fallos/etapas inciertas/saltos requieren --box-state y
+--recovery-confirmed; siguen vigentes postura, salud, odometría estacionaria,
+localización de entrada y contexto. Mismo perfil/política/boot/contenedores y
+dependencias. Registro v3 guarda sólo segmento real y origen, sin modificar ni
+ocultar el fallo anterior. Archivo de procedencia no ejecutable como checkpoint;
+origen consumido sólo antes de arm y primera etapa revalida la entrada.
+
+Destino PC exacto bajo `/home/lacuna/proyectos/Robots/Humanoide/`:
+`scripts/box_handling/scenario1_cli.py`, `scenario1_contract.py`,
+`scenario1_runtime.py`; nuevos `scenario1_resume.py`, `scenario1_resume_worker.py`,
+`test_scenario1_resume.py`, `test_scenario1_resume_worker.py`,
+`test_scenario1_resume_runtime.py`; registro global y guías. Fuente y receta:
+[reanudación por etapa](box_handling/FORCE_IMPROVED_SCENARIO1.md#reanudación-por-etapa--28-09-2026).
+Activación automática con próxima invocación; helper nativo embebido en memoria.
+Dependencias: lector y contratos existentes, API ROSA y `/mc/odom`; referencias
+FT cualificadas adicionales para la entrada autochecked. No modificación del
+SDK/robot/mapa/XML/YAML ni reinicio de servicios. SPS sólo si el tramo incluye agarre.
+
+418 pruebas offline correctas; detalle en unit-tests.txt/verification.json. --plan real del
+incidente 104306 selecciona retreat→navigate_put1→deposit→verify_released→home→
+verify_home. --check correspondiente rc0, salud sin exigir HOME para held,
+dos poses get1 a 11,240 mm/0,156° y dos odometrías quietas. Sin arm, consumo,
+etapas ni objetivos físicos. Procesos de lectura en Motion 192.168.11.2,
+contenedores redescubiertos/contexto coincidente, terminados. La comprobación
+de lectura no se registra como ejecución física ni autorización de movimiento.
+
+Backup previo, versiones/hashes exactos y resultados:
+`../Humanoide-vla-evidence/20260928T110310Z_SCENARIO1_RESUME_STAGES/`
+(`before/`, `after/`, `before-sha256.json`, `after-sha256.json`,
+`changed-files.json`, `unit-tests.txt`, `verification.json`, `check-retreat/`, `check-final/`).
+Reversión selectiva de CLI/contrato/runtime a before y retirada sólo de dos
+módulos/tres tests nuevos, preservando cambios previos/posteriores; actualizar
+documentación. No rollback de configuración remota ni borrado de marcadores de
+consumo para repetir un movimiento. Punto de reanudación: operador comprueba
+estado físico actual y elige etapa; continuación física de recuperación pendiente.
+
+
+### BOX-01-EXEC-IMPROVED — bloqueo corrección free_nav, 28-09-2026 13:29 CEST, Europe/Madrid
+
+Estado vigente: fuentes PC instaladas; carga al próximo inicio; maniobra
+correctiva automática BLOQUEADA. Solicitud: evitar repetición del incidente
+112349. Causa observada: norma angular0,26143>0,25rad/s durante corrección pese
+solicitar0,15. Variante nativa no cualificada; se conservan todos los límites,
+2cm/2° de llegada y flujo normal cuando cumple. Ante residual persistente,
+bloqueo antes del segundo objetivo y del agarre, con residual y motivo legibles.
+Esta ficha sustituye la disponibilidad correctiva de12:35 sin borrar su historia.
+
+Destino exacto PC bajo `/home/lacuna/proyectos/Robots/Humanoide/`:
+`scripts/box_handling/scenario1_nav_correction.py`, `scenario1_runtime.py`,
+`scenario1_action_client.py`, `scenario1_cli.py`; tests
+`test_scenario1_nav_correction.py`, `test_scenario1_navigation_correction.py`,
+`test_scenario1_correction_transport.py`, `test_scenario1_policies.py`; guías/global/este índice.
+Fuente y receta reproducibles: [sección de la incidencia](box_handling/FORCE_IMPROVED_SCENARIO1.md#bloqueo-de-corrección-free_nav-por-velocidad--28-09-2026).
+Aplicación/activación: próximos arranques de las tres entradas incorporan
+módulos PC en memoria; `--plan` expone el bloqueo. No instalador remoto, edición
+del proveedor ni reinicio. Dependencias y configuración previa conservadas.
+No activar ni reducir límites usando overrides; no existe flag de excepción.
+
+Verificación: regresión de velocidad exacta y bloqueo antes de arm/send,
+llegadas dentro y fuera de tolerancia, fallo duradero y ausencia de agarre.
+428 pruebas correctas, sintaxis/planes y hashes exactos en `verification.json`; prueba física
+PENDIENTE. No conexiones ni objetivos físicos del agente en esta intervención.
+El registro ahora conserva muestra/sellos/fase/umbrales ante exceso; no da por
+verificados el estado físico o localización visual actuales.
+
+Backup y evidencia (incluyen trabajo local previo sin commit):
+`../Humanoide-vla-evidence/20260928T112641Z_SCENARIO1_CORRECTION_VELOCITY/`,
+`before/`, `after/`, manifests SHA256 y `changed-files.json`.
+Reversión selectiva desde before conserva cambios ajenos; reactivaría una
+maniobra incompatible observada y no resuelve el fallo. Sin rollback remoto.
+Deuda/punto de reanudación: controlador de ajuste con límites efectivos de todas
+las fases, activación y ensayo específico todavía PENDIENTES. No restaurar el
+candidato ArcPrecise ni relanzar free_nav bajo otra velocidad JSON por esta ficha.
+
+
+### BOX-01-EXEC-IMPROVED — reactivación supervisada get1, 28-09-2026 14:02 CEST, Europe/Madrid
+
+Estado vigente: habilitado en fuentes PC con validación física PENDIENTE.
+Petición explícita: que el robot se posicione, relajando velocidad cuando sea
+adecuado. Sustituye el bloqueo13:29. Perfil supervisor adaptado a curva Arc y
+giro final; llegada2cm/2° sigue obligatoria. No modificación de control nativo.
+
+Destino PC bajo `/home/lacuna/proyectos/Robots/Humanoide/`:
+`scripts/box_handling/scenario1_nav_correction.py`, `scenario1_cli.py`, tests
+`test_scenario1_nav_correction.py`, `test_scenario1_navigation_correction.py`,
+`test_scenario1_correction_transport.py`, `test_scenario1_policies.py`,
+fuente global, guía de transferencia, guía del ejecutor y este índice.
+Fuente/receta: [reactivación supervisada](box_handling/FORCE_IMPROVED_SCENARIO1.md#reactivación-supervisada-del-ajuste-get1--28-09-2026).
+Activación al próximo inicio de las tres entradas mediante módulos en memoria;
+`--plan` muestra parámetros y validación física pendiente. Dependencias previas,
+navegación/anticolisión nativa y DDS conservados. No reinicio, instalación
+remota ni cambios de SDK/mapa/tareas; efector y altura pendientes ajenos intactos.
+
+Límites medidos: angular0,60rad/s,1,20 sólo con dosposesfrescas≤2cm y
+linear≤0,02m/s; cotalinear0,10m/s. Giro geométrico2×bearing+errorfinal+15°,
+cap195°, acumulado cap400° integrado sinwrap; centro8cm/ruta12cm conservados;
+empeoramiento15mm, acción30s,total70s,máximo2. Progreso reconoce orientación
+hacia desplazamiento y luego yawfinal, sin renovación por oscilación del umbral.
+Controles de salud/HOME, reposo antes/después, edad, cancelación y fallo duradero
+conservados. Los límites no garantizan convergencia ni frenado y no acotan el
+barrido exterior; prueba física acotada pendiente con zona libre para giro.
+
+Verificación local:446 pruebas correctas, AST/bash, --help/--plan de las tres entradas; resultados
+exactos en `verification.json`. Sin conexiones ni objetivos físicos del agente.
+Backup/hash de trabajo previo y fuentes finales:
+`../Humanoide-vla-evidence/20260928T115136Z_SCENARIO1_CORRECTION_REENABLE/`.
+Reversión selectiva de archivos de `changed-files.json` desde `before/`,
+preservando cambios posteriores y registrando estado; devuelve bloqueo total.
+No rollback físico ni modificación de checkpoints fallidos. Pendiente ensayo
+`--stop-after get1` y continuación de ciclo, con estado físico fresco.

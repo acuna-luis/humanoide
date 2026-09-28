@@ -166,6 +166,16 @@ def result_succeeded(kind, status, result):
     return True
 
 
+def correction_module():
+    # Runtime can supply this reviewed module in memory; ordinary invocations
+    # without a correction do not need to import it or create telemetry readers.
+    if __package__:
+        from . import scenario1_nav_correction
+    else:
+        import scenario1_nav_correction
+    return scenario1_nav_correction
+
+
 def native_client_class(base, to_string):
     """Adapt the observed native API, without treating a local handle as accepted."""
     class ObservedClient(base):
@@ -313,6 +323,11 @@ class RosaTransport:
         else:
             from unav_task_msgs.action import Task as Action
         self.rosa = rosa
+        self.kind = kind
+        self.correction_guard = None
+        self.correction_failure = None
+        self.correction_armed = False
+        self.correction_readers = {}
         self.events = queue.Queue()
         require_callables(rosa, ('init', 'Node', 'spin_once', 'ok', 'shutdown'), 'rosa')
         self.api_fingerprints = validate_native_sources({
@@ -368,6 +383,69 @@ class RosaTransport:
     def cancel(self):
         self.client.cancel_own_goal()
 
+    def configure_correction(self, spec):
+        if self.kind != 'navigation' or self.goal_id is not None or self.correction_guard is not None:
+            raise RuntimeError('Correction requires an idle navigation client')
+        self.correction_guard = correction_module().Guard(spec, requested_ns=time.time_ns())
+        self.correction_failure = None
+        self.correction_armed = False
+        if self.correction_readers:
+            return
+        from rosa.base._QoS import SensorDataQoS
+        from rosa.utils import resolve_message_type
+        for key, topic, type_name in (
+                ('map', '/nav/robot_pose', 'geometry_msgs/msg/PoseStamped'),
+                ('odom', '/mc/odom', 'nav_msgs/msg/Odometry')):
+            qos = SensorDataQoS()
+            qos.bestEffort()
+            qos.durabilityVolatile()
+            qos.keepLast(5)
+            self.correction_readers[key] = self.node.create_reader(
+                resolve_message_type(type_name), topic, self.correction_callback(key), qos=qos)
+
+    def correction_callback(self, key):
+        # The str annotation selects JSON delivery in the inspected native SDK.
+        def receive(raw: str):
+            if self.correction_guard is None or self.correction_failure is not None:
+                return
+            try:
+                self.correction_guard.add(key, object_json(raw), time.time_ns())
+            except Exception as error:
+                # Do not throw through the SDK or spin(): cancellation must
+                # continue spinning until the active UUID has a terminal result.
+                self.correction_failure = str(error)
+        return receive
+
+    def check_correction(self):
+        if self.correction_failure is not None:
+            raise RuntimeError('Correction telemetry failed: ' + self.correction_failure)
+        if self.correction_guard is not None and self.correction_armed:
+            self.correction_guard.check(time.time_ns())
+
+    def correction_ready(self):
+        self.check_correction()
+        return (all(reader.getWriterCount() >= 1 for reader in self.correction_readers.values())
+                and self.correction_guard.ready(time.time_ns()))
+
+    def arm_correction(self):
+        self.check_correction()
+        self.correction_guard.arm(time.time_ns())
+        self.correction_armed = True
+
+    def begin_correction_settle(self):
+        self.check_correction()
+        self.correction_guard.begin_settle(time.time_ns())
+
+    def correction_settled(self):
+        self.check_correction()
+        return self.correction_guard.settled(time.time_ns())
+
+    def correction_snapshot(self):
+        return dict(self.correction_guard.summary(),
+                    publishers={key: reader.getWriterCount()
+                                for key, reader in self.correction_readers.items()},
+                    telemetry_failure=self.correction_failure)
+
     def finish_successful_request(self):
         goal_id = self.goal_id
         # No background ROSA spinner exists: callbacks run only in spin().
@@ -375,7 +453,11 @@ class RosaTransport:
         for row in self.drain():
             if row.get('goal_id') != goal_id or row['event'] not in ('status', 'feedback'):
                 raise RuntimeError('Unexpected evidence while completing action request')
+        self.check_correction()
         self.client.retire_successful_goal()
+        self.correction_guard = None
+        self.correction_failure = None
+        self.correction_armed = False
 
     def validate_session_api(self):
         for name in ('_goal_handles', '_goal_futures', '_result_futures', '_goal_options'):
@@ -393,6 +475,13 @@ def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
     accepted = False
     terminal = None
     failure = None
+    correction = getattr(transport, 'correction_guard', None) is not None
+    last_correction_report = clock()
+
+    def report_correction(phase):
+        if correction:
+            emit(event='correction_guard', goal_id=transport.goal_id,
+                 phase=phase, snapshot=transport.correction_snapshot())
 
     def check_guards():
         reason = interrupted()
@@ -401,6 +490,8 @@ def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
         check_lease(lease_file, clock())
         if clock() >= deadline:
             raise TimeoutError('Action deadline exceeded')
+        if correction:
+            transport.check_correction()
 
     def observe():
         nonlocal accepted, terminal
@@ -427,12 +518,27 @@ def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
         return rejected
 
     try:
+        if correction and (kind != 'navigation' or goal.get('command') != 'navigation_start'):
+            raise ValueError('Correction is limited to navigation_start')
+        if correction:
+            correction_module().require_motion_qualified()
         discovery_deadline = min(deadline, clock() + 5.0)
         while not transport.ready():
             check_guards()
             if clock() >= discovery_deadline:
                 raise TimeoutError('Action server unavailable')
             transport.spin()
+        if correction:
+            report_correction('preparing')
+            readiness_deadline = min(deadline, clock() + 5.0)
+            while not transport.correction_ready():
+                check_guards()
+                if clock() >= readiness_deadline:
+                    raise TimeoutError('Correction fresh stationary telemetry unavailable')
+                transport.spin()
+            check_guards()
+            transport.arm_correction()
+            report_correction('armed')
         check_guards()
         goal_id = transport.send(goal)
         emit(event='dispatched', goal_id=goal_id, endpoint=ENDPOINTS[kind])
@@ -442,12 +548,36 @@ def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
             transport.spin()
             if observe():
                 return 2
+            if correction and clock() - last_correction_report >= .25:
+                report_correction('progress')
+                last_correction_report = clock()
             if not accepted and clock() >= acceptance_deadline:
                 raise TimeoutError('Acceptance unknown; do not retry')
         check_guards()
         if not accepted:
             raise RuntimeError('Terminal response without verified acceptance')
         if result_succeeded(kind, terminal['status'], terminal['result']):
+            if correction:
+                validate_session_result(kind, goal, terminal)
+                transport.begin_correction_settle()
+                report_correction('settling')
+                settle_deadline = min(deadline, clock() + 1.5)
+                while True:
+                    check_guards()
+                    if transport.correction_settled():
+                        break
+                    if clock() >= settle_deadline:
+                        raise TimeoutError('Correction stationary arrival unconfirmed')
+                    transport.spin()
+                    # This UUID is already terminal. Only trailing feedback or
+                    # status is admissible; a new result/error cannot replace it.
+                    for row in transport.drain():
+                        emit(**row)
+                        if (row.get('goal_id') != transport.goal_id
+                                or row['event'] not in ('status', 'feedback')):
+                            raise RuntimeError('Unexpected action evidence while settling correction')
+                report_correction('settled')
+            report_correction('terminal')
             return 0
         emit(event='error', goal_id=transport.goal_id,
              reason='Action did not report successful terminal application result')
@@ -455,6 +585,10 @@ def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
     except Exception as error:
         failure = str(error)
         emit(event='error', goal_id=transport.goal_id, reason=failure)
+        try:
+            report_correction('failed')
+        except Exception:
+            pass  # Diagnostic serialization must never suppress cancellation.
 
     if transport.goal_id is None:
         return 2
@@ -496,8 +630,9 @@ SESSION_NAV_COMMANDS = frozenset(('get_map_name', 'check_state', 'map_set',
 
 def validate_session_request(kind, raw, seen):
     request = object_json(raw)
-    if set(request) != {'request_id', 'goal', 'timeout'}:
-        raise ValueError('Request must contain exactly request_id, goal and timeout')
+    required = {'request_id', 'goal', 'timeout'}
+    if set(request) not in (required, required | {'correction'}):
+        raise ValueError('Request requires request_id, goal, timeout and optional correction')
     request_id = request['request_id']
     if (not isinstance(request_id, str)
             or re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}', request_id) is None):
@@ -513,6 +648,10 @@ def validate_session_request(kind, raw, seen):
     goal = validate_goal(kind, json.dumps(request['goal'], allow_nan=False))
     if kind == 'navigation' and goal['command'] not in SESSION_NAV_COMMANDS:
         raise ValueError('Navigation command has no reviewed session result contract')
+    if 'correction' in request:
+        if kind != 'navigation' or goal['command'] != 'navigation_start':
+            raise ValueError('Correction is limited to navigation_start')
+        correction_module().validate_spec(request['correction'], goal=goal)
     return request_id, goal, timeout
 
 
@@ -614,6 +753,9 @@ def run_session(transport, kind, inbox, emit, interrupted=lambda: None,
                 request_id = candidate
             request_id, goal, timeout = validate_session_request(kind, raw, seen)
             seen.add(request_id)
+            request = object_json(raw)
+            if 'correction' in request:
+                transport.configure_correction(request['correction'])
             terminal = None
 
             def request_emit(**row):

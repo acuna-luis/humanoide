@@ -8,6 +8,7 @@ no publishers, action clients or motion services in this process.
 import argparse
 from collections import deque
 import copy
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -92,6 +93,7 @@ class Acquisition:
         self.samples = deque(maxlen=2)
         self.receipts = {}
         self.last_stamp = None
+        self.duplicates_ignored = 0
 
     def add(self, key, message, received_ns, received_monotonic_ns):
         if received_monotonic_ns <= self.requested_monotonic_ns:
@@ -104,12 +106,28 @@ class Acquisition:
         if key != wanted:
             return
         stamp = source_stamp_ns(message)
-        if stamp < self.requested_ns:
+        if stamp < self.requested_ns and self.last_stamp is None:
             return  # DDS data queued before this request cannot satisfy it.
         if not 0 <= received_ns-stamp <= MAX_AGE_NS:
             raise ValueError('Stale or future '+key+' source timestamp')
         if self.last_stamp is not None and stamp <= self.last_stamp:
-            raise ValueError('Nonadvancing '+key+' source timestamp')
+            # A repeated actuator packet is not a second measurement. Ignore
+            # only an exact duplicate, without renewing its receipt or freshness.
+            # JSON comparison preserves types (unlike Python's True == 1).
+            current = json.dumps(message, sort_keys=True, separators=(',', ':'), allow_nan=False)
+            previous = json.dumps(self.samples[-1], sort_keys=True, separators=(',', ':'), allow_nan=False)
+            if key == 'actuator' and stamp == self.last_stamp and current == previous:
+                self.duplicates_ignored += 1
+                return
+            reason = ('Conflicting actuator samples with identical source timestamp'
+                      if key == 'actuator' and stamp == self.last_stamp
+                      else 'Nonadvancing '+key+' source timestamp')
+            diagnostic = dict(source_ns=stamp, previous_source_ns=self.last_stamp,
+                              delta_ns=stamp-self.last_stamp, received_ns=received_ns,
+                              same_payload=current == previous,
+                              previous_sha256=hashlib.sha256(previous.encode()).hexdigest(),
+                              current_sha256=hashlib.sha256(current.encode()).hexdigest())
+            raise ValueError(reason+'; '+json.dumps(diagnostic, sort_keys=True))
         self.last_stamp = stamp
         self.samples.append(copy.deepcopy(message))
         self.receipts[wanted] = received_ns
@@ -129,7 +147,8 @@ class Acquisition:
             raise ValueError('Collected safety samples became stale')
         return dict(result, require_home=self.request['require_home'], controller=object_json(controller),
                     status=object_json(status), status_retained=True,
-                    safety=copy.deepcopy(self.safety), actuator=copy.deepcopy(list(self.samples)))
+                    safety=copy.deepcopy(self.safety), actuator=copy.deepcopy(list(self.samples)),
+                    actuator_duplicates_ignored=self.duplicates_ignored)
 
 
 def session_active(session, now):
@@ -247,6 +266,7 @@ class NativeReader:
                     return result
             diagnostic = dict(publishers=publisher_counts, fresh_samples=len(self.acquisition.samples),
                               safety_received=sorted(self.acquisition.safety),
+                              actuator_duplicates_ignored=self.acquisition.duplicates_ignored,
                               controller_received=self.controller is not None,
                               status_received=self.status is not None)
             raise TimeoutError('Fresh read-only '+request['command']+' collection timed out; '+
