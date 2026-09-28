@@ -80,7 +80,7 @@ class ResumeCliTests(unittest.TestCase):
             payloads, instances = [], []
 
             class Connection:
-                def __init__(self, payload, wifi, location):
+                def __init__(self, payload, wifi, location, *, console=None):
                     payloads.append(copy.deepcopy(payload))
                     instances.append(self)
                     self.process = Mock()
@@ -151,7 +151,7 @@ class ResumeCliTests(unittest.TestCase):
             sent = []
 
             class Connection:
-                def __init__(self, payload, wifi, location):
+                def __init__(self, payload, wifi, location, *, console=None):
                     self.checkpoint = copy.deepcopy(payload['checkpoint'])
                     self.process = Mock()
 

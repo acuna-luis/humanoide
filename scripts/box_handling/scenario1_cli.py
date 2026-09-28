@@ -22,12 +22,14 @@ if __package__:
     from . import scenario1_sensors as sensors
     from . import scenario1_nav_correction as nav_correction
     from . import scenario1_resume as resume
+    from .scenario1_console import ConsoleReporter, stage_label
     from .front_box_integration import build_bundle, TASK_ROOT, META_ROOT, SNAPSHOT
 else:
     import scenario1_contract as contract
     import scenario1_sensors as sensors
     import scenario1_nav_correction as nav_correction
     import scenario1_resume as resume
+    from scenario1_console import ConsoleReporter, stage_label
     from front_box_integration import build_bundle, TASK_ROOT, META_ROOT, SNAPSHOT
 
 HERE = Path(__file__).resolve().parent
@@ -125,8 +127,9 @@ def ssh_command(wifi):
 
 
 class Connection:
-    def __init__(self, payload, wifi, evidence):
+    def __init__(self, payload, wifi, evidence, *, console=None):
         self.evidence = evidence
+        self.console = console if console is not None else ConsoleReporter()
         self.events = queue.Queue()
         self.write_lock = threading.Lock()
         self.closed = threading.Event()
@@ -161,11 +164,28 @@ class Connection:
                         if event['event'] == 'checkpoint':
                             contract.validate_checkpoint(event['checkpoint'])
                             atomic_json(self.evidence/'checkpoint.json', event['checkpoint'])
+                        self.present(event)
                         self.events.put(event)
                     except (ValueError, KeyError, TypeError) as exc:
-                        self.events.put(dict(event='error', reason='Protocolo remoto inválido: '+str(exc)))
+                        error = dict(event='error', reason='Protocolo remoto inválido: '+str(exc))
+                        self.present(error)
+                        self.events.put(error)
         finally:
             self.events.put(dict(event='eof'))
+
+    def present(self, event):
+        # Presentation never consumes events or changes validation/control. Keep
+        # this in the reader so late cancellation events remain visible in close().
+        try:
+            lines = self.console.render(event)
+        except Exception:
+            lines = ['  Aviso: no se pudo resumir un evento; consulte events.jsonl.']
+        for line in lines:
+            try:
+                print(line, flush=True)
+            except (OSError, ValueError):
+                # A closed output pipe must not prevent journaling/checkpoints.
+                break
 
     def errors(self):
         with (self.evidence/'ssh.log').open('w') as log:
@@ -192,45 +212,6 @@ class Connection:
                 raise RuntimeError(event.get('reason', 'Fallo remoto'))
             if kind == 'eof':
                 raise RuntimeError('Conexión terminada antes de confirmar '+desired)
-            if kind == 'action':
-                detail = event['detail']
-                if detail['event'] in ('accepted', 'rejected', 'result', 'cancel_requested', 'terminal_unknown'):
-                    print('  '+json.dumps(detail, ensure_ascii=False), flush=True)
-                elif detail['event'] == 'feedback':
-                    print('  Progreso: '+json.dumps(detail, ensure_ascii=False), flush=True)
-            elif kind == 'arrival':
-                print('  Llegada medida: '+json.dumps(event, ensure_ascii=False), flush=True)
-            elif kind == 'get1_correction':
-                if event['phase'] == 'blocked_before_dispatch':
-                    distance_mm = max(row['distance_m'] for row in event['measurements']) * 1000
-                    yaw_deg = max(row['yaw_error_deg'] for row in event['measurements'])
-                    print('  Ajuste get1 no enviado: '+event['qualification']['reason']+
-                          '; llegada medida %.2f mm / %.3f grados. Agarre no iniciado.' %
-                          (distance_mm, yaw_deg), flush=True)
-                else:
-                    label = 'inicio' if event['phase'] == 'start' else 'resultado medido'
-                    print('  Ajuste get1 '+str(event['attempt'])+'/'+str(nav_correction.POLICY['max_corrections'])+
-                          ': '+label+'; '+json.dumps(event['measurements'], ensure_ascii=False), flush=True)
-            elif kind == 'resume_checked':
-                print('  Entrada comprobada: '+event['stage']+'; caja declarada/asumida='+event['requirements']['box_state']+
-                      '; chasis inmóvil y estado técnico vigente.', flush=True)
-            elif kind == 'resume_arrival':
-                print('  Posición de entrada '+event['point']+': '+
-                      json.dumps(event['measurements'], ensure_ascii=False), flush=True)
-            elif kind == 'resume_prerequisite':
-                print('  Preparación de la entrada: '+event['task'], flush=True)
-            elif kind == 'pose_check':
-                print('  Posición de navegación: dos muestras nuevas en map', flush=True)
-            elif kind == 'sensor_check':
-                print('  Telemetría FT/articular recibida; referencias: '+event['qualification'], flush=True)
-            elif kind == 'sensor_verification':
-                print('  FT/postura compatibles con '+event['state'], flush=True)
-            elif kind == 'timing':
-                print('  Comprobación '+event['operation']+': '+format(event['elapsed_s'], '.2f')+' s', flush=True)
-            elif kind == 'stage_complete' and 'elapsed_s' in event:
-                print('  Etapa completada: '+format(event['elapsed_s'], '.2f')+' s', flush=True)
-            elif kind == 'check_benchmark':
-                print('  Lectura '+str(event['iteration'])+': '+format(event['elapsed_s'], '.2f')+' s en total', flush=True)
             if kind == desired:
                 return event
         raise RuntimeError('Plazo agotado esperando '+desired+'; estado físico no confirmado')
@@ -286,6 +267,8 @@ def parser(policy='ask'):
                    help='Estado físico actual: empty=vacías; held=sujeta, separada y estable; released=apoyada y liberada')
     p.add_argument('--recovery-confirmed', action='store_true',
                    help='Confirma recuperación física y recorrido aptos para la etapa elegida tras fallo/interrupción o salto; no omite comprobaciones')
+    p.add_argument('--verbose', action='store_true',
+                   help='Mostrar todos los eventos técnicos en consola; events.jsonl siempre conserva el detalle completo')
     p.add_argument('--wifi', action='store_true', help='SSH mediante 192.168.42.2')
     p.add_argument('--benchmark-checks', type=int, choices=range(1, 6), default=0, metavar='N',
                    help='Sólo con --check: medir de 1 a 5 rondas adicionales de consultas sin mover')
@@ -384,6 +367,7 @@ def _main(args):
             'sensor_worker': hashlib.sha256(payload['sensor_worker'].encode()).hexdigest(),
             'health_worker': hashlib.sha256(payload['health_worker'].encode()).hexdigest(),
             'resume_worker': hashlib.sha256(payload['resume_worker'].encode()).hexdigest(),
+            'scenario1_console': hashlib.sha256((HERE/'scenario1_console.py').read_bytes()).hexdigest(),
             'scenario1_cli': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             'entrypoint': hashlib.sha256((ROOT/'scripts'/ENTRYPOINTS[policy]).read_bytes()).hexdigest()})
     print('Evidencia: '+str(evidence), flush=True)
@@ -393,7 +377,7 @@ def _main(args):
             lock = stack.enter_context(open(name, 'a'))
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         try:
-            connection = Connection(payload, args.wifi, evidence)
+            connection = Connection(payload, args.wifi, evidence, console=ConsoleReporter(verbose=args.verbose))
             ready = connection.wait('ready')
             atomic_json(evidence/'context.json', ready['context'])
             print('Comprobaciones técnicas completadas; mapa='+ready['map_name']+' '+ready['nav_state'], flush=True)
@@ -438,7 +422,8 @@ def _main(args):
                 # Local intent prevents reuse of a stale successful checkpoint after a link loss.
                 checkpoint = contract.begin_stage(checkpoint, stage)
                 atomic_json(evidence/'checkpoint.json', checkpoint)
-                print('Etapa: '+stage, flush=True)
+                print('Etapa '+str(contract.STAGES.index(stage)+1)+'/'+str(len(contract.STAGES))+
+                      ': '+stage_label(stage), flush=True)
                 connection.send(message)
                 connection.wait('stage_complete', timeout=420)
                 checkpoint = contract.validate_checkpoint(json.loads((evidence/'checkpoint.json').read_text()), profile)

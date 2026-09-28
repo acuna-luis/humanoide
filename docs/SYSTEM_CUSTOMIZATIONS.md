@@ -3774,3 +3774,34 @@ Reversión selectiva de archivos de `changed-files.json` desde `before/`,
 preservando cambios posteriores y registrando estado; devuelve bloqueo total.
 No rollback físico ni modificación de checkpoints fallidos. Pendiente ensayo
 `--stop-after get1` y continuación de ciclo, con estado físico fresco.
+
+
+### BOX-01-EXEC-IMPROVED — consola resumida, 28-09-2026 14:43 CEST, Europe/Madrid
+
+Estado vigente: **instalado en fuentes PC; VERIFICADO offline; prueba física
+PENDIENTE**. Motivo: JSON de feedback a unos 50 Hz dificulta leer el progreso.
+Se presentan etapas en español, tiempos redondeados, feedback normal repetido a
+un máximo de 1 Hz por objetivo y avisos inmediatos, incluidos los de cancelación
+posteriores al fallo. `--verbose` recupera todos los eventos en consola;
+`events.jsonl` siempre conserva el flujo original completo antes del formateo.
+
+Destino bajo `/home/lacuna/proyectos/Robots/Humanoide/`:
+`scripts/box_handling/scenario1_console.py` (nuevo), `scenario1_cli.py`, nuevo
+`test_scenario1_console.py` y ajustes de dobles de conexión en tests policies,
+navigation_only y resume_runtime; fuente global, guía de transferencia, guía del
+ejecutor y este índice. Fuente/receta reproducible:
+[consola resumida](box_handling/FORCE_IMPROVED_SCENARIO1.md#consola-resumida--28-09-2026).
+Dependencia: Python estándar; tres wrappers existentes. Activación al siguiente
+inicio; formateador sólo PC, no enviado al robot. Hash incluido en evidencia de
+cada ejecución. No cambia trayectorias, controles, límites ni protocolo remoto.
+
+Versión/hash: `before-sha256.json` y `after-sha256.json`; backup y fuentes en
+`../Humanoide-vla-evidence/20260928T123214Z_SCENARIO1_CONSOLE/`, directorios
+`before/` y `after/`. `verification.json` y `unit-tests.txt` registran el resultado
+exacto de las pruebas locales, más planes/ayuda y sintaxis; `console-sample.txt`
+contiene una muestra sintética. Sin conexiones, cambios remotos ni movimientos.
+Reversión: restauración selectiva de `changed-files.json` desde `before/` y
+retirada de los archivos nuevos después de restaurar el cliente, preservando
+trabajo posterior; actualizar esta ficha. No restaurar checkpoints ni estados
+transitorios. Validación de la presentación en una próxima ejecución real queda
+pendiente; no hay deuda de instalación remota. Sin commit/push.

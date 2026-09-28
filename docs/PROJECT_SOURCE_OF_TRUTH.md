@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**28-09-2026 14:43 CEST — BOX-01-EXEC-IMPROVED: consola resumida.**
+Implementado en el PC: etapas en español, tiempos redondeados y feedback normal
+repetido como máximo una vez por segundo y objetivo. Cambios de estado, errores,
+obstáculos, pérdida de localización y cancelaciones se muestran inmediatamente,
+también durante el cierre. `events.jsonl` conserva todos los eventos originales;
+`--verbose` permite verlos en consola. La presentación no cambia el protocolo,
+los checkpoints ni los controles físicos. Verificación offline documentada;
+sin conexión al robot ni movimiento en esta intervención.
+[Uso, pruebas y reversión](box_handling/FORCE_IMPROVED_SCENARIO1.md#consola-resumida--28-09-2026).
+
 **28-09-2026 14:02 CEST — BOX-01-EXEC-IMPROVED: ajuste get1 reactivado con límites supervisados.**
 Por petición explícita de permitir posicionamiento y relajar límites razonados,
 se sustituye el bloqueo total. Giro medido0,60rad/s al aproximar;1,20 sólo con

@@ -1,5 +1,13 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**28-09-2026 14:43 CEST — consola del escenario mejorado.**
+Las tres entradas muestran etapas legibles, progreso normal repetido hasta una
+vez por segundo y avisos inmediatos. La sujeción/liberación asumida conserva esa
+etiqueta; sólo `stage_complete` anuncia una etapa completada. El detalle completo
+sigue en `events.jsonl` y puede verse con `--verbose`. Cambio PC comprobado
+offline; no se ha conectado ni movido el robot.
+[Formato, alcance y evidencia](../box_handling/FORCE_IMPROVED_SCENARIO1.md#consola-resumida--28-09-2026).
+
 **28-09-2026 14:02 CEST — get1: ajuste supervisado reactivado por autorización del operador.**
 Hasta2ajustes con giro medido0,60rad/s;1,20 sólo junto al destino y con poca
 traslación. Presupuestos de giro por geometría consideran la curva nativa y

@@ -109,16 +109,20 @@ class AutomaticCliTest(unittest.TestCase):
         connection.events = queue.Queue()
         revoked = dict(runtime.nav_correction.qualification_report(), motion_enabled=False,
                        status='blocked', reason_code='GET1_CORRECTION_UNQUALIFIED', reason='synthetic revocation')
-        connection.events.put(dict(event='get1_correction', phase='blocked_before_dispatch',
+        events = [dict(event='get1_correction', phase='blocked_before_dispatch',
             qualification=revoked,
             measurements=[dict(distance_m=.027319, yaw_error_deg=.385),
-                          dict(distance_m=.027318, yaw_error_deg=.387)]))
-        connection.events.put(dict(event='error', reason='GET1_CORRECTION_UNQUALIFIED: test'))
-        with patch('sys.stdout', io.StringIO()) as output, \
-                self.assertRaisesRegex(RuntimeError, 'GET1_CORRECTION_UNQUALIFIED'):
-            connection.wait('stage_complete', timeout=1)
+                          dict(distance_m=.027318, yaw_error_deg=.387)]),
+                  dict(event='error', reason='GET1_CORRECTION_UNQUALIFIED: test')]
+        connection.console = cli.ConsoleReporter()
+        connection.process = Mock(stdout=io.StringIO(''.join(json.dumps(row)+'\n' for row in events)))
+        with tempfile.TemporaryDirectory() as directory, patch('sys.stdout', io.StringIO()) as output:
+            connection.evidence = Path(directory)
+            connection.read()
+            with self.assertRaisesRegex(RuntimeError, 'GET1_CORRECTION_UNQUALIFIED'):
+                connection.wait('stage_complete', timeout=1)
         self.assertIn('Ajuste get1 no enviado', output.getvalue())
-        self.assertIn('27.32 mm / 0.387 grados', output.getvalue())
+        self.assertIn('27,3 mm / 0,39°', output.getvalue())
         self.assertIn('Agarre no iniciado', output.getvalue())
 
     def test_pending_sensor_calibration_stops_before_any_network_or_motion(self):
@@ -154,7 +158,7 @@ class AutomaticCliTest(unittest.TestCase):
             sensor_path.write_text(json.dumps(sensor_fixture()))
 
             class OfflineConnection:
-                def __init__(self, payload, wifi, location):
+                def __init__(self, payload, wifi, location, *, console=None):
                     self.checkpoint = copy.deepcopy(payload['checkpoint'])
                     self.evidence = location
                     self.stage = None

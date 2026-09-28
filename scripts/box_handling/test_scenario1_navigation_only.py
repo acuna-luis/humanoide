@@ -33,7 +33,7 @@ class NavigationOnlyCliTests(unittest.TestCase):
             messages = []
 
             class OfflineConnection:
-                def __init__(self, payload, wifi, location):
+                def __init__(self, payload, wifi, location, *, console=None):
                     self.checkpoint = copy.deepcopy(payload['checkpoint'])
                     self.evidence = location
                     self.process = Mock()

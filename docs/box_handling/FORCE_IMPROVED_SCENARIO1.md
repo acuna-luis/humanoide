@@ -1,6 +1,9 @@
 # Ejecutor mejorado del escenario 1
 
 28-09-2026, Europe/Madrid. **BOX-01-EXEC-IMPROVED — implementado en el PC.**
+Consola vigente: etapas legibles, feedback normal repetido limitado a una vez
+por segundo, avisos inmediatos y registro técnico íntegro; `--verbose` muestra
+los eventos completos. [Uso](#consola-resumida--28-09-2026).
 Reanudación vigente: `--resume CHECKPOINT --from-stage ETAPA`, con `--plan`
 y `--check` de sólo lectura. Admite las diez etapas; una entrada tras fallo,
 interrupción o salto exige estado de caja y recuperación declarados explícitamente,
@@ -1440,3 +1443,70 @@ resultados en
 Reversión selectiva desde `before/` devuelve el bloqueo total y los límites
 anteriores, preservando trabajo ajeno; actualizar estado en guías/índice. No
 rollback remoto ni reproducción de estados transitorios. Sin commit/push.
+
+
+## Consola resumida — 28-09-2026
+
+**BOX-01-EXEC-IMPROVED, 14:43 CEST, Europe/Madrid.** Cambio de presentación
+solicitado por el usuario para eliminar el JSON repetido del terminal. Afecta a
+`ask_improved_scenario1.sh`, `force_improved_scenario1.sh` y
+`force_improved_scenario1_autochecked.sh`, que comparten el cliente PC.
+
+Ejemplo ilustrativo, sin constituir evidencia de una prueba física:
+
+```text
+Etapa 3/10: Recoger y separar la caja
+  Comprobación de estado técnico: 2,1 s
+  En curso — 12,8 s
+  Resultado recibido: SUCCEED
+  Etapa completada: 34,5 s
+Etapa 4/10: Registrar sujeción
+  Etapa completada: 0,0 s; estado de caja asumido
+```
+
+- Tiempos con un decimal; residual de posición en mm y grados. El redondeo sólo
+  afecta al texto: las comparaciones mantienen los datos originales.
+- Feedback normal repetido como máximo una vez por segundo, por objetivo y
+  tipo de acción, mediante reloj monotónico PC. El primer mensaje y los cambios
+  de estado se muestran inmediatamente; no se añaden esperas al flujo.
+- Errores, obstáculos, pérdida de localización, rechazos y cancelaciones sin
+  limitación de frecuencia. El lector sigue mostrándolos durante el cierre,
+  aunque la espera principal ya haya fallado. Una respuesta de cancelación no
+  se presenta como prueba de parada física.
+- `FINISH`, `SUCCEED` y `status=4` se presentan como feedback/respuesta; sólo el
+  evento `stage_complete` anuncia la etapa completada. El tiempo de una consulta
+  de salud no afirma éxito; las confirmaciones `assumed` siguen identificadas.
+- `events.jsonl` guarda cada línea original antes de resumirla. Checkpoints,
+  validaciones, objetivos y mecanismos de cancelación conservan su protocolo.
+  Una excepción del formateador no consume el evento ni suprime un fallo técnico.
+
+El formato se activa al siguiente inicio, sin argumentos nuevos. Para diagnóstico
+completo en consola, añadir `--verbose` a cualquiera de las tres entradas:
+
+```bash
+./scripts/force_improved_scenario1.sh --help
+./scripts/force_improved_scenario1.sh --check --verbose
+```
+
+La segunda orden conecta y consulta sin iniciar movimientos; no se ejecutó en
+esta intervención. `--plan` conserva su JSON de planificación. `--verbose` no
+cambia el detalle de `events.jsonl`, que ya es completo por defecto.
+
+Fuente reproducible: `scripts/box_handling/scenario1_console.py` y su integración
+en `scenario1_cli.py`; Python estándar, sólo en el PC. El formateador no se envía
+al robot y su hash se incorpora a `source-sha256.json` en cada ejecución.
+
+Verificación **VERIFICADO offline**: 462 pruebas correctas, incluidas 16 de
+presentación, más regresiones del supervisor; sintaxis Python/bash, `--help` y `--plan` de las tres entradas. Conteo
+y resultados exactos en `verification.json`. Registro íntegro, checkpoints,
+limitación de feedback, estados asumidos, avisos y cierre tardío cubiertos por
+`test_scenario1_console.py`. Prueba física con este formato: **PENDIENTE**;
+no se ha conectado al robot ni enviado movimiento.
+
+Backup, hashes antes/después, fuentes finales, pruebas y muestra de consola:
+`../Humanoide-vla-evidence/20260928T123214Z_SCENARIO1_CONSOLE/`.
+Para revertir, restaurar selectivamente los archivos de `changed-files.json`
+desde `before/`, preservando cambios posteriores; los dos archivos nuevos
+(formateador y su test) pueden retirarse después de restaurar el cliente.
+No requiere restaurar robot, mapas, tareas, estados transitorios ni checkpoints.
+Actualizar este estado y el índice al revertir. Sin commit ni push.
