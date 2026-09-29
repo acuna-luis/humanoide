@@ -1,5 +1,11 @@
 # Escenario 1 con supervisión continua
 
+**Actualización 29-09-2026:** la consola muestra XYZ, rango y margen/exceso tanto
+de cajas válidas como rechazadas durante la recogida. Las válidas usan la segunda
+captura; las rechazadas, la pose real que comprobó el gate, sin alterar su fallo.
+No añade capturas/esperas de sensores ni modifica el paquete SPS o sus límites.
+[Formato, verificación y reversión](FORCE_IMPROVED_SCENARIO1.md#medidas-de-caja-en-consola--29-09-2026).
+
 **28-09-2026, Europe/Madrid — BOX-01-EXEC-OPTIMISTIC. Implementado en el PC;
 VERIFICADO offline y en lectura. Ensayo físico PENDIENTE.**
 Entrada: [`optimistic_scenario1.sh`](../../scripts/optimistic_scenario1.sh).

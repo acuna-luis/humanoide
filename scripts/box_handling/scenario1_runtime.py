@@ -93,6 +93,14 @@ guard={}
 exec(compile(GUARD_VALUE,'scenario1_perception.py','exec'),guard)
 import front_sps_contract as contract
 original=contract.select_report
+original_position=contract.validate_position
+def position_diagnostic(detail):
+ entry=dict(detail,time_ns=time.time_ns())
+ with (session/'selection.jsonl').open('a') as stream:
+  stream.write(json.dumps(entry,allow_nan=False)+'\\n')
+def observed_position(pose):
+ return guard['observe_position_rejection'](original_position,pose,contract.POSITION_BOUNDS_M,position_diagnostic)
+contract.validate_position=observed_position
 def capture(timeout):
  if timeout<=0:raise TimeoutError('No remaining native perception budget')
  with socket.socket(socket.AF_UNIX) as conn:
@@ -148,6 +156,8 @@ class Runtime:
         self.health_session = None
         self.resume_plan = None
         self.resume_validated = False
+        self.perception_offset = 0
+        self.perception_last_read = float('-inf')
         if payload.get('resume_plan') is not None:
             self.resume_plan = resume.plan_resume(payload['resume_source_checkpoint'], payload['profile'],
                                                  **payload['resume_options'])
@@ -435,6 +445,46 @@ class Runtime:
             measurements.append(measurement)
         self.emit('health', safety=health, posture=measurements, home_required=require_home)
 
+    def forward_perception(self, *, force=False):
+        """Forward existing complete JSONL records without querying perception.
+
+        Called on the action-event thread and at shutdown, never by the watchdog.
+        Partial lines stay on disk for the next feedback; offsets prevent the
+        final drain from repeating measurements already shown during grasp.
+        """
+        if self.session is None:
+            return
+        now = time.monotonic()
+        if not force and now-self.perception_last_read < 0.1:
+            return
+        self.perception_last_read = now
+        try:
+            with (self.session/'selection.jsonl').open('rb') as stream:
+                stream.seek(self.perception_offset)
+                while True:
+                    line = stream.readline()
+                    if not line or not line.endswith(b'\n'):
+                        break
+                    self.perception_offset = stream.tell()
+                    try:
+                        detail = json.loads(line)
+                        if not isinstance(detail, dict):
+                            raise ValueError('not a perception event')
+                    except (ValueError, UnicodeError):
+                        self.emit('perception_log_warning', reason='Registro de percepción ilegible')
+                        continue
+                    self.emit('perception', detail=detail)
+        except FileNotFoundError:
+            pass  # No perception has been requested yet.
+        except OSError as exc:
+            # Presentation is not a new condition for authorizing movement.
+            self.emit('perception_log_warning', reason='Lectura de registro de percepción: '+str(exc))
+
+    def action_event(self, kind, detail):
+        if kind == 'motion':
+            self.forward_perception(force=detail.get('event') in ('result', 'error', 'request_complete'))
+        self.emit('action', kind=kind, detail=detail)
+
     def action(self, kind, goal, timeout, *, correction=None):
         # A session is created before preflight. Reuse each endpoint's client;
         # keep one-shot mode for isolated diagnostics without a session.
@@ -450,7 +500,7 @@ class Runtime:
                     '--lease-file', str(self.session/'control-lease.json')])
                 self.action_sessions[kind] = ProcessSession(['docker', 'exec', '-i', self.native_container,
                     'bash', '-lc', SETUP+'exec '+shlex.join(command)],
-                    lambda detail: self.emit('action', kind=kind, detail=detail))
+                    lambda detail: self.action_event(kind, detail))
             request = {'goal': goal, 'timeout': timeout}
             if correction is not None:
                 request['correction'] = correction
@@ -494,7 +544,7 @@ class Runtime:
                 except (ValueError, TypeError):
                     self.emit('native_log', text=line.rstrip()[:3000])
                     continue
-                self.emit('action', kind=kind, detail=event)
+                self.action_event(kind, event)
                 if event['event'] == 'result':
                     results.append(event)
             else:
@@ -949,10 +999,7 @@ class Runtime:
             if self.session:
                 self.write_lease()
                 (self.session/'stop').touch()
-                selection = self.session/'selection.jsonl'
-                if selection.exists():
-                    for line in selection.read_text().splitlines():
-                        self.emit('perception', detail=json.loads(line))
+                self.forward_perception(force=True)
             for worker in list(self.action_sessions.values()) + ([self.health_session] if self.health_session else []):
                 worker.close()
             for process in self.adapters + ([self.sensor_process] if self.sensor_process else []):
@@ -961,6 +1008,7 @@ class Runtime:
                 except subprocess.TimeoutExpired:
                     process.terminate()
                     self.emit('adapter_exit_unconfirmed')
+            self.forward_perception(force=True)
             for log in self.logs:
                 log.close()
             if self.lock:

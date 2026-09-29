@@ -1,5 +1,14 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**29-09-2026 — medidas de caja visibles tanto aceptadas como rechazadas.**
+Improved/optimistic muestran XYZ en cm y margen al límite más cercano en mm,
+en base_link, o exceso en cada eje fuera de rango. El adaptador transitorio
+registra también la pose que rechaza el gate original, sin sustituir su excepción.
+Se reutilizan capturas y se imprimen durante la recogida, sin esperas de sensores.
+Límites y paquete SPS no cambian; 153 pruebas y replay offline del rechazo110554
+correctos. Sin prueba física nueva del agente.
+[Ejemplo, activación y evidencia](../box_handling/FORCE_IMPROVED_SCENARIO1.md#medidas-de-caja-en-consola--29-09-2026).
+
 **28-09-2026 18:35 CEST — rango frontal restaurado por petición del operador.**
 X vuelve a[0,41;0,79] m; el paquete requerido vuelve a`bf145fa17e1116fc`.
 La edición local previa[0,35;0,90] generaba otra identidad no instalada y abortó

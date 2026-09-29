@@ -1,9 +1,20 @@
-"""Pure regression checks; never contact the robot or create files."""
+"""Offline perception regressions; only temporary files, no robot or network."""
 import copy
+from contextlib import contextmanager
+import json
 import math
+from pathlib import Path
+import runpy
+import sys
+import tempfile
 import unittest
+from unittest.mock import Mock, patch
 
-from scripts.box_handling.scenario1_perception import guard_selection, stable_report, validate_pair
+from scripts.box_handling import front_sps_contract as sps
+from scripts.box_handling.scenario1_perception import (
+    guard_selection, observe_position_rejection, stable_report, validate_pair)
+from scripts.box_handling.scenario1_runtime import guarded_adapter_source
+from scripts.box_handling.test_front_sps import report
 
 
 def selection(stamp=100, x=.78, y=.10, z=.62, angle_deg=0., index=0, axis='z'):
@@ -13,6 +24,108 @@ def selection(stamp=100, x=.78, y=.10, z=.62, angle_deg=0., index=0, axis='z'):
                 selection=dict(selected_index=index,
                                selected_pose=dict(position=dict(x=x, y=y, z=z),
                                                   orientation=orientation)))
+
+
+class PositionRejectionObservationTest(unittest.TestCase):
+    def test_success_retains_original_result_without_extra_diagnostic(self):
+        result = object()
+        validator = Mock(return_value=result)
+        log = Mock()
+        pose = dict(position=dict(x=.75, y=.1, z=.2))
+        self.assertIs(observe_position_rejection(validator, pose, sps.POSITION_BOUNDS_M, log), result)
+        validator.assert_called_once_with(pose)
+        log.assert_not_called()
+
+    def test_failure_preserves_same_exception_and_observes_all_axes_and_actual_bounds(self):
+        error = ValueError('original gate failure')
+        pose = dict(position=dict(x=.8173, y=.10, z=.20))
+        bounds = copy.deepcopy(sps.POSITION_BOUNDS_M)
+        before = copy.deepcopy((pose, bounds))
+        log = Mock()
+        with self.assertRaises(ValueError) as raised:
+            observe_position_rejection(Mock(side_effect=error), pose, bounds, log)
+        self.assertIs(raised.exception, error)
+        detail = log.call_args.args[0]
+        self.assertEqual(detail['event'], 'position_rejected')
+        self.assertEqual(detail['frame_id'], 'base_link')
+        self.assertEqual(detail['position'], pose['position'])
+        self.assertEqual(detail['bounds_m'], bounds)
+        self.assertEqual(detail['reason'], str(error))
+        detail['position']['x'] = 0
+        detail['bounds_m']['x'] = (0, 20)
+        self.assertEqual((pose, bounds), before)
+
+    def test_invalid_axis_is_null_without_discarding_other_axes_or_masking_rejection(self):
+        for value in (math.nan, math.inf, True, None, '0.5', 10**400):
+            pose = dict(position=dict(x=value, y=.1, z=.2))
+            log = Mock()
+            error = ValueError('invalid x')
+            with self.subTest(value=value), self.assertRaises(ValueError) as raised:
+                observe_position_rejection(Mock(side_effect=error), pose, sps.POSITION_BOUNDS_M, log)
+            self.assertIs(raised.exception, error)
+            detail = log.call_args.args[0]
+            self.assertEqual(detail['position'], dict(x=None, y=.1, z=.2))
+            json.dumps(detail, allow_nan=False)
+
+    def test_log_failure_never_replaces_gate_rejection(self):
+        error = ValueError('BOX_POSITION_REJECTED: original')
+        for log_error in (OSError('disk unavailable'), ValueError('serialization failed')):
+            with self.subTest(error=log_error), self.assertRaises(ValueError) as raised:
+                observe_position_rejection(Mock(side_effect=error), dict(position={}), {},
+                                           Mock(side_effect=log_error))
+            self.assertIs(raised.exception, error)
+
+    @contextmanager
+    def transient_adapter(self, directory):
+        source = Path(__file__).with_name('scenario1_perception.py').read_text()
+        generated = guarded_adapter_source('/not-installed-for-test', directory, source)
+        with patch.dict(sys.modules, {'front_sps_contract': sps}), \
+                patch.object(sps, 'validate_position', sps.validate_position), \
+                patch.object(sps, 'select_report', sps.select_report), \
+                patch.object(sys, 'path', list(sys.path)), patch.object(sys, 'argv', list(sys.argv)), \
+                patch.object(runpy, 'run_path'):
+            namespace = {}
+            exec(compile(generated, 'test-transient-adapter', 'exec'), namespace)
+            yield namespace
+
+    def test_generated_adapter_logs_first_rejection_and_transaction_still_latches(self):
+        with tempfile.TemporaryDirectory() as directory, self.transient_adapter(directory) as namespace:
+            capture = Mock(side_effect=AssertionError('No extra capture after rejection'))
+            namespace['capture'] = capture
+            transaction = sps.SelectionTransaction()
+            captured = report()
+            captured['vision_result']['trans_outputs']['box_pose']['poses'][1]['position']['x'] = .6173
+            with self.assertRaisesRegex(ValueError, 'BOX_POSITION_REJECTED.*x=0.8173'):
+                transaction.detect(captured, 100_100_000_000)
+            capture.assert_not_called()
+            self.assertTrue(transaction.failed)
+            self.assertIsNone(transaction.pending)
+            rows = (Path(directory)/'selection.jsonl').read_text().splitlines()
+            self.assertEqual(len(rows), 1)
+            detail = json.loads(rows[0])
+            self.assertAlmostEqual(detail['position']['x'], .8173)
+            self.assertEqual(set(detail['position']), set('xyz'))
+            self.assertEqual(detail['bounds_m']['x'], [.41, .79])
+
+    def test_rejection_of_second_capture_is_visible_without_returning_a_selection(self):
+        with tempfile.TemporaryDirectory() as directory, self.transient_adapter(directory) as namespace:
+            captured = report()
+            captured['vision_result']['trans_outputs']['box_pose']['poses'][1]['position']['x'] = .6173
+            capture = Mock(return_value=captured)
+            with self.assertRaisesRegex(ValueError, 'BOX_POSITION_REJECTED'):
+                stable_report(report(), 100_100_000_000, namespace['original'],
+                              capture, lambda: 100_200_000_000)
+            capture.assert_called_once()
+            self.assertEqual(len((Path(directory)/'selection.jsonl').read_text().splitlines()), 1)
+
+    def test_valid_selection_and_final_reply_still_preserve_camera_pose_without_extra_records(self):
+        with tempfile.TemporaryDirectory() as directory, self.transient_adapter(directory) as namespace:
+            captured = report()
+            pending = namespace['original'](captured, 100_100_000_000)
+            reply = sps.SelectionTransaction.result(pending)
+            self.assertEqual(reply['sps_outputs']['poses'], [pending['camera_pose']])
+            self.assertTrue(reply['ok'])
+            self.assertFalse((Path(directory)/'selection.jsonl').exists())
 
 
 class SelectionConsistencyTest(unittest.TestCase):

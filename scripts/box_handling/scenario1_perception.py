@@ -13,6 +13,32 @@ MAX_TRANSLATION_M = 0.02
 MAX_ROTATION_DEG = 3.0
 
 
+def observe_position_rejection(validate, pose, bounds, report):
+    """Observe the original gate's failure; never recover or substitute a pose.
+
+    The transient adapter supplies its installed validator and actual bounds.
+    Logging must not replace a gate exception, including when the log cannot be
+    written. Successful calls retain the original return value unchanged.
+    """
+    try:
+        return validate(pose)
+    except ValueError as exc:
+        try:
+            raw_position = pose.get('position', {})
+            position = {}
+            for axis in 'xyz':
+                try:
+                    position[axis] = _numeric(raw_position.get(axis))
+                except (ValueError, AttributeError):
+                    position[axis] = None
+            report(dict(event='position_rejected', frame_id='base_link',
+                        position=position,
+                        bounds_m=copy.deepcopy(bounds), reason=str(exc)))
+        except Exception:
+            pass  # The original rejection remains authoritative.
+        raise
+
+
 def _numeric(value):
     if type(value) not in (int, float):
         raise ValueError('Selection pose contains a nonnumeric value')

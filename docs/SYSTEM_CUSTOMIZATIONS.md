@@ -3980,3 +3980,44 @@ en `../Humanoide-vla-evidence/20260928T163456Z_SPS_PACKAGE_PREFLIGHT/`.
 Reversión selectiva sólo del módulo de diagnóstico y su prueba desde`before/`;
 no restaurar el rango anterior del backup, descartado por petición del operador.
 [Receta, detalles y pendientes](box_handling/FRONT_BOX_DEPTH_GATE_20260928.md#configuración-local-y-paquete-ausente--28-09-2026-1835-cest).
+
+### BOX-01-POSITION-CONSOLE — 29-09-2026, Europe/Madrid
+
+**Ampliación vigente: rechazo con XYZ completo.** El intento110554 del operador
+demostró que sólo se imprimían las medidas aceptadas, porque el gate abortaba
+antes de emitir `detected`. Fuente PC adicional `scenario1_perception.py` y
+su prueba; runtime transitorio observa `validate_position` original, registra
+posición/límites ante ValueError y relanza la misma excepción. La consola muestra
+XYZ/margen/exceso también del rechazo; no recalcula objetivo ni modifica límites.
+Errores de registro no reemplazan el fallo de control. No requiere instalar:
+fuentes del bundle`bf145fa17e1116fc` idénticas; carga sólo en la siguiente sesión.
+153 pruebas y replay offline exacto del intento correctos, X81,73/Y13,13/Z8,81 cm
+y excesoX27,3 mm. Sin conexión/movimientos del agente; prueba física nueva pendiente.
+Backup adicional y hashes antes/después:
+`../Humanoide-vla-evidence/20260929T110941Z_BOX_REJECTION_CONSOLE/`.
+Revertir sólo esta ampliación: restaurar selectivamente consola/runtime/percepción
+y sus pruebas desde ese`before/`; conserva el rechazo original y el formato de
+aceptadas. No restaurar estados remotos ni checkpoints.
+
+**IMPLEMENTADO PC; VERIFICADO offline; observación en ciclo físico PENDIENTE.**
+Motivo: mostrar también cajas dentro de rango, con XYZ en cm e intervalos
+efectivos y margen al límite más cercano en mm. Fuentes:
+`scripts/box_handling/scenario1_console.py`, `scenario1_runtime.py` y sus dos
+pruebas. Destino: consola PC y runtime temporal transmitido en memoria al host
+Motion en la siguiente invocación de improved/optimistic. No instalación remota,
+recarga de servicios ni modificación de las seis fuentes SPS`bf145fa17e1116fc`.
+
+Se reenvía `selection.jsonl` durante feedback/resultados Motion y al cierre,
+sin líneas parciales ni duplicar registros. La consola muestra una vez la pose
+final de la segunda captura validada, usando datos/base_link/intervalos del
+evento; no vuelve a captar ni cambia decisiones. Sin esperas de sensores,
+watchdog nuevo o modificación de límites. Un aviso de registro no autoriza
+movimiento ni cambia resultado/checkpoint. --verbose mantiene los eventos.
+
+114 pruebas PASS, --plan y replay offline de captura histórica correctos.
+Sin conexión ni movimiento realizados por el agente. Base Git88b17026…;
+backup antes/después, hashes, pruebas y replay en
+`../Humanoide-vla-evidence/20260929T102432Z_BOX_POSITION_CONSOLE/`.
+Reversión selectiva de ambos módulos y pruebas desde`before/`, preservando
+trabajo posterior; no rollback del paquete SPS ni cambios de checkpoint.
+[Formato, receta de verificación y alcance](box_handling/FORCE_IMPROVED_SCENARIO1.md#medidas-de-caja-en-consola--29-09-2026).

@@ -71,6 +71,82 @@ def advance(machine, stop='verify_home'):
             break
 
 
+class PerceptionForwardingTest(unittest.TestCase):
+    def machine(self, directory):
+        events = []
+        machine = runtime.Runtime({'checkpoint': contract.new_checkpoint(PROFILE)},
+                                  lambda event, **values: events.append(dict(event=event, **values)))
+        machine.session = Path(directory)
+        return machine, events, Path(directory)/'selection.jsonl'
+
+    def test_measurement_is_forwarded_during_action_and_final_drain_does_not_duplicate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            machine, events, path = self.machine(directory)
+            captured = dict(event='detected', stamp_ns=123, selection={'measured': 'unchanged'})
+            path.write_text(json.dumps(captured)+'\n')
+            feedback = dict(event='feedback', feedback={'state': {'desc': 'RUNNING'}})
+            machine.action_event('motion', feedback)
+            self.assertEqual(events, [dict(event='perception', detail=captured),
+                                      dict(event='action', kind='motion', detail=feedback)])
+            machine.forward_perception(force=True)
+            self.assertEqual(len(events), 2)
+            self.assertFalse(machine.stop.is_set())
+
+    def test_partial_utf8_line_waits_for_newline_without_losing_or_repeating_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            machine, events, path = self.machine(directory)
+            first = dict(event='captured', label='caja')
+            second = dict(event='selected', label='posición')
+            first_line = (json.dumps(first)+'\n').encode()
+            second_line = (json.dumps(second, ensure_ascii=False)+'\n').encode()
+            cut = second_line.index('ó'.encode()) + 1
+            path.write_bytes(first_line+second_line[:cut])
+            machine.forward_perception(force=True)
+            self.assertEqual(events, [dict(event='perception', detail=first)])
+            with path.open('ab') as stream:
+                stream.write(second_line[cut:])
+            machine.forward_perception(force=True)
+            self.assertEqual(events[-1], dict(event='perception', detail=second))
+            machine.forward_perception(force=True)
+            self.assertEqual(len(events), 2)
+
+    def test_feedback_throttles_only_file_reads_but_result_flushes_recent_diagnostics(self):
+        with tempfile.TemporaryDirectory() as directory:
+            machine, events, path = self.machine(directory)
+            with patch.object(runtime.time, 'monotonic', return_value=10.):
+                machine.forward_perception()  # File does not exist yet.
+                detail = dict(event='failed', reason='BOX_POSITION_REJECTED')
+                path.write_text(json.dumps(detail)+'\n')
+                machine.action_event('motion', dict(event='feedback'))
+                self.assertEqual(len(events), 1)
+                machine.action_event('motion', dict(event='result', status=6))
+            self.assertEqual(events[1], dict(event='perception', detail=detail))
+            self.assertEqual(events[2]['detail']['status'], 6)
+
+    def test_bad_log_record_is_reported_without_changing_control_or_hiding_next_record(self):
+        with tempfile.TemporaryDirectory() as directory:
+            machine, events, path = self.machine(directory)
+            detail = dict(event='failed', reason='original rejection')
+            path.write_bytes(b'not-json\n[]\n'+(json.dumps(detail)+'\n').encode())
+            before = copy.deepcopy(machine.checkpoint)
+            machine.forward_perception(force=True)
+            self.assertEqual([row['event'] for row in events],
+                             ['perception_log_warning', 'perception_log_warning', 'perception'])
+            self.assertEqual(events[-1]['detail'], detail)
+            self.assertEqual(machine.checkpoint, before)
+            self.assertFalse(machine.stop.is_set())
+
+    def test_read_error_does_not_replace_action_result_or_interrupt_cleanup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            machine, events, path = self.machine(directory)
+            path.mkdir()  # Opening a directory as a file produces OSError.
+            result = dict(event='result', status=4)
+            machine.action_event('motion', result)
+            self.assertEqual(events[0]['event'], 'perception_log_warning')
+            self.assertEqual(events[1], dict(event='action', kind='motion', detail=result))
+            self.assertFalse(machine.stop.is_set())
+
+
 class RuntimeTest(unittest.TestCase):
     def test_action_status_uses_existing_auto_qos_while_telemetry_is_volatile(self):
         machine = runtime.Runtime({'checkpoint': contract.new_checkpoint(PROFILE)})

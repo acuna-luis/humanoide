@@ -1,5 +1,20 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**29-09-2026 — BOX-01-POSITION-CONSOLE: medidas visibles al aceptar o rechazar.**
+Los ejecutores improved/optimistic muestran la posición seleccionada XYZ en cm,
+intervalos efectivos y margen a la cara más cercana en mm, también si pasa el
+rechazo de posición. Las aceptadas usan la segunda captura validada; las
+rechazadas, la pose exacta comprobada por el gate original (primera/segunda
+captura o comprobación final), con exceso o margen por eje. Z en base_link no
+es altura al suelo. Registro de diagnóstico transitorio antes de propagar el
+mismo rechazo; eventos reenviados durante feedback/resultados y al cierre.
+No agrega capturas ni esperas ni convierte un rechazo en resultado válido.
+Fuentes PC; bundle`bf145fa17e1116fc` idéntico, sin reinstalación ni cambio de límites.
+153 pruebas y replay offline del intento110554 correctos: X81,73/Y13,13/Z8,81 cm,
+X excede el máximo por27,3 mm. --plan correcto.
+Sin conexión/movimiento del agente; comprobación en próximo ciclo PENDIENTE.
+[Formato, alcance y reversión](box_handling/FORCE_IMPROVED_SCENARIO1.md#medidas-de-caja-en-consola--29-09-2026).
+
 **28-09-2026 18:35 CEST — BOX-01-SPS-PREFLIGHT: restaurado rango pedido.**
 El intento163254 falló antes de etapas porque la edición local X=[0,35;0,90]
 generaba el paquete ausente`665dc3bff417b03a`. Por petición del operador se

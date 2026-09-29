@@ -1498,6 +1498,131 @@ anteriores, preservando trabajo ajeno; actualizar estado en guías/índice. No
 rollback remoto ni reproducción de estados transitorios. Sin commit/push.
 
 
+## Medidas de caja en consola — 29-09-2026
+
+**BOX-01-POSITION-CONSOLE, Europe/Madrid. IMPLEMENTADO PC; VERIFICADO offline;
+ensayo físico de presentación PENDIENTE.** Se aplica a los tres improved y a
+`optimistic_scenario1.sh`. La consola antes ocultaba eventos perceptivos válidos
+y el supervisor sólo los enviaba al finalizar el ciclo.
+
+**Corrección posterior del mismo día: cajas rechazadas.** El ensayo del operador
+`20260929T110554Z_OPTIMISTIC_SCENARIO1_542726` mostró correctamente el aviso
+durante la recogida, pero no XYZ: el rechazo de posición ocurre antes de crear
+los eventos `detected`/`selected`, únicos cubiertos inicialmente. Esa carencia
+de presentación queda corregida; el siguiente bloque se obtuvo reproduciendo
+offline la detección y TF de ese intento, sin consultar ni mover el robot:
+
+```text
+  AVISO: Caja seleccionada en base_link — rechazada por posición (Z no es altura al suelo):
+    X: 81,73 cm [41,00 a 79,00 cm]; exceso sobre máximo: 27,3 mm
+    Y: 13,13 cm [-39,00 a 39,00 cm]; margen al máximo: 258,7 mm
+    Z: 8,81 cm [1,00 a 149,00 cm]; margen al mínimo: 78,1 mm
+```
+
+El adaptador **transitorio** generado por `scenario1_runtime.py` observa
+`validate_position` del contrato instalado. El helper
+`scenario1_perception.observe_position_rejection` llama al validador original,
+devuelve intacto su resultado cuando pasa y, si éste lanza `ValueError`, registra
+la posición realmente comprobada y los límites efectivos antes de relanzar la
+misma excepción. No reconstruye selección/TF ni filtra candidatos para imprimir.
+El evento `position_rejected` se añade a `selection.jsonl` en una sola escritura
+y se reenvía por el lector incremental existente. `time_ns` fecha el diagnóstico,
+no sustituye el sello de la detección original. Cubre rechazos de primera/segunda
+captura y del chequeo final; una primera captura rechazada no solicita otra.
+
+El diagnóstico sigue rechazado aunque otro eje esté dentro de rango; muestra
+margen, exceso sobre máximo o diferencia hasta mínimo por eje. Coordenadas
+inválidas se registran como `null` y aparecen como «dato no disponible» sin
+ocultar los otros ejes. Marco desconocido conserva sólo el aviso original;
+no se etiqueta una pose de cámara como base_link. Diagnósticos exactamente
+repetidos con la misma fecha se deduplican; --verbose conserva los registros.
+Un fallo de escritura/serialización del diagnóstico no reemplaza el rechazo
+original ni deja utilizable la transacción. Los límites y el paquete SPS
+permanecen idénticos: la observación se carga en memoria en la próxima sesión,
+sin instalación ni reinicio. Las medidas aceptadas mantienen el formato inferior.
+
+Verificación de la corrección: **153 pruebas PASS**, incluyendo código transitorio
+ejecutado offline, misma excepción/resultado, invalidación de transacción, fallo
+de registro y segundo rechazo. Replay de la captura del intento110554 reproduce
+exactamente el rechazo original y ahora muestra los tres ejes antes del feedback.
+Se añade `scripts.box_handling.test_front_sps` a la receta de pruebas inferior.
+No hubo conexión ni movimiento del agente. Backup adicional, fuentes/hashes,
+bundles idénticos, pruebas y replay:
+`../Humanoide-vla-evidence/20260929T110941Z_BOX_REJECTION_CONSOLE/`.
+Reversión de esta ampliación: restaurar selectivamente consola, runtime,
+`scenario1_perception.py` y pruebas desde su `before/`, preservando trabajo
+posterior. Devuelve la presentación sólo de aceptadas; no cambia el gate.
+
+Ejemplo obtenido al reproducir **offline una captura histórica**, no medición
+actual del robot:
+
+```text
+  Caja seleccionada en base_link — dentro del rango XYZ (Z no es altura al suelo):
+    X: 77,49 cm [41,00 a 79,00 cm]; margen al máximo: 15,1 mm
+    Y: 9,72 cm [-39,00 a 39,00 cm]; margen al máximo: 292,8 mm
+    Z: 9,47 cm [1,00 a 149,00 cm]; margen al mínimo: 84,7 mm
+```
+
+`scenario1_console.py` usa `selection.selected_pose.position` y los intervalos
+efectivos de `selection.position_gate.bounds_m`, sin valores de rango duplicados
+en la presentación. Posición e intervalos en cm con dos decimales; distancia
+al límite mínimo o máximo más cercano en mm con un decimal. Ese margen describe
+posición dentro de una envolvente, no calidad de agarre, colisiones ni certeza
+de la medición. El redondeo de texto no cambia las decisiones del contrato.
+
+Los eventos `detected`/`selected` contienen la segunda captura del par validado;
+se muestra una vez por sello, índice, coordenadas e intervalos. No se presenta
+la pose en cámara ni se toma la primera captura como pose final. Una lectura
+nueva se vuelve a imprimir; `--verbose` conserva todos los eventos íntegros.
+Datos ausentes, no finitos, marco incorrecto o gate no válido no generan un
+mensaje de aceptación. Los rechazos muestran ahora XYZ con la ampliación descrita
+arriba y conservan además su motivo original.
+En el intento101910 del usuario, X=0,7915 m supera 0,79 m por1,5 mm; esta
+presentación no amplía el rango ni cambia ese resultado.
+
+`scenario1_runtime.py` reenvía incrementalmente `selection.jsonl` al recibir
+feedback de acciones Motion, como máximo una lectura cada0,1 s, y fuerza una
+lectura en resultado/error/fin de solicitud y al cerrar. No espera al final
+del ciclo, no crea otro hilo de supervisión y no añade consultas de visión,
+RPC de salud ni sleeps. La latencia de presentación depende del feedback;
+no es una garantía de tiempo real. Conserva offsets de bytes, deja líneas
+parciales para la siguiente lectura y no duplica registros al cerrar.
+Errores de lectura/formato del log producen un aviso de diagnóstico sin
+modificar estado/checkpoint ni ocultar el resultado original de la acción.
+Los eventos completos continúan archivados en `events.jsonl`.
+
+Activación: la próxima invocación de cualquiera de esos wrappers carga la
+presentación PC y transmite el runtime en memoria. **No requiere instalar ni
+reiniciar el robot.** Las seis fuentes del bundle SPS permanecen idénticas,
+ID`bf145fa17e1116fc`; no cambia `front_sps_contract.py`, límites, selección,
+comparación de capturas, watchdogs ni trayectorias.
+
+Verificación inicial (antes de añadir el detalle de rechazadas): **114 pruebas PASS** de consola/runtime, sesiones, optimización,
+perfil optimista, consistencia perceptiva, límites e incidente; --plan local y
+git diff --check correctos. Replay del primer caso de
+`scripts/box_handling/fixtures/front_box_20260928.json` confirma que los dos
+eventos se archivan antes del feedback y sólo generan un bloque de medidas.
+No se conectó ni movió el robot. Reproducción de las suites principales:
+
+```bash
+python3 -B -m unittest scripts.box_handling.test_scenario1_console \
+  scripts.box_handling.test_scenario1_runtime \
+  scripts.box_handling.test_scenario1_optimization \
+  scripts.box_handling.test_scenario1_optimistic \
+  scripts.box_handling.test_scenario1_perception \
+  scripts.box_handling.test_scenario1_session \
+  scripts.box_handling.test_front_sps_position_gate \
+  scripts.box_handling.test_front_box_incident
+./scripts/optimistic_scenario1.sh --plan
+```
+
+Evidencia: `../Humanoide-vla-evidence/20260929T102432Z_BOX_POSITION_CONSOLE/`,
+backup previo y posterior, hashes, bundles idénticos, pruebas, replay de eventos
+y consola. Base Git88b17026a0c91b575ee1c747099318c39259d18d. Reversión:
+restaurar selectivamente `scenario1_runtime.py`, `scenario1_console.py` y sus
+dos pruebas desde `before/`, preservando modificaciones posteriores; actualizar
+esta ficha e índices. No necesita rollback remoto ni editar checkpoints.
+
 ## Consola resumida — 28-09-2026
 
 **BOX-01-EXEC-IMPROVED, 14:43 CEST, Europe/Madrid.** Cambio de presentación

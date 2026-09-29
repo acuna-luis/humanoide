@@ -68,6 +68,93 @@ class ConsoleReporter:
         self.clock = clock or time.monotonic
         self.last_feedback = {}
         self.confirmations = {}
+        self.shown_box_measurements = set()
+        self.shown_box_rejections = set()
+
+    def rejected_box_measurement(self, detail):
+        """Display the rejected gate input, without reselecting or authorizing it.
+
+        None requests the existing generic warning; an empty list means this
+        exact diagnostic was already shown. A missing axis never hides others.
+        """
+        if detail.get('frame_id') != 'base_link':
+            return None
+        identity = None
+        stamp = detail.get('time_ns')
+        if type(stamp) is int and stamp > 0:
+            try:
+                identity = json.dumps(detail, sort_keys=True, separators=(',', ':'))
+            except (TypeError, ValueError):
+                pass  # Malformed diagnostics still must not hide the rejection.
+        if identity is not None and identity in self.shown_box_rejections:
+            return []
+        position, bounds = mapping(detail.get('position')), mapping(detail.get('bounds_m'))
+        lines = ['  AVISO: Caja seleccionada en base_link — rechazada por posición '
+                 '(Z no es altura al suelo):']
+        for axis in 'xyz':
+            prefix = '    '+axis.upper()+': '
+            limits = bounds.get(axis)
+            if not isinstance(limits, (tuple, list)) or len(limits) != 2:
+                lines.append(prefix+'dato no disponible')
+                continue
+            value, low, high = number(position.get(axis)), number(limits[0]), number(limits[1])
+            if None in (value, low, high) or low > high:
+                lines.append(prefix+'dato no disponible')
+                continue
+            if value < low:
+                label, distance = 'falta hasta mínimo', low-value
+            elif value > high:
+                label, distance = 'exceso sobre máximo', value-high
+            elif value-low <= high-value:
+                label, distance = 'margen al mínimo', value-low
+            else:
+                label, distance = 'margen al máximo', high-value
+            cm, low_cm, high_cm, distance_mm = value*100, low*100, high*100, distance*1000
+            if any(number(item) is None for item in (cm, low_cm, high_cm, distance_mm)):
+                lines.append(prefix+'dato no disponible')
+                continue
+            lines.append(prefix+decimal(cm, 2)+' cm ['+decimal(low_cm, 2)+' a '+
+                         decimal(high_cm, 2)+' cm]; '+label+': '+decimal(distance_mm)+' mm')
+        if identity is not None:
+            self.shown_box_rejections.add(identity)
+        return lines
+
+    def box_measurement(self, detail):
+        """Show the already-validated final capture; never decide robot control."""
+        if detail.get('event') not in ('detected', 'selected'):
+            return []
+        selection = mapping(detail.get('selection'))
+        gate = mapping(selection.get('position_gate'))
+        if gate.get('passed') is not True or gate.get('frame_id') != 'base_link':
+            return []
+        stamp, index = detail.get('stamp_ns'), selection.get('selected_index')
+        if type(stamp) is not int or stamp <= 0 or type(index) is not int or index < 0:
+            return []
+        position = mapping(mapping(selection.get('selected_pose')).get('position'))
+        bounds = mapping(gate.get('bounds_m'))
+        measured = []
+        lines = ['  Caja seleccionada en base_link — dentro del rango XYZ (Z no es altura al suelo):']
+        for axis in 'xyz':
+            limits = bounds.get(axis)
+            if not isinstance(limits, (tuple, list)) or len(limits) != 2:
+                return []
+            value, low, high = number(position.get(axis)), number(limits[0]), number(limits[1])
+            if None in (value, low, high) or not low <= value <= high:
+                return []
+            lower_gap, upper_gap = value-low, high-value
+            face = 'mínimo' if lower_gap <= upper_gap else 'máximo'
+            cm, low_cm, high_cm, margin_mm = value*100, low*100, high*100, min(lower_gap, upper_gap)*1000
+            if any(number(item) is None for item in (cm, low_cm, high_cm, margin_mm)):
+                return []
+            measured.append((axis, value, low, high))
+            lines.append('    '+axis.upper()+': '+decimal(cm, 2)+' cm ['+
+                         decimal(low_cm, 2)+' a '+decimal(high_cm, 2)+' cm]; margen al '+face+
+                         ': '+decimal(margin_mm)+' mm')
+        identity = (stamp, index, tuple(measured))
+        if identity in self.shown_box_measurements:
+            return []
+        self.shown_box_measurements.add(identity)
+        return lines
 
     def render(self, event):
         if self.verbose:
@@ -111,6 +198,14 @@ class ConsoleReporter:
             return ['  Lectura '+clean(event.get('iteration'))+': '+seconds(event.get('elapsed_s'))+' en total']
         if name in ('native_log', 'perception'):
             detail = mapping(event.get('detail'))
+            if name == 'perception':
+                if detail.get('event') == 'position_rejected':
+                    rejected = self.rejected_box_measurement(detail)
+                    if rejected is not None:
+                        return rejected
+                measured = self.box_measurement(detail)
+                if measured:
+                    return measured
             message = clean(event.get('text') or detail.get('reason') or detail.get('event'))
             return ['  AVISO: '+message] if ALERT.search(message) else []
         return self.detail(event, '')
@@ -164,6 +259,7 @@ class ConsoleReporter:
             'worker_exit_unconfirmed': 'Salida del ejecutor sin confirmar; parada física no confirmada',
             'adapter_exit_unconfirmed': 'Salida del adaptador sin confirmar',
             'sensor_profile_pending': 'Referencias de sensores pendientes',
+            'perception_log_warning': 'AVISO de registro de percepción',
         }
         if name in labels:
             if name == 'cancel_response':
