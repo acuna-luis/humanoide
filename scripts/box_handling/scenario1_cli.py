@@ -18,6 +18,7 @@ import threading
 import time
 
 if __package__:
+    from . import scenario1_table90 as table90
     from . import scenario1_contract as contract
     from . import scenario1_sensors as sensors
     from . import scenario1_nav_correction as nav_correction
@@ -25,6 +26,7 @@ if __package__:
     from .scenario1_console import ConsoleReporter, stage_label
     from .front_box_integration import build_bundle, TASK_ROOT, META_ROOT, SNAPSHOT
 else:
+    import scenario1_table90 as table90
     import scenario1_contract as contract
     import scenario1_sensors as sensors
     import scenario1_nav_correction as nav_correction
@@ -35,6 +37,7 @@ else:
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 MODULES = [('cruzr_home_posture_gate', ROOT/'scripts/lib/cruzr_home_posture_gate.py'),
+           ('scenario1_table90', HERE/'scenario1_table90.py'),
            ('front_sps_session', HERE/'front_sps_session.py'),
            ('scenario1_contract', HERE/'scenario1_contract.py'),
            ('scenario1_checks', HERE/'scenario1_checks.py'),
@@ -90,6 +93,15 @@ def make_payload(mode, profile, checkpoint):
                      'meta_clamp/wrc/put_cruzr_wrc_low.yaml', 'meta_clamp/wrc/open_arm_cruzr.yaml'):
         prefix, name = relative.split('/', 1)
         extra[(TASK_ROOT if prefix == 'tasks' else META_ROOT)+name] = hashlib.sha256((SNAPSHOT/relative).read_bytes()).hexdigest()
+    deposit_bundle = None
+    if table90.is_table90(profile):
+        deposit_bundle = table90.build_bundle(
+            (SNAPSHOT/'tasks/wrc_cruzr/put_cruzr_wrc_low.xml').read_text(),
+            (SNAPSHOT/'meta_clamp/wrc/put_cruzr_wrc_low.yaml').read_text(),
+            (SNAPSHOT/'meta_clamp/wrc/open_arm_cruzr.yaml').read_text())
+        table90.validate_bundle(deposit_bundle)
+        extra.update(deposit_bundle['manifest']['robot_files'])
+        extra.update(table90.CURRENT_MODEL_PINS)
     # Reuse reviewed HOME contracts, including user edits; never import shell secrets.
     pins = dict(re.findall(r'^readonly (\w+_SHA)="([a-f0-9]{64})"$',
                           (ROOT/'scripts/cruzr_blue_workbin_cycle.sh').read_text(), re.M))
@@ -115,6 +127,7 @@ def make_payload(mode, profile, checkpoint):
                      ' exec(compile(_source,_name+".py","exec"),_module.__dict__)\n'+
                      (HERE/'scenario1_health_worker.py').read_text())
     return dict(mode=mode, profile=profile, checkpoint=checkpoint, bundle=bundle,
+                deposit_bundle=deposit_bundle,
                 extra_hashes=extra, home_pins=dict(accepted=[pins[n] for n in names],
                     direct=pins['DIRECT_HOME_SHA'], meta=pins['OPEN_HOME_META_SHA']),
                 action_client=action_source,
@@ -292,9 +305,10 @@ def parser(policy='ask', execution_profile='standard_v1'):
     p.add_argument('--wifi', action='store_true', help='SSH mediante 192.168.42.2')
     p.add_argument('--benchmark-checks', type=int, choices=range(1, 6), default=0, metavar='N',
                    help='Sólo con --check: medir de 1 a 5 rondas adicionales de consultas sin mover')
-    p.add_argument('--stop-after', choices=('get1', 'grasp', 'cycle'), default='cycle',
-                   help='get1: sólo navegar y medir llegada; grasp: terminar tras confirmar caja sujeta')
-    p.add_argument('--profile', type=Path, default=HERE/'scenario1_current_geometry.json')
+    p.add_argument('--stop-after', choices=('get1', 'grasp', 'deposit', 'cycle'), default='cycle',
+                   help='get1: llegada; grasp: caja sujeta; deposit: depósito/apertura, pausa antes de verificar liberación y HOME')
+    p.add_argument('--profile', type=Path, default=(ROOT/'config/box_handling/scenario1_table90_geometry.json'
+                   if execution_profile == 'optimistic_v1' else HERE/'scenario1_current_geometry.json'))
     if policy == 'sensors':
         p.add_argument('--sensor-profile', type=Path, default=HERE/'scenario1_sensor_profile.json',
                        help='Referencias FT por postura; --run requiere perfil cualificado')
@@ -315,7 +329,7 @@ def _main(args):
         raise ValueError('--from-stage, --box-state y --recovery-confirmed requieren --resume CHECKPOINT')
     if args.benchmark_checks and (moving or args.plan):
         raise ValueError('--benchmark-checks sólo permite comprobaciones de lectura')
-    stop_after = {'get1': 'navigate_get1', 'grasp': 'verify_held', 'cycle': 'verify_home'}[args.stop_after]
+    stop_after = {'get1': 'navigate_get1', 'grasp': 'verify_held', 'deposit': 'deposit', 'cycle': 'verify_home'}[args.stop_after]
     profile = contract.validate_profile(json.loads(args.profile.read_text()), stop_after=stop_after)
     checkpoint = contract.new_checkpoint(profile, stop_after=stop_after, policy=policy,
                                          execution_profile=execution_profile)
@@ -340,7 +354,11 @@ def _main(args):
         checkpoint = resume_plan['checkpoint']
     if moving and policy == 'ask' and not sys.stdin.isatty():
         raise RuntimeError('Se requiere un terminal y operador junto al robot')
-    print('Geometría: force_escenario1.sh actual; tareas y límites del proveedor conservados.')
+    if moving:
+        table90.require_motion_ready(profile, stop_after,
+                                     resume_plan['stage'] if resume_plan and 'stage' in resume_plan else (args.from_stage or 'navigate_get1'))
+    print('Geometría: '+('mesa de depósito 90 cm; '+('ensayo físico y HOME completados.' if table90.motion_qualified(profile) else 'validación física pendiente.')
+                        if table90.is_table90(profile) else 'force_escenario1.sh actual; tareas y límites del proveedor conservados.'))
     print('Confirmación: '+{'ask': 'operador', 'assume': 'sin preguntas; sujeción/liberación asumidas tras éxito técnico',
                           'sensors': 'sin preguntas; ventanas FT y postura con referencias cualificadas'}[policy])
     if execution_profile == 'optimistic_v1':
@@ -361,7 +379,11 @@ def _main(args):
             interstage_health=('live_snapshot_and_fresh_stationary_actuators'
                                if execution_profile == 'optimistic_v1' else 'full_acquisition'),
             sensor_qualification=sensor_profile['qualification'] if sensor_profile else None,
-            physical_validation='pending', automatic_retries=0,
+            physical_validation=('completed_operator_confirmed' if table90.is_table90(profile) and table90.motion_qualified(profile) else 'pending'), automatic_retries=0,
+            deposit_calculation=(dict(table90.RECIPE, task_name=table90.TASK_NAME,
+                                      kinematic_validation='conditional_sample_review', executable=table90.motion_qualified(profile),
+                                      physical_qualification=table90.PHYSICAL_QUALIFICATION)
+                                 if table90.is_table90(profile) else None),
             get1_correction=dict(nav_correction.qualification_report(), policy=dict(nav_correction.POLICY)),
             resume=resume_plan), indent=2, ensure_ascii=False))
         return 0
@@ -465,6 +487,8 @@ def _main(args):
                 raise RuntimeError('Supervisor terminó con error')
             if stop_after == 'navigate_get1':
                 print('GET1_ALCANZADO; prueba de navegación terminada, sin agarre.')
+            elif stop_after == 'deposit':
+                print('DEPOSITO_TERMINADO; pausado antes de verificar liberación y HOME. Compruebe el apoyo y las abrazaderas.')
             elif args.resume and stop_after == 'verify_home':
                 print('REANUDACION_COMPLETADA_HOME_MEDIDO; desde='+resume_plan['stage']+
                       '; evidencia de caja: '+policy)

@@ -1,5 +1,34 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+**01-10-2026 — BOX-01-TABLE90: adaptación probada y HOME medido.**
+Instalados/cargados XML/YAML3e142cd1…; ensayo supervisado en tres tramos cubre
+las diez etapas. Depósito/apertura SUCCEED; operador confirma caja estable sobre
+mesa90 y liberada. HOME SUCCEED, dos muestras MEASURED_HOME=1, velocidad0,
+máximo absoluto corporal0,002684rad. Final --check rc0 confirma salud/HOME,
+modelo y tareas. Ciclo optimistic90 habilitado sólo para hash del perfil probado;
+seis pines incluyen HOME nativo. Caja/agarre/XY/torso/controles originales intactos.
+577 pruebas pertinentes correctas; legacy17 errores preexistentes excluidos.
+Mapa utars activo, robot HOME y caja en destino. Sin reinicio, commit ni push.
+Una prueba física con confirmación de operador no es certificado continuo ni
+calibración independiente. [Fuentes, evidencia y reversión](box_handling/SCENARIO1_TABLE90_CANDIDATE.md).
+
+
+**01-10-2026 — BOX-01-TABLE90: agarre real y ensayo acotado preparado.**
+Check instalado rc0 confirma hashes/tareas/modelo y HOME. Navegación a get1,
+visión y agarre frontal nativos terminan SUCCEED; operador confirma caja sujeta,
+completamente separada y estable. No depósito ni HOME todavía. Checkpoint:
+`../Humanoide-vla-evidence/20261001_SCENARIO1_TABLE90/grasp-trial/checkpoint.json`.
+Lectura fresca de `/mc/whole_joint_states`: articulaciones nombradas, velocidades0.
+IK condicional desde esa postura, con regularización de continuidad0,001:
+61/61 muestras por perfil original/90 convergen; sin excesos de velocidad por
+diferencias finitas. No certifica interpolación nativa ni escena exterior.
+Se añade `--stop-after deposit`: termina tras tarea nativa/apertura, antes de
+asumir liberación o enviar HOME. Ciclo completo sigue bloqueado; ensayo acotado
+supervisado autorizado por el usuario, conservando controles nativos y pines.
+576 pruebas pertinentes correctas (17 errores legacy excluidos ya reproducidos
+en baseline). [Estado y recetas](box_handling/SCENARIO1_TABLE90_CANDIDATE.md).
+
+
 **23-09-2026 — VOICE-BRAKE-07: idioma del aviso de freno instalado.**
 Frase exacta de backend_service_vision→WAV español; lógica/condición del freno
 intactas.7 hashes correctos, prueba nativa y a través del entrypoint instalado
@@ -4021,3 +4050,24 @@ backup antes/después, hashes, pruebas y replay en
 Reversión selectiva de ambos módulos y pruebas desde`before/`, preservando
 trabajo posterior; no rollback del paquete SPS ni cambios de checkpoint.
 [Formato, receta de verificación y alcance](box_handling/FORCE_IMPROVED_SCENARIO1.md#medidas-de-caja-en-consola--29-09-2026).
+
+## BOX-01-TABLE90-CANDIDATE — 01-10-2026, Europe/Madrid
+
+VIGENTE: instalado, cargado y probado físicamente con mismo montaje declarado.
+Delta de mesa +45cm; dos Z absolutas de manos0,65→1,10m, final relativo0,90m.
+Perfil optimistic por defecto90; standard original. Paquete3e142cd1… aditivo en
+Motion, contenedor walker-motion.manipulation_robot_app-1. Originales intactos.
+Seis pines de modelo/HOME y hash de perfil probado; controles nativos conservados.
+Ciclo completo habilitado tras depósito/liberación confirmados y HOME medido.
+El expediente registra estado anterior, paths exactos, hashes, dependencias,
+recetas versionadas de instalación/lectura, activación por primera tarea real,
+comprobaciones, alcance de prueba, backup y reversión condicionada a hashes.
+Cambio de ejecución adicional: mapa utars_nav_map y relocalización global;
+conservado, sin editar puntos ni rollback automático. Diez etapas físicas en
+tramos grasp-trial/deposit-trial/home-trial, rc0; un check stale rechazado y
+repetido sin modificar gates. Robot queda HOME, caja apoyada en destino.
+577 pruebas pertinentes y final --check rc0; legado17 errores ajenos reproducidos.
+Backups externos: ../Humanoide-vla-evidence/20261001_SCENARIO1_TABLE90/
+(before/, continuation-before/, after/, install/, physical-validation.json).
+No restart, paquetes nuevos, cambios de SDK, commit ni push.
+[Registro completo y reanudación](box_handling/SCENARIO1_TABLE90_CANDIDATE.md).

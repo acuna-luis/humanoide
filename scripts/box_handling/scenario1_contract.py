@@ -13,17 +13,22 @@ import json
 import math
 import re
 
+if __package__:
+    from . import scenario1_table90 as table90
+else:
+    import scenario1_table90 as table90
+
 
 STAGES = (
     'navigate_get1', 'enable_vision', 'grasp', 'verify_held', 'retreat',
     'navigate_put1', 'deposit', 'verify_released', 'home', 'verify_home',
 )
-STOP_AFTER = ('navigate_get1', 'verify_held', 'verify_home')
+STOP_AFTER = ('navigate_get1', 'verify_held', 'deposit', 'verify_home')
 BOX_STATES = ('empty', 'held', 'released', 'unknown')
 CONFIRMATION_POLICIES = ('ask', 'assume', 'sensors')
 _VERIFICATION_SOURCES = {'ask': 'operator', 'assume': 'assumed', 'sensors': 'sensors'}
 _BOX_VERIFICATIONS = {'verify_held': 'held', 'verify_released': 'released'}
-COMPATIBILITY = ('verified', 'operator_assumed_existing', 'pending', 'incompatible')
+COMPATIBILITY = ('verified', 'operator_assumed_existing', 'pending', 'incompatible', table90.COMPATIBILITY)
 EXECUTION_PROFILES = ('standard_v1', 'optimistic_v1')
 _ACCEPTED_COMPATIBILITY = ('verified', 'operator_assumed_existing')
 _TASKS = {
@@ -187,11 +192,17 @@ def validate_profile(profile, *, stop_after='verify_home'):
     for phase, task in _TASKS.items():
         item = profile[phase]
         _keys(item, {'task', 'compatibility'}, phase)
+        if phase == 'deposit' and item['task'] == table90.TASK_NAME:
+            if profile['id'] != table90.PROFILE_ID or item['compatibility'] != table90.COMPATIBILITY:
+                raise ValueError('Table90 requires its own calculated profile identity')
+            continue
         if item['task'] != task:
             raise ValueError('Unsupported ' + phase + ' task')
+        if item['compatibility'] == table90.COMPATIBILITY:
+            raise ValueError('Calculated compatibility is exclusive to table90 deposit')
         if item['compatibility'] not in COMPATIBILITY:
             raise ValueError('Unknown ' + phase + ' compatibility')
-        if (phase == 'grasp' or stop_after == 'verify_home') and (
+        if (phase == 'grasp' or STAGES.index(stop_after) >= STAGES.index('deposit')) and (
                 item['compatibility'] not in _ACCEPTED_COMPATIBILITY):
             raise ValueError(phase + ' compatibility does not permit this run')
     return copy.deepcopy(profile)

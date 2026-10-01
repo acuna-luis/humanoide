@@ -1,0 +1,41 @@
+{
+  "id": "scenario1_table90_candidate_v1",
+  "reference_surface_height_m": 0.45,
+  "surface_height_m": 0.9,
+  "reference_source": "Operator confirmation in conversation, 2026-10-01 Europe/Madrid: functional table 45 cm; same box, grasp and horizontal layout",
+  "physical_validation": "completed_operator_confirmed",
+  "kinematic_validation": "conditional_sample_review",
+  "torso_policy": "retain_vendor",
+  "version": 1,
+  "delta_height_m": 0.45,
+  "approach_hand_z_m": 1.1,
+  "final_hand_z_m": 0.9,
+  "change": "two_absolute_hand_z_only",
+  "reference": "operator_confirmed_20261001",
+  "task_name": "local_scenario1_deposit/3e142cd1eda7e4a0d625a566ff9b86127d6ec0fee430004c55ced8caf17118cf",
+  "executable": true,
+  "physical_qualification": {
+    "state": "completed_operator_confirmed",
+    "date": "2026-10-01 Europe/Madrid",
+    "task_name": "local_scenario1_deposit/3e142cd1eda7e4a0d625a566ff9b86127d6ec0fee430004c55ced8caf17118cf",
+    "profile_sha256": "6930bea144020dd338987d108eee9335b024458eececb1d8b96a96368b3a29d0",
+    "evidence_root": "../Humanoide-vla-evidence/20261001_SCENARIO1_TABLE90/",
+    "checkpoint_sha256": {
+      "grasp-trial": "4c9df2c823c83822b4f028863c1b4082d3d8b87dfdda03354a622a866754c03d",
+      "deposit-trial": "e4c7b9b3c15d2398105da9bc53bde58f8e4e8d0f73ae9f093e0eaf019cc9aa76",
+      "home-trial": "3760e5a61dafd156e6fcad861880c5a5f3e7d410e00b77c15be18ad7479d4a37"
+    },
+    "operator_confirmations": [
+      "held_separated_stable",
+      "supported_on_table90_released_home_path_clear"
+    ],
+    "home_verified": true,
+    "scope": "Same box, clamps, grasp, horizontal layout and pinned native model/HOME; one supervised trial in segments"
+  },
+  "source_hashes": {
+    "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/wrc_cruzr/put_cruzr_wrc_low.xml": "579b862962e0ee07a423c92517c29b5ecad80b4929961aac2fae6a0240fa0f78",
+    "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/put_cruzr_wrc_low.yaml": "8aeb0a24a3149c7676f481219299ec85bb872d6b17ad93605a6e461776909ff5",
+    "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/open_arm_cruzr.yaml": "c41bd1d88379c2012ee44639142fb5b55c1d58decd6a75851c8e17763778e37b"
+  },
+  "preserved": "Torso, X/Y, orientations, box_size, durations, force/collision controls, relative descent and opening"
+}

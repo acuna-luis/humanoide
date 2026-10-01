@@ -1,5 +1,55 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**01-10-2026 — BOX-01-TABLE90: adaptación probada y HOME medido.**
+Instalados/cargados XML/YAML3e142cd1…; ensayo supervisado en tres tramos cubre
+las diez etapas. Depósito/apertura SUCCEED; operador confirma caja estable sobre
+mesa90 y liberada. HOME SUCCEED, dos muestras MEASURED_HOME=1, velocidad0,
+máximo absoluto corporal0,002684rad. Final --check rc0 confirma salud/HOME,
+modelo y tareas. Ciclo optimistic90 habilitado sólo para hash del perfil probado;
+seis pines incluyen HOME nativo. Caja/agarre/XY/torso/controles originales intactos.
+577 pruebas pertinentes correctas; legacy17 errores preexistentes excluidos.
+Mapa utars activo, robot HOME y caja en destino. Sin reinicio, commit ni push.
+Una prueba física con confirmación de operador no es certificado continuo ni
+calibración independiente. [Fuentes, evidencia y reversión](box_handling/SCENARIO1_TABLE90_CANDIDATE.md).
+
+
+**01-10-2026 — BOX-01-TABLE90: agarre real y ensayo acotado preparado.**
+Check instalado rc0 confirma hashes/tareas/modelo y HOME. Navegación a get1,
+visión y agarre frontal nativos terminan SUCCEED; operador confirma caja sujeta,
+completamente separada y estable. No depósito ni HOME todavía. Checkpoint:
+`../Humanoide-vla-evidence/20261001_SCENARIO1_TABLE90/grasp-trial/checkpoint.json`.
+Lectura fresca de `/mc/whole_joint_states`: articulaciones nombradas, velocidades0.
+IK condicional desde esa postura, con regularización de continuidad0,001:
+61/61 muestras por perfil original/90 convergen; sin excesos de velocidad por
+diferencias finitas. No certifica interpolación nativa ni escena exterior.
+Se añade `--stop-after deposit`: termina tras tarea nativa/apertura, antes de
+asumir liberación o enviar HOME. Ciclo completo sigue bloqueado; ensayo acotado
+supervisado autorizado por el usuario, conservando controles nativos y pines.
+576 pruebas pertinentes correctas (17 errores legacy excluidos ya reproducidos
+en baseline). [Estado y recetas](box_handling/SCENARIO1_TABLE90_CANDIDATE.md).
+
+
+**01-10-2026 — BOX-01-TABLE90: instalación aditiva y modelo real.**
+XML/YAML3e142cd1… instalados, originales intactos, sin reinicio ni movimiento
+por el instalador. Usuario confirma preparación física. Cargador inicialmente
+rechazado y después libre; mapa vacío preparado a utars_nav_map con relocalización
+global status4. Ruta histórica rechaza después get1/put1; mapa activo conservado.
+URDF nativo actual:41 muestras90 con IK; CAD sin solapes adicionales a HOME,
+pero sin certificado caja/mesa/entrada/retorno. Cinco pines de modelo agregados;
+ciclo90 sigue bloqueado. Carga nativa y ensayo PENDIENTES.
+[Estado, evidencia y reversión](box_handling/SCENARIO1_TABLE90_CANDIDATE.md).
+
+
+**01-10-2026 — BOX-01-TABLE90-CANDIDATE:** operador confirma mesa funcional
+45 cm y destino90 cm, caja/agarre/disposición iguales. Optimistic selecciona
+perfil90 y tarea inmutable3e142cd1… con hashes/checkpoints propios. Sólo manos
+Z1,10→0,90 m; resto del YAML original conservado. IK condicional de los tres
+extremos encuentra soluciones al dejar libre XYZ del torso, según hipótesis de
+máscara original; semántica Motion/camino/colisiones sin cualificar. Ciclo completo
+bloqueado antes de SSH por TABLE90_MOTION_PENDING; NO instalado/cargado/probado.
+Sólo cambios PC; [receta, pruebas, evidencia y reversión](box_handling/SCENARIO1_TABLE90_CANDIDATE.md).
+
+
 **29-09-2026 — BOX-01-POSITION-CONSOLE: medidas visibles al aceptar o rechazar.**
 Los ejecutores improved/optimistic muestran la posición seleccionada XYZ en cm,
 intervalos efectivos y margen a la cara más cercana en mm, también si pasa el

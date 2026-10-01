@@ -1,0 +1,8 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <Action ID="MetaClamp" name="local_scenario1_deposit/3e142cd1eda7e4a0d625a566ff9b86127d6ec0fee430004c55ced8caf17118cf" />
+            <Action ID="MetaClamp" name="wrc/open_arm_cruzr" />
+        </Sequence>
+    </BehaviorTree>
+</root>

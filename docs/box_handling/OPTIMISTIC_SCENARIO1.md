@@ -1,5 +1,17 @@
 # Escenario 1 con supervisión continua
 
+**01-10-2026 — BOX-01-TABLE90: adaptación probada y HOME medido.**
+Instalados/cargados XML/YAML3e142cd1…; ensayo supervisado en tres tramos cubre
+las diez etapas. Depósito/apertura SUCCEED; operador confirma caja estable sobre
+mesa90 y liberada. HOME SUCCEED, dos muestras MEASURED_HOME=1, velocidad0,
+máximo absoluto corporal0,002684rad. Final --check rc0 confirma salud/HOME,
+modelo y tareas. Ciclo optimistic90 habilitado sólo para hash del perfil probado;
+seis pines incluyen HOME nativo. Caja/agarre/XY/torso/controles originales intactos.
+577 pruebas pertinentes correctas; legacy17 errores preexistentes excluidos.
+Mapa utars activo, robot HOME y caja en destino. Sin reinicio, commit ni push.
+Una prueba física con confirmación de operador no es certificado continuo ni
+calibración independiente. [Fuentes, evidencia y reversión](SCENARIO1_TABLE90_CANDIDATE.md).
+
 **Actualización 29-09-2026:** la consola muestra XYZ, rango y margen/exceso tanto
 de cajas válidas como rechazadas durante la recogida. Las válidas usan la segunda
 captura; las rechazadas, la pose real que comprobó el gate, sin alterar su fallo.

@@ -165,7 +165,8 @@ class OptimisticCliTest(unittest.TestCase):
             with patch.object(cli, 'Connection', side_effect=AssertionError('No network')), \
                     patch('sys.stdout', io.StringIO()):
                 with self.assertRaisesRegex(ValueError, '[Ee]xecution profile'):
-                    cli.main(['--resume', str(path), '--plan'], policy='assume',
+                    cli.main(['--resume', str(path), '--plan', '--profile',
+                              str(cli.HERE/'scenario1_current_geometry.json')], policy='assume',
                              execution_profile='optimistic_v1')
             self.assertEqual(path.read_bytes(), before)
             self.assertFalse(path.with_name(path.name+'.consumed.json').exists())

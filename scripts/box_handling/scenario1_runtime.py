@@ -23,6 +23,7 @@ import time
 import urllib.request
 
 if __package__:
+    from . import scenario1_table90 as table90
     from . import scenario1_checks as checks, scenario1_contract as contract
     from . import scenario1_sensors as sensors
     from . import scenario1_dependencies as dependencies
@@ -33,6 +34,7 @@ if __package__:
     from scripts.lib.cruzr_home_posture_gate import classify
     from .front_sps_session import check_sps_discovery
 else:
+    import scenario1_table90 as table90
     import scenario1_checks as checks
     import scenario1_contract as contract
     import scenario1_sensors as sensors
@@ -126,6 +128,14 @@ runpy.run_path(root+'/front_sps_native.py',run_name='__main__')
 class Runtime:
     def __init__(self, payload, emit=None):
         self.payload = payload
+        if payload.get('profile') is not None and table90.is_table90(payload['profile']):
+            _, deposit_hashes = table90.validate_bundle(payload.get('deposit_bundle'))
+            if any(payload.get('extra_hashes', {}).get(path) != digest
+                   for path, digest in dict(deposit_hashes, **table90.CURRENT_MODEL_PINS).items()):
+                raise ValueError('Table90 dependency pins are missing or changed')
+            if payload.get('mode') != 'check':
+                table90.require_motion_ready(payload['profile'], payload['checkpoint']['stop_after'],
+                                             payload['checkpoint'].get('entry_stage', 'navigate_get1'))
         self.emit = emit or (lambda event, **values: print(json.dumps(
             dict(event=event, time_ns=time.time_ns(), **values), allow_nan=False), flush=True))
         self.commands = queue.Queue()
@@ -885,6 +895,9 @@ class Runtime:
                     contract.validate_motion_result(self.action('motion',
                         {'task_name': task, 'yaml_args': '{}'}, timeout))
                 task, timeout = TASKS[stage]
+                if stage == 'deposit':
+                    task = self.payload.get('profile', {}).get('deposit', {}).get('task', task)
+                    table90.require_motion_ready(self.payload.get('profile', {}), self.checkpoint['stop_after'], 'deposit')
                 result = self.action('motion', {'task_name': task, 'yaml_args': '{}'}, timeout)
                 contract.validate_motion_result(result)
                 self.connected()

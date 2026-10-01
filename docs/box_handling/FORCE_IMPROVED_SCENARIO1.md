@@ -1,5 +1,9 @@
 # Ejecutor mejorado del escenario 1
 
+**01-10-2026:** sólo la entrada optimistic de esta rama selecciona el
+[perfil90 integrado](SCENARIO1_TABLE90_CANDIDATE.md), con ensayo físico de depósito y HOME completado. Las entradas standard conservan depósito original.
+
+
 **Perfil adicional, 28-09-2026:** [`optimistic_scenario1.sh`](../../scripts/optimistic_scenario1.sh)
 usa `assume` con salud recibida continuamente para reducir la adquisición entre
 etapas. Mantiene los fallos bloqueantes, dos muestras articulares posteriores

@@ -1,0 +1,9 @@
+{
+  "id": "scenario1_table90_candidate_v1",
+  "reference_surface_height_m": 0.45,
+  "surface_height_m": 0.9,
+  "reference_source": "Operator confirmation in conversation, 2026-10-01 Europe/Madrid: functional table 45 cm; same box, grasp and horizontal layout",
+  "physical_validation": "completed_operator_confirmed",
+  "kinematic_validation": "conditional_sample_review",
+  "torso_policy": "retain_vendor"
+}
