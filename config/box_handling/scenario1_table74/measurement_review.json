@@ -1,0 +1,69 @@
+{
+  "id": "BOX-01-TABLE74-MEASURED-REFERENCE-01",
+  "date": "2026-09-30",
+  "timezone": "Europe/Madrid",
+  "status": "measured_box_height_with_unverified_motion_conditions",
+  "installed": false,
+  "active_in_optimistic": false,
+  "can_execute_from_this_record": false,
+  "box_base_reference": {
+    "height_above_floor_m": 1.1,
+    "source": "operator_confirmed_tape_zero_on_floor_and_same_post_grasp_posture_2026-09-30",
+    "measurement_is_approximate": true,
+    "bounded_uncertainty_m": null,
+    "reference_run": "20260930T173316Z_OPTIMISTIC_SCENARIO1_1944108",
+    "applies_to": "this held box and unchanged grasp/posture, not all future cycles"
+  },
+  "destination": {
+    "horizontal_table_height_m": 0.74,
+    "source": "operator_report",
+    "bounded_uncertainty_m": null
+  },
+  "release": {
+    "requested_drop_m": 0.03,
+    "photo_estimate_plate_bottom_to_lower_rib_m": [
+      0.06,
+      0.07
+    ],
+    "photo_estimate_is_verified_clearance": false,
+    "nominal_remaining_gap_if_estimate_correct_m": [
+      0.03,
+      0.04
+    ],
+    "required_drop_to_disengage_pins_m": null,
+    "whole_tool_swept_clearance_verified": false,
+    "operator_support_confirmation_required": true
+  },
+  "nominal_relative_calculation_m": {
+    "box_base_target_change": -0.36,
+    "approach_box_base_height": 0.79,
+    "approach_hand_delta_z_preserving_box_offset": -0.31,
+    "final_deposit_hand_delta_z": -0.05,
+    "release_hand_delta_z_after_support": -0.03,
+    "total_hand_delta_z_if_conditions_hold": -0.39
+  },
+  "native_mode_evidence": {
+    "library_sha256": "d6bc61a493f7d790150fdbd673108121f46589fef56620de4a9023dcc2ba520a",
+    "verification": "static_archived_binary_not_physical_trial",
+    "mode": "Z_REL_XYRPY_ABSOLUTE",
+    "handler_address": "0xfeed0",
+    "dispatch_address": "0x111990",
+    "semantics": "Absolute XY and orientation; Z is previous Z plus requested delta; does not preserve orientation automatically",
+    "orientation_preserving_alternative": "ABSOLUTE with stay_last_state_dof [0,0,1,1], then RELATIVE delta with identity quaternion",
+    "vendor_example": "vendor/ubtech/cruzr_s2/snapshot_20260916/motion/meta_clamp/zhucheng/put_cruzr_zc_low.yaml"
+  },
+  "assumptions_not_verified": [
+    "box orientation and grip offset remain unchanged during motion",
+    "Motion relative Z is parallel to physical gravity throughout this move",
+    "same support/floor reference and measured box height after transport",
+    "full approach sweep clears table, ribs, arms and surroundings",
+    "support is established before any opening",
+    "3 cm releases pins without other contact"
+  ],
+  "missing_for_automatic_activation": [
+    "bounded measurement/orientation/trajectory uncertainty",
+    "support and disengagement verification",
+    "reviewed installed task and integration with checkpoint/stop handling"
+  ],
+  "no_fake_measurements": "No hand coordinates or verification flags in scenario1_put1.json were filled from these assumptions."
+}

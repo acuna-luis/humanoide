@@ -29,6 +29,7 @@ if __package__:
     from . import scenario1_nav_correction as nav_correction
     from . import scenario1_resume as resume
     from . import scenario1_live_health as live_health
+    from .scenario1_cycle_lease import adapter_runner_source
     from .scenario1_session import ProcessSession
     from scripts.lib.cruzr_home_posture_gate import classify
     from .front_sps_session import check_sps_discovery
@@ -40,6 +41,7 @@ else:
     import scenario1_nav_correction as nav_correction
     import scenario1_resume as resume
     import scenario1_live_health as live_health
+    from scenario1_cycle_lease import adapter_runner_source
     from scenario1_session import ProcessSession
     from cruzr_home_posture_gate import classify
     from front_sps_session import check_sps_discovery
@@ -78,13 +80,13 @@ def code_command(source, arguments=()):
     return ['python3', '-u', '-B', '-c', code, *arguments]
 
 
-def guarded_adapter_source(root, session, guard_source):
+def guarded_adapter_source(root, session, guard_source, *, cycle=False):
     """Two captures at the vendor's actual perception phase, after head setup.
 
     The installed adapter/SDK remain untouched. Existing result deadlines still
     apply: slow/inconsistent perception fails before a pose reaches MetaClamp.
     """
-    return '''import json,runpy,socket,sys,time
+    source = '''import json,runpy,socket,sys,time
 from pathlib import Path
 root=ROOT_VALUE
 session=Path(SESSION_VALUE)
@@ -121,6 +123,10 @@ contract.select_report=stable
 sys.argv=[root+'/front_sps_native.py','--session',str(session)]
 runpy.run_path(root+'/front_sps_native.py',run_name='__main__')
 '''.replace('ROOT_VALUE', repr(root)).replace('SESSION_VALUE', repr(str(session))).replace('GUARD_VALUE', repr(guard_source))
+    if cycle:
+        source = source.replace("runpy.run_path(root+'/front_sps_native.py',run_name='__main__')",
+                                adapter_runner_source(root+'/front_sps_native.py', session))
+    return source
 
 
 class Runtime:
@@ -138,6 +144,7 @@ class Runtime:
         self.checkpoint = payload['checkpoint']
         self.lock = None
         self.points = None
+        self.planner_map_synced = False
         self.container_identity = None
         self.dependency_identity = None
         self.session_deadline = None
@@ -148,11 +155,18 @@ class Runtime:
         self.execution_profile = payload.get('execution_profile', 'standard_v1')
         if self.execution_profile != contract.execution_profile(self.checkpoint):
             raise ValueError('Checkpoint execution profile differs from entrypoint')
+        self.cycle = payload.get('cycle', False)
+        if type(self.cycle) is not bool or (self.cycle and (
+                self.execution_profile != 'optimistic_v1' or self.policy != 'assume' or
+                self.checkpoint['stop_after'] != 'verify_home')):
+            raise ValueError('Continuous cycles require the complete optimistic profile')
+        self.cycle_number = 1
         self.live_monitor_enabled = False
         self.last_action_end_ns = None
         self.sensor_process = None
         self.sensor_min_stamp_ns = 0
         self.action_sessions = {}
+        self.workers_lock = threading.Lock()
         self.health_session = None
         self.resume_plan = None
         self.resume_validated = False
@@ -227,10 +241,11 @@ class Runtime:
             self.check_live_health()
 
     def check_workers(self):
-        for worker in ([self.health_session] if self.health_session else []) + list(self.action_sessions.values()):
-            if worker.failed or worker.process.poll() is not None:
-                self.stop.set()
-                raise RuntimeError('PERSISTENT_WORKER_LOST: no se permiten nuevas órdenes')
+        with self.workers_lock:
+            for worker in ([self.health_session] if self.health_session else []) + list(self.action_sessions.values()):
+                if worker.failed or worker.process.poll() is not None:
+                    self.stop.set()
+                    raise RuntimeError('PERSISTENT_WORKER_LOST: no se permiten nuevas órdenes')
 
     def start_health(self):
         if self.health_session is not None:
@@ -485,9 +500,17 @@ class Runtime:
             self.forward_perception(force=detail.get('event') in ('result', 'error', 'request_complete'))
         self.emit('action', kind=kind, detail=detail)
 
-    def action(self, kind, goal, timeout, *, correction=None):
+    def action(self, kind, goal, timeout, *, correction=None, allow_home_retry=False):
         # A session is created before preflight. Reuse each endpoint's client;
         # keep one-shot mode for isolated diagnostics without a session.
+        if type(allow_home_retry) is not bool:
+            raise ValueError('HOME retry permission must be a boolean')
+        if allow_home_retry and (
+                kind != 'motion' or goal != {'task_name': 'cruzr/home', 'yaml_args': '{}'} or
+                self.session is None or not self.armed or correction is not None or
+                self.execution_profile != 'optimistic_v1' or self.policy != 'assume' or
+                not contract.home_retry_available(self.checkpoint)):
+            raise RuntimeError('HOME_RETRY_REQUIRES_GUARDED_OPTIMISTIC_STAGE')
         if correction is not None:
             if kind != 'navigation' or self.session is None:
                 raise RuntimeError('CORRECTION_REQUIRES_GUARDED_NAVIGATION_SESSION')
@@ -504,6 +527,8 @@ class Runtime:
             request = {'goal': goal, 'timeout': timeout}
             if correction is not None:
                 request['correction'] = correction
+            if allow_home_retry:
+                request['allow_home_retry'] = True
             rows = self.action_sessions[kind].call(request, timeout=timeout+18)
             results = [row for row in rows if row['event'] == 'result']
             if len(results) != 1:
@@ -803,11 +828,15 @@ class Runtime:
         raise RuntimeError('GET1_CORRECTION_LIMIT: no se alcanzaron 2 cm / 2 grados')
 
     def navigate(self, point):
-        self.prepare_map()
-        self.map_points()
+        if not (self.cycle and self.planner_map_synced):
+            self.prepare_map()
+            self.map_points()
         self.timed('pose', self.read_poses)  # Broken telemetry must block before motion.
+        self.sync_planner_map()
         target = dict(self.points[point])
         expected = dict(target.pop('_expected_pose'))
+        self.emit('navigation_target', point=point, mode=target['mode'],
+                  expected=expected, target=target)
         result = self.action('navigation', {'command': 'navigation_start',
             'arg_json': json.dumps({'target_point': target})}, 180)
         contract.validate_navigation_result(result)
@@ -822,6 +851,34 @@ class Runtime:
         for measured in measurements:
             self.emit('arrival', point=point, measurement=measured)
 
+    def sync_planner_map(self):
+        """Reload saved destinations once per session, before sending any goal.
+
+        The native planner caches target_points in set_map and does not pick up
+        later editor saves. Its dedicated endpoint reloads that cache without
+        map_set/relocation on the navigation manager or changing waypoint modes.
+        Failure remains terminal; never retry a rejected navigation as refresh.
+        """
+        if self.planner_map_synced:
+            return
+        self.connected()
+        if self.map_state() != ('utars_nav_map', 'FSM_WAITNAVIGATE'):
+            raise RuntimeError('PLANNER_SYNC_MAP_NOT_READY')
+        goal = {'command': 'check_state', 'map_name': 'utars_nav_map'}
+        contract.validate_planning_result(self.action('planning', goal, 12), allow_finished=True)
+        self.emit('planner_map_sync', phase='start', map_name='utars_nav_map')
+        started = time.monotonic()
+        result = self.action('planning', {'command': 'set_map', 'map_name': 'utars_nav_map'}, 30)
+        contract.validate_planning_result(result)
+        self.connected()
+        self.map_points()  # Reject a destination edited while its cache reloads.
+        if self.map_state() != ('utars_nav_map', 'FSM_WAITNAVIGATE'):
+            raise RuntimeError('PLANNER_SYNC_MAP_CHANGED')
+        self.timed('pose', self.read_poses)
+        self.planner_map_synced = True
+        self.emit('planner_map_sync', phase='complete', map_name='utars_nav_map',
+                  elapsed_s=round(time.monotonic()-started, 3))
+
     def start_adapters(self):
         root = '/opt/cruzr-front-box/'+self.payload['bundle']['manifest']['id']
         for container, setup, filename, ready in [
@@ -832,7 +889,11 @@ class Runtime:
             self.logs.append(log)
             command = ['python3', '-u', '-B', root+'/'+filename, '--session', str(self.session)]
             if filename == 'front_sps_native.py':
-                command = code_command(guarded_adapter_source(root, self.session, self.payload['perception_guard']))
+                command = code_command(guarded_adapter_source(root, self.session, self.payload['perception_guard'],
+                                                              cycle=self.cycle))
+            elif self.cycle:
+                command = code_command(adapter_runner_source(root+'/'+filename, self.session),
+                                       ['--session', str(self.session)])
             process = subprocess.Popen(['docker', 'exec', container, 'bash', '-lc', setup+'exec '+shlex.join(command)],
                                        stdout=log, stderr=subprocess.STDOUT)
             self.adapters.append(process)
@@ -846,6 +907,98 @@ class Runtime:
     def save(self):
         atomic_json(self.session/'checkpoint.json', self.checkpoint)
         self.emit('checkpoint', checkpoint=self.checkpoint)
+
+    def motion_stage(self, stage):
+        """One extra HOME only for a confirmed native MoveToGoalFailed result.
+
+        The worker keeps that aborted result unchanged and stays alive only for
+        this explicitly requested case. Unknown outcomes never reach this path.
+        No watchdog, failed worker or lease is reset to permit the second goal.
+        """
+        task, timeout = TASKS[stage]
+        goal = {'task_name': task, 'yaml_args': '{}'}
+        retry_allowed = (stage == 'home' and self.execution_profile == 'optimistic_v1' and
+                         self.policy == 'assume' and contract.home_retry_available(self.checkpoint))
+        options = {'allow_home_retry': True} if retry_allowed else {}
+        result = self.action('motion', goal, timeout, **options)
+        state = result.get('result', {}).get('state', {}) if isinstance(result, dict) and isinstance(
+            result.get('result'), dict) else {}
+        candidate = (retry_allowed and isinstance(result, dict) and isinstance(state, dict) and
+                     type(result.get('status')) is int and result['status'] == 6 and
+                     type(state.get('state')) is int and state['state'] == 7104050 and
+                     state.get('desc') == 'MoveToGoalFailed')
+        if not candidate:
+            contract.validate_motion_result(result)
+            return result
+
+        first_result_ns = self.last_action_end_ns
+        self.emit('home_retry', phase='checking', attempt=2, max_attempts=2,
+                  failed_goal_id=result.get('goal_id'), first_result=result)
+        self.connected()
+        self.timed('home_retry_containers', self.discover)
+        self.timed('home_retry_dependencies', self.hashes)
+        self.timed('home_retry_health', self.health, require_home=False)
+        # Full acquisition above validates fresh actuators, paros, charger,
+        # battery, controllers and idle action. Also require two stationary
+        # live samples newer than the failed result before another movement.
+        self.timed('home_retry_stationary', self.quick_health)
+        self.connected()
+        self.checkpoint = contract.reserve_home_retry(self.checkpoint, result,
+            first_result_ns=first_result_ns, reserved_ns=time.time_ns())
+        self.save()  # Consume the single allowance durably BEFORE dispatch.
+        self.emit('home_retry', phase='retrying', attempt=2, max_attempts=2,
+                  failed_goal_id=result.get('goal_id'))
+        self.connected()
+        # No opt-in on this request: every failure remains fatal. A new native
+        # UUID is generated by the existing action client for this new goal.
+        second = self.action('motion', goal, timeout)
+        contract.validate_motion_result(second)
+        self.connected()
+        self.emit('home_retry', phase='succeeded', attempt=2, max_attempts=2,
+                  goal_id=second.get('goal_id'))
+        return second
+
+    def next_cycle(self, cycle_number):
+        """A new empty-box ledger only after the preceding HOME was measured."""
+        contract.validate_checkpoint(self.checkpoint, self.payload['profile'])
+        if (not self.cycle or not self.armed or type(cycle_number) is not int or
+                cycle_number != self.cycle_number+1 or contract.next_stage(self.checkpoint) is not None or
+                not self.checkpoint['completed'] or self.checkpoint['completed'][-1] != 'verify_home' or
+                self.checkpoint['box_state'] != 'released'):
+            raise RuntimeError('CYCLE_BOUNDARY_NOT_VERIFIED')
+        self.connected()
+        # Bound the native UUID history. Only retire idle, successful clients;
+        # retain the live health reader, SPS and loaded planner/map throughout.
+        for kind in list(self.action_sessions):
+            with self.workers_lock:
+                worker = self.action_sessions[kind]
+                if worker.sequence < 128:
+                    continue
+                if worker.failed or worker.process.poll() is not None:
+                    raise RuntimeError('CYCLE_WORKER_NOT_IDLE')
+                del self.action_sessions[kind]
+            worker.close()
+            if worker.process.returncode != 0:
+                raise RuntimeError('CYCLE_WORKER_CLOSE_FAILED')
+            self.emit('cycle_client_retired', kind=kind, requests=worker.sequence)
+        # Renew only at a successful boundary; neither expiry nor a stopped
+        # watchdog can be resurrected by a pending PC rollover message.
+        with self.lease_lock:
+            now = time.monotonic()
+            if self.stop.is_set() or self.session_deadline is None or now >= self.session_deadline:
+                raise RuntimeError('CYCLE_LEASE_EXPIRED')
+            deadline = now+900
+            atomic_json(self.session/'lease.json', {'deadline': deadline})
+            self.session_deadline = deadline
+        atomic_json(self.session/('cycle-%06d.json' % self.cycle_number),
+                    dict(artifact='completed_cycle', cycle_number=self.cycle_number, checkpoint=self.checkpoint))
+        self.checkpoint = contract.new_checkpoint(self.payload['profile'], policy=self.policy,
+                                                  execution_profile=self.execution_profile)
+        self.resume_plan = None
+        self.resume_validated = False
+        self.cycle_number = cycle_number
+        self.save()
+        self.emit('cycle_ready', cycle_number=cycle_number, checkpoint=self.checkpoint)
 
     def stage(self, message):
         if not self.armed:
@@ -884,9 +1037,7 @@ class Runtime:
                     self.emit('resume_prerequisite', stage=stage, task=task)
                     contract.validate_motion_result(self.action('motion',
                         {'task_name': task, 'yaml_args': '{}'}, timeout))
-                task, timeout = TASKS[stage]
-                result = self.action('motion', {'task_name': task, 'yaml_args': '{}'}, timeout)
-                contract.validate_motion_result(result)
+                self.motion_stage(stage)
                 self.connected()
                 self.sensor_min_stamp_ns = time.time_ns()
             elif stage not in ('verify_held', 'verify_released', 'verify_home'):
@@ -969,6 +1120,9 @@ class Runtime:
                 except queue.Empty:
                     continue
                 if message == {'command': 'finish'}:
+                    if self.checkpoint.get('in_flight') or self.checkpoint.get('failure'):
+                        raise RuntimeError('FINISH_REQUIRES_CLEAN_BOUNDARY')
+                    self.emit('session_finishing', reason='requested')
                     return 0
                 if message.get('command') == 'resume' and not self.armed:
                     if self.resume_plan is None or message['stop_after'] != self.checkpoint['stop_after']:
@@ -982,13 +1136,15 @@ class Runtime:
                     self.create_session()
                     remaining = contract.STAGES[contract.progress_index(self.checkpoint):
                                                 contract.STAGES.index(self.checkpoint['stop_after'])+1]
-                    if 'grasp' in remaining:
+                    if 'grasp' in remaining or self.cycle:
                         self.start_adapters()
                     self.armed = True
                     self.save()
                     self.emit('armed', remote_evidence=str(self.session))
                 elif message.get('command') == 'stage':
                     self.stage(message)
+                elif message.get('command') == 'next_cycle':
+                    self.next_cycle(message.get('cycle_number'))
                 else:
                     raise RuntimeError('Unexpected supervisor command')
         except BaseException as exc:

@@ -124,7 +124,8 @@ class ResumePlanTest(unittest.TestCase):
             self.assertEqual(origin['repeated_stages'], ['retreat'] if selected == 'retreat' else [])
 
     def test_source_stop_does_not_hide_the_actual_next_stage(self):
-        for stop, following in (('navigate_get1', 'enable_vision'), ('verify_held', 'retreat')):
+        for stop, following in (('navigate_get1', 'enable_vision'), ('verify_held', 'retreat'),
+                                ('navigate_put1', 'deposit')):
             source = finish(before(stop, stop_after=stop), stop)
             self.assertIsNone(contract.next_stage(source))
             self.assertEqual(plan_resume(source, profile())['stage'], following)

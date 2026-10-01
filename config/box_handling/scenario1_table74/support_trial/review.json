@@ -1,0 +1,98 @@
+{
+  "phase": "support_only",
+  "reference": {
+    "version": 1,
+    "gap_above_surface_m": 0.05,
+    "surface_height_m": 0.74,
+    "predecessor_bundle_id": "9360060014e4103ce31da084426302ee4c2e06900a0f5707bf68df0d07ada9ef",
+    "predecessor_goal_id": "7553e90f-cde1-4ca7-a488-96c86816d988",
+    "scope": "current_post_approach_box_only",
+    "evidence": "2026-09-30 Europe/Madrid: after successful approach recorded in 20260930T180539Z_TABLE74_APPROACH_TRIAL_2028660, operator confirms approximately 5 cm from the tabletop (tape zero) to the lowest part of the box. Earlier 7-8 cm image estimate is discarded. Approximate measurement without bounded uncertainty; box remains held, support and release not yet physically demonstrated."
+  },
+  "physical_validation": "pending",
+  "automatic_execution_authorized": false,
+  "installed": false,
+  "integrated_in_optimistic": false,
+  "operator_gap_is_approximate": true,
+  "bounded_gap_uncertainty_m": null,
+  "absolute_hand_motion_z_m": null,
+  "absolute_hand_z_calibration_created": false,
+  "hand_mode": "RELATIVE",
+  "hand_delta_at_6s_m": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "hand_delta_at_10s_m": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "final_hand_delta_z_m": -0.05,
+  "hand_delta_xy_m": [
+    0.0,
+    0.0
+  ],
+  "relative_quaternion_wxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "torso_delta_at_each_point_m": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "torso_translation_weights": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "nominal_duration_s": 12.0,
+  "nominal_lowering_waypoint_interval_s": [
+    10.0,
+    12.0
+  ],
+  "contact_window_s": [
+    10.0,
+    12.0
+  ],
+  "contact_reference_time_s": 10.0,
+  "configured_collision_force_each_hand": [
+    0.0,
+    0.0,
+    10.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "native_controls_preserved": true,
+  "support_confirmed": false,
+  "pin_disengagement_confirmed": false,
+  "excluded_phases": [
+    "approach",
+    "pin_release_3cm",
+    "opening",
+    "navigation",
+    "home"
+  ],
+  "assumptions_not_verified": [
+    "The same held box and pose remain unchanged after the pinned successful approach.",
+    "The operator-reported approximate 5 cm gap refers to the box bottom and the support surface at 0.74 m.",
+    "Motion relative Z is aligned with physical vertical, and the box stays rigid relative to the hands.",
+    "The entire lowering and any native force/IK adjustments clear the table, box supports and surroundings.",
+    "The original collision and force settings remain appropriate for this current box and table."
+  ],
+  "limitations": [
+    "This is not an autorun bundle; building it neither installs files nor dispatches an action.",
+    "The 6 and 10 second points request zero displacement; force control and native IK can still adjust posture.",
+    "The final hand waypoint requests 5 cm down between nominal times 10 and 12; exact physical interpolation is not certified here.",
+    "Torso waypoints request no translation, but zero XYZ weights do not lock the physical torso.",
+    "The original collision record/start/end times [10,10,12] and positive Z force setting 10 are preserved; no support classifier is added.",
+    "Action SUCCEED does not prove that the box is supported or that its pins are disengaged.",
+    "No opening or further 3 cm disengagement is included; stable support requires separate physical confirmation.",
+    "The approximate gap has no bounded measurement error; a residual gap or earlier contact remains possible.",
+    "Repeating this relative task would request another 5 cm down; no automatic retry is authorized."
+  ]
+}

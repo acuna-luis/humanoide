@@ -1,0 +1,62 @@
+{
+  "phase": "approach_only",
+  "reference": {
+    "version": 1,
+    "box_bottom_above_floor_m": 1.1,
+    "surface_height_m": 0.74,
+    "precontact_clearance_m": 0.05,
+    "scope": "current_post_grasp_box_only",
+    "evidence": "2026-09-30 Europe/Madrid: operator confirms tape zero at floor, box bottom approximately 1.10 m and unchanged post-grasp posture from 20260930T173316Z_OPTIMISTIC_SCENARIO1_1944108. Photographs and confirmation recorded in measurement_review.json. Approximate measurement; no bounded error or physical approach validation. Valid only while this grasp and reference remain unchanged."
+  },
+  "physical_validation": "pending",
+  "automatic_execution_authorized": false,
+  "installed": false,
+  "integrated_in_optimistic": false,
+  "operator_box_height_is_approximate": true,
+  "bounded_height_uncertainty_m": null,
+  "absolute_hand_motion_z_m": null,
+  "absolute_hand_z_calibration_created": false,
+  "nominal_target_box_bottom_above_floor_m": 0.79,
+  "first_hand_delta_z_m": -0.31,
+  "first_hand_absolute_x_m": 0.75,
+  "first_hand_absolute_y_m": {
+    "left": 0.285,
+    "right": -0.285
+  },
+  "first_hand_absolute_quaternion_wxyz": [
+    0.5,
+    0.5,
+    0.5,
+    -0.5
+  ],
+  "first_hand_mode": "Z_REL_XYRPY_ABSOLUTE",
+  "following_hand_delta_x_m": 0.2,
+  "final_hand_delta_z_m": 0.0,
+  "final_torso_delta_z_m": 0.0,
+  "nominal_duration_s": 12.0,
+  "native_mode_evidence": "Static archived binary review: handler 0xfeed0, dispatch 0x111990; no physical trial.",
+  "excluded_phases": [
+    "final_5cm_lowering",
+    "pin_release_3cm",
+    "opening",
+    "navigation",
+    "home"
+  ],
+  "assumptions_not_verified": [
+    "The same box, grasp, posture and reported floor-height reference remain valid at dispatch, including after transport.",
+    "The held box stays rigid relative to the tools and its orientation matches the vendor absolute hand orientations.",
+    "Motion relative Z is parallel to physical gravity and the floor reference is unchanged.",
+    "The entire diagonal approach, torso motion and subsequent 0.20 m advance clear the surroundings.",
+    "The approximate height measurement leaves sufficient clearance above the table throughout the approach."
+  ],
+  "limitations": [
+    "This is not an autorun bundle; building it neither installs files nor dispatches an action.",
+    "The native mixed mode preserves only relative Z; it sets XY and orientation absolutely.",
+    "The original torso targets at 6 and 10 seconds and all native force/contact controls remain.",
+    "The original contact window is 10 to 12 seconds; it does not cover an earlier table impact.",
+    "Zero final descent and action success do not prove table support or pin disengagement.",
+    "No physical height/reach envelope or measurement error bound has been invented.",
+    "The 1.10 m reference is pinned to this reviewed trial; another measured height requires a new review.",
+    "Repetition from the resulting pose would apply the relative descent again; this is not an idempotent task."
+  ]
+}

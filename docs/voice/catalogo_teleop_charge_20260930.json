@@ -1,0 +1,996 @@
+[
+  {
+    "id": "teleop_001",
+    "kind": "fixed",
+    "zh": "遥操初始化中，请保持距离",
+    "es": "Inicializando la teleoperación. Mantenga la distancia.",
+    "en": "Initializing teleoperation. Please keep your distance.",
+    "status": "OBSERVED_CURRENT",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/motion-logs.json",
+        "stream": "stdout",
+        "line": 4588,
+        "quote": "I2026-09-30 22:25:05.856143 [27047.760990] 75 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 遥操初始化中，请保持距离"
+      },
+      {
+        "path": "../Humanoide-vla-evidence/20260907T053541Z_CONTACT-AUDIT/motion/etc/walker/log/motion/robot_app.20260825-132622.65.log",
+        "line": 601,
+        "log": "I2026-08-25 13:30:17.812202 [383.717088] 77 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 遥操初始化中，请保持距离"
+      },
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1fdbc8",
+            "reference": "0x1c1774",
+            "function": "manipulation::teleoperation::Teleoperation::Execute(manipulation::teleoperation::Request const&)",
+            "tts_call": "0x1c1790"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_002",
+    "kind": "fixed",
+    "zh": "初始化完成",
+    "es": "Inicialización completada.",
+    "en": "Initialization complete.",
+    "status": "OBSERVED_CURRENT",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/motion-logs.json",
+        "stream": "stdout",
+        "line": 4615,
+        "quote": "I2026-09-30 22:25:17.848943 [27059.753790] 75 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 初始化完成"
+      },
+      {
+        "path": "../Humanoide-vla-evidence/20260907T053541Z_CONTACT-AUDIT/motion/etc/walker/log/motion/robot_app.20260825-132622.65.log",
+        "line": 622,
+        "log": "I2026-08-25 13:30:29.811770 [395.716656] 77 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 初始化完成"
+      },
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1fc365",
+            "reference": "0x1c19e9",
+            "function": "manipulation::teleoperation::Teleoperation::Execute(manipulation::teleoperation::Request const&)",
+            "tts_call": "0x1c19fe"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_003",
+    "kind": "fixed",
+    "zh": "收到VR数据",
+    "es": "Datos de realidad virtual recibidos.",
+    "en": "VR data received.",
+    "status": "OBSERVED_CURRENT",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/motion-logs.json",
+        "stream": "stdout",
+        "line": 4702,
+        "quote": "I2026-09-30 22:25:57.759441 [27099.664287] 75 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 收到VR数据"
+      },
+      {
+        "path": "../Humanoide-vla-evidence/20260907T053541Z_CONTACT-AUDIT/motion/etc/walker/log/motion/robot_app.20260825-132622.65.log",
+        "line": 38132,
+        "log": "I2026-08-25 17:57:33.067437 [16418.972323] 77 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 收到VR数据"
+      },
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1fc356",
+            "reference": "0x1c18df",
+            "function": "manipulation::teleoperation::Teleoperation::Execute(manipulation::teleoperation::Request const&)",
+            "tts_call": "0x1c18f4"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_004",
+    "kind": "fixed",
+    "zh": "原地全身遥操模式已开启",
+    "es": "Teleoperación de cuerpo completo en el sitio activada.",
+    "en": "Stationary whole-body teleoperation mode activated.",
+    "status": "OBSERVED_CURRENT",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/motion-logs.json",
+        "stream": "stdout",
+        "line": 4722,
+        "quote": "I2026-09-30 22:26:02.724994 [27104.629840] 75 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 原地全身遥操模式已开启"
+      },
+      {
+        "path": "../Humanoide-vla-evidence/20260907T053541Z_CONTACT-AUDIT/motion/etc/walker/log/motion/robot_app.20260825-132622.65.log",
+        "line": 11154,
+        "log": "I2026-08-25 15:39:34.180563 [8140.085449] 77 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 原地全身遥操模式已开启"
+      },
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1f8ba0",
+            "reference": "0x15e806",
+            "function": "manipulation::teleoperation::PicoVRJoystickDeviceMapper::UpdatePicoVRJoystickTeleRobotNewCoreMode()",
+            "tts_call": "0x15e81b"
+          },
+          {
+            "string_address": "0x1f8ba0",
+            "reference": "0x15e94f",
+            "function": "manipulation::teleoperation::PicoVRJoystickDeviceMapper::UpdatePicoVRJoystickTeleRobotNewCoreMode()",
+            "tts_call": "0x15e96c"
+          },
+          {
+            "string_address": "0x1f8ba0",
+            "reference": "0x189fb6",
+            "function": "manipulation::teleoperation::QuestVRJoystickDeviceMapper::UpdateQuestVRJoystickTeleRobotNewCoreMode()",
+            "tts_call": "0x189fcb"
+          },
+          {
+            "string_address": "0x1f8ba0",
+            "reference": "0x18a0ff",
+            "function": "manipulation::teleoperation::QuestVRJoystickDeviceMapper::UpdateQuestVRJoystickTeleRobotNewCoreMode()",
+            "tts_call": "0x18a11c"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones. El nombre verbal cuerpo completo no demuestra que cintura/elevador estén habilitados: el perfil arms-only puede conservar este aviso."
+  },
+  {
+    "id": "teleop_005",
+    "kind": "fixed",
+    "zh": "结束遥操",
+    "es": "Finalizando la teleoperación.",
+    "en": "Ending teleoperation.",
+    "status": "OBSERVED_CURRENT",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/motion-logs.json",
+        "stream": "stdout",
+        "line": 4770,
+        "quote": "I2026-09-30 22:26:17.936421 [27119.841267] 75 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 结束遥操"
+      },
+      {
+        "path": "../Humanoide-vla-evidence/20260907T053541Z_CONTACT-AUDIT/motion/etc/walker/log/motion/robot_app.20260825-132622.65.log",
+        "line": 11760,
+        "log": "I2026-08-25 15:44:05.118175 [8411.023062] 77 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 结束遥操"
+      },
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1f7c94",
+            "reference": "0x15ebea",
+            "function": "manipulation::teleoperation::PicoVRJoystickDeviceMapper::UpdatePicoVRJoystickTeleRobotNewCoreMode()",
+            "tts_call": "0x15ebff"
+          },
+          {
+            "string_address": "0x1f7c94",
+            "reference": "0x15ed1f",
+            "function": "manipulation::teleoperation::PicoVRJoystickDeviceMapper::UpdatePicoVRJoystickTeleRobotNewCoreMode()",
+            "tts_call": "0x15ed34"
+          },
+          {
+            "string_address": "0x1f7c94",
+            "reference": "0x18a38f",
+            "function": "manipulation::teleoperation::QuestVRJoystickDeviceMapper::UpdateQuestVRJoystickTeleRobotNewCoreMode()",
+            "tts_call": "0x18a3a4"
+          },
+          {
+            "string_address": "0x1f7c94",
+            "reference": "0x18a4bf",
+            "function": "manipulation::teleoperation::QuestVRJoystickDeviceMapper::UpdateQuestVRJoystickTeleRobotNewCoreMode()",
+            "tts_call": "0x18a4d4"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_006",
+    "kind": "fixed",
+    "zh": "收到结束遥操指令，结束遥操",
+    "es": "Orden de finalizar la teleoperación recibida. Finalizando la teleoperación.",
+    "en": "Received the command to end teleoperation. Ending teleoperation.",
+    "status": "OBSERVED_CURRENT",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/motion-logs.json",
+        "stream": "stdout",
+        "line": 6654,
+        "quote": "I2026-09-30 22:28:29.591471 [27251.496318] 75 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 收到结束遥操指令，结束遥操"
+      },
+      {
+        "path": "../Humanoide-vla-evidence/20260907T053541Z_CONTACT-AUDIT/motion/etc/walker/log/motion/robot_app.20260825-132622.65.log",
+        "line": 12993,
+        "log": "I2026-08-25 15:53:40.516287 [8986.421174] 77 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 收到结束遥操指令，结束遥操"
+      },
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1fc638",
+            "reference": "0x1a6c0a",
+            "function": "manipulation::teleoperation::Teleoperation::TeleEnableCallback(std::shared_ptr<std_msgs::msg::Bool const>)",
+            "tts_call": "0x1a6c29"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_007",
+    "kind": "fixed",
+    "zh": "重新收到遥操数据，请继续遥操",
+    "es": "Se han vuelto a recibir datos de teleoperación. Continúe la teleoperación.",
+    "en": "Teleoperation data received again. Please continue teleoperation.",
+    "status": "OBSERVED_CURRENT",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/motion-logs.json",
+        "stream": "stdout",
+        "line": 4856,
+        "quote": "I2026-09-30 22:26:57.425301 [27159.330148] 75 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 重新收到遥操数据，请继续遥操"
+      },
+      {
+        "path": "../Humanoide-vla-evidence/20260907T053541Z_CONTACT-AUDIT/motion/etc/walker/log/motion/robot_app.20260825-132622.65.log",
+        "line": 12954,
+        "log": "I2026-08-25 15:53:30.449732 [8976.354618] 77 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 重新收到遥操数据，请继续遥操"
+      },
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1fc888",
+            "reference": "0x1a7d93",
+            "function": "manipulation::teleoperation::Teleoperation::SendRobotTeleModeStatus()",
+            "tts_call": "0x1a7da8"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_008",
+    "kind": "fixed",
+    "zh": "三秒未收到VR数据, 请检查设备",
+    "es": "No se han recibido datos de realidad virtual durante tres segundos. Revise el dispositivo.",
+    "en": "No VR data received for three seconds. Please check the device.",
+    "status": "OBSERVED_HISTORICAL",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "../Humanoide-vla-evidence/20260907T053541Z_CONTACT-AUDIT/motion/etc/walker/log/motion/robot_app.20260825-132622.65.log",
+        "line": 68198,
+        "log": "I2026-08-25 18:59:29.021113 [20134.925999] 77 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 三秒未收到VR数据, 请检查设备"
+      },
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1fc778",
+            "reference": "0x1a7c73",
+            "function": "manipulation::teleoperation::Teleoperation::SendRobotTeleModeStatus()",
+            "tts_call": "0x1a7c88"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_009",
+    "kind": "fixed",
+    "zh": "十秒未收到遥操数据，结束遥操",
+    "es": "No se han recibido datos de teleoperación durante diez segundos. Finalizando la teleoperación.",
+    "en": "No teleoperation data received for ten seconds. Ending teleoperation.",
+    "status": "OBSERVED_HISTORICAL",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "../Humanoide-vla-evidence/20260907T053541Z_CONTACT-AUDIT/motion/etc/walker/log/motion/robot_app.20260825-132622.65.log",
+        "line": 68258,
+        "log": "I2026-08-25 18:59:36.022622 [20141.927508] 77 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 十秒未收到遥操数据，结束遥操"
+      },
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1fc7f8",
+            "reference": "0x1a84dd",
+            "function": "manipulation::teleoperation::Teleoperation::SendRobotTeleModeStatus()",
+            "tts_call": "0x1a84f2"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_010",
+    "kind": "fixed",
+    "zh": "移动模式已开启",
+    "es": "Modo de desplazamiento activado.",
+    "en": "Movement mode activated.",
+    "status": "OBSERVED_HISTORICAL",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "../Humanoide-vla-evidence/20260907T053541Z_CONTACT-AUDIT/motion/etc/walker/log/motion/robot_app.20260826-140930.65.log",
+        "line": 20228,
+        "log": "I2026-08-26 19:40:16.952676 [19994.856537] 77 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 移动模式已开启"
+      },
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1f7ca1",
+            "reference": "0x15e5c7",
+            "function": "manipulation::teleoperation::PicoVRJoystickDeviceMapper::UpdatePicoVRJoystickTeleRobotNewCoreMode()",
+            "tts_call": "0x15e5ef"
+          },
+          {
+            "string_address": "0x1f7ca1",
+            "reference": "0x189de7",
+            "function": "manipulation::teleoperation::QuestVRJoystickDeviceMapper::UpdateQuestVRJoystickTeleRobotNewCoreMode()",
+            "tts_call": "0x189e04"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_011",
+    "kind": "fixed",
+    "zh": "移动模式切换失败",
+    "es": "No se ha podido cambiar al modo de desplazamiento.",
+    "en": "Failed to switch to movement mode.",
+    "status": "BINARY_CANDIDATE",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1f7cb7",
+            "reference": "0x15ef4c",
+            "function": "manipulation::teleoperation::PicoVRJoystickDeviceMapper::UpdatePicoVRJoystickTeleRobotNewCoreMode()",
+            "tts_call": "0x15ef6b"
+          },
+          {
+            "string_address": "0x1f7cb7",
+            "reference": "0x18a759",
+            "function": "manipulation::teleoperation::QuestVRJoystickDeviceMapper::UpdateQuestVRJoystickTeleRobotNewCoreMode()",
+            "tts_call": "0x18a778"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_012",
+    "kind": "fixed",
+    "zh": "手臂发生自碰撞",
+    "es": "Detectada autocolisión del brazo.",
+    "en": "Arm self-collision detected.",
+    "status": "OBSERVED_HISTORICAL",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "../Humanoide-vla-evidence/20260907T053541Z_CONTACT-AUDIT/motion/etc/walker/log/motion/robot_app.20260826-140930.65.log",
+        "line": 19404,
+        "log": "I2026-08-26 19:40:07.435276 [19985.339137] 77 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 手臂发生自碰撞"
+      },
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1fbf24",
+            "reference": "0x1acc51",
+            "function": "manipulation::teleoperation::Teleoperation::SetWalkerS2LimbComponentCommandWithCollisionDetection(bool)",
+            "tts_call": "0x1acc66"
+          },
+          {
+            "string_address": "0x1fbf24",
+            "reference": "0x1ae916",
+            "function": "manipulation::teleoperation::Teleoperation::SetWalkerS2LimbComponentCommand(bool)",
+            "tts_call": "0x1ae92b"
+          },
+          {
+            "string_address": "0x1fbf24",
+            "reference": "0x1ae975",
+            "function": "manipulation::teleoperation::Teleoperation::SetWalkerS2LimbComponentCommand(bool)",
+            "tts_call": "0x1ae98a"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_013",
+    "kind": "fixed",
+    "zh": "左手发生碰撞",
+    "es": "Detectada colisión en la mano izquierda.",
+    "en": "Left-hand collision detected.",
+    "status": "BINARY_CANDIDATE",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1f7ef9",
+            "reference": "0x171412",
+            "function": "manipulation::teleoperation::PicoVRJoystickDeviceMapper::MapQuestVRJoystickDataToRobotS2Limb(Eigen::Matrix<double, -1, 1, 0, -1, 1> const&, Eigen::Matrix<double, -1, 1, 0, -1, 1> const&)",
+            "tts_call": "0x171427"
+          },
+          {
+            "string_address": "0x1f7ef9",
+            "reference": "0x19ba1a",
+            "function": "manipulation::teleoperation::QuestVRJoystickDeviceMapper::MapQuestVRJoystickDataToRobotS2Limb(Eigen::Matrix<double, -1, 1, 0, -1, 1> const&, Eigen::Matrix<double, -1, 1, 0, -1, 1> const&)",
+            "tts_call": "0x19ba2f"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_014",
+    "kind": "fixed",
+    "zh": "右手发生碰撞",
+    "es": "Detectada colisión en la mano derecha.",
+    "en": "Right-hand collision detected.",
+    "status": "OBSERVED_HISTORICAL",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "../Humanoide-vla-evidence/20260907T053541Z_CONTACT-AUDIT/motion/etc/walker/log/motion/robot_app.20260826-140930.65.log",
+        "line": 39293,
+        "log": "I2026-08-26 20:04:26.941456 [21444.845317] 77 [tele_device_mapper_base.cpp:1099:operator()]: TTS goal accepted: 右手发生碰撞"
+      },
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1f7f0c",
+            "reference": "0x1724d1",
+            "function": "manipulation::teleoperation::PicoVRJoystickDeviceMapper::MapQuestVRJoystickDataToRobotS2Limb(Eigen::Matrix<double, -1, 1, 0, -1, 1> const&, Eigen::Matrix<double, -1, 1, 0, -1, 1> const&)",
+            "tts_call": "0x1724e6"
+          },
+          {
+            "string_address": "0x1f7f0c",
+            "reference": "0x19c701",
+            "function": "manipulation::teleoperation::QuestVRJoystickDeviceMapper::MapQuestVRJoystickDataToRobotS2Limb(Eigen::Matrix<double, -1, 1, 0, -1, 1> const&, Eigen::Matrix<double, -1, 1, 0, -1, 1> const&)",
+            "tts_call": "0x19c716"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_015",
+    "kind": "fixed",
+    "zh": "初始化过程中发生自碰撞，请重新遥操作手臂避免碰撞，再进行复位",
+    "es": "Autocolisión durante la inicialización. Recoloque los brazos mediante teleoperación para evitar la colisión y después vuelva a restablecer la posición.",
+    "en": "Self-collision during initialization. Reposition the arms using teleoperation to avoid the collision, then reset the position.",
+    "status": "BINARY_CANDIDATE",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1fca10",
+            "reference": "0x1ae785",
+            "function": "manipulation::teleoperation::Teleoperation::SetWalkerS2LimbComponentCommand(bool)",
+            "tts_call": "0x1ae79a"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_016",
+    "kind": "fixed",
+    "zh": "收到遥操数据，开始遥操",
+    "es": "Datos de teleoperación recibidos. Iniciando la teleoperación.",
+    "en": "Teleoperation data received. Starting teleoperation.",
+    "status": "BINARY_CANDIDATE",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1fdba0",
+            "reference": "0x1c19bf",
+            "function": "manipulation::teleoperation::Teleoperation::Execute(manipulation::teleoperation::Request const&)",
+            "tts_call": "0x1c19d4"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_017",
+    "kind": "fixed",
+    "zh": "收到结束遥操指令，请结束遥操",
+    "es": "Orden de finalizar la teleoperación recibida. Finalice la teleoperación.",
+    "en": "Received the command to end teleoperation. Please end teleoperation.",
+    "status": "BINARY_CANDIDATE",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1fc660",
+            "reference": "0x1a6e17",
+            "function": "manipulation::teleoperation::Teleoperation::TeleEnableCallback(std::shared_ptr<std_msgs::msg::Bool const>)",
+            "tts_call": "0x1a6e2c"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_018",
+    "kind": "fixed",
+    "zh": "十秒未收到遥操数据，请结束遥操",
+    "es": "No se han recibido datos de teleoperación durante diez segundos. Finalice la teleoperación.",
+    "en": "No teleoperation data received for ten seconds. Please end teleoperation.",
+    "status": "BINARY_CANDIDATE",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1fc828",
+            "reference": "0x1a8578",
+            "function": "manipulation::teleoperation::Teleoperation::SendRobotTeleModeStatus()",
+            "tts_call": "0x1a858d"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones."
+  },
+  {
+    "id": "teleop_019",
+    "kind": "fixed",
+    "zh": "步态启动成功，请开始遥操",
+    "es": "Marcha iniciada correctamente. Inicie la teleoperación.",
+    "en": "Gait started successfully. Please begin teleoperation.",
+    "status": "BINARY_CANDIDATE",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1fc6c8",
+            "reference": "0x1a6f49",
+            "function": "manipulation::teleoperation::Teleoperation::TeleEnableCallback(std::shared_ptr<std_msgs::msg::Bool const>)",
+            "tts_call": "0x1a6f6f"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones. Texto propio de plataforma bípeda/suspensión, presente en biblioteca compartida. No observado en esta unidad; aplicabilidad a Cruzr S2 PENDIENTE."
+  },
+  {
+    "id": "teleop_020",
+    "kind": "fixed",
+    "zh": "初始化完成，请将机器人放到地面，预留吊绳长度",
+    "es": "Inicialización completada. Coloque el robot en el suelo y deje suficiente holgura en la eslinga de suspensión.",
+    "en": "Initialization complete. Place the robot on the ground and leave sufficient slack in the suspension rope.",
+    "status": "BINARY_CANDIDATE",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "verification": "UTF-8 literal -> std::string constructor -> TeleDeviceMapperBase::SpeakTts at PLT 0xa3440",
+        "references": [
+          {
+            "string_address": "0x1fdc28",
+            "reference": "0x1c17f7",
+            "function": "manipulation::teleoperation::Teleoperation::Execute(manipulation::teleoperation::Request const&)",
+            "tts_call": "0x1c180c"
+          }
+        ]
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Traducción del aviso del proveedor; no modifica ni certifica estados, modos o protecciones. Texto propio de plataforma bípeda/suspensión, presente en biblioteca compartida. No observado en esta unidad; aplicabilidad a Cruzr S2 PENDIENTE."
+  },
+  {
+    "id": "teleop_021",
+    "kind": "fixed",
+    "zh": "开始遥操",
+    "es": "Iniciando la teleoperación.",
+    "en": "Starting teleoperation.",
+    "status": "BINARY_CANDIDATE",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "function": "manipulation::teleoperation::Teleoperation::TeleEnableCallback",
+        "reference": "0x1a7038",
+        "tts_call": "0x1a7054",
+        "string_address": "0x1fbec2",
+        "verification": "Separate UTF-8 literal at 0x1fbec2 -> std::string constructor at 0x1a7047 -> SpeakTts@plt at 0x1a7054. A different same-prefix log literal was excluded."
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Ruta TTS demostrada estáticamente en la biblioteca actual. Emisión de esta frase en la unidad PENDIENTE. La traducción conserva el aviso nativo; no cambia parámetros ni inicia teleoperación."
+  },
+  {
+    "id": "teleop_022",
+    "kind": "fixed",
+    "zh": "初始参数变更，请确保环境安全后再启动遥操",
+    "es": "Han cambiado los parámetros iniciales. Compruebe que el entorno sea seguro antes de iniciar la teleoperación.",
+    "en": "Initial parameters have changed. Ensure the surroundings are safe before starting teleoperation.",
+    "status": "BINARY_CANDIDATE",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "function": "manipulation::teleoperation::Teleoperation::SetTeleParam",
+        "reference": "0x1e8132",
+        "tts_call": "0x1e8184",
+        "verification": "60-byte std::string constructed from 16-byte rodata chunks 0x2024b0/0x2024c0/0x2024d0 plus little-endian 0x81e9a88ae5af90e5 (8 bytes) and 0x8d93e6a5 (4 bytes); then SpeakTts@plt at 0x1e8184."
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Ruta TTS demostrada estáticamente en la biblioteca actual. Emisión de esta frase en la unidad PENDIENTE. La traducción conserva el aviso nativo; no cambia parámetros ni inicia teleoperación."
+  },
+  {
+    "id": "teleop_023",
+    "kind": "fixed",
+    "zh": "部分初始参数变更，请确保环境安全后再启动遥操",
+    "es": "Han cambiado algunos parámetros iniciales. Compruebe que el entorno sea seguro antes de iniciar la teleoperación.",
+    "en": "Some initial parameters have changed. Ensure the surroundings are safe before starting teleoperation.",
+    "status": "BINARY_CANDIDATE",
+    "installed": false,
+    "source": {
+      "host": "motion",
+      "container": "walker-motion.manipulation_robot_app-1",
+      "process": "/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app",
+      "library": "/opt/walker/manipulation_meta_tasks/lib/libmeta_teleoperation.so",
+      "library_sha256": "05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8",
+      "tts_function": "manipulation::teleoperation::TeleDeviceMapperBase::SpeakTts",
+      "log_source": "tele_device_mapper_base.cpp:1099"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/teleop-tts-xrefs.json",
+        "function": "manipulation::teleoperation::Teleoperation::SetTeleParam",
+        "reference": "0x1e8210",
+        "tts_call": "0x1e825f",
+        "verification": "66-byte std::string constructed from 16-byte rodata chunks 0x2024e0/0x2024f0/0x202500/0x202510 plus little-endian 0x8d93 (2 bytes); then SpeakTts@plt at 0x1e825f."
+      }
+    ],
+    "coverage_before": "Sin cobertura: VOICE_CC sólo control_center; VOICE_BRAKE sólo backend; VOICE_DYNAMIC sólo ae_worker.",
+    "notes": "Ruta TTS demostrada estáticamente en la biblioteca actual. Emisión de esta frase en la unidad PENDIENTE. La traducción conserva el aviso nativo; no cambia parámetros ni inicia teleoperación."
+  },
+  {
+    "id": "charge_001",
+    "kind": "fixed",
+    "zh": "开始充电",
+    "es": "Iniciando carga.",
+    "en": "Starting charging.",
+    "status": "OBSERVED_CURRENT",
+    "installed": false,
+    "source": {
+      "confirmed": "Control Center emite cc_009 español; speech_service recibe además un goal TTS chino con UUID distinto.",
+      "untranslated_sender": "PENDIENTE; dos UUID demuestran dos goals, no dos procesos."
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/walker-system.control_center-1-logs.json",
+        "quote": "23:17:46.371028 processRequest 开始充电; [VOICE_CC] fixed announcement -> Spanish FILE"
+      },
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/walker-voice.speech_service-1-logs.json",
+        "quote": "23:17:46.371209 TTS 开始充电, UUID ce816aa3-2dc7-4c4d-b55c-c2776686bf4d; 23:17:46.372829 FILE /etc/walker/voice/control_center_es_v1/audio_es/cc_009.wav, UUID fbf1c71b-65e8-47e2-aee4-2c7ace81ba7a"
+      }
+    ],
+    "coverage_before": "cc_009 cubre la ruta de Control Center; persiste un segundo goal TTS chino.",
+    "notes": "Sólo traducción exacta del aviso; no iniciar carga ni modificar prioridades, interrupciones o decisiones de cargador."
+  },
+  {
+    "id": "task_001",
+    "kind": "fixed",
+    "zh": "还未指定任务，请从网页指定任务后重启任务管理器",
+    "es": "Todavía no se ha asignado ninguna tarea. Asigne una desde la página web y después reinicie el gestor de tareas.",
+    "en": "No task has been assigned yet. Assign a task from the web page, then restart the task manager.",
+    "status": "OBSERVED_CURRENT",
+    "installed": false,
+    "source": {
+      "host": "vision",
+      "container": "walker-system.task_manager-1",
+      "log_source": "TtsClient.cpp:23:on_send",
+      "endpoint": "/sys/speech/tts"
+    },
+    "evidence": [
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/charge-tts-other.json",
+        "quote": "2026-09-30 22:31:32.171685 [TtsClient.cpp:23:on_send]: TtsClient TTS ============ 还未指定任务，请从网页指定任务后重启任务管理器; UUID f582c4d2-880c-474d-b2b4-87d0f483fae0"
+      },
+      {
+        "path": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/walker-voice.speech_service-1-logs.json",
+        "quote": "2026-09-30 22:31:32.174618 [sp_service_tts.cpp:66:handleGoalTts]: 收到 tts 转换语音请求：还未指定任务，请从网页指定任务后重启任务管理器"
+      }
+    ],
+    "coverage_before": "VOICE_DYNAMIC sólo se carga en ae_worker; el emisor task_manager queda fuera.",
+    "notes": "Traducción del aviso nativo; esta intervención no asigna tareas ni reinicia su gestor."
+  }
+]

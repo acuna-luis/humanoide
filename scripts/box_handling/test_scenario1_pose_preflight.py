@@ -59,6 +59,7 @@ class PosePreflightTest(unittest.TestCase):
         """Exercise real navigate/read_poses with in-memory transport only."""
         machine = self.machine()
         machine.prepare_map = Mock()
+        machine.sync_planner_map = Mock()  # Keep these tests focused on arrival telemetry.
         machine.points = {point: {'id': point, 'mode': 'free_nav',
             'point_x': 1., 'point_y': 2., 'point_yaw': 0.,
             '_expected_pose': {'point_x': 1., 'point_y': 2., 'point_yaw': 0.}}

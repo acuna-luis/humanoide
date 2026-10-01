@@ -11,7 +11,8 @@ SPS audit. The installed SDK is not modified. Its goal callback loses the real
 acceptance flag, and its cancel helper swaps the stored UUID; this adapter reads
 the response directly and copies the UUID into its own cancel request.
 Optional --serve keeps one reviewed client alive for sequential requests, and
-exits permanently on failure. It never recreates or retries an interrupted goal.
+exits permanently on failure except for an explicitly requested, fully observed
+HOME MoveToGoalFailed result handed back to the supervisor. It never retries.
 """
 
 import argparse
@@ -29,9 +30,16 @@ import textwrap
 import threading
 import time
 
+if __package__:
+    from .scenario1_request_ids import RequestIds
+else:
+    from scenario1_request_ids import RequestIds
+
 
 ENDPOINTS = {'motion': '/mc/manipulation/action',
-             'navigation': '/vnav/task/command'}
+             'navigation': '/vnav/task/command',
+             'planning': '/vnav/action/planning'}
+PLANNING_COMMANDS = frozenset(('set_map', 'check_state'))
 TERMINAL = frozenset((4, 5, 6))
 # Canonical AST of the complete classes printed in rosa-python-api.txt, audit
 # 20260921T112801Z_FRONT_NATIVE_INTEGRATION_AUDIT. File SHA256:
@@ -137,6 +145,17 @@ def object_json(raw):
 
 def validate_goal(kind, raw):
     goal = object_json(raw)
+    if kind not in ENDPOINTS:
+        raise ValueError('Unsupported action kind')
+    if kind == 'planning':
+        # This native endpoint can also move the base. Only the reviewed map
+        # refresh/readiness commands are admitted here, with no target or flags.
+        if (set(goal) != {'command', 'map_name'}
+                or not isinstance(goal['command'], str)
+                or goal['command'] not in PLANNING_COMMANDS
+                or goal['map_name'] != 'utars_nav_map'):
+            raise ValueError('Planning goal requires only set_map/check_state and map_name utars_nav_map')
+        return goal
     fields = ('task_name', 'yaml_args') if kind == 'motion' else ('command', 'arg_json')
     if set(goal) != set(fields) or any(not isinstance(goal[k], str) for k in fields):
         raise ValueError('Goal must contain exactly string fields ' + ', '.join(fields))
@@ -162,6 +181,10 @@ def result_succeeded(kind, status, result):
     if kind == 'motion':
         return result.get('state', {}).get('desc') == 'SUCCEED' and result.get(
             'state', {}).get('state') == 1101001
+    if kind == 'planning':
+        state = result.get('state')
+        return (type(status) is int and isinstance(state, dict)
+                and state.get('desc') in ('READY', 'FINISH'))
     # Navigation command semantics and measured arrival belong to the caller.
     return True
 
@@ -320,6 +343,8 @@ class RosaTransport:
         from rosa.base._ActionType import to_string
         if kind == 'motion':
             from mc_task_msgs.action import ArmTask as Action
+        elif kind == 'planning':
+            from vnav_task_msgs.action import VnavCommand as Action
         else:
             from unav_task_msgs.action import Task as Action
         self.rosa = rosa
@@ -446,7 +471,7 @@ class RosaTransport:
                                 for key, reader in self.correction_readers.items()},
                     telemetry_failure=self.correction_failure)
 
-    def finish_successful_request(self):
+    def _finish_terminal_request(self):
         goal_id = self.goal_id
         # No background ROSA spinner exists: callbacks run only in spin().
         # Any unexpected queued evidence still prevents client reuse.
@@ -458,6 +483,14 @@ class RosaTransport:
         self.correction_guard = None
         self.correction_failure = None
         self.correction_armed = False
+
+    def finish_successful_request(self):
+        self._finish_terminal_request()
+
+    def finish_recoverable_home_failure(self, terminal):
+        if not known_home_failure(terminal) or terminal['goal_id'] != self.goal_id:
+            raise RuntimeError('Unconfirmed HOME failure cannot retire a native goal')
+        self._finish_terminal_request()
 
     def validate_session_api(self):
         for name in ('_goal_handles', '_goal_futures', '_result_futures', '_goal_options'):
@@ -518,6 +551,9 @@ def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
         return rejected
 
     try:
+        if kind == 'planning':
+            # Also protect in-memory callers that do not enter via CLI/session.
+            validate_goal(kind, json.dumps(goal, allow_nan=False))
         if correction and (kind != 'navigation' or goal.get('command') != 'navigation_start'):
             raise ValueError('Correction is limited to navigation_start')
         if correction:
@@ -557,6 +593,8 @@ def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
         if not accepted:
             raise RuntimeError('Terminal response without verified acceptance')
         if result_succeeded(kind, terminal['status'], terminal['result']):
+            if kind == 'planning':
+                validate_session_result(kind, goal, terminal)
             if correction:
                 validate_session_result(kind, goal, terminal)
                 transport.begin_correction_settle()
@@ -627,25 +665,74 @@ def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
 SESSION_NAV_COMMANDS = frozenset(('get_map_name', 'check_state', 'map_set',
                                   'relocation_start', 'navigation_start'))
 
+HOME_GOAL = {'task_name': 'cruzr/home', 'yaml_args': '{}'}
+UNSUCCESSFUL_TERMINAL = 'Action did not report successful terminal application result'
+
+
+def known_home_failure(terminal):
+    if not isinstance(terminal, dict) or terminal.get('event') != 'result':
+        return False
+    result = terminal.get('result')
+    state = result.get('state') if isinstance(result, dict) else None
+    return (type(terminal.get('status')) is int and terminal['status'] == 6
+            and isinstance(terminal.get('goal_id'), str) and bool(terminal['goal_id'])
+            and isinstance(state, dict) and type(state.get('state')) is int
+            and state['state'] == 7104050 and state.get('desc') == 'MoveToGoalFailed')
+
+
+def recoverable_home_trace(kind, goal, rows, goal_id):
+    """Recognize one accepted native failure, never timeout/cancel/uncertainty.
+
+    Returning True only permits the supervisor to receive the original failure.
+    It does not authorize or dispatch another action.
+    """
+    if kind != 'motion' or goal != HOME_GOAL or not isinstance(goal_id, str) or not goal_id:
+        return False
+    allowed = {'dispatched', 'accepted', 'result_pending', 'feedback', 'status', 'result', 'error'}
+    if any(row.get('event') not in allowed or row.get('goal_id') != goal_id for row in rows):
+        return False
+    dispatched = [row for row in rows if row['event'] == 'dispatched']
+    accepted = [row for row in rows if row['event'] == 'accepted']
+    results = [row for row in rows if row['event'] == 'result']
+    errors = [row for row in rows if row['event'] == 'error']
+    if (len(dispatched) != 1 or dispatched[0].get('endpoint') != ENDPOINTS['motion']
+            or len(accepted) != 1 or accepted[0].get('accepted') is not True
+            or len(results) != 1 or not known_home_failure(results[0])
+            or len(errors) != 1 or errors[0].get('reason') != UNSUCCESSFUL_TERMINAL):
+        return False
+    if not (rows.index(dispatched[0]) < rows.index(accepted[0]) < rows.index(results[0]) < rows.index(errors[0])):
+        return False
+    return (all(type(row.get('status')) is int and row['status'] in (1, 2, 6)
+                for row in rows if row['event'] == 'status')
+            and all(type(row.get('status')) is int and row['status'] in (0, 1, 2)
+                    for row in rows if row['event'] == 'result_pending'))
+
 
 def validate_session_request(kind, raw, seen):
     request = object_json(raw)
     required = {'request_id', 'goal', 'timeout'}
-    if set(request) not in (required, required | {'correction'}):
-        raise ValueError('Request requires request_id, goal, timeout and optional correction')
+    if set(request) not in (required, required | {'correction'}, required | {'allow_home_retry'}):
+        raise ValueError('Request requires request_id, goal, timeout and one optional reviewed policy')
     request_id = request['request_id']
     if (not isinstance(request_id, str)
             or re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}', request_id) is None):
         raise ValueError('Invalid request_id')
-    if request_id in seen:
-        raise ValueError('Repeated request_id; no retry permitted')
-    if len(seen) >= 256:
-        raise ValueError('Session request limit reached')
+    if isinstance(seen, RequestIds):
+        seen.validate(request_id)
+    else:
+        # Keep the standalone validator's existing set-based API bounded.
+        if request_id in seen:
+            raise ValueError('Repeated request_id; no retry permitted')
+        if len(seen) >= 256:
+            raise ValueError('Session request limit reached')
     timeout = request['timeout']
     if (isinstance(timeout, bool) or not isinstance(timeout, (int, float))
             or not math.isfinite(timeout) or timeout <= 0):
         raise ValueError('Request timeout must be finite and positive')
     goal = validate_goal(kind, json.dumps(request['goal'], allow_nan=False))
+    if 'allow_home_retry' in request and (request['allow_home_retry'] is not True
+                                         or kind != 'motion' or goal != HOME_GOAL):
+        raise ValueError('allow_home_retry requires true and exact motion cruzr/home with yaml_args {}')
     if kind == 'navigation' and goal['command'] not in SESSION_NAV_COMMANDS:
         raise ValueError('Navigation command has no reviewed session result contract')
     if 'correction' in request:
@@ -666,6 +753,13 @@ def validate_session_result(kind, goal, terminal):
         raise ValueError('Session request did not confirm successful terminal result')
     if kind == 'motion':
         return
+    if kind == 'planning':
+        validate_goal(kind, json.dumps(goal, allow_nan=False))
+        # check_state can report idle FINISH after a completed navigation.
+        # A new map refresh must itself confirm READY, never an old finish.
+        if goal['command'] == 'set_map' and terminal['result']['state']['desc'] != 'READY':
+            raise ValueError('Planning map refresh did not confirm READY')
+        return  # Generic SUCCESS remains insufficient for either command.
     result = terminal['result']
     state = result.get('state')
     desc = state.get('desc') if isinstance(state, dict) else None
@@ -724,8 +818,8 @@ class SessionInput:
 
 def run_session(transport, kind, inbox, emit, interrupted=lambda: None,
                 lease_file=None, clock=time.monotonic, run_one=run_action):
-    """Sequential fail-sticky request loop; never reconnects or retries a goal."""
-    seen = set()
+    """Sequential request loop; a reviewed HOME failure may be returned, never retried."""
+    seen = RequestIds(legacy_limit=256)
     emit(event='session_ready', request_id=None, kind=kind)
     while True:
         request_id = None
@@ -757,9 +851,11 @@ def run_session(transport, kind, inbox, emit, interrupted=lambda: None,
             if 'correction' in request:
                 transport.configure_correction(request['correction'])
             terminal = None
+            trace = []
 
             def request_emit(**row):
                 nonlocal terminal
+                trace.append(row)
                 if row['event'] == 'result':
                     terminal = row
                 emit(request_id=request_id, **row)
@@ -767,6 +863,21 @@ def run_session(transport, kind, inbox, emit, interrupted=lambda: None,
             code = run_one(transport, kind, goal, timeout, request_emit,
                            interrupted=lambda: interrupted() or inbox.reason,
                            lease_file=lease_file, clock=clock)
+            recoverable = (code == 2 and request.get('allow_home_retry') is True
+                           and recoverable_home_trace(kind, goal, trace, transport.goal_id))
+            if recoverable:
+                if interrupted() or inbox.reason:
+                    raise RuntimeError(interrupted() or inbox.reason)
+                check_lease(lease_file, clock())
+                goal_id = transport.goal_id
+                transport.finish_recoverable_home_failure(terminal)
+                # Recheck after retirement; a concurrent stop still poisons the session.
+                if interrupted() or inbox.reason:
+                    raise RuntimeError(interrupted() or inbox.reason)
+                check_lease(lease_file, clock())
+                emit(event='request_complete', request_id=request_id, returncode=2,
+                     recoverable_home_failure=True, goal_id=goal_id)
+                continue
             if code == 0:
                 # Do not clear a goal before all successful-result checks pass.
                 validate_session_result(kind, goal, terminal)

@@ -1,5 +1,41 @@
 # Caja frontal: profundidad y rechazo de posición — 28-09-2026
 
+## Ambigüedad frontal del 30-09-2026
+
+**BOX-01-FRONTAL-AMBIGUITY — VERIFICADO por replay local, sin cambios de código.**
+Intento `20260930T072751Z_OPTIMISTIC_SCENARIO1_306856`, `events.jsonl` líneas
+699–700: nueve poses detectadas y rechazo
+`Ambiguous frontal stacks; do not choose by height or list order`.
+Sólo dos candidatas dentro de ±20°, en `base_link`:
+
+| Índice de esa captura | X (m) | Y (m) | Z (m) | Ángulo |
+|---|---:|---:|---:|---:|
+| 3 | 0,768842 | 0,100831 | 0,086345 | +7,471525° |
+| 6 | 1,764667 | −0,258083 | −0,106224 | −8,320535° |
+
+La diferencia de ángulos absolutos es 0,849010°, inferior a 2°. ΔY35,89 cm
+impide agruparlas en una misma franja de 8 cm; por eso no se aplica la prioridad
+de profundidad. La cercana pasa XYZ si se evalúa aisladamente, pero el selector
+compara antes de comprobar alcance: el candidato lejano causa ambigüedad.
+No se seleccionó ninguna ni se solicitó segunda captura. La Z es base_link,
+no altura al suelo; las poses no permiten determinar si el fondo era caja real
+o falso positivo. La preparación de la tarea pudo ejecutarse antes del rechazo.
+
+La consola filtra `reason` por palabras de alerta y omite este texto pese a
+`event=failed`: `ConsoleReporter.render(evento700)` devuelve `[]`. El registro
+sí conserva la causa. Fallo perceptivo a09:28:00,135 CEST, NoneException≈127 ms
+después; resultado de acción6 y cierre/leases posteriores. Llegada a get1
+cumplía7,39 mm/0,42°. En el ciclo previo072222 sólo aparece la candidata cercana
+en el sector y el checkpoint completa las diez etapas (caja asumida).
+
+Reproducción: cargar `detail.detection` del evento699 y pasarla a
+`front_sps_contract.select_report` usando `detail.time_ns` de esa captura;
+genera la misma excepción. `probe_front_box.transform_poses` con su
+`tf_at_detection.transform` reproduce la tabla. Evidencia derivada, hashes y
+respaldo previo: `../Humanoide-vla-evidence/20260930T073831Z_BOX_SELECTION_DIAG`.
+Pendiente revisar criterio de selección y presentación de errores; no se
+relajaron límites, modificaron controles ni conectó al robot.
+
 ## Configuración local y paquete ausente — 28-09-2026 18:35 CEST
 
 **BOX-01-SPS-PREFLIGHT — VERIFICADO offline y en lectura remota.** El intento del operador

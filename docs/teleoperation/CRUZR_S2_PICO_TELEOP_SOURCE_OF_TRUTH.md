@@ -1,5 +1,23 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**30-09-2026 17:47 CEST — VOICE-TELEOP-CHARGE-08: voz instalada, carga pendiente.**
+Control Center traduce entrada/salida de modo, pero `tele_device_mapper_base.cpp`
+anuncia por separado inicialización, recepción/pérdida de datos, activación,
+salida y colisiones mediante otro cliente TTS. Se contrastaron35llamadas directas
+de la biblioteca actual con23frases distintas; 12tienen emisión observada actual
+o histórica y11sólo evidencia estática, incluidas ramas de plataforma bípeda
+sin emisión demostrada en este Cruzr. Catálogo/traducciones y WAV preparados;
+adaptador exacto en Speech Service validado con 13 pruebas offline y seis
+ejecuciones nativas aisladas. 33 archivos instalados con paro1 confirmado y SHA
+verificados; prueba adicional mediante entrypoint instalado pasa 25frases.
+Recibo/backup real externos y persistentes, rollback independiente preparado.
+Proceso Speech actual sin adaptador; carga en su próximo inicio y escucha
+real PENDIENTES. Instalación no inicia ni cambia el modo de teleoperación.
+No cambia modos, parámetros, trayectorias, límites ni respuesta ante colisiones;
+las frases conservan lo que comunica el proveedor, no verifican estado físico.
+Sin movimiento, reproducción, reinicio o cambio de modo por el agente.
+[Catálogo y estado de integración](../voice/CATALOGO_VOZ_ES_EN.md#teleoperación-y-carga-avisos-adicionales--30-09-2026).
+
 **2026-09-11 — Recuperación sin teleoperación: preparación integrada; ejecución NO resuelta.**
 El usuario indicó teleoperación no disponible: se retira la petición de volver
 manualmente a PICO como siguiente paso. Nuevo `cruzr_prepare_recovery.py` lee

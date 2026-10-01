@@ -1,5 +1,249 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**30-09-2026 — BOX-01-TABLE74-PAUSE-01: apagado confirmado por el operador.**
+«Ya apagado y todo asegurado y estable»: caja, brazos y cuerpo asegurados;
+sin verificación física independiente del agente. Última prueba support_only
+SUCCEED, pero caja inclinada: toda la base sobre mesa, contacto en una punta y
+esquina alta a 2,8 cm. No apertura, desenganche de 3 cm ni HOME ejecutados.
+El agente sólo consultó: observó reinicios recientes de hw/manipulación y
+posterior timeout SSH en ambos hosts; no ordenó movimiento, paro ni apagado.
+Relevo/consultas/backups: ../Humanoide-vla-evidence/20260930T183000Z_TABLE74_SHUTDOWN_PREP/.
+Última ejecución: 20260930T182221Z_TABLE74_SUPPORT_TRIAL_2072686; journal de
+aproximación consumido, soporte exitoso sin apoyo físico completo acreditado.
+Mañana arrancar con paro pulsado y mantenerlo durante revisión física/técnica;
+no liberar para HOME automático con caja encajada o apoyos externos. No repetir
+ensayos ni borrar consumed; redescubrir contexto tras el reinicio.
+[Estado, evidencia y punto de reanudación](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#pausa-para-apagado-caja-inclinada-y-desenganche-pendiente).
+
+**30-09-2026 — BOX-01-TABLE74-SUPPORT-TRIAL-01: descenso de apoyo instalado.**
+Tarea separada de 5 cm desde la aproximación exitosa y el hueco confirmado por
+el operador; sin apertura, desenganche de 3 cm, HOME ni navegación. Dos archivos
+aditivos Motion con controles WRC conservados; originales y aproximación intactos.
+Referencia/bundle en config/box_handling/scenario1_table74/support_trial/.
+--check real 182123Z pasa, put1=6,4 mm / 0,04°, journal previo sin consumir;
+avisos de lease al cierre registrados. Carga/prueba física de apoyo PENDIENTES.
+70 pruebas pasan. Runner --after verifica journal+eventos+contexto anterior, consume trial.json
+antes de armar y registra support.json; no permite repetir ni produce checkpoint
+ordinario. Backup remoto /var/tmp/cruzr-table74-trial/649c5325…e6655d1 y copia
+externa ../Humanoide-vla-evidence/20260930T181234Z_TABLE74_SUPPORT_TRIAL/.
+[Fuentes, ejecución, límites y rollback](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#continuación-separada-descenso-de-apoyo-de-5-cm).
+
+**30-09-2026 — BOX-01-TABLE74-APPROACH-TRIAL-02: aproximación física completada.**
+Operador ejecutó tarea independiente: única acción SUCCEED/status4/1101001,
+12,407 s; etapa 17,347 s. Dos muestras posteriores inmóviles. Confirma hueco
+actual aproximado de 5 cm sobre mesa74cm; la estimación por foto de 7–8 cm se descarta.
+Caja aún sujeta, sin apoyo/liberación/HOME. Origen put1 consumido; contexto no
+reutilizable, sin checkpoint ordinario. No repetir aproximación ni ciclo completo.
+Evidencia 20260930T180539Z_TABLE74_APPROACH_TRIAL_2028660 y backup documental
+review-before; originales/rollback conservados. Próximo tramo: apoyo nominal de 5 cm,
+por tarea separada; después comprobar apoyo antes del desenganche de 3 cm.
+[Resultado y evidencia](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#resultado-físico-de-la-aproximación-del-30-09-2026).
+
+**30-09-2026 — BOX-01-TABLE74-APPROACH-TRIAL-01: aproximación instalada.**
+Tarea independiente hasta base nominal a 79 cm (mesa 74 + margen 5), mediante
+Z relativo −31 cm desde la medición aproximada de 1,10 m. Conserva movimientos
+XY/torso y controles WRC; sin descenso final, apertura, liberación ni HOME.
+Dos archivos nuevos inmutables en Motion; originales intactos. Instalación y
+hashes verificados, carga/prueba física PENDIENTES. No integrada en ciclo normal.
+Generador, instalador y runner específicos con 44 pruebas; exige checkpoint
+limpio tras put1 y confirmación actual, consume origen antes de armar, sin retry
+ni checkpoint ordinario reutilizable. Backup remoto /var/tmp/cruzr-table74-trial/
+y copia externa en ../Humanoide-vla-evidence/20260930T175607Z_TABLE74_APPROACH_TRIAL/.
+[Receta, dependencias, límites y rollback](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#ensayo-separado-de-aproximación-a-mesa-de-74-cm).
+
+**30-09-2026 — BOX-01-STOP-PUT1-01: pausa antes del depósito, sólo PC.**
+Nuevo `--stop-after put1`; desde recogida pausada ejecutaría retreat y
+navigate_put1, conserva held y no envía depósito/HOME. Rechaza --cycle.
+Contrato/CLI y pruebas actualizados; TASKS/perfiles/Runtime originales intactos.
+73pruebas pasan, plan real correcto y sin consumir checkpoint; sin conexión
+ni movimiento. Transporte físico y depósito relativo no activados/probados.
+Fuentes y rollback selectivo: ../Humanoide-vla-evidence/20260930T174618Z_TABLE74_MEASURED_REFERENCE/.
+[Receta y cautela al reanudar](box_handling/OPTIMISTIC_SCENARIO1.md).
+
+**30-09-2026 — BOX-01-TABLE74-MEASURED-REFERENCE-01: base confirmada ≈1,10m.**
+Operador confirma cinta desde suelo y misma postura tras agarre173316Z.
+Fotos nuevas con abrazadera: hueco estimado6–7cm; no cota de incertidumbre ni
+prueba de desenganche. Cálculo relativo nominal−31cm hasta precontacto y−5cm
+hasta mesa74cm; después−3cm sólo con apoyo. Modo nativo Z_REL_XYRPY_ABSOLUTE
+confirmado estáticamente; fija orientación absoluta. Registro de medición y
+supuestos en config/box_handling/scenario1_table74/measurement_review.json.
+No calibración absoluta inventada, instalación ni activación del depósito.
+Respaldo/SHA: ../Humanoide-vla-evidence/20260930T174618Z_TABLE74_MEASURED_REFERENCE/.
+[Datos, cálculo y límites](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#mesa-horizontal-de-74-cm--candidato-local-del-30-09-2026).
+
+**30-09-2026 19:33 CEST — BOX-01-TABLE74-CALIBRATION-PICKUP-01: prueba parcial.**
+Tras confirmación física actual y check válido, se ejecutó sólo recogida con
+`optimistic_scenario1.sh --run --stop-after grasp`: get1(3,7mm/0,14°), visión
+y agarre SUCCEED; pausa tras verify_held asumido, sin traslado/depósito/HOME.
+Checkpoint held sin fallo ni tarea en curso; confirmación física y referencia
+base-caja/manos aún PENDIENTES. Lectura articular posterior inmóvil; poses
+cartesianas finales no obtenidas (topics anunciados sin muestras en timeout).
+Variante mesa74/desenganche3cm no instalada ni activada. Mismo mapa recargado
+en planificador durante prueba; no edición de puntos. Evidencia/fuentes/SHA,
+respaldo documental y punto de continuación en20260930T173316Z_OPTIMISTIC_SCENARIO1_1944108.
+[Resultado y límites](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#mesa-horizontal-de-74-cm--candidato-local-del-30-09-2026).
+
+**30-09-2026 — BOX-01-TABLE74-RELEASE3-01: propuesta vigente de 3 cm, sólo PC.**
+El operador reduce el descenso de desenganche de5a3cm. Preparador y candidato
+bajan3cm/2s tras el apoyo previsto, después abren±10cm/2s sin otra bajada/giro.
+Depósito conserva5cm: total nominal8cm desde precontacto. Los14cm indicados
+en foto menos placa10cm sólo darían4cm de holgura total bajo esa hipótesis;
+no prueban3cm de recorrido libre. Referencias de altura y holgura PENDIENTES.
+Sin instalación/integración/conexión/movimiento; original operativo intacto.
+28pruebas offline pasan. Fuentes, respaldo previo, SHA finales y reversión en
+`../Humanoide-vla-evidence/20260930T172654Z_TABLE74_RELEASE3/`.
+[Receta, estado y rollback](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#mesa-horizontal-de-74-cm--candidato-local-del-30-09-2026).
+
+**30-09-2026 19:21 CEST — BOX-01-TABLE74-CHECK-01: sólo lectura, HOME medido.**
+Ante petición de activar candidata74cm con supuestos, se contrastan dimensiones
+de abrazaderas: no resuelven origen Motion→agarre/suelo ni holgura de pines bajo
+reborde. Variante continúa sin integrar/instalar. --check original retorna0:
+HOME20D inmóvil, posición/delta máximo0,001822rad, paros0/0, cargador0,
+baterías38,5/41,3%, mapa listo; hashes WRC/abertura originales intactos.
+No tareas de movimiento, rearme ni reinicio. Observación volátil y geométrica
+pendiente, no autorización física. Evidencia172140Z_OPTIMISTIC_SCENARIO1_1914616.
+[Diagnóstico y estado de activación](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#mesa-horizontal-de-74-cm--candidato-local-del-30-09-2026).
+
+**30-09-2026 — BOX-01-TABLE74-RELEASE5-01: propuesta de desenganche guardada.**
+Usuario propone5cm tras apoyar para pines bajo reborde. Candidato local:
+bajar manos5cm/2s sin giro, luego separar±10cm/2s sin más bajada; duración4s,
+torso objetivo relativo0. Son5cm adicionales al descenso5cm del depósito,
+total nominal10cm desde aproximación. Es una propuesta, no un desenganche
+medido; apoyo real, holgura, dos Z absolutas e integración PENDIENTES.
+Original preservado, sin instalación/conexión/movimiento.28pruebas pasan;
+backup/SHA en20260930T171510Z_TABLE74_RELEASE5.
+[Secuencia, cálculo y rollback](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#mesa-horizontal-de-74-cm--candidato-local-del-30-09-2026).
+
+**30-09-2026 — BOX-01-TABLE74-PINS-01: pines bajo reborde, variante no activada.**
+Operador confirma retención de pines bajo reborde; no está demostrado que
+apertura lateral conΔZ0 los libere. Esa hipótesis se marca DESCARTADA para
+activación y se conserva sólo como texto rechazado; descenso mínimo necesario
+permanece `null`. Los5cm de depósito conjunto no equivalen a desenganche tras
+apoyar. Condición del usuario para activar/probar no satisfecha, sin movimientos
+ni instalación. Original conservado; alturas absolutas también PENDIENTES.
+Respaldo y verificación local en20260930T171326Z_TABLE74_PIN_REVIEW.
+[Estado vigente, evidencia y reversión](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#mesa-horizontal-de-74-cm--candidato-local-del-30-09-2026).
+
+**30-09-2026 — BOX-01-TABLE74-DRAFT-01: mesa74cm, candidato guardado en PC.**
+Usuario pide superficie horizontal74cm y descenso corto al dejar/soltar caja;
+confirma que la altura actual también es incorrecta. Variante local: tramo
+relativo final de manos/torso−5cm, apertura lateral±10cm sin descenso ni giro
+añadido. Referencia mano→base de caja no disponible: dos Z absolutas permanecen
+como tokens en plantilla, sin XML ni instalación/integración en optimistic.
+Base/centro/borde nominales74/85/96cm no se presentan como coordenadas Motion.
+28pruebas offline pasan; no conexión/movimiento. Originales locales respaldados
+con SHA en evidencia20260930T170222Z_DEPOSIT_TABLE74. Calibración, trayectoria
+completa y ensayo físico PENDIENTES; ejecutor activo conserva WRC original.
+[Valores, fórmulas, fuentes y rollback](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#mesa-horizontal-de-74-cm--candidato-local-del-30-09-2026).
+
+**30-09-2026 18:29 CEST — BOX-01-HOME-RETRY-01: un reintento HOME en optimistic.**
+Petición explícita tras el diagnóstico: permitir un segundo HOME completo
+ante resultado nativo7104050/MoveToGoalFailed/status6, sólo con liberación
+registrada, sesión vigente y salud/reposo/acción libre comprobados de nuevo.
+El aborto conserva su resultado; segundo fallo o desenlace desconocido
+interrumpe. Reserva previa al envío en checkpoint, conservada al reanudar;
+retoma de HOME ambiguo sin reserva bloquea otro reintento automático. HOMEv8,
+límites y verificación final medidos se conservan. Fuentes PC, carga temporal
+en próxima ejecución; verificación offline y replay de la traza real, sin
+conexión ni movimiento. Prueba física y recuperación del intento previo
+PENDIENTES. Respaldo/SHA y reversión selectiva documentados.
+[Alcance, pruebas, activación y rollback](box_handling/OPTIMISTIC_SCENARIO1.md#un-reintento-de-home-tras-aborto-confirmado--30-09-2026).
+
+**30-09-2026 18:00 CEST — BOX-01-HOME-FAIL-20260930: HOME no alcanzado.**
+Intento optimistic155848 aborta `cruzr/home` con7104050/status6 antes de
+`verify_home`. Motion identifica elevador: destino0 en3,75s, errores−0,242465/
+−0,000479/0,302098rad al finalizar. Leases fallan después del aborto; no son
+la causa. Lectura posterior20D habilitada/sin errores/velocidad0/delta≤0,001980,
+pero `MEASURED_HOME=0`; brazos conservan ajustes iniciales y cuerpo fuera de cero.
+Paros0/0; operador confirma inmóvil, caja apoyada/liberada y abrazaderas vacías
+sin contacto. HOMEv8/MetaMove hashes intactos, mismos archivos que éxitos previos.
+Diagnóstico sólo lectura; no reintento ni cambio de trayectoria/control. Causa
+interna de la llegada incompleta y recuperación desde esta postura PENDIENTES.
+Este diagnóstico no ejecutó otra vez los deltas ni omitió la verificación;
+la petición posterior de reintento y sus límites figuran arriba.
+[Detalle, evidencias y punto de continuación](box_handling/OPTIMISTIC_SCENARIO1.md#home-abortado-en-el-elevador--30-09-2026).
+
+**30-09-2026 17:47 CEST — VOICE-TELEOP-CHARGE-08: instalado, activación pendiente.**
+CC/freno españoles siguen cargados. Motion emite avisos propios de teleoperación
+que esas capas no interceptan; 35 llamadas SpeakTts corresponden a23textos,
+12observados entre registros actuales/históricos y11sólo estáticos. Speech
+recibe además inicio de carga TTSchino junto a FILEcc009 español y aviso chino
+de tarea no asignada del task_manager. Catálogo25 ES/EN y WAV locales preparados.
+Adaptador de recepción Speech con hashes/rollback pasa 13 pruebas offline y
+seis pruebas nativas aisladas de preparación. Autorización de instalación y
+confirmación física HOME estable/vacías/paro1; 33 archivos instalados y SHA
+releídos correctos. Prueba nativa mediante entrypoint instalado pasa 25frases,
+UUID/metadatos conservados. Respaldo real en
+`/etc/walker/voice/deployments/cruzr-voice-20260930T154705Z`, recibo y originales
+externos en evidencia `20260930T152040Z_VOICE_TELEOP_CHARGE/install/`.
+Paro1 antes/durante/después. Speech PID71 aún sin adaptador: activación en próximo
+inicio controlado y escucha PENDIENTES. Sin movimiento, reproducción o reinicio.
+[Diagnóstico, catálogo, fuentes y estado vigente](voice/CATALOGO_VOZ_ES_EN.md#teleoperación-y-carga-avisos-adicionales--30-09-2026).
+
+**30-09-2026 — BOX-01-EXEC-OPTIMISTIC-CYCLE y BOX-01-CLOSE-CONSOLE.**
+Entrada optimista con `--cycle`: repite desde get1 en la misma sesión, reutiliza
+mapa/puntos/planificador y evita repetir preflight/preparación del mapa. Conserva
+pose reciente, llegada, salud continua y HOME medido. Ctrl+C termina la etapa
+y sus registros de caja/HOME, guarda una retoma limpia y sale; errores reales
+siguen bloqueados. Autorización SPS renovable sólo entre ciclos completos,
+solicitudes secuenciales sin límite artificial de 256/4096 y clientes de acción
+renovados periódicamente en reposo. Fuentes PC, activación temporal al ejecutar;
+sin conexión, instalación persistente ni movimiento en esta intervención.
+Los 22 ciclos completos de hoy archivados pasaron HOME; errores posteriores
+eran revocaciones esperadas al cerrar lectores. Consola distingue ese cierre
+sin ocultar errores activos/desconocidos. Verificación offline; ensayo físico
+de `--cycle`/pausas y presentación de cierre PENDIENTE. 680 pruebas pasan;
+17 errores ajenos del instalador de depósito reproducidos también en HEAD,
+documentados aparte. Plan, payload y sintaxis correctos; bundle SPS sin cambios.
+[Uso, fronteras, evidencia y reversión](box_handling/OPTIMISTIC_SCENARIO1.md).
+
+**30-09-2026 — VENDOR-SOURCE-SCOPE-01: inventario para solicitar fuentes.**
+Revisión posterior: sí tenemos ejemplos/interfaces SDK, fuentes propias,
+XML/YAML, modelos y VLA. Los tar SDK no incluyen las implementaciones internas
+Motion/percepción/NAV solicitadas; pedirlas junto con su build/versiones.
+[Qué existe ya y alcance comprobado](box_handling/DECOMPILACION_SELECCION_CAJA.md#material-que-ya-tenemos--30-09-2026).
+Trazado offline de optimistic: Motion/manipulación, percepción 6D y navegación,
+con archivos C++ identificados y requisitos de compilación/versiones. Borrador
+para el operador; no enviado, sin conexión ni cambios al robot.
+[Inventario y alcance](box_handling/DECOMPILACION_SELECCION_CAJA.md#fuentes-a-solicitar-a-ubtech--30-09-2026).
+
+**30-09-2026 — BOX-01-FRONTAL-AMBIGUITY: causa del aborto 072751 verificada.**
+Dos candidatas frontales X0,768842/1,764667 m, diferencia de ángulos absolutos
+0,849°≤2°: rechazo en selección antes del gate XYZ. No eligió la posterior.
+La consola oculta el motivo de ambigüedad; NoneException y leases son posteriores.
+Reproducción sólo local; código intacto. [Diagnóstico](box_handling/FRONT_BOX_DEPTH_GATE_20260928.md#ambigüedad-frontal-del-30-09-2026).
+
+**29-09-2026 14:45 CEST — NAV-PLANNER-CACHE-01: causa corregida y recarga verificada.**
+GOAL_OUTCOSTMAP de get1 era ID ausente en la lista cargada: PLANNING leyó 0 puntos
+antes de guardarse get1/put1 y siguió con esa caché. Nuevo ejecutor sincroniza
+`/vnav/action/planning set_map` una vez por sesión antes de navegar; conserva
+logo_nav/free_nav y todos los rechazos. Recarga real READY/status4 en6,361s,
+logs ahora2puntos, archivo del mapa con SHA idéntico; 299 pruebas offline pasan.
+--check antes/después rc0
+con HOME y FSM_WAITNAVIGATE. Sólo configuración/cero velocidad; sin objetivos
+de navegación ni manipulación. Recorrido físico con corrección PENDIENTE.
+[Causa, código, verificación y reversión](box_handling/NAV_PLANNER_CACHE_20260929.md).
+
+**29-09-2026 — NAV-MODES-01: free_nav explícito y logo_nav admitidos.**
+Ejecutor compartido improved/optimistic: corrige rechazo de puntos guardados con
+`mode=free_nav`; conserva `logo_nav` por ID y marcadores históricos de modo vacío.
+Modo utilizado visible en consola; rechazo nativo GOAL_OUTCOSTMAP explicado en
+español. Conserva resultados, llegada y aborto antes de agarre; no fallback ni
+cambio de mapa. 176 pruebas offline y replay del mapa guardado pasan; --plan OK.
+Compatibilidad PC; no demuestra resuelto el fallo del planificador del mapa
+nuevo. Sin conexión ni movimiento en esta modificación.
+[Fuentes, activación, pruebas y reversión](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md#29-09-2026--nav-modes-01-compatibilidad-explícita-con-ambos-modos).
+
+**29-09-2026 — NAV-MAP-GET1-20260929: fallo de navegación tras cambiar mapa.**
+Operador confirma mapa creado/cargado. Intentos 121213 y 121248 fallan en
+`navigate_get1`, antes de visión/agarre: planificador nativo `GOAL_OUTCOSTMAP`,
+código 7218013. get1/put1 cambiaron de pose y de `free_nav` a `logo_nav` con
+`precise_marker`. Coordenadas dentro del mapa estático guardado; pose previa
+al último objetivo a ≈0,93 mm de get1. No falló la tolerancia local 2 cm/2° ni
+el rango de caja. Costmap activo/objetivo interno no obtenidos; causa exacta
+PENDIENTE. Consultas de sólo lectura; sin cambios de control ni movimientos.
+[Evidencia, límites del diagnóstico y siguiente ensayo candidato](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md#29-09-2026--nav-map-get1-20260929-rechazo-tras-cambiar-mapa).
+
 **29-09-2026 — BOX-01-POSITION-CONSOLE: medidas visibles al aceptar o rechazar.**
 Los ejecutores improved/optimistic muestran la posición seleccionada XYZ en cm,
 intervalos efectivos y margen a la cara más cercana en mm, también si pasa el

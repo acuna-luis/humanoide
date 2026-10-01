@@ -7,7 +7,7 @@ import unittest
 from scripts.box_handling.scenario1_contract import (
     STAGES, begin_stage, complete_stage, fail_stage, new_checkpoint, next_stage,
     resume_checkpoint, validate_checkpoint, validate_motion_result,
-    validate_navigation_result, validate_profile,
+    validate_navigation_result, validate_planning_result, validate_profile,
 )
 
 
@@ -108,8 +108,34 @@ class ProfileTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_profile(profile(), stop_after='get1')  # CLI alias is not a checkpoint stage.
 
+    def test_put1_boundary_allows_unqualified_deposit_but_never_extends_into_it(self):
+        for compatibility in ('pending', 'incompatible'):
+            item = profile()
+            item['deposit']['compatibility'] = compatibility
+            original = copy.deepcopy(item)
+            cp = through('navigate_put1', stop_after='navigate_put1', selected_profile=item)
+            self.assertEqual(cp['box_state'], 'held')
+            self.assertIsNone(next_stage(cp))
+            self.assertEqual(item, original)
+            with self.assertRaises(ValueError):
+                begin_stage(cp, 'deposit')
+            with self.assertRaises(ValueError):
+                new_checkpoint(item, stop_after='verify_home')
+
 
 class CheckpointTest(unittest.TestCase):
+    def test_put1_boundary_is_clean_held_and_cannot_dispatch_any_later_stage(self):
+        cp = through('navigate_put1', stop_after='navigate_put1')
+        self.assertEqual(cp['completed'], list(STAGES[:6]))
+        self.assertEqual(cp['box_state'], 'held')
+        self.assertIsNone(cp['in_flight'])
+        self.assertIsNone(cp['failure'])
+        self.assertIsNone(next_stage(cp))
+        self.assertEqual(validate_checkpoint(json.loads(json.dumps(cp)), profile()), cp)
+        for stage in STAGES[6:]:
+            with self.subTest(stage=stage), self.assertRaises(ValueError):
+                begin_stage(cp, stage)
+
     def test_get1_only_completes_empty_after_exactly_one_stage(self):
         for policy in ('ask', 'assume', 'sensors'):
             with self.subTest(policy=policy):
@@ -492,6 +518,16 @@ class ResultTest(unittest.TestCase):
                 failed['result']['dmsg'] = 'navigation_start SUCCEEDED: reached target'
             with self.subTest(desc=desc), self.assertRaises(ValueError):
                 validate_navigation_result(failed)
+
+    def test_planning_reload_requires_terminal_ready(self):
+        self.assertEqual(validate_planning_result(terminal(desc='READY', code=0))['state']['desc'], 'READY')
+        self.assertEqual(validate_planning_result(terminal(desc='FINISH', code=0),
+                                                 allow_finished=True)['state']['desc'], 'FINISH')
+        for payload in (terminal(desc='READY', status=6), terminal(desc='READY', status=True),
+                        terminal(desc='MAP_SETTING'), terminal(desc='MAP_SETTING_ERROR'),
+                        terminal(desc='GOAL_OUTCOSTMAP'), terminal(desc='SUCCESS'), terminal(desc='FINISH')):
+            with self.subTest(payload=payload), self.assertRaises(ValueError):
+                validate_planning_result(payload)
 
 
 if __name__ == '__main__':

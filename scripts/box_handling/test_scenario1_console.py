@@ -123,6 +123,50 @@ class ReporterTests(unittest.TestCase):
         self.assertNotIn('etapa completada', output.lower())
         self.assertNotIn('agarre completado', output.lower())
 
+    def test_navigation_mode_is_visible_without_changing_raw_target(self):
+        reporter, _ = self.reporter()
+        for mode, method in (('free_nav', 'por coordenadas'), ('logo_nav', 'por identificador')):
+            event = {'event': 'navigation_target', 'point': 'get1', 'mode': mode,
+                     'target': {'map_name': 'utars_nav_map', 'mode': mode},
+                     'expected': {'point_x': 1.673524, 'point_y': .278332, 'point_yaw': 1.599775}}
+            before = copy.deepcopy(event)
+            with self.subTest(mode=mode):
+                output = '\n'.join(reporter.render(event))
+                self.assertIn('Navegación a get1: '+mode, output)
+                self.assertIn(method, output)
+                self.assertEqual(event, before)
+                self.assertEqual(json.loads(ConsoleReporter(verbose=True).render(event)[0]), before)
+
+    def test_native_costmap_failure_is_visible_in_spanish_with_raw_evidence_intact(self):
+        reporter, clock = self.reporter()
+        event = feedback(state='GOAL_OUTCOSTMAP')
+        before = copy.deepcopy(event)
+        for _ in range(2):
+            output = '\n'.join(reporter.render(event))
+            self.assertIn('AVISO', output)
+            self.assertIn('GOAL_OUTCOSTMAP', output)
+            self.assertIn('planificador no pudo resolver o admitir', output)
+        self.assertEqual(event, before)
+        event['detail'] = {'event': 'result', 'status': 6, 'result': {
+            'state': {'desc': '导航模块,目标点附近停靠超出范围,请检查目标点合法性', 'state': 7218013},
+            'dmsg': 'navigation_start FAILURE, change to FSM_WaitNavigate'}}
+        before = copy.deepcopy(event)
+        output = '\n'.join(reporter.render(event))
+        self.assertIn('GOAL_OUTCOSTMAP', output)
+        self.assertIn('estado de acción 6', output)
+        self.assertIn('revisar mapa y punto', output)
+        self.assertNotIn('completada', output)
+        self.assertEqual(event, before)
+        self.assertEqual(json.loads(ConsoleReporter(verbose=True).render(event)[0]), before)
+
+    def test_planner_sync_is_distinct_from_arrival_and_mentions_once_per_session(self):
+        reporter, _ = self.reporter()
+        output = '\n'.join(reporter.render({'event': 'planner_map_sync', 'phase': 'start'}))
+        self.assertIn('una vez por sesión', output)
+        output = '\n'.join(reporter.render({'event': 'planner_map_sync', 'phase': 'complete', 'elapsed_s': 5.25}))
+        self.assertIn('recargados en el planificador', output)
+        self.assertNotIn('Llegada', output)
+
     def test_only_stage_complete_announces_completion_with_assumption_label(self):
         reporter, _ = self.reporter()
         lines = reporter.render({'event': 'stage_complete', 'stage': 'verify_held',
@@ -487,6 +531,28 @@ class ConnectionPresentationTests(unittest.TestCase):
             self.assertEqual(connection.events.get_nowait(), {'event': 'eof'})
             self.assertTrue(connection.closed.is_set())
             connection.process.wait.assert_called_once_with(timeout=15)
+
+
+class HomeRetryConsoleTests(unittest.TestCase):
+    def test_recoverable_receipt_does_not_claim_worker_exited_or_home_succeeded(self):
+        reporter = ConsoleReporter()
+        event = dict(event='action', kind='motion', detail=dict(event='request_complete',
+            returncode=2, recoverable_home_failure=True, goal_id='failed-home'))
+        original = copy.deepcopy(event)
+        text = '\n'.join(reporter.render(event))
+        self.assertIn('HOME abortado', text)
+        self.assertNotIn('terminó', text)
+        self.assertNotIn('correctamente', text)
+        self.assertEqual(event, original)
+        event['detail']['event'] = 'worker_closed'
+        self.assertIn('ERROR', '\n'.join(reporter.render(event)))
+
+    def test_retry_is_visible_but_posture_verification_is_still_pending(self):
+        reporter = ConsoleReporter()
+        self.assertIn('Reintento de HOME 1/1', '\n'.join(reporter.render(
+            dict(event='home_retry', phase='retrying'))))
+        self.assertIn('pendiente comprobar', '\n'.join(reporter.render(
+            dict(event='home_retry', phase='succeeded'))))
 
 
 if __name__ == '__main__':

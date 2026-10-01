@@ -36,6 +36,7 @@ class NavigationCorrectionTests(unittest.TestCase):
                                     _expected_pose=copy.deepcopy(EXPECTED))
                           for name in ('get1', 'put1')}
         machine.prepare_map = Mock()
+        machine.sync_planner_map = Mock()  # Cache reload has its own integration tests.
         machine.map_points = Mock(return_value=machine.points)
         machine.map_state = Mock(return_value=('utars_nav_map', 'FSM_WAITNAVIGATE'))
         machine.discover = Mock()

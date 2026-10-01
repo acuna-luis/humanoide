@@ -1,0 +1,134 @@
+{
+  "id": "BOX-01-TABLE74-DRAFT-01",
+  "status": "blocked_height_and_pin_release",
+  "revision": "BOX-01-TABLE74-RELEASE3-01",
+  "installed": false,
+  "integrated_in_optimistic": false,
+  "can_install": false,
+  "physical_validation": "pending",
+  "source_hashes": {
+    "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/wrc_cruzr/put_cruzr_wrc_low.xml": "579b862962e0ee07a423c92517c29b5ecad80b4929961aac2fae6a0240fa0f78",
+    "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/put_cruzr_wrc_low.yaml": "8aeb0a24a3149c7676f481219299ec85bb872d6b17ad93605a6e461776909ff5",
+    "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/open_arm_cruzr.yaml": "c41bd1d88379c2012ee44639142fb5b55c1d58decd6a75851c8e17763778e37b"
+  },
+  "geometry_review": {
+    "ready": false,
+    "missing": [
+      "reference_vendor_box_bottom_above_floor_m",
+      "reference_vendor_position_reached_verified",
+      "horizontal_alignment_verified",
+      "release_clearance_verified",
+      "evidence"
+    ],
+    "targets": null,
+    "config": {
+      "version": 1,
+      "id": "scenario1_put1_table_v1",
+      "surface_height_m": 0.74,
+      "surface_pitch_deg": 0.0,
+      "box_size_m": [
+        0.603,
+        0.397,
+        0.22
+      ],
+      "calibration_mode": "vendor_final_reference",
+      "reference_vendor_box_bottom_above_floor_m": null,
+      "reference_vendor_position_reached_verified": false,
+      "reference_box_bottom_above_floor_m": null,
+      "reference_left_hand_motion_z_m": null,
+      "reference_right_hand_motion_z_m": null,
+      "horizontal_alignment_verified": false,
+      "release_clearance_verified": false,
+      "evidence": null
+    },
+    "calibration_mode": "vendor_final_reference",
+    "physical_validation": "pending",
+    "target_semantics": "Nominal hand targets in Motion; contact is not measured."
+  },
+  "nominal_box_on_table_floor_m": {
+    "bottom": 0.74,
+    "center": 0.85,
+    "top": 0.96
+  },
+  "nominal_box_note": "Horizontal box of height 0.22 m, resting on table; not hand coordinates.",
+  "hand_formula": {
+    "measured_hand_reference_contact_z_m": "0.74 + measured_hand_motion_z_m - measured_box_bottom_above_floor_m",
+    "vendor_final_reference_contact_z_m": "0.45 + (0.74 - measured_box_bottom_at_verified_original_vendor_endpoint_m)",
+    "approach_z_m": "contact_z_m + 0.05",
+    "after_release_z_m": "contact_z_m - 0.03",
+    "requires": "Same horizontal held box and hand orientations; actual simultaneous measured reference or verified original vendor endpoint."
+  },
+  "deposit_descent_m": {
+    "hands": -0.05,
+    "torso": -0.05
+  },
+  "deposit_descent_previous_m": {
+    "hands": -0.2,
+    "torso": -0.2
+  },
+  "maximum_nominal_final_hand_descent_m": 0.05,
+  "opening": {
+    "duration_s": 4.0,
+    "lowering": {
+      "duration_s": 2.0,
+      "both_hand_delta_m": [
+        0,
+        0,
+        -0.03
+      ]
+    },
+    "separation": {
+      "duration_s": 2.0,
+      "left_delta_m": [
+        0,
+        0.1,
+        0
+      ],
+      "right_delta_m": [
+        0,
+        -0.1,
+        0
+      ]
+    },
+    "relative_quaternion_wxyz": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "torso_delta_m": [
+      0,
+      0,
+      0
+    ],
+    "status": "operator_proposed_unverified"
+  },
+  "release_review": {
+    "retention": "pins_under_rim",
+    "source": "operator_report_2026-09-30",
+    "zero_drop_clearance_verified": false,
+    "required_relative_hand_drop_after_support_m": null,
+    "proposed_relative_hand_drop_after_support_m": 0.03,
+    "operator_max_drop_after_support_m": 0.03,
+    "rotation_for_disengagement": null,
+    "note": "Lowering box and hands together does not establish pin disengagement after support."
+  },
+  "nominal_hand_drop_from_precontact_through_release_m": 0.08,
+  "opening_previous": {
+    "hand_delta_z_m": -0.05,
+    "relative_roll_deg_approx": [
+      75,
+      -75
+    ]
+  },
+  "limitations": [
+    "No verified hand-to-box/floor reference is invented.",
+    "Deposit contact window remains 10 to 12 seconds; early contact is not covered by that window.",
+    "The 5 cm limit applies to the final relative lowering segment, not the preceding absolute approach from an unknown current pose.",
+    "3 cm of lowering after support is an operator proposal, not a verified pin or table clearance.",
+    "The zero-drop opening is rejected: under-rim pins may remain engaged. No minimum disengagement drop is known.",
+    "Separate 2 second stages do not detect support: a future executor must establish stable support before release.",
+    "Waypoints do not prove an exact stop or lack of interpolation blending at the 2 second transition.",
+    "No executable task or robot installer is emitted; runtime still uses the original WRC task."
+  ]
+}

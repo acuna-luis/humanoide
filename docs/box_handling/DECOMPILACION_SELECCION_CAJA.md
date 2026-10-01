@@ -1,5 +1,125 @@
 # Decompilación de la selección de cajas
 
+## Material que ya tenemos — 30-09-2026
+
+**VENDOR-SOURCE-SCOPE-01, revisión de disponibilidad local.** Sí existe código
+fuente parcial. La solicitud al proveedor debe centrarse en las implementaciones
+internas que faltan y en identificar sus versiones compatibles.
+
+| Material | Disponibilidad comprobada |
+|---|---|
+| Ejecutor y selección propios | Fuentes completas en `scripts/box_handling/`: CLI, runtime, contratos, selector, adaptadores SPS y pruebas |
+| Tareas del robot | XML/YAML archivados en `vendor/ubtech/cruzr_s2/snapshot_20260916/`; describen secuencias, trayectorias y parámetros, no la implementación C++ de los nodos |
+| SDK C++ | Tar versionado: 9 ejemplos `.cpp`, 3 cabeceras `ubt_robot/{api,skill,work}.h`, 46 cabeceras JSON de terceros y 14 bibliotecas estáticas; API interna compilada |
+| SDK Python | Tar versionado: 9 demos y 2 wheels; sus implementaciones vienen en `_core.so`, `libcc_api_client.so` y bibliotecas tbox |
+| Demo de bajo nivel | Tar versionado: 23 ejemplos `.cpp`, 28 `.msg`, `Tts.action` y CMake/package.xml |
+| Modelos y VLA | URDF/USD y código VLA/GR00T, puentes y mensajes disponibles; VLA no es el ejecutor de optimistic. Los directorios grandes extraídos están excluidos de Git |
+| Ingeniería inversa | Binarios y pseudocódigo de Ghidra en evidencia externa; no equivalen al proyecto fuente original compilable |
+
+Los tres tar del SDK se inspeccionaron incluyendo ambos wheels en memoria,
+sin instalación ni ejecución. No contienen las implementaciones de
+`manipulation_meta_tasks`, `manipulation_perception`, `pose_6d_estimate`,
+`nav_taskmanager` o `freepnc`. El paquete de actualización de 40 archivos tiene
+YAML, scripts, JSON y DEB, sin fuentes C/C++. La búsqueda de archivos desplegados
+en el workspace, incluyendo carpetas ignoradas y excluyendo secretos/entornos,
+tampoco encontró los archivos C++ internos identificados más abajo. Las
+imágenes Docker locales se distinguen del código versionado: su presencia
+no demuestra que incluyan el árbol fuente completo.
+
+Se indexaron también las capas `COPY /opt/walker` de `images/motion.tar` y
+`images/vision.tar`, sin cargar contenedores ni extraer a disco. En los paquetes
+Motion `manipulation_meta_tasks`, `manipulation_task_manager` y
+`manipulation_perception`, y en los paquetes Vision `pose_6d_estimate`,
+`nav_taskmanager`, `freepnc_task_manager`, `freepnc_task_module`,
+`arc_precise_controller`, `local_controller`, `ucostmap` y `umap_manager`, no
+aparecen fuentes C/C++, cabeceras ni Python. Sí hay fuentes generadas de
+mensajes/bindings en paquetes de interfaces. No se auditaron todas las capas
+base: esta comprobación cubre las capas de instalación de los componentes.
+
+Por tanto, añadir a la solicitud: «We already have the SDK examples, API
+headers, task XML/YAML files and runtime images. We need the original source
+implementation of the underlying modules and their reproducible build setup.»
+La petición anterior de interfaces/configuraciones completas sigue sirviendo
+para solicitar la versión compatible, pero no implica que no tengamos ninguna.
+
+Índices de los tar y SHA256, respaldo previo y revisión sólo PC:
+`../Humanoide-vla-evidence/20260930T080718Z_SOURCE_AVAILABILITY`.
+No se modificaron SDK, código ejecutable ni robot. Reversión documental
+selectiva desde `before/`; sin cambios de instalación que reaplicar.
+
+## Fuentes a solicitar a UBTECH — 30-09-2026
+
+**VENDOR-SOURCE-SCOPE-01 — VERIFICADO en código local y evidencia archivada.**
+Solicitud preparada, no enviada. No conexión ni cambios al robot. El script
+`optimistic_scenario1.sh` entra en `scenario1_cli` y `scenario1_runtime`; éstos
+son nuestros, al igual que `front_sps_*`, `select_front_box.py` y la variante
+`local_front_box`. Lo que falta es el árbol fuente compilable del proveedor
+que atiende las acciones y ejecuta las tareas, con sus dependencias transitivas.
+No se afirma disponer de un inventario exhaustivo de fuentes internas: UBTECH
+debe entregar los manifiestos de compilación y relacionarlos con los binarios.
+
+| Bloque | Proyectos/componentes confirmados que identificar en la solicitud |
+|---|---|
+| Motion | `manipulation_task_manager`, `manipulation_meta_tasks` y `manipulation_perception`; implementación de `MetaClamp`, `MetaMove`, `MetaLook`, `MetaCruzrMove` y dependencias de controlador, IK/HQP, trayectorias, fuerza y hardware |
+| Percepción | Repositorio de compilación `pose_6d_estimation`, paquete `pose_6d_estimate`, ejecutable `box_pose_estimator_node`, implementación de `/cv/task/transport_action` y pipeline de detección/pose 6D de `workbin` |
+| Navegación | Repositorios `nav_taskmanager`, `freepnc_task`, `freepnc_local`; paquetes `freepnc_task_module`, `freepnc_task_manager`, `behaviortree_interface`, `arc_precise_controller` |
+| Dependencias NAV | `navi_common`, `navi_global`, `navi_local`, `navi_recovery`, `uglobal_planner`, `local_controller`, `ucostmap`, `ucostmap_converter`, `freepnc_aeb`, `umap_manager`, `bt_interface`, `nav_freepnc_config_utars`; localización LiDAR/VSLAM y gestión de mapas |
+| Interfaces/plataforma | ROSA y puente ROS2, mensajes/acciones/servicios/IDL usados; controladores y drivers de actuadores, base y sensores; URDF, TF y calibraciones correspondientes a esta unidad |
+
+Archivos C++ identificados en las rutas de compilación de los binarios
+archivados (pedir también cabeceras y fuentes asociadas, no sólo estos archivos):
+
+- `repos/manipulation/meta_tasks/src/meta_clamp/{meta_clamp,clamp,clamp_vision,clamp_traj,clamp_task_stack,clamp_admit,clamp_admit_replan,clamp_abnormality_helper,clamp_utils}.cpp`.
+- `repos/manipulation/perception/src/perception_action_client.cpp`.
+- `repos/nav_taskmanager/nav_taskmanager/src/{nav_taskmanager,json_parser,map_interface}.cpp` y `fsm/`.
+- `repos/freepnc_task/freepnc_task_module/src/{freepnc_task_module,freepnc_task_module_node}.cpp` y `semantic_planning_manager/semantic_planning_manager.cpp`.
+- `repos/freepnc_local/arc_precise_controller/src/arc_precise_controller.cpp`.
+
+No se conoce el nombre de cada fuente de `box_pose_estimator_node`; sí su
+paquete y símbolo `UBT_CV::WalkerS::Pose6dNode::execute_Trans`. La configuración
+archivada arranca `pose_6d_estimation_640_400_byd.json`. Componentes auxiliares
+configurados: `rgb_camera/rgb_camera_node`,
+`stereo_depth_estimation/stereo_depth_node` y
+`calibration_full_chain/calibration_node`; solicitar su relación de dependencias.
+`locate3d_task` y `vslam` son nombres de servicios/contenedores observados,
+no identificaciones completas de sus repositorios fuente.
+
+Cadena concreta para que el proveedor determine el alcance:
+
+- `/mc/manipulation/action` (`mc_task_msgs/action/ArmTask`):
+  `vision/enable_transport_vision_switch`,
+  `local_front_box/separate_right_cruzr` (derivada de
+  `Singapore/separate_right_cruzr`), `cruzr/mobot_back_20`,
+  `wrc_cruzr/put_cruzr_wrc_low`, `cruzr/home`.
+- YAML originales de `meta_clamp/wrc/`: `separate_right_cruzr.yaml`,
+  `separate_bodyback_cruzr.yaml`, `put_cruzr_wrc_low.yaml`, `open_arm_cruzr.yaml`;
+  pilas `task_stack_cruzr_separate_manipulability.yaml`,
+  `task_stack_cruzr_clamp_bodyback.yaml`, `task_stack_cruzr_clamp_manipulability.yaml`.
+- `/cv/task/transport_action` (`cv_task_msgs/action/VisionActionTask`):
+  `transport/head/grasp`, caja de 0,603 × 0,397 × 0,22 m; nuestras dos interfaces
+  SPS enlazan esa detección con el consumidor nativo de Motion.
+- `/vnav/task/command` (`unav_task_msgs/action/Task`), `free_nav`/`logo_nav`,
+  y `/vnav/action/planning` (`vnav_task_msgs/action/VnavCommand`).
+
+Pedir fuentes C++/Python, cabeceras, CMake/package.xml, submódulos, versiones de
+dependencias, XML/YAML/launch, modelos/pesos de percepción, URDF/calibraciones,
+Dockerfiles y procedimiento de compilación/despliegue. Solicitar commit/tag y
+digest de imagen que correspondan a los binarios instalados: la etiqueta
+`v0.2.0` sola no identifica una compilación. Los hashes de las tres bibliotecas
+Motion están en `front_box_integration.py`; `libmeta_move.so` se comprueba por
+`scenario1_dependencies.py`. El planificador archivado/contrastado el 29-09 tiene
+SHA256 `54da620905aa6816bb29a8e5983823172b02fe1f36cae68a407de5c420b812ea`.
+
+Evidencia de nombres: scripts citados, XML/YAML de
+`vendor/ubtech/cruzr_s2/snapshot_20260916/motion`, configuración local
+`utars-udoke-config-v0.2.0_offline-001/vision/.metafiles/box_pose_estimation.metafile.yml`,
+y archivos externos `20260921T110500Z_FRONT_BOX_SELECTION`,
+`20260922T080049Z_ARC_PRECISE_DIAG/vendor`, `20260929T123551Z_NAV_PLANNER_FIX`.
+Respaldo documental/SHA: `../Humanoide-vla-evidence/vendor_source_scope_latest.txt`.
+Sólo documentación PC; no adaptación instalada ni mensaje enviado. Reversión:
+retirar selectivamente esta sección y las entradas de índice, conservando los
+cambios anteriores. Pendiente entrega y comprobación del árbol fuente de UBTECH.
+
 **Actualización posterior:** adaptador y variante ya instalados; dos pruebas de recepción nativa correctas. Agarre físico pendiente. [Integración SPS vigente](INTEGRACION_CAJA_FRONTAL_SPS.md). El análisis inferior conserva el estado previo a esa instalación.
 
 2026-09-21, Europe/Madrid. **BOX-01-FRONT-DECOMPILE — VERIFICADO por análisis

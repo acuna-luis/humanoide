@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "box_bottom_above_floor_m": 1.10,
+  "surface_height_m": 0.74,
+  "precontact_clearance_m": 0.05,
+  "scope": "current_post_grasp_box_only",
+  "evidence": "2026-09-30 Europe/Madrid: operator confirms tape zero at floor, box bottom approximately 1.10 m and unchanged post-grasp posture from 20260930T173316Z_OPTIMISTIC_SCENARIO1_1944108. Photographs and confirmation recorded in measurement_review.json. Approximate measurement; no bounded error or physical approach validation. Valid only while this grasp and reference remain unchanged."
+}

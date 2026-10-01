@@ -63,6 +63,20 @@ def plan_resume(checkpoint, profile, *, stage=None, box_state=None,
     }
     cp = contract.new_resume_checkpoint(profile, entry_stage=selected, entry_box_state=expected,
         origin=origin, stop_after=stop_after, policy=policy, execution_profile=execution_profile)
+    if 'home_retry' in source:
+        # An explicit recovery segment must not manufacture another automatic
+        # retry, including when a crash followed reservation but not dispatch.
+        cp['home_retry'] = copy.deepcopy(source['home_retry'])
+    uncertain_home_budget = (source['in_flight'] == 'home' or
+                             source['failure'] is not None and source['failure']['stage'] == 'home')
+    if (source.get('home_retry_blocked', False) or
+            requested_execution == 'optimistic_v1' and 'home_retry' not in source
+            and uncertain_home_budget):
+        # The remote reservation can be durable before its event reaches the
+        # PC checkpoint. Absence there does not prove that the budget is free.
+        # Preserve uncertainty without inventing a failed UUID or native result.
+        cp['home_retry_blocked'] = True
+    cp = contract.validate_checkpoint(cp, profile)
     waypoint = ('get1' if selected in ('enable_vision', 'grasp', 'verify_held', 'retreat') else
                 'put1' if selected == 'deposit' else None)
     return {'checkpoint': cp, 'stage': selected, 'source_sha256': source_sha256,

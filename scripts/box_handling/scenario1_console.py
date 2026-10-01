@@ -17,7 +17,7 @@ STAGE_LABELS = {
     'home': 'Volver a HOME',
     'verify_home': 'Comprobar HOME',
 }
-ALERT = re.compile(r'LOST|FAIL|ERROR|FAULT|ABORT|COLLISION|OBSTACLE|STOP|TIMEOUT|BLOCK|PAUS|UNKNOWN|REJECT|CANCEL', re.I)
+ALERT = re.compile(r'LOST|FAIL|ERROR|FAULT|ABORT|COLLISION|OBSTACLE|OUTCOSTMAP|STOP|TIMEOUT|BLOCK|PAUS|UNKNOWN|REJECT|CANCEL', re.I)
 
 
 def mapping(value):
@@ -51,6 +51,14 @@ def stage_label(stage):
     return STAGE_LABELS.get(clean(stage), clean(stage))
 
 
+def state_label(state, kind):
+    desc = clean(state.get('desc'))
+    if kind == 'navigation' and (desc == 'GOAL_OUTCOSTMAP' or state.get('state') == 7218013):
+        return ('GOAL_OUTCOSTMAP: el planificador no pudo resolver o admitir el destino; '
+                'revisar mapa y punto (también ocurre si el ID no está cargado)')
+    return desc
+
+
 def residual(rows):
     rows = rows if isinstance(rows, list) else [rows]
     distances = [number(mapping(row).get('distance_m')) for row in rows]
@@ -70,6 +78,8 @@ class ConsoleReporter:
         self.confirmations = {}
         self.shown_box_measurements = set()
         self.shown_box_rejections = set()
+        self.session_finishing = False
+        self.expected_worker_closes = set()
 
     def rejected_box_measurement(self, detail):
         """Display the rejected gate input, without reselecting or authorizing it.
@@ -161,11 +171,41 @@ class ConsoleReporter:
             return [json.dumps(event, ensure_ascii=False)]
         event = mapping(event)
         name = clean(event.get('event'))
+        if name == 'cycle_ready':
+            self.last_feedback.clear()
+            self.shown_box_measurements.clear()
+            self.shown_box_rejections.clear()
+            return []
         if name == 'checkpoint':
             self.confirmations = mapping(mapping(event.get('checkpoint')).get('confirmations'))
             return []
+        if name == 'session_finishing' and event.get('reason') == 'requested':
+            self.session_finishing = True
+            return ['  Cierre solicitado: terminando los ejecutores de la sesión.']
+        if name == 'home_retry':
+            phase = event.get('phase')
+            if phase == 'checking':
+                return ['  HOME abortado por MoveToGoalFailed. Comprobando salud y reposo antes del único reintento.']
+            if phase == 'retrying':
+                return ['  Reintento de HOME 1/1: comprobaciones superadas; permiso registrado.']
+            if phase == 'succeeded':
+                return ['  Reintento de HOME finalizado correctamente; pendiente comprobar la postura HOME.']
+            return ['  AVISO: Estado de reintento HOME no reconocido: '+clean(phase)]
         if name in ('action', 'health_worker'):
-            return self.detail(mapping(event.get('detail')), clean(event.get('kind') or name))
+            detail = mapping(event.get('detail'))
+            kind = clean(event.get('kind') or name)
+            if self.expected_idle_close(detail, kind):
+                return []
+            return self.detail(detail, kind)
+        if name == 'navigation_target':
+            mode = clean(event.get('mode'))
+            method = {'logo_nav': 'por identificador', 'free_nav': 'por coordenadas'}.get(mode)
+            return ['  Navegación a '+clean(event.get('point'))+': '+mode+
+                    (' ('+method+')' if method else '')]
+        if name == 'planner_map_sync':
+            if event.get('phase') == 'complete':
+                return ['  Mapa y destinos recargados en el planificador: '+seconds(event.get('elapsed_s'))]
+            return ['  Sincronizando mapa y destinos del planificador (una vez por sesión)']
         if name == 'arrival':
             return ['  Llegada '+clean(event.get('point'))+': '+residual(event.get('measurement'))]
         if name == 'get1_correction':
@@ -210,13 +250,43 @@ class ConsoleReporter:
             return ['  AVISO: '+message] if ALERT.search(message) else []
         return self.detail(event, '')
 
+    def expected_idle_close(self, event, kind):
+        """Recognize only idle workers revoked after an explicit clean finish.
+
+        Raw events remain in the journal and verbose output. A lease error
+        before this boundary, a correlated request/goal, or any other reason
+        remains an error. This presentation state never changes control state.
+        """
+        if not self.session_finishing:
+            return False
+        name = event.get('event')
+        if name == 'error':
+            expected = {
+                'motion': 'Lease missing, invalid or expired',
+                'navigation': 'Lease missing, invalid or expired',
+                'planning': 'Lease missing, invalid or expired',
+                'health_worker': 'RuntimeError: Health worker lease expired or stop requested',
+            }
+            idle = ('request_id' in event and event['request_id'] is None and
+                    event.get('goal_id') is None and
+                    (kind == 'health_worker' or 'goal_id' in event))
+            if kind in expected and idle and event.get('reason') == expected[kind]:
+                self.expected_worker_closes.add(kind)
+                return True
+            self.expected_worker_closes.discard(kind)
+        if name == 'worker_closed' and kind in self.expected_worker_closes:
+            self.expected_worker_closes.discard(kind)
+            code = event.get('returncode')
+            return type(code) is int and code == (78 if kind == 'health_worker' else 2)
+        return False
+
     def detail(self, event, kind):
         name = clean(event.get('event'))
         reason = clean(event.get('reason'))
         if name == 'feedback':
             feedback = mapping(event.get('feedback'))
             state = mapping(feedback.get('state'))
-            desc = clean(state.get('desc'))
+            desc = state_label(state, kind)
             message = clean(feedback.get('dmsg'))
             alert = bool(ALERT.search(desc+' '+message))
             key = (kind, clean(event.get('goal_id') or event.get('request_id')))
@@ -239,7 +309,7 @@ class ConsoleReporter:
             return ['  '+('AVISO: ' if alert else '')+label]
         if name == 'result':
             result = mapping(event.get('result'))
-            desc = clean(mapping(result.get('state')).get('desc'))
+            desc = state_label(mapping(result.get('state')), kind)
             message = clean(result.get('dmsg'))
             status = event.get('status')
             alert = bool(ALERT.search(desc+' '+message)) or status != 4
@@ -269,6 +339,10 @@ class ConsoleReporter:
             return ['  '+labels[name]+(': '+reason if reason else '')]
         if name == 'accepted' and event.get('accepted') is False:
             return ['  Orden no aceptada'+(': '+reason if reason else '')]
+        if (name == 'request_complete' and kind == 'motion' and
+                event.get('recoverable_home_failure') is True and
+                type(event.get('returncode')) is int and event['returncode'] == 2):
+            return ['  AVISO: HOME abortado; ejecutor disponible para revisar el único reintento.']
         if name in ('request_complete', 'worker_closed') and event.get('returncode') not in (None, 0):
             return ['  ERROR: ejecutor terminó con código '+clean(event.get('returncode'))]
         if ALERT.search(name):

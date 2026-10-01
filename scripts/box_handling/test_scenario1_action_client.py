@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 from types import SimpleNamespace as NS
 import unittest
+from unittest.mock import Mock, patch
 
 if __package__:
     from . import scenario1_action_client as action
@@ -355,6 +356,115 @@ class CompatibilityTests(unittest.TestCase):
         code = action.run_action(transport, 'motion', {}, 2., lambda **row: None, clock=clock)
         self.assertEqual(code, 0)
         self.assertEqual(transport.sent, 1)
+
+
+class PlanningTests(unittest.TestCase):
+    def run_case(self, goal=None, status=4, result=None, lease_file=None, interrupt=lambda: None):
+        clock = FakeClock()
+        result = {'state': {'desc': 'READY', 'state': 0}} if result is None else result
+        terminal = dict(event='result', status=status, result=result)
+        transport = FakeTransport(clock, ((.25, ACCEPT), (.5, terminal)))
+        rows = []
+        goal = dict(command='set_map', map_name='utars_nav_map') if goal is None else goal
+        code = action.run_action(transport, 'planning', goal, 2., lambda **row: rows.append(row),
+            interrupted=interrupt, lease_file=lease_file, clock=clock, cancel_grace=1.)
+        return code, rows, transport
+
+    def test_reviewed_map_refresh_and_state_query_require_ready_result(self):
+        for command in ('set_map', 'check_state'):
+            goal = dict(command=command, map_name='utars_nav_map')
+            with self.subTest(command=command):
+                self.assertEqual(action.validate_goal('planning', json.dumps(goal)), goal)
+                code, rows, transport = self.run_case(goal)
+                self.assertEqual(code, 0)
+                self.assertEqual(transport.sent, 1)
+                self.assertEqual(transport.canceled, [])
+                self.assertEqual(rows[0]['endpoint'], '/vnav/action/planning')
+
+    def test_finished_is_idle_only_for_state_query_not_map_refresh(self):
+        finished = {'state': {'desc': 'FINISH', 'state': 0}}
+        for command, expected_code in (('check_state', 0), ('set_map', 2)):
+            with self.subTest(command=command):
+                code, rows, transport = self.run_case(
+                    dict(command=command, map_name='utars_nav_map'), result=finished)
+                self.assertEqual(code, expected_code)
+                self.assertEqual(transport.sent, 1)
+                self.assertEqual(transport.canceled, [])
+                if command == 'set_map':
+                    self.assertTrue(any('did not confirm READY' in row.get('reason', '') for row in rows))
+
+    def test_other_commands_targets_fields_or_maps_never_dispatch(self):
+        base = dict(command='set_map', map_name='utars_nav_map')
+        goals = [dict(base, command=name) for name in ('start_planning', 'navigation_start',
+                 'map_set', 'stop', '', True, ['set_map'])]
+        goals += [dict(base, map_name=value) for value in ('another_map', '', None, True)]
+        goals += [dict(base, **{field: value}) for field, value in (
+            ('target_point', {}), ('arg_json', '{}'), ('allow_backward', ''),
+            ('marker_operator', ''), ('marker_changename', ''))]
+        goals += [{}, {'command': 'set_map'}, {'map_name': 'utars_nav_map'}]
+        for goal in goals:
+            with self.subTest(goal=goal):
+                with self.assertRaises(ValueError):
+                    action.validate_goal('planning', json.dumps(goal))
+                code, rows, transport = self.run_case(goal)
+                self.assertEqual(code, 2)
+                self.assertEqual(transport.sent, 0)
+                self.assertEqual(transport.canceled, [])
+
+    def test_planning_terminal_status_four_without_ready_is_failure(self):
+        results = [{'state': {'desc': desc, 'state': 0}}
+                   for desc in ('SUCCESS', 'SUCCEED', 'RUNNING', 'GOAL_OUTCOSTMAP', '', None)]
+        results += [{}, {'state': None}, {'state': []}, {'state': 'READY'}]
+        for result in results:
+            with self.subTest(result=result):
+                self.assertFalse(action.result_succeeded('planning', 4, result))
+                code, rows, transport = self.run_case(result=result)
+                self.assertEqual(code, 2)
+                self.assertEqual(transport.sent, 1)
+                self.assertEqual(transport.canceled, [])
+
+    def test_ready_cannot_mask_canceled_aborted_or_nonterminal_status(self):
+        for status in (0, 2, 5, 6, True, 4.0, '4'):
+            with self.subTest(status=status):
+                self.assertFalse(action.result_succeeded('planning', status,
+                    {'state': {'desc': 'READY', 'state': 0}}))
+        for status in (5, 6):
+            with self.subTest(status=status):
+                code, rows, transport = self.run_case(status=status)
+                self.assertEqual(code, 2)
+                self.assertEqual(transport.sent, 1)
+
+    def test_expired_lease_or_interruption_prevents_map_refresh(self):
+        with tempfile.TemporaryDirectory() as directory:
+            lease = Path(directory) / 'lease.json'
+            lease.write_text('{"deadline":0}')
+            code, rows, transport = self.run_case(lease_file=lease)
+            self.assertEqual((code, transport.sent), (2, 0))
+        code, rows, transport = self.run_case(interrupt=lambda: 'Signal 2')
+        self.assertEqual((code, transport.sent), (2, 0))
+
+    def test_planning_transport_uses_observed_native_type_and_endpoint(self):
+        native_action = object()
+        base_client = NS(SendGoalOptions=lambda: object())
+        rosa = NS(init=Mock(), Node=Mock(return_value='node'), spin_once=Mock(),
+                  ok=Mock(return_value=True), shutdown=Mock())
+        client = NS(configure_observer=Mock())
+        constructor = Mock(return_value=client)
+        modules = {'rosa': rosa,
+            'rosa.action_client': NS(ActionClient=base_client, ActionClientGoalHandle=object()),
+            'rosa.base._ActionType': NS(to_string=str),
+            'vnav_task_msgs.action': NS(VnavCommand=native_action)}
+        with patch.dict('sys.modules', modules), \
+                patch.object(action, 'validate_native_sources', return_value={}) as pin, \
+                patch.object(action, 'validate_native_client') as validate, \
+                patch.object(action, 'native_client_class', return_value=constructor):
+            transport = action.RosaTransport('planning')
+            constructor.assert_called_once_with('node', '/vnav/action/planning', native_action)
+            pin.assert_called_once()
+            validate.assert_called_once_with(client)
+            client.configure_observer.assert_called_once()
+            transport.close()
+            rosa.shutdown.assert_called_once()
 
 
 if __name__ == '__main__':

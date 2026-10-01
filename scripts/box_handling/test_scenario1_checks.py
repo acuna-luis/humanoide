@@ -301,6 +301,60 @@ class ArrivalAndMapChecks(unittest.TestCase):
         self.assertEqual(result['put1']['speed']['linear']['x'], .18)
         self.assertEqual(result['put1']['_expected_pose']['point_yaw'], .5)
 
+    def test_explicit_free_nav_preserves_current_pose_and_speed_policy(self):
+        response = map_response()
+        message = json.loads(response['message'])
+        point = message['umap']['target_points'][0]
+        point.update(mode='free_nav', type='precise_marker',
+                     point_x=1.6735242237794687, point_y=.27833227656019477,
+                     point_yaw=1.5997746657494152, speed_x=.3, speed_yaw=.3)
+        response['message'] = message
+        before = copy.deepcopy(response)
+        target = validate_map_points(response)['get1']
+        self.assertEqual(target['mode'], 'free_nav')
+        self.assertEqual(target['level'], 1)
+        for field in ('point_x', 'point_y', 'point_yaw'):
+            self.assertEqual(target[field], point[field])
+            self.assertEqual(target['_expected_pose'][field], point[field])
+        self.assertEqual(target['speed'], {'linear': {'x': .18, 'y': .01, 'z': 0.},
+                                          'angular': {'x': 0., 'y': 0., 'z': .20}})
+        self.assertNotIn('id', target)
+        self.assertEqual(response, before)
+
+    def test_precise_logo_nav_keeps_id_and_does_not_copy_editor_metadata(self):
+        response = map_response()
+        message = json.loads(response['message'])
+        point = message['umap']['target_points'][0]
+        point.update(type='precise_marker', keyframe_index=-1,
+                     mark_point={'id': 'false', 'point_x': .0001})
+        response['message'] = message
+        target = validate_map_points(response)['get1']
+        self.assertEqual(target, {'map_name': 'utars_nav_map', 'mode': 'logo_nav', 'id': 'get1',
+                                 '_expected_pose': {'point_x': 1., 'point_y': 2., 'point_yaw': 0.}})
+
+    def test_empty_mode_is_only_supported_for_historical_mapping_marker(self):
+        for marker_type in ('precise_marker', 'logo', None):
+            response = map_response()
+            message = json.loads(response['message'])
+            message['umap']['target_points'][0].update(mode='', type=marker_type)
+            response['message'] = message
+            with self.subTest(marker_type=marker_type), self.assertRaisesRegex(ValueError, 'mode'):
+                validate_map_points(response)
+
+    def test_explicit_free_nav_still_requires_finite_coordinates_and_unique_points(self):
+        for problem in ('duplicate', 'missing_coordinate', 'nan', 'bool'):
+            response = map_response()
+            message = json.loads(response['message'])
+            points = message['umap']['target_points']
+            points[0]['mode'] = 'free_nav'
+            if problem == 'duplicate': points.append(copy.deepcopy(points[0]))
+            if problem == 'missing_coordinate': del points[0]['point_yaw']
+            if problem == 'nan': points[0]['point_x'] = float('nan')
+            if problem == 'bool': points[0]['point_y'] = False
+            response['message'] = message
+            with self.subTest(problem=problem), self.assertRaises(ValueError):
+                validate_map_points(response)
+
     def test_missing_duplicate_unknown_mode_and_invalid_map_fail(self):
         for alteration in ('missing', 'duplicate', 'mode', 'nonfinite', 'boolean'):
             response = map_response(); message = json.loads(response['message'])

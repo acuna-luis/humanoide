@@ -333,7 +333,12 @@ def validate_nav_pose(payload, expected, started_at, now, previous_stamp=None, *
 
 
 def validate_map_points(response):
-    """Preserve current get1/put1 geometry and supported navigation modes."""
+    """Use logo_nav by ID or free_nav by pose from the current saved map.
+
+    Historical mapping_marker/empty points are implicit free_nav. An explicit
+    free_nav mode has the same pose contract, independently of the UI marker
+    type. Neither form substitutes another mode after a native action failure.
+    """
     response = _json(response)
     try:
         if type(response.get('code')) is not int or response['code'] != 200:
@@ -349,12 +354,14 @@ def validate_map_points(response):
                 raise ValueError('Require one unique ' + name)
             point = matches[0]
             marker = point.get('type') == 'mapping_marker' and point.get('mode') == ''
-            if point.get('mode') != 'logo_nav' and not marker:
-                raise ValueError('Unsupported waypoint navigation mode')
+            mode = 'free_nav' if marker else point.get('mode')
+            if mode not in ('logo_nav', 'free_nav'):
+                raise ValueError('Unsupported waypoint navigation mode for '+name+
+                                 ': expected free_nav, logo_nav or mapping_marker with empty mode')
             expected = {key: _number(point.get(key), 'Waypoint coordinate')
                         for key in ('point_x', 'point_y', 'point_yaw')}
             target = {'map_name': 'utars_nav_map', 'mode': 'logo_nav', 'id': name}
-            if marker:
+            if mode == 'free_nav':
                 target = dict(map_name='utars_nav_map', mode='free_nav', level=1, **expected,
                               speed={'linear': {'x': 0.18, 'y': 0.01, 'z': 0.0},
                                      'angular': {'x': 0.0, 'y': 0.0, 'z': 0.20}})

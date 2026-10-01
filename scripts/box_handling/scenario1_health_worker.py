@@ -20,6 +20,11 @@ import tempfile
 import threading
 import time
 
+if __package__:
+    from .scenario1_request_ids import RequestIds
+else:
+    from scenario1_request_ids import RequestIds
+
 
 TOPICS = {
     'estop': ('/emb/estop_key_state', 'std_msgs/msg/UInt8'),
@@ -374,7 +379,7 @@ def main(argv=None):
     commands = queue.Queue(maxsize=16)
     ended = threading.Event()
     errors = []
-    seen = set()
+    seen = RequestIds(legacy_limit=4096)
     native = None
     current = None
 
@@ -411,8 +416,6 @@ def main(argv=None):
                 current = commands.get_nowait()
             except queue.Empty:
                 continue
-            if current['request_id'] in seen or len(seen) >= 4096:
-                raise ValueError('Repeated request_id or session request limit')
             seen.add(current['request_id'])
             emit(**native.acquire(current, guard))
             emit(event='request_complete', request_id=current['request_id'], returncode=0)

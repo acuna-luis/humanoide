@@ -1,5 +1,170 @@
 # Catálogo de voz Cruzr S2: chino, español e inglés
 
+## Teleoperación y carga: avisos adicionales — 30-09-2026
+
+**VOICE-TELEOP-CHARGE-08 — INSTALADO el 30-09-2026 a las 17:47 CEST;
+activación en el servicio y escucha real PENDIENTES.** El operador oye
+chino al entrar/salir de teleoperación y durante la carga. Las capas anteriores
+siguen cargadas: `/proc` muestra `libvoice_cc.so` en Control Center y
+`libbrake_voice.so` en backend. Speech Service recibe correctamente `cc_011.wav`
+y `cc_012.wav`, además de los avisos de preparación y carga de CC en español.
+
+Los avisos adicionales de teleoperación proceden de Motion, del cliente de
+`tele_device_mapper_base.cpp` en `robot_app`; no estaban cubiertos por el
+adaptador de CC ni por el de los workers AE. La biblioteca actual
+`libmeta_teleoperation.so` contiene 35 llamadas directas a `SpeakTts`, resueltas
+a **23 textos distintos**: siete observados en la captura actual, cinco en
+registros históricos y once sólo contrastados estáticamente. Los avisos de
+marcha y eslinga corresponden a ramas de plataforma bípeda; no consta su
+emisión en esta unidad. El catálogo los distingue y no prueba que esos modos
+estén habilitados.
+
+La carga aparece en Speech Service como dos objetivos distintos, uno FILE
+`cc_009.wav` y otro TTS chino `开始充电`. Eso acredita dos solicitudes, todavía
+no identifica el emisor de la segunda. El aviso de tarea sin asignar procede
+de `walker-system.task_manager-1`, fuera del adaptador limitado a `ae_worker`.
+No se elimina ninguna solicitud ni se cambia su condición de disparo.
+
+[Catálogo de las 25 frases y traducciones ES/EN](catalogo_teleop_charge_20260930.json).
+Ejemplos:
+
+| Chino | Audio español | TTS alternativo inglés |
+| --- | --- | --- |
+| 遥操初始化中，请保持距离 | Inicializando la teleoperación. Mantenga la distancia. | Initializing teleoperation. Please keep your distance. |
+| 初始化完成 | Inicialización completada. | Initialization complete. |
+| 结束遥操 | Finalizando la teleoperación. | Ending teleoperation. |
+| 三秒未收到VR数据, 请检查设备 | No se han recibido datos de realidad virtual durante tres segundos. Revise el dispositivo. | No VR data received for three seconds. Please check the device. |
+| 开始充电 | Iniciando carga. | Starting charging. |
+
+25 WAV generados localmente con Piper y el modelo previamente respaldado
+`es_ES-sharvard-medium`, voz1, mono/16kHz/PCM16. Validación de señal y
+transcripción automática local Whisper small; no equivale a escucha humana.
+La ASR presenta pequeñas discordancias, conservadas en `audio-validation.json`;
+no se han alterado advertencias basándose sólo en esa transcripción.
+[Vista previa local](../../../Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/ESCUCHAR.html).
+
+La corrección instalada se limita a Speech Service y a esos textos exactos.
+Interpone la deserialización nativa de `Tts_SendGoal_Request` después de terminar
+correctamente, convirtiendo su objetivo en FILE español o TTS inglés si falta
+el WAV. FILE previos y textos desconocidos conservan su comportamiento. UUID,
+volumen, velocidad, interrupción y demás metadatos se conservan; no sustituye
+binarios del proveedor ni modifica Motion, teleoperación, carga o seguridad.
+La ruta PLT se comprobó en ELF; está fijada a los hashes de esta versión.
+
+Fuentes: [preparador](../../scripts/voice/prepare_speech_voice.py),
+[adaptador](../../scripts/voice/speech/voice_speech.cpp),
+[prueba nativa](../../scripts/voice/speech/native_test.cpp),
+[pruebas de empaquetado y rollback](../../scripts/voice/test_speech_voice_prepare.py).
+Evidencia y copia externa de binario/librería/entrypoint anteriores:
+`../Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/`,
+incluido `build2/originals.tar.gz`; desensamblado ABI en
+`../Humanoide-vla-evidence/20260930T152343Z_VOICE_SPEECH_ABI_AUDIT/`.
+Los respaldos de ES03, EN04, CC y freno se conservan.
+
+La preparación escribe fuentes y pruebas aisladas bajo `/tmp` del contenedor
+de voz, sin crear nodos, enviar objetivos o reproducir audio. La primera prueba
+nativa falló por interpretar el contenedor `SerializedPayload_t` como bytes
+CDR; también fallaba sin adaptador. Se corrigió el programa de prueba; no fue
+un fallo del proceso de voz en servicio. La evidencia fallida se conserva en
+`build/`; la preparación definitiva está en `build2/`.
+
+**Verificación:** 13 pruebas offline de catálogo, lanzador y rollback pasan.
+En las bibliotecas reales pasan seis ejecuciones aisladas: dos nativas sin
+adaptador, dos con adaptador en un ejecutable ajeno que debe quedar intacto,
+una con los 25 FILE españoles y una con los 25 TTS ingleses. Comparan UUID,
+todos los metadatos, FILE previos, textos desconocidos/casi coincidentes y
+rechazo nativo de CDR inválido. No crean nodos ni reproducen voz. Sintaxis del
+entrypoint correcta; no equivale a prueba de escucha ni carga en servicio.
+
+**Instalación verificada:** operador confirma HOME estable, abrazaderas vacías
+y paro pulsado. Lectura del paro 1 antes de cada grupo y al terminar. Comprobación
+del instalador correcta; 33/33 archivos instalados y releídos con SHA idénticos.
+El programa de prueba nativa ejecutado mediante el entrypoint ya instalado pasa
+las 25 frases españolas, conservando UUID/metadatos; cero objetivos y audio.
+Speech Service sigue en PID 71, sin el adaptador cargado: no se reinició ni se
+recargó ningún servicio. El nuevo idioma se activará en su próximo inicio.
+
+Recibo real: `install/receipt.json` de la evidencia externa; `applied=true`.
+Respaldo persistente:
+`/etc/walker/voice/deployments/cruzr-voice-20260930T154705Z`.
+Copia externa de originales inmediatos, permisos y journals:
+`install/remote-receipts-and-originals.tar.gz`, SHA256
+`a6821a7319510a0e5115a35819214cb2873692506f8a8bc4b66438f0699e381d`.
+Sus 33 registros están verificados y el original del entrypoint coincide con
+`59f77c2d…`. Evidencia de lectura `install/readback-user.json`, prueba
+`install/installed-launcher-native-test.json` y paro `install/estop-after.json`.
+La primera consulta de `/proc` como root no pudo leer procesos del usuario
+walker; se repitió con el usuario del servicio y quedó verificada. No fue un
+fallo ni desaparición de Speech Service. El staging previo `install-check/`
+queda conservado como evidencia de comprobación, sin aplicación.
+
+### Aplicación y reversión de VOICE-TELEOP-CHARGE-08
+
+Destino instalado: Vision, 32 archivos nuevos bajo
+`/etc/walker/voice/teleop_charge_es_v1/`, compartidos con Speech Service, y
+`walker-voice.speech_service-1:/opt/walker/entrypoint.sh`. Este último es el
+único archivo preexistente sustituido. Los activos anteriores de voz y Motion
+quedan intactos. La guarda del lanzador comprueba binario, biblioteca nativa y
+todos los nuevos activos antes de cargar el adaptador. Si no coinciden, conserva
+la voz nativa; el fallback inglés se aplica a WAV no disponibles después de
+haber cargado una instalación compatible.
+
+Dependencias fijadas a v0.2.0: binario Speech `3ffd6c14…`, biblioteca
+`libsys_task_msgs.so` `98ed5126…`, entrypoint previo `59f77c2d…`. SHA completos
+en `build2/original-hashes.json`; los de fuentes, audios y plan en
+`prepared-sha256.json` de la evidencia. Biblioteca preparada SHA256
+`cb33abd5a80a03657124e918432f8b61d77699bdae0fcc35b01a8c10d9ec86ab`.
+Respaldo externo inmediato `build2/originals.tar.gz`, SHA256
+`03393a23eb1d3c84f216e12d8d7550d63d439e695b627bd4cc6c2ebfe60d14c8`.
+
+El paro principal inicial fue 0; después de la confirmación física del operador
+fue 1 durante la instalación y al terminar. El instalador exige lectura 1 antes
+y durante las escrituras. Para una futura aplicación/reversión, confirmar HOME
+estable y abrazaderas vacías antes de pulsar el paro desde una postura nueva.
+Receta aplicada desde la raíz (registro; **no repetir sobre esta instalación**):
+
+```bash
+VOICE_EVIDENCE=../Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE
+python3 -B scripts/voice/deploy_voice_assets.py \
+  --deployment "$VOICE_EVIDENCE/build2/deployment" \
+  --evidence "$VOICE_EVIDENCE/install" --apply
+```
+
+La receta anterior está **ejecutada y verificada**. Creó recibo y
+respaldo persistente por archivo en `/etc/walker/voice/deployments/`, y copia
+externa en `install/`. Ante interrupción, revisar `install/receipt.json` y los
+journals; no repetir la instalación sobre archivos parcialmente escritos.
+Con el mismo requisito de paro, el rollback es:
+
+```bash
+VOICE_EVIDENCE=../Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE
+python3 -B scripts/voice/deploy_voice_assets.py \
+  --rollback-receipt "$VOICE_EVIDENCE/install/receipt.json" \
+  --evidence "$VOICE_EVIDENCE/rollback"
+```
+
+Devuelve primero el entrypoint y después elimina sólo los nuevos archivos
+que aún coincidan con sus hashes. Se detiene si detecta cambios posteriores;
+no restaura el robot completo ni elimina los respaldos. Restauración de bytes,
+permisos y fecha del entrypoint verificada offline. Cada ejecución necesita
+una carpeta de evidencia nueva; conservar los recibos anteriores.
+
+Instalador y rollback no reinician servicios. La activación o desactivación
+requiere un posterior inicio controlado de Speech Service; un proceso que ya
+cargó el adaptador lo conserva hasta terminar. Confirmar entonces la biblioteca
+en `/proc/<PID>/maps` y el mensaje `[VOICE_SPEECH]` en sus logs, y verificar
+la escucha en el siguiente uso autorizado de teleoperación/carga. No iniciar
+movimientos ni cargar la batería sólo para provocar un aviso.
+
+Para reconstruir desde las fuentes y WAV respaldados, usar el preparador
+con `--catalog docs/voice/catalogo_teleop_charge_20260930.json`,
+`--audio "$VOICE_EVIDENCE/audio_es"` y `--evidence` apuntando a una carpeta
+nueva. Se detiene si la versión o el entrypoint de partida cambiaron. Tras
+actualizar el robot, revisar la ficha; no reaplicar la biblioteca a otra ABI.
+Estado: **instalado y archivos verificados; carga en el servicio y escucha real
+PENDIENTES**. No liberar el paro ni iniciar teleoperación como parte de este
+procedimiento de instalación de voz.
+
 **23-09-2026 — VOICE-BRAKE-07: idioma del aviso de freno instalado.**
 Frase exacta de backend_service_vision→WAV español; lógica/condición del freno
 intactas.7 hashes correctos, prueba nativa y a través del entrypoint instalado

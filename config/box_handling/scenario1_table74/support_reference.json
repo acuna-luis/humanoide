@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "gap_above_surface_m": 0.05,
+  "surface_height_m": 0.74,
+  "predecessor_bundle_id": "9360060014e4103ce31da084426302ee4c2e06900a0f5707bf68df0d07ada9ef",
+  "predecessor_goal_id": "7553e90f-cde1-4ca7-a488-96c86816d988",
+  "scope": "current_post_approach_box_only",
+  "evidence": "2026-09-30 Europe/Madrid: after successful approach recorded in 20260930T180539Z_TABLE74_APPROACH_TRIAL_2028660, operator confirms approximately 5 cm from the tabletop (tape zero) to the lowest part of the box. Earlier 7-8 cm image estimate is discarded. Approximate measurement without bounded uncertainty; box remains held, support and release not yet physically demonstrated."
+}

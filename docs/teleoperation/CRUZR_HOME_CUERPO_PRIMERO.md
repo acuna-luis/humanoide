@@ -1,5 +1,23 @@
 # HOME: cuerpo a cero antes de los brazos
 
+**30-09-2026 — BOX-01-HOME-RETRY-01: supervisor optimistic, XML intacto.**
+El ejecutor PC puede repetir una vez HOME completo tras7104050/status6 y nuevas
+comprobaciones de salud/reposo, por solicitud del operador. Conserva presupuesto
+en checkpoints y HOME final medido. No modifica HOMEv8 automático, deltas,
+tiempos ni límites, ni demuestra la trayectoria desde cualquier postura parcial.
+Implementado/verificado offline; sin conexión, movimiento ni nueva instalación
+HOME. Recuperación física PENDIENTE.
+[Alcance, verificación y reversión](../box_handling/OPTIMISTIC_SCENARIO1.md#un-reintento-de-home-tras-aborto-confirmado--30-09-2026).
+
+**30-09-2026 — HOMEv8: fallo observado del primer tramo del elevador.**
+Mismo XML d9e94627… y MetaMove bfeab1c7… releídos; en un ciclo tras depósito,
+el elevador no alcanza0 en3,75s y aborta con7104050/status6. Brazos sólo completan
+ajustes relativos iniciales. Muestras posteriores inmóviles/habilitadas/sin
+error de servo, pero cuerpo/brazos fuera de HOME. Causa interna y recuperación
+PENDIENTES; no basta omitir el gate final ni asumir que repetir deltas sea seguro.
+Sin cambios de XML, tiempos, tolerancias o control en esta revisión.
+[Diagnóstico y evidencia](../box_handling/OPTIMISTIC_SCENARIO1.md#home-abortado-en-el-elevador--30-09-2026).
+
 **22-09-2026 — HOME-V8-AUTO-01: v8 INSTALADA como HOME automático.**
 Tras nueva petición «hazlo ahora», paro principal1/servo0, cargador0 y hashes
 verificados. home.xml sustituido atómicamente por el XML exacto ensayado:

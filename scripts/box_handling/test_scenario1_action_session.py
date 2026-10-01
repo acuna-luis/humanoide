@@ -196,6 +196,133 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(transport.completed, [])
         self.assertEqual(len(transport.sent), 1)
 
+    def test_planning_refresh_then_check_state_reuses_reviewed_transport_after_ready(self):
+        refresh = dict(command='set_map', map_name='utars_nav_map')
+        query = dict(command='check_state', map_name='utars_nav_map')
+        code, rows, transport = self.run_requests([request(1, refresh), request(2, query)],
+            [{'state': {'desc': 'READY', 'state': 0}}], 'planning')
+        self.assertEqual(code, 0)
+        self.assertEqual(transport.sent, [refresh, query])
+        self.assertEqual(transport.completed, ['uuid-1', 'uuid-2'])
+        self.assertEqual(transport.canceled, [])
+        receipts = [row for row in rows if row['event'] == 'request_complete']
+        self.assertEqual(receipts, [dict(event='request_complete', request_id='request-1', returncode=0),
+                                    dict(event='request_complete', request_id='request-2', returncode=0)])
+        self.assertTrue(all(row['endpoint'] == '/vnav/action/planning'
+                            for row in rows if row['event'] == 'dispatched'))
+
+    def test_planning_finished_state_query_can_precede_ready_map_refresh(self):
+        query = dict(command='check_state', map_name='utars_nav_map')
+        refresh = dict(command='set_map', map_name='utars_nav_map')
+        code, rows, transport = self.run_requests([request(1, query), request(2, refresh)],
+            [{'state': {'desc': 'FINISH', 'state': 0}},
+             {'state': {'desc': 'READY', 'state': 0}}], 'planning')
+        self.assertEqual(code, 0)
+        self.assertEqual(transport.sent, [query, refresh])
+        self.assertEqual(transport.completed, ['uuid-1', 'uuid-2'])
+        self.assertEqual(transport.canceled, [])
+
+    def test_planning_finished_map_refresh_poisoned_without_retry(self):
+        refresh = dict(command='set_map', map_name='utars_nav_map')
+        code, rows, transport = self.run_requests([request(1, refresh), request(2, refresh)],
+            [{'state': {'desc': 'FINISH', 'state': 0}}], 'planning')
+        self.assertEqual(code, 2)
+        self.assertEqual(transport.sent, [refresh])
+        self.assertEqual(transport.completed, [])
+        self.assertEqual(transport.canceled, [])
+        self.assertTrue(any('did not confirm READY' in row.get('reason', '') for row in rows))
+
+    def test_planning_session_rechecks_finished_against_refresh_command(self):
+        clock = FakeClock()
+        transport = FakeTransport(clock)
+        source = inbox()
+        source.requests.put(request(1, dict(command='set_map', map_name='utars_nav_map')))
+        rows = []
+        def incorrectly_successful(transport, kind, goal, timeout, emit, **kwargs):
+            transport.send(goal)
+            emit(event='result', goal_id=transport.goal_id, status=4,
+                 result={'state': {'desc': 'FINISH', 'state': 0}})
+            return 0
+        code = action.run_session(transport, 'planning', source, lambda **row: rows.append(row),
+            clock=clock, run_one=incorrectly_successful)
+        self.assertEqual(code, 2)
+        self.assertEqual(len(transport.sent), 1)
+        self.assertEqual(transport.completed, [])
+
+    def test_planning_success_string_or_failure_poison_session_without_second_dispatch(self):
+        refresh = dict(command='set_map', map_name='utars_nav_map')
+        for desc in ('SUCCESS', 'SUCCEED', 'GOAL_OUTCOSTMAP', 'ERROR', 'RUNNING'):
+            with self.subTest(desc=desc):
+                code, rows, transport = self.run_requests([request(1, refresh), request(2, refresh)],
+                    [{'state': {'desc': desc, 'state': 0}}], 'planning')
+                self.assertEqual(code, 2)
+                self.assertEqual(transport.sent, [refresh])
+                self.assertEqual(transport.completed, [])
+                self.assertEqual(rows[-1], dict(event='request_complete', request_id='request-1', returncode=2))
+
+    def test_planning_map_refresh_is_not_replayed_for_repeated_request_id(self):
+        refresh = dict(command='set_map', map_name='utars_nav_map')
+        code, rows, transport = self.run_requests([request(1, refresh), request(1, refresh)],
+            [{'state': {'desc': 'READY', 'state': 0}}], 'planning')
+        self.assertEqual(code, 2)
+        self.assertEqual(transport.sent, [refresh])
+        self.assertEqual(transport.completed, ['uuid-1'])
+        self.assertTrue(any('Repeated request_id' in row.get('reason', '') for row in rows))
+
+    def test_planning_timeout_cancels_exact_goal_and_cannot_start_next_request(self):
+        refresh = dict(command='set_map', map_name='utars_nav_map')
+        def configure(transport, source, clock):
+            transport.produce_result = False
+            transport.cancel_result = False
+        code, rows, transport = self.run_requests([request(1, refresh), request(2, refresh)],
+            kind='planning', configure=configure)
+        self.assertEqual(code, 3)
+        self.assertEqual(transport.sent, [refresh])
+        self.assertEqual(transport.canceled, ['uuid-1'])
+        self.assertEqual(transport.completed, [])
+        self.assertTrue(any(row['event'] == 'terminal_unknown' for row in rows))
+
+    def test_planning_goals_with_unreviewed_command_or_fields_never_dispatch(self):
+        goals = [dict(command='start_planning', map_name='utars_nav_map'),
+                 dict(command='set_map', map_name='another_map'),
+                 dict(command='set_map', map_name='utars_nav_map', target_point={}),
+                 dict(command='check_state', map_name='utars_nav_map', arg_json='{}')]
+        for goal in goals:
+            with self.subTest(goal=goal):
+                code, rows, transport = self.run_requests([request(1, goal)], kind='planning')
+                self.assertEqual(code, 2)
+                self.assertEqual(transport.sent, [])
+                self.assertEqual(rows[-1], dict(event='request_complete', request_id='request-1', returncode=2))
+
+    def test_planning_ready_result_after_disconnect_does_not_retire_or_continue(self):
+        def configure(transport, source, clock):
+            transport.on_spin = lambda: setattr(source, 'reason', 'Input disconnected')
+        refresh = dict(command='set_map', map_name='utars_nav_map')
+        code, rows, transport = self.run_requests([request(1, refresh), request(2, refresh)],
+            [{'state': {'desc': 'READY', 'state': 0}}], 'planning', configure)
+        self.assertEqual(code, 2)
+        self.assertEqual(transport.sent, [refresh])
+        self.assertEqual(transport.completed, [])
+
+    def test_planning_session_rechecks_ready_when_transport_reports_success(self):
+        """A successful transport return alone cannot retire an application failure."""
+        clock = FakeClock()
+        transport = FakeTransport(clock)
+        source = inbox()
+        source.requests.put(request(1, dict(command='set_map', map_name='utars_nav_map')))
+        rows = []
+        def incorrectly_successful(transport, kind, goal, timeout, emit, **kwargs):
+            transport.send(goal)
+            emit(event='result', goal_id=transport.goal_id, status=4,
+                 result={'state': {'desc': 'SUCCESS', 'state': 0}})
+            return 0
+        code = action.run_session(transport, 'planning', source, lambda **row: rows.append(row),
+            clock=clock, run_one=incorrectly_successful)
+        self.assertEqual(code, 2)
+        self.assertEqual(len(transport.sent), 1)
+        self.assertEqual(transport.completed, [])
+        self.assertEqual(rows[-1]['returncode'], 2)
+
 
 class InputTests(unittest.TestCase):
     def test_exact_request_fields_and_timeout_required(self):

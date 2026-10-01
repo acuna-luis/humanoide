@@ -46,8 +46,10 @@ class SimulatedRuntime(runtime.Runtime):
         self.assert_persisted()
         self.calls.append(point)
 
-    def action(self, kind, goal, timeout):
+    def action(self, kind, goal, timeout, *, allow_home_retry=False):
         self.assert_persisted()
+        if allow_home_retry and (kind != 'motion' or goal['task_name'] != 'cruzr/home'):
+            raise AssertionError('Retry permission escaped HOME')
         task = goal['task_name']
         self.calls.append(task)
         return dict(event='result', status=4 if task != self.failure_task else 6,

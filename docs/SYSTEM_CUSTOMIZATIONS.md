@@ -1,5 +1,239 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+**30-09-2026 — BOX-01-TABLE74-PAUSE-01: apagado confirmado por el operador.**
+«Ya apagado y todo asegurado y estable»: caja, brazos y cuerpo asegurados;
+sin verificación física independiente del agente. Última prueba support_only
+SUCCEED, pero caja inclinada: toda la base sobre mesa, contacto en una punta y
+esquina alta a 2,8 cm. No apertura, desenganche de 3 cm ni HOME ejecutados.
+El agente sólo consultó: observó reinicios recientes de hw/manipulación y
+posterior timeout SSH en ambos hosts; no ordenó movimiento, paro ni apagado.
+Relevo/consultas/backups: ../Humanoide-vla-evidence/20260930T183000Z_TABLE74_SHUTDOWN_PREP/.
+Última ejecución: 20260930T182221Z_TABLE74_SUPPORT_TRIAL_2072686; journal de
+aproximación consumido, soporte exitoso sin apoyo físico completo acreditado.
+Mañana arrancar con paro pulsado y mantenerlo durante revisión física/técnica;
+no liberar para HOME automático con caja encajada o apoyos externos. No repetir
+ensayos ni borrar consumed; redescubrir contexto tras el reinicio.
+[Estado, evidencia y punto de reanudación](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#pausa-para-apagado-caja-inclinada-y-desenganche-pendiente).
+
+**30-09-2026 — BOX-01-TABLE74-SUPPORT-TRIAL-01: descenso de apoyo instalado.**
+Tarea separada de 5 cm desde la aproximación exitosa y el hueco confirmado por
+el operador; sin apertura, desenganche de 3 cm, HOME ni navegación. Dos archivos
+aditivos Motion con controles WRC conservados; originales y aproximación intactos.
+Referencia/bundle en config/box_handling/scenario1_table74/support_trial/.
+--check real 182123Z pasa, put1=6,4 mm / 0,04°, journal previo sin consumir;
+avisos de lease al cierre registrados. Carga/prueba física de apoyo PENDIENTES.
+70 pruebas pasan. Runner --after verifica journal+eventos+contexto anterior, consume trial.json
+antes de armar y registra support.json; no permite repetir ni produce checkpoint
+ordinario. Backup remoto /var/tmp/cruzr-table74-trial/649c5325…e6655d1 y copia
+externa ../Humanoide-vla-evidence/20260930T181234Z_TABLE74_SUPPORT_TRIAL/.
+[Fuentes, ejecución, límites y rollback](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#continuación-separada-descenso-de-apoyo-de-5-cm).
+
+**30-09-2026 — BOX-01-TABLE74-APPROACH-TRIAL-02: aproximación física completada.**
+Operador ejecutó tarea independiente: única acción SUCCEED/status4/1101001,
+12,407 s; etapa 17,347 s. Dos muestras posteriores inmóviles. Confirma hueco
+actual aproximado de 5 cm sobre mesa74cm; la estimación por foto de 7–8 cm se descarta.
+Caja aún sujeta, sin apoyo/liberación/HOME. Origen put1 consumido; contexto no
+reutilizable, sin checkpoint ordinario. No repetir aproximación ni ciclo completo.
+Evidencia 20260930T180539Z_TABLE74_APPROACH_TRIAL_2028660 y backup documental
+review-before; originales/rollback conservados. Próximo tramo: apoyo nominal de 5 cm,
+por tarea separada; después comprobar apoyo antes del desenganche de 3 cm.
+[Resultado y evidencia](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#resultado-físico-de-la-aproximación-del-30-09-2026).
+
+**30-09-2026 — BOX-01-TABLE74-APPROACH-TRIAL-01: aproximación instalada.**
+Tarea independiente hasta base nominal a 79 cm (mesa 74 + margen 5), mediante
+Z relativo −31 cm desde la medición aproximada de 1,10 m. Conserva movimientos
+XY/torso y controles WRC; sin descenso final, apertura, liberación ni HOME.
+Dos archivos nuevos inmutables en Motion; originales intactos. Instalación y
+hashes verificados, carga/prueba física PENDIENTES. No integrada en ciclo normal.
+Generador, instalador y runner específicos con 44 pruebas; exige checkpoint
+limpio tras put1 y confirmación actual, consume origen antes de armar, sin retry
+ni checkpoint ordinario reutilizable. Backup remoto /var/tmp/cruzr-table74-trial/
+y copia externa en ../Humanoide-vla-evidence/20260930T175607Z_TABLE74_APPROACH_TRIAL/.
+[Receta, dependencias, límites y rollback](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#ensayo-separado-de-aproximación-a-mesa-de-74-cm).
+
+**30-09-2026 — BOX-01-STOP-PUT1-01: pausa antes del depósito, sólo PC.**
+Nuevo `--stop-after put1`; desde recogida pausada ejecutaría retreat y
+navigate_put1, conserva held y no envía depósito/HOME. Rechaza --cycle.
+Contrato/CLI y pruebas actualizados; TASKS/perfiles/Runtime originales intactos.
+73pruebas pasan, plan real correcto y sin consumir checkpoint; sin conexión
+ni movimiento. Transporte físico y depósito relativo no activados/probados.
+Fuentes y rollback selectivo: ../Humanoide-vla-evidence/20260930T174618Z_TABLE74_MEASURED_REFERENCE/.
+[Receta y cautela al reanudar](box_handling/OPTIMISTIC_SCENARIO1.md).
+
+**30-09-2026 — BOX-01-TABLE74-MEASURED-REFERENCE-01: base confirmada ≈1,10m.**
+Operador confirma cinta desde suelo y misma postura tras agarre173316Z.
+Fotos nuevas con abrazadera: hueco estimado6–7cm; no cota de incertidumbre ni
+prueba de desenganche. Cálculo relativo nominal−31cm hasta precontacto y−5cm
+hasta mesa74cm; después−3cm sólo con apoyo. Modo nativo Z_REL_XYRPY_ABSOLUTE
+confirmado estáticamente; fija orientación absoluta. Registro de medición y
+supuestos en config/box_handling/scenario1_table74/measurement_review.json.
+No calibración absoluta inventada, instalación ni activación del depósito.
+Respaldo/SHA: ../Humanoide-vla-evidence/20260930T174618Z_TABLE74_MEASURED_REFERENCE/.
+[Datos, cálculo y límites](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#mesa-horizontal-de-74-cm--candidato-local-del-30-09-2026).
+
+**30-09-2026 19:33 CEST — BOX-01-TABLE74-CALIBRATION-PICKUP-01: prueba parcial.**
+Tras confirmación física actual y check válido, se ejecutó sólo recogida con
+`optimistic_scenario1.sh --run --stop-after grasp`: get1(3,7mm/0,14°), visión
+y agarre SUCCEED; pausa tras verify_held asumido, sin traslado/depósito/HOME.
+Checkpoint held sin fallo ni tarea en curso; confirmación física y referencia
+base-caja/manos aún PENDIENTES. Lectura articular posterior inmóvil; poses
+cartesianas finales no obtenidas (topics anunciados sin muestras en timeout).
+Variante mesa74/desenganche3cm no instalada ni activada. Mismo mapa recargado
+en planificador durante prueba; no edición de puntos. Evidencia/fuentes/SHA,
+respaldo documental y punto de continuación en20260930T173316Z_OPTIMISTIC_SCENARIO1_1944108.
+[Resultado y límites](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#mesa-horizontal-de-74-cm--candidato-local-del-30-09-2026).
+
+**30-09-2026 — BOX-01-TABLE74-RELEASE3-01: propuesta vigente de 3 cm, sólo PC.**
+El operador reduce el descenso de desenganche de5a3cm. Preparador y candidato
+bajan3cm/2s tras el apoyo previsto, después abren±10cm/2s sin otra bajada/giro.
+Depósito conserva5cm: total nominal8cm desde precontacto. Los14cm indicados
+en foto menos placa10cm sólo darían4cm de holgura total bajo esa hipótesis;
+no prueban3cm de recorrido libre. Referencias de altura y holgura PENDIENTES.
+Sin instalación/integración/conexión/movimiento; original operativo intacto.
+28pruebas offline pasan. Fuentes, respaldo previo, SHA finales y reversión en
+`../Humanoide-vla-evidence/20260930T172654Z_TABLE74_RELEASE3/`.
+[Receta, estado y rollback](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#mesa-horizontal-de-74-cm--candidato-local-del-30-09-2026).
+
+**30-09-2026 19:21 CEST — BOX-01-TABLE74-CHECK-01: sin despliegue.**
+--check de lectura en unidad real pasa con HOME medido/paros0/cargador0;
+dependencias WRC y HOME originales verificadas, sin tareas de movimiento.
+Candidata con altura pendiente no se activa mediante valores supuestos.
+Sólo registro documental y procesos transitorios de consulta; no configuración
+remota persistente que reaplicar. Logs/fuentes/SHA y respaldo documental en
+`../Humanoide-vla-evidence/20260930T172140Z_OPTIMISTIC_SCENARIO1_1914616/`.
+Rollback sólo documental selectivo desde `review-before/`. Geometría y prueba
+física pendientes; adaptación original preservada.
+[Evidencia y punto de continuación](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#mesa-horizontal-de-74-cm--candidato-local-del-30-09-2026).
+
+**30-09-2026 — BOX-01-TABLE74-RELEASE5-01: propuesta local, NO activada.**
+Preparador/candidato en `config/box_handling/scenario1_table74/` revisados por
+petición del operador: liberación con descenso5cm/2s y apertura lateral/2s,
+sin giro ni otro descenso. Fuente `scripts/box_handling/prepare_scenario1_table74.py`;
+test actualizado y28pruebas pasan. Reemplaza archivo de apertura rechazada
+por `release_under_rim.candidate.yaml`; ambos estados conservados en respaldo.
+Destino exclusivoPC; runtime/original/robot intactos. Descenso propuesto no
+marca holgura verificada ni resuelve altura absoluta. Sin activación/prueba.
+SHA/backup/reversión en `../Humanoide-vla-evidence/20260930T171510Z_TABLE74_RELEASE5/`.
+[Receta reproducible y estado](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#mesa-horizontal-de-74-cm--candidato-local-del-30-09-2026).
+
+**30-09-2026 — BOX-01-TABLE74-PINS-01: bloqueo del borrador de apertura.**
+Usuario confirma pines bajo reborde; aperturaΔZ0 no está validada para liberar.
+Preparador y review locales registran rechazo; YAML candidato anterior pasa a
+`open_horizontal.rejected.yaml.txt` con aviso, respaldo previo verificado.
+No instalar/reaplicar como adaptación operativa. Original/ejecutor intactos,
+sin instalación, recarga o movimiento. Referencia de altura y desenganche
+siguen PENDIENTES. Fuentes/SHA/backup de11archivos en
+`../Humanoide-vla-evidence/20260930T171326Z_TABLE74_PIN_REVIEW/`; reversión
+selectiva local no convierte la propuesta anterior en validada.
+[Corrección, límites y rollback](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#mesa-horizontal-de-74-cm--candidato-local-del-30-09-2026).
+
+**30-09-2026 — BOX-01-TABLE74-DRAFT-01: preparación local, NO instalada.**
+Destino PC: `config/box_handling/scenario1_table74/` (perfil, revisión, plantilla
+depósito y apertura candidata), `scripts/box_handling/prepare_scenario1_table74.py`
+y prueba. Mesa74cm horizontal; descenso relativo final5cm y apertura0cm/0°;
+falta referencia geométrica para dos Z absolutas, sin sustituirlas por valores
+supuestos. Generación reproducible con SHA originales; no XML ejecutable ni
+carga automática. Depende de snapshot16-09 y contrato geométrico existente.
+28pruebas pasan; instalación/carga/validación física PENDIENTES. Originales,
+fuentes finales y SHA en `../Humanoide-vla-evidence/20260930T170222Z_DEPOSIT_TABLE74/`.
+Rollback selectivo local; no archivo/servicio del robot que revertir. No cambia
+optimistic ni su reintento HOME. Instalador histórico2/builder3 incompatible,
+deuda pendiente fuera del preparador. Sin red/movimiento.
+[Receta, cálculos, verificación y reversión](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#mesa-horizontal-de-74-cm--candidato-local-del-30-09-2026).
+
+**30-09-2026 18:29 CEST — BOX-01-HOME-RETRY-01: implementado en PC.**
+Objetivo: segundo HOME tras aborto nativo7104050/status6 en optimistic/assume,
+sin restablecer workers ni leases fallidos. Destino: wrapper
+`scripts/optimistic_scenario1.sh` y módulos runtime/action_client/session/
+contract/resume/cli/console en `scripts/box_handling/`. Validación estricta
+UUID/resultado, nuevas comprobaciones de salud/reposo/acción ociosa, reserva
+persistente antes del segundo envío y bloqueo conservador de retomas ambiguas.
+Segundo fallo detiene; HOME medido sigue obligatorio. Mismo XMLv8 y MetaMove,
+ninguna modificación remota persistente; carga temporal en próxima ejecución
+del PC. VERIFICADO offline, no cargado en robot en esta intervención y ensayo
+físico PENDIENTE. Backup previo completo con cambios sin commit, fuentes finales,
+SHA y resultados en `../Humanoide-vla-evidence/20260930T161503Z_OPTIMISTIC_HOME_RETRY/`.
+Reversión selectiva desde `before/` con ejecutor terminado; no borrar ni
+degradar checkpoints para recuperar permisos consumidos. Dependencias,
+receta de pruebas, activación, límites y archivos concretos en la ficha.
+[Ficha reproducible BOX-01-HOME-RETRY-01](box_handling/OPTIMISTIC_SCENARIO1.md#un-reintento-de-home-tras-aborto-confirmado--30-09-2026).
+
+**30-09-2026 — BOX-01-HOME-FAIL-20260930: diagnóstico/documentación, sin adaptación.**
+HOME de optimistic abortado por elevador sin alcanzar cero en3,75s, no por
+validación final ni leases de cierre. Muestras posteriores20D sanas/inmóviles
+pero fuera de HOME; operador confirma caja liberada y sin contacto. XMLv8
+d9e94627… y MetaMove bfeab1c7… verificados intactos. Ningún archivo o estado de
+control cambiado en robot; sin movimiento, cancelación, rearme o reinicio.
+Cambio PC limitado a documentos; backup y SHA en
+`../Humanoide-vla-evidence/20260930T160259Z_OPTIMISTIC_HOME_FAILED/`.
+Reversión documental selectiva desde `before/`; no restaurar estado transitorio
+ni checkpoint. Causa interna/recuperación PENDIENTES, sin solución instalada.
+[Evidencia, diagnóstico y continuación](box_handling/OPTIMISTIC_SCENARIO1.md#home-abortado-en-el-elevador--30-09-2026).
+
+**30-09-2026 17:47 CEST — VOICE-TELEOP-CHARGE-08: instalado, NO cargado aún.**
+Objetivo: traducir 23 avisos propios de teleoperación, inicio de carga y tarea
+sin asignar. 25 WAV españoles/alternativas TTS inglesas y adaptador de textos
+exactos en Speech Service; conserva solicitudes y condiciones originales.
+Destino instalado: Vision `/etc/walker/voice/teleop_charge_es_v1/` y entrypoint
+del contenedor `walker-voice.speech_service-1`; no modifica Motion ni control.
+Fuentes PC: `scripts/voice/prepare_speech_voice.py`, `scripts/voice/speech/`,
+`docs/voice/catalogo_teleop_charge_20260930.json`. ABI y hashes fijados a los
+binarios actuales v0.2.0; biblioteca preparada `cb33abd5…`, plan de 33 archivos
+`308a709f…`. Preparación y SHA completos en
+`../Humanoide-vla-evidence/20260930T152040Z_VOICE_TELEOP_CHARGE/build2/`;
+respaldo externo previo `originals.tar.gz` SHA `03393a23…` y copia de documentos
+en `before/` de la misma evidencia. Compilación/prueba aislada bajo
+`/tmp/20260930T152040Z_VOICE_TELEOP_CHARGE-{build,build2}` en Speech Service;
+fallo inicial del harness conservado y corregido, sin fallo del servicio.
+Verificado: 13 pruebas offline, seis ejecuciones nativas ES/EN/nativa/ámbito,
+con UUID/metadatos preservados, cero nodos/objetivos/audio. Después, operador
+confirma HOME estable/vacías/paro1; check del instalador y aplicación correctos,
+33 hashes releídos y prueba nativa del lanzador instalado pasan. Paro1 antes,
+durante y después. Backup/recibos persistentes:
+`/etc/walker/voice/deployments/cruzr-voice-20260930T154705Z`; copia externa
+`install/remote-receipts-and-originals.tar.gz` SHA `a6821a73…` y recibo
+`install/receipt.json` de la evidencia. Original entrypoint/permisos verificados.
+Speech PID71 todavía sin adaptador; carga en próximo inicio controlado del
+servicio y escucha física PENDIENTES. Sin reinicios ni reproducción.
+Rollback preparado con recibos reales, orden entrypoint→activos nuevos y guardas SHA;
+preserva las capas de voz anteriores. No reaplicar a otra versión sin revisar.
+[Aplicación, respaldo, validación, activación y rollback](voice/CATALOGO_VOZ_ES_EN.md#aplicación-y-reversión-de-voice-teleop-charge-08).
+
+**30-09-2026 — VENDOR-SOURCE-SCOPE-01 / BOX-01-FRONTAL-AMBIGUITY: documentación.**
+Revisión de material ya disponible: SDK inspeccionado sin extraer/ejecutar;
+índices/SHA y backup documental en `../Humanoide-vla-evidence/20260930T080718Z_SOURCE_AVAILABILITY`.
+Inventario offline de fuentes a solicitar y diagnóstico de ambigüedad registrado;
+sin adaptación de control, conexión al robot ni mensaje enviado. Respaldo y SHA
+documentales en `../Humanoide-vla-evidence/vendor_source_scope_latest.txt`.
+[Alcance y reversión documental](box_handling/DECOMPILACION_SELECCION_CAJA.md#fuentes-a-solicitar-a-ubtech--30-09-2026).
+
+**29-09-2026 14:45 CEST — NAV-PLANNER-CACHE-01: sincronización antes de navegar.**
+PC: runtime/cliente/contrato/consola del ejecutor shared improved/optimistic;
+recarga restringida de PLANNING una vez por sesión, sin cambiar los modos.
+Vision: caché transitoria recargada con2puntos desde disco; READY/status4,
+mapa persistente SHA intacto y checks antes/después rc0. Sin archivos remotos,
+reinicios, navegación ni manipulación. Fuentes PC vigentes en próxima sesión;
+recorrido físico PENDIENTE. Respaldo/SHA y dependencias nativas en ficha.
+[Aplicación, evidencia y reversión NAV-PLANNER-CACHE-01](box_handling/NAV_PLANNER_CACHE_20260929.md).
+
+**29-09-2026 — NAV-MODES-01: compatibilidad de modos, sólo fuentes PC.**
+Destino `scripts/box_handling/{scenario1_checks,scenario1_runtime,scenario1_console}.py`:
+admite `free_nav` explícito, conserva `logo_nav` por ID/marcador vacío; muestra
+modo y traduce rechazo GOAL_OUTCOSTMAP. Carga en próxima sesión improved/optimistic,
+sin instalación remota ni reinicio. Respaldo/hash, dependencia y reversión en
+ficha enlazada. Fallo nativo del mapa nuevo y ensayo físico PENDIENTES; no omite
+errores ni cambia tolerancias/obstáculos. Sin conexión/movimiento del agente.
+[Ficha reproducible NAV-MODES-01](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md#29-09-2026--nav-modes-01-compatibilidad-explícita-con-ambos-modos).
+
+**29-09-2026 — NAV-MAP-GET1-20260929: diagnóstico, sin adaptación instalada.**
+Operador confirma nuevo mapa. get1/put1 tienen coordenadas nuevas y pasan de
+metas `free_nav` a `logo_nav`/`precise_marker`; dos intentos abortan en get1
+con `GOAL_OUTCOSTMAP`/7218013. No se modificó mapa, contenedor, parámetro ni
+script. Verificado con logs/API; costmap activo y causa exacta PENDIENTES.
+Documentación PC respaldada con SHA256 en la evidencia externa. No hay cambios
+remotos para reaplicar. No recuperar coordenadas históricas en el nuevo marco.
+[Estado, evidencia y reversión documental](box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md#29-09-2026--nav-map-get1-20260929-rechazo-tras-cambiar-mapa).
+
 **23-09-2026 — VOICE-BRAKE-07: idioma del aviso de freno instalado.**
 Frase exacta de backend_service_vision→WAV español; lógica/condición del freno
 intactas.7 hashes correctos, prueba nativa y a través del entrypoint instalado
@@ -3908,7 +4142,52 @@ el ID anterior, pero reintroduce el defecto: no usarlo para repetir el incidente
 No restaurar checkpoints/cachés ni borrar tareas compartidas. Sin commit/push.
 
 
+### BOX-01-EXEC-OPTIMISTIC-CYCLE / BOX-01-CLOSE-CONSOLE — 30-09-2026, Europe/Madrid
+
+**IMPLEMENTADO PC; VERIFICADO offline; carga real y ensayo físico nuevos
+PENDIENTES.** Amplía BOX-01-EXEC-OPTIMISTIC: `--cycle` repite get1→agarre→put1→
+depósito→HOME en la misma sesión, con mapa/puntos/planificador conservados.
+Evita repetir preflight inicial, preparación/descarga del mapa y sincronización
+del planificador. Pose reciente, llegada, salud y HOME medido siguen vigentes.
+Ctrl+C en la entrada optimista termina la etapa y sus verificaciones de cierre,
+guarda el siguiente punto de retoma y sale. Los fallos siguen requiriendo
+recuperación; no cancela ni repite una tarea para convertirla en pausa limpia.
+
+Motivo adicional: los 22 ciclos completos de hoy archivados pasaron HOME,
+pero la revocación posterior de leases de lectores inactivos se presentaba como
+error. La consola reconoce ese cierre exacto tras `session_finishing requested`;
+errores activos, desconocidos y cancelaciones siguen visibles. JSONL y verbose
+conservan los originales. No se cambia la trayectoria ni la medición de HOME.
+
+Destino/fuentes: PC `scripts/optimistic_scenario1.sh` y
+`scripts/box_handling/scenario1_{cli,runtime,console,action_client,health_worker}.py`;
+nuevos `scenario1_cycle_lease.py` y `scenario1_request_ids.py` más sus pruebas.
+Activación: invocar wrapper; envía código temporal al host Motion y procesos de
+contenedores descubiertos, sin instalar ni reiniciar servicios. El envoltorio
+SPS temporal relee el lease renovado sólo tras HOME exitoso; paquete instalado,
+límites de acción/captura, watchdog y heartbeat intactos. Identidad secuencial
+sin el tope de 256/4096 consultas, con rechazo de replay; recambio de clientes
+de acciones inactivos desde 128 solicitudes conserva el resto de la sesión.
+Dependencias: perfil optimista `assume`, bundle SPS y hashes actuales; checkpoints
+v2/v3 conservados y archivos históricos no ejecutables por cada vuelta.
+
+Backup previo, fuentes finales, hashes, resultados y auditoría de HOME:
+`../Humanoide-vla-evidence/20260930T145400Z_OPTIMISTIC_CYCLE/`.
+680 pruebas correctas, payload/plan/sintaxis verificados. Los 17 errores del
+instalador de depósito de la pasada amplia también se reproducen con HEAD sin
+cambios; excluidos de esa cifra, documentados en `deposit-preexisting-audit/`.
+`source-sha256.json` identifica fuentes reproducibles de esta intervención;
+cada ejecución guarda también sus fuentes transmitidas por hash. Reversión:
+detener el ejecutor, restaurar selectivamente fuentes PC desde `before/`,
+preservar cambios posteriores y retirar los módulos nuevos cuando ya no se
+referencien. No restaurar checkpoints ni copiar estados al robot. Sin commit/push.
+[Receta, pruebas, límites, retomas y reversión](box_handling/OPTIMISTIC_SCENARIO1.md).
+
 ### BOX-01-EXEC-OPTIMISTIC — 28-09-2026, Europe/Madrid
+
+**Ampliación vigente 30-09:** continuidad/Ctrl+C y presentación de cierre en la
+ficha BOX-01-EXEC-OPTIMISTIC-CYCLE / BOX-01-CLOSE-CONSOLE anterior. La deuda
+histórica de mensajes de revocación al cerrar queda corregida para ese caso.
 
 **IMPLEMENTADO en PC; carga temporal y lectura real VERIFICADAS; ensayo físico
 PENDIENTE.** Nueva entrada `scripts/optimistic_scenario1.sh`, policy`assume`,

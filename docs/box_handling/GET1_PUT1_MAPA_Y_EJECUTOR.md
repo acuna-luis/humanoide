@@ -1,5 +1,144 @@
 # get1 guardado y ejecutor get1 → put1 → HOME
 
+**29-09-2026 14:45 CEST — causa del rechazo logo_nav corregida.**
+El planificador conservaba0destinos cargados antes de crearse get1/put1; por
+eso no encontraba el ID y emitía GOAL_OUTCOSTMAP. Nueva recarga restringida,
+una vez por sesión, conserva ambos modos. Recarga real READY con2puntos,
+mapa intacto, checks antes/después rc0. Sin navegación física del agente.
+Este hallazgo resuelve la causa antes pendiente en los apartados históricos
+inferiores. [Informe NAV-PLANNER-CACHE-01](NAV_PLANNER_CACHE_20260929.md).
+
+## 29-09-2026 — NAV-MODES-01: compatibilidad explícita con ambos modos
+
+**IMPLEMENTADO en PC, 14:30 CEST (Europe/Madrid); ensayo físico PENDIENTE.**
+Por petición del operador, el ejecutor compartido de `optimistic_scenario1.sh`,
+`force_improved_scenario1.sh`, `ask_improved_scenario1.sh` y
+`force_improved_scenario1_autochecked.sh` admite los siguientes formatos de
+get1/put1, incluso combinados en el mismo mapa:
+
+| Punto guardado | Petición al navegador |
+| --- | --- |
+| `mode=free_nav` explícito | Pose X/Y/yaw guardada en el mapa actual, `free_nav`, `level=1` |
+| `mode=logo_nav` | Identificador get1/put1, conservando `logo_nav` |
+| `type=mapping_marker`, modo vacío | Conversión histórica a `free_nav` por pose |
+
+Antes se rechazaba el primer formato pese a admitir la conversión histórica;
+`logo_nav` ya estaba soportado. Se conservan velocidades del perfil `free_nav`
+(X 0,18 m/s, Y 0,01 m/s, yaw 0,20 rad/s), validación de puntos únicos,
+coordenadas finitas, estabilidad del mapa durante la sesión y medición posterior
+de llegada. Los puntos `precise_marker/logo_nav` no se convierten ni se editan.
+El formato por ID coincide con el
+[ejemplo del proveedor](../../vendor/ubtech/cruzr_s2/snapshot_20260916/vision/cruzr_s2/subtrees/Navigation/navigation.xml)
+y el [catálogo local](../guides/CATALOGO_FUNCIONALIDADES_CRUZR_S2.md).
+
+Consola: `Navegación a get1: logo_nav (por identificador)` o
+`Navegación a get1: free_nav (por coordenadas)`. La evidencia JSON conserva la
+meta enviada y pose esperada. `GOAL_OUTCOSTMAP`/7218013 se presenta como rechazo
+del planificador en español, conservando el evento original en los registros
+y `--verbose`. No se agregan consultas ni esperas entre etapas.
+
+**VERIFICADO offline:** 176 pruebas pertinentes pasan, incluidos ambos modos
+hasta el envío nativo simulado, mapas mixtos, cambios de puntos y rechazo con
+checkpoint que bloquea visión/agarre. Replay de la respuesta API guardada y
+copias locales con cuatro combinaciones de modos correcto. `--plan` de las
+entradas optimistic y force_improved correcto; sin ejecutar `--run` ni `--check`
+remotos. Comando de regresión: `python3 -B -m unittest` con los módulos de
+`tests.json` en la evidencia; resultado íntegro en `tests.txt`.
+
+**Límite:** esta corrección de compatibilidad no demuestra resuelto el rechazo
+nativo del mapa nuevo documentado abajo. Si el navegador aborta, no se cambia
+automáticamente de modo ni se continúa al agarre. No se alteran tolerancias,
+obstáculos, límites de caja ni parámetros del proveedor.
+
+Fuentes reproducibles: `scripts/box_handling/scenario1_checks.py`,
+`scenario1_runtime.py`, `scenario1_console.py` y pruebas `test_scenario1_checks`,
+`test_scenario1_console`, `test_scenario1_navigation_modes` en ese directorio.
+Aplicación/activación: los entrypoints cargan estas fuentes PC en la próxima
+sesión; no requiere instalar un bundle ni reiniciar el robot. No cambia sesiones
+ya abiertas. La variante histórica `force_escenario1.sh` no forma parte de este
+ejecutor compartido. Sin conexión ni movimiento del agente en esta modificación.
+
+Evidencia y versiones SHA256 antes/después:
+`/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260929T123046Z_NAV_MODE_COMPATIBILITY`.
+Respaldo `before/` incluye los cambios documentales anteriores sin sobrescribirlos;
+`test_scenario1_navigation_modes.py` es nuevo. Reversión: restaurar selectivamente
+los tres módulos PC desde ese respaldo y retirar sólo la nueva prueba/estas notas;
+no restaurar el mapa ni revertir otros cambios del usuario. Comprobación física
+con ambos modos y coherencia del costmap activo siguen PENDIENTES.
+
+## 29-09-2026 — NAV-MAP-GET1-20260929: rechazo tras cambiar mapa
+
+**VERIFICADO en registros; diagnóstico de sólo lectura.** El operador confirma
+haber creado o cargado otro mapa. Los intentos
+`20260929T121213Z_OPTIMISTIC_SCENARIO1_722390` y
+`20260929T121248Z_OPTIMISTIC_SCENARIO1_724017` fallaron en `navigate_get1`, con
+cero etapas completadas. No llegaron a activar visión ni a recoger la caja.
+El ciclo anterior `20260929T115326Z_OPTIMISTIC_SCENARIO1_668112` sí registró las
+diez etapas y HOME medido; sujeción/liberación seguían siendo asumidas.
+
+El resultado chino `导航模块,目标点附近停靠超出范围,请检查目标点合法性`
+indica que el módulo de navegación rechaza el estacionamiento próximo al
+objetivo por estar fuera de rango y pide comprobar el punto. El código nativo
+es `7218013`; feedback nuevo y log de `walker-nav.nav_taskmanager-1` confirman
+`GOAL_OUTCOSTMAP`, `PLANNING FAIL` y `fail_module_name: PLANNING`.
+En el segundo intento, objetivo de navegación
+`8d6d8664-e598-4ef6-85cf-fd75f39df833`, el objetivo interno de planificación
+`78d3a35e-56d4-4f4e-9bc1-dfffd33672ab` devuelve ese estado unos 49 ms después
+de enviarse. No es el rechazo local por llegada >2 cm/2° ni por posición XYZ
+de caja. Los errores posteriores de lease/worker pertenecen al cierre, después
+del fallo de navegación.
+
+**Cambio observado en los puntos del mapa:**
+
+| Punto | Último ciclo completo: free_nav, X/Y/yaw | Mapa nuevo: logo_nav, X/Y/yaw |
+| --- | --- | --- |
+| get1 | −0,836033 / −0,204935 / −1,528698 | 1,673524 / 0,278332 / 1,599775 |
+| put1 | −0,004022 / −0,009027 / 1,605292 | 0,848068 / 0,083987 / −1,555664 |
+
+Unidades: metros y radianes en el marco `map` correspondiente. Los puntos nuevos
+son `precise_marker`, `mode=logo_nav`. El ejecutor lee el mapa en cada sesión:
+[validate_map_points](../../scripts/box_handling/scenario1_checks.py) convierte
+`mapping_marker` con modo vacío a una meta `free_nav` por pose, mientras que
+`logo_nav` envía el identificador del punto para que lo resuelva el proveedor.
+Por tanto, cambiar los puntos también cambió la petición de navegación sin
+editar el script. No restaurar coordenadas antiguas sobre el mapa nuevo.
+
+La lectura API del mapa nuevo conserva el nombre `utars_nav_map`; cuadrícula
+768×832, resolución ≈0,05 m, origen [−14,4; −16; 0]. get1 y put1 están dentro
+de la cuadrícula guardada, en celdas de valor 0 y con vecindad 7×7 de valor 0.
+La última pose recogida **antes** del segundo objetivo estaba a ≈0,93 mm y
+0,0104° de get1. No es una medición posterior al fallo ni el estado actual.
+La cuadrícula guardada no demuestra qué costmap inflado tenía activo el
+planificador ni cuál era su objetivo interno de estacionamiento.
+
+**INFERENCIA / PENDIENTE:** el cambio de mapa y de modalidad coincide con el
+fallo, pero no se ha aislado si falla la carga del costmap, la referencia del
+punto preciso u otra condición interna. `mark_point.id=false` y
+`keyframe_index=-1` no prueban por sí solos un punto inválido: existen en
+configuraciones históricas. La lectura pasiva de costmaps/objetivos durante
+8 s no obtuvo muestras. `docker logs` de `freepnc_task` y `locate3d_task`
+falló al decodificar un carácter NUL; no se repararon ni reiniciaron servicios.
+
+**Punto de reanudación:** comprobar coherencia entre la versión del mapa activo,
+la localización y los puntos nuevos. Ensayo candidato, todavía no aplicado:
+navegar por pose `free_nav` con las coordenadas del mapa nuevo para aislar la
+resolución por ID de `logo_nav`, conservando resultados nativos, obstáculos,
+límites y llegada 2 cm/2°. No garantiza resolver un costmap incoherente. Un
+objetivo cercano también puede producir movimiento/retroceso del controlador
+preciso, como documenta el ensayo del 22-09; no ejecutar una prueba suponiendo
+inmovilidad porque la pose previa ya estaba próxima. No ampliar límites de
+caja ni de navegación como respuesta a este diagnóstico.
+
+**Evidencia externa:**
+`/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20260929T121529Z_NAV_GOAL_OUTCOSTMAP`:
+inventario de contenedores Motion/Vision, `map-current-response.json`, logs del
+gestor, `vision-topics-readonly.txt`, `costmap-readonly.py` y su resultado.
+Correlación por UUID: relojes de Docker y del proceso no se asumieron iguales.
+Fuentes locales de la intervención: commit `fba2f75`. Sólo consultas remotas y
+documentación PC; sin movimiento, instalación, cambio de mapa ni parámetros.
+Respaldo documental en `docs-before/`, checksums en `docs-before-sha256.json`;
+reversión sólo de estas notas. No hay cambio remoto que activar o revertir.
+
 **28-09-2026 — alternativa mejorada implementada sólo en PC.**
 `force_improved_scenario1.sh` conserva la geometría del ejecutor actual por
 indicación expresa del usuario; añade supervisión y recuperación por etapas.

@@ -1,5 +1,20 @@
 # Discrepancia del procedimiento de apagado — Cruzr S2 v0.2.0
 
+**30-09-2026 — BOX-01-TABLE74-PAUSE-01: apagado confirmado por el operador.**
+«Ya apagado y todo asegurado y estable»: caja, brazos y cuerpo asegurados;
+sin verificación física independiente del agente. Última prueba support_only
+SUCCEED, pero caja inclinada: toda la base sobre mesa, contacto en una punta y
+esquina alta a 2,8 cm. No apertura, desenganche de 3 cm ni HOME ejecutados.
+El agente sólo consultó: observó reinicios recientes de hw/manipulación y
+posterior timeout SSH en ambos hosts; no ordenó movimiento, paro ni apagado.
+Relevo/consultas/backups: ../Humanoide-vla-evidence/20260930T183000Z_TABLE74_SHUTDOWN_PREP/.
+Última ejecución: 20260930T182221Z_TABLE74_SUPPORT_TRIAL_2072686; journal de
+aproximación consumido, soporte exitoso sin apoyo físico completo acreditado.
+Mañana arrancar con paro pulsado y mantenerlo durante revisión física/técnica;
+no liberar para HOME automático con caja encajada o apoyos externos. No repetir
+ensayos ni borrar consumed; redescubrir contexto tras el reinicio.
+[Estado, evidencia y punto de reanudación](../box_handling/DEPOSITO_WRC_ALTURA_100CM.md#pausa-para-apagado-caja-inclinada-y-desenganche-pendiente).
+
 **22-09 09:17 Europe/Madrid — preparación de apagado para COMM-01.** Usuario
 confirma HOME y ambos brazos físicamente asegurados. Nueva lectura ROS2 de20
 articulaciones: máximo absoluto 0.002589rad, velocidad0, stamp

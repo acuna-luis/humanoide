@@ -1,5 +1,43 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**30-09-2026 — BOX-01-TABLE74-PAUSE-01: apagado confirmado por el operador.**
+«Ya apagado y todo asegurado y estable»: caja, brazos y cuerpo asegurados;
+sin verificación física independiente del agente. Última prueba support_only
+SUCCEED, pero caja inclinada: toda la base sobre mesa, contacto en una punta y
+esquina alta a 2,8 cm. No apertura, desenganche de 3 cm ni HOME ejecutados.
+El agente sólo consultó: observó reinicios recientes de hw/manipulación y
+posterior timeout SSH en ambos hosts; no ordenó movimiento, paro ni apagado.
+Relevo/consultas/backups: ../Humanoide-vla-evidence/20260930T183000Z_TABLE74_SHUTDOWN_PREP/.
+Última ejecución: 20260930T182221Z_TABLE74_SUPPORT_TRIAL_2072686; journal de
+aproximación consumido, soporte exitoso sin apoyo físico completo acreditado.
+Mañana arrancar con paro pulsado y mantenerlo durante revisión física/técnica;
+no liberar para HOME automático con caja encajada o apoyos externos. No repetir
+ensayos ni borrar consumed; redescubrir contexto tras el reinicio.
+[Estado, evidencia y punto de reanudación](../box_handling/DEPOSITO_WRC_ALTURA_100CM.md#pausa-para-apagado-caja-inclinada-y-desenganche-pendiente).
+
+**30-09-2026 — BOX-01-HOME-RETRY-01, excepción limitada al ejecutor optimistic.**
+Por petición posterior al diagnóstico, se implementa un único reintento HOME
+ante7104050/status6 confirmado, con salud/reposo/acción libre comprobados y
+permiso persistido. No es una recuperación general tras contacto, paro o fault:
+usa HOMEv8 completo con sus deltas, mantiene verificaciones y excluye resultados
+inciertos. Retomas ambiguas de HOME no obtienen otro reintento automático.
+Cambio sólo PC, verificación offline; no se mueve ni recupera el robot ahora.
+Trayectoria desde la postura actual y ensayo físico PENDIENTES.
+[Activación, límites y rollback](../box_handling/OPTIMISTIC_SCENARIO1.md#un-reintento-de-home-tras-aborto-confirmado--30-09-2026).
+
+**30-09-2026 18:00 CEST — HOME de ciclo abortado; postura posterior NO HOME.**
+`cruzr/home` v8 falla en el primer tramo del elevador, errores de hasta0,302098rad
+tras3,75s. Resultado7104050/status6 anterior a los errores de cierre de leases.
+Lecturas posteriores20D: habilitados/sin fault, velocidad0, delta consigna≤0,001980,
+elevador−0,239972/−0,000288/0,299510rad y brazos aún fuera de HOME. Paros0/0.
+Operador confirma robot inmóvil, caja apoyada/liberada y abrazaderas vacías sin
+contacto. Diagnóstico de lectura; ningún movimiento, rearme o reinicio.
+En el diagnóstico se indicó no reutilizar HOME completo: sus deltas iniciales
+ya se ejecutaron; revisar
+trayectoria y postura antes de una recuperación específica. El origen interno
+de la llegada incompleta sigue PENDIENTE, no se atribuye a un fault de servo.
+[Intento, medidas, límites y continuación](../box_handling/OPTIMISTIC_SCENARIO1.md#home-abortado-en-el-elevador--30-09-2026).
+
 **Actualización 28-09-2026 — recuperación comunicada por el operador.**
 El operador informa que recolocó los brazos, liberó E-stop y el robot funciona
 en HOME. OBSERVADO por operador; no constituye procedimiento validado para

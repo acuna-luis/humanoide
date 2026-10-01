@@ -18,7 +18,7 @@ STAGES = (
     'navigate_get1', 'enable_vision', 'grasp', 'verify_held', 'retreat',
     'navigate_put1', 'deposit', 'verify_released', 'home', 'verify_home',
 )
-STOP_AFTER = ('navigate_get1', 'verify_held', 'verify_home')
+STOP_AFTER = ('navigate_get1', 'verify_held', 'navigate_put1', 'verify_home')
 BOX_STATES = ('empty', 'held', 'released', 'unknown')
 CONFIRMATION_POLICIES = ('ask', 'assume', 'sensors')
 _VERIFICATION_SOURCES = {'ask': 'operator', 'assume': 'assumed', 'sensors': 'sensors'}
@@ -45,6 +45,8 @@ ENTRY_BOX_STATES = dict(zip(STAGES, ('empty', 'empty', 'empty', 'held', 'held',
 _ORIGIN_KEYS = {'source_sha256', 'source_next_stage', 'source_failure', 'source_in_flight',
                 'requested_stage', 'explicit_state', 'recovery_confirmed',
                 'skipped_stages', 'repeated_stages'}
+_HOME_RETRY_KEYS = {'version', 'used', 'failed_goal_id', 'first_result_ns',
+                    'reserved_ns', 'status', 'code', 'desc'}
 
 
 def _entry_index(cp):
@@ -167,7 +169,7 @@ def _box_evidence(policy, box, source, sensor_evidence):
 def validate_profile(profile, *, stop_after='verify_home'):
     """Return an independent profile copy, or block incompatible execution.
 
-    A get1-only or grasp-only run may retain a pending/incompatible deposit
+    A run ending at get1, grasp or put1 may retain a pending/incompatible deposit
     profile because no deposit is authorized. Completing the cycle requires both
     compatibilities. The existing grasp/profile restrictions remain unchanged.
     """
@@ -225,6 +227,65 @@ def new_resume_checkpoint(profile, *, entry_stage, entry_box_state, origin,
     return validate_checkpoint(cp, profile)
 
 
+def _home_retry_goal_id(value):
+    return (type(value) is str and
+            re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', value) is not None
+            and value != '00000000-0000-0000-0000-000000000000')
+
+
+def _validate_home_retry(record):
+    _keys(record, _HOME_RETRY_KEYS, 'HOME retry record')
+    for name, expected in (('version', 1), ('used', 1), ('status', 6), ('code', 7104050)):
+        if type(record[name]) is not int or record[name] != expected:
+            raise ValueError('Invalid HOME retry '+name)
+    if record['desc'] != 'MoveToGoalFailed' or not _home_retry_goal_id(record['failed_goal_id']):
+        raise ValueError('Invalid HOME retry failure identity')
+    for name in ('first_result_ns', 'reserved_ns'):
+        if type(record[name]) is not int or record[name] <= 0:
+            raise ValueError('Invalid HOME retry '+name)
+    if record['reserved_ns'] < record['first_result_ns']:
+        raise ValueError('HOME retry reservation predates its failure')
+
+
+def home_retry_available(checkpoint):
+    """Whether this in-flight HOME still has its single automatic retry.
+
+    This only checks the durable budget and stage identity. The runtime must
+    separately establish the exact accepted native result and fresh health.
+    """
+    cp = validate_checkpoint(checkpoint)
+    return (execution_profile(cp) == 'optimistic_v1' and cp.get('policy') == 'assume'
+            and cp['in_flight'] == 'home' and cp['box_state'] == 'released'
+            and cp['failure'] is None and 'home_retry' not in cp
+            and not cp.get('home_retry_blocked', False))
+
+
+def reserve_home_retry(checkpoint, first_result, *, first_result_ns, reserved_ns):
+    """Consume the retry before dispatch; the caller MUST durably save this copy.
+
+    A consumed reservation stays consumed after a crash or explicit resume,
+    even when there is no evidence that the second goal was dispatched.
+    Additional native result fields remain in the caller's evidence journal.
+    """
+    cp = validate_checkpoint(checkpoint)
+    if not home_retry_available(cp):
+        raise ValueError('HOME retry unavailable for this checkpoint')
+    _finite_json(first_result)
+    if (not isinstance(first_result, dict) or first_result.get('event') != 'result'
+            or type(first_result.get('status')) is not int or first_result['status'] != 6
+            or not _home_retry_goal_id(first_result.get('goal_id'))):
+        raise ValueError('HOME retry requires an identified aborted native result')
+    result = first_result.get('result')
+    state = result.get('state') if isinstance(result, dict) else None
+    if (not isinstance(state, dict) or type(state.get('state')) is not int
+            or state['state'] != 7104050 or state.get('desc') != 'MoveToGoalFailed'):
+        raise ValueError('HOME retry requires MoveToGoalFailed/7104050')
+    cp['home_retry'] = dict(version=1, used=1, failed_goal_id=first_result['goal_id'],
+                            first_result_ns=first_result_ns, reserved_ns=reserved_ns,
+                            status=6, code=7104050, desc='MoveToGoalFailed')
+    return validate_checkpoint(cp)
+
+
 def validate_checkpoint(checkpoint, profile=None):
     """Validate an exact prefix (v1/v2) or real contiguous segment (v3)."""
     if (not isinstance(checkpoint, dict) or type(checkpoint.get('version')) is not int
@@ -234,10 +295,22 @@ def validate_checkpoint(checkpoint, profile=None):
                      3: _CHECKPOINT_V3_KEYS}[checkpoint['version']]
     if checkpoint['version'] >= 2 and 'execution_profile' in checkpoint:
         expected_keys = expected_keys | {'execution_profile'}
+    if checkpoint['version'] >= 2 and 'home_retry' in checkpoint:
+        expected_keys = expected_keys | {'home_retry'}
+    if checkpoint['version'] >= 2 and 'home_retry_blocked' in checkpoint:
+        expected_keys = expected_keys | {'home_retry_blocked'}
     _keys(checkpoint, expected_keys, 'Checkpoint')
     _finite_json(checkpoint)
     execution_profile(checkpoint)
     cp = checkpoint
+    if 'home_retry' in cp:
+        if execution_profile(cp) != 'optimistic_v1' or cp.get('policy') != 'assume':
+            raise ValueError('HOME retry record requires the optimistic assume profile')
+        _validate_home_retry(cp['home_retry'])
+    if 'home_retry_blocked' in cp:
+        if (execution_profile(cp) != 'optimistic_v1' or cp.get('policy') != 'assume'
+                or cp['home_retry_blocked'] is not True):
+            raise ValueError('HOME retry block requires true and the optimistic assume profile')
     _stop_after(cp['stop_after'])
     if (type(cp['profile_id']) is not str or
             re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,79}', cp['profile_id']) is None or
@@ -419,6 +492,14 @@ def validate_motion_result(payload):
     if (state['desc'] != 'SUCCEED' or type(state.get('state')) is not int or
             state['state'] != 1101001):
         raise ValueError('Motion did not confirm SUCCEED/1101001')
+    return result
+
+
+def validate_planning_result(payload, *, allow_finished=False):
+    """A planner check/map reload must finish READY, not just transport success."""
+    result = _result(payload)
+    if result['state']['desc'] not in (('READY', 'FINISH') if allow_finished else ('READY',)):
+        raise ValueError('Planning map synchronization did not confirm READY')
     return result
 
 

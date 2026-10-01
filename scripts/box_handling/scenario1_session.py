@@ -6,6 +6,49 @@ import threading
 import time
 
 
+def recoverable_home_receipt(request, request_id, receipt, rows):
+    """Validate the narrow opt-in failure before keeping this channel alive.
+
+    This independently checks the worker's claim. A status=6 remains a failure
+    result in returned rows; only the supervisor can decide a bounded retry.
+    """
+    if (request.get('allow_home_retry') is not True
+            or request.get('goal') != {'task_name': 'cruzr/home', 'yaml_args': '{}'}
+            or receipt.get('recoverable_home_failure') is not True
+            or type(receipt.get('returncode')) is not int or receipt['returncode'] != 2
+            or receipt.get('request_id') != request_id):
+        return False
+    goal_id = receipt.get('goal_id')
+    if not isinstance(goal_id, str) or not goal_id:
+        return False
+    allowed = {'dispatched', 'accepted', 'result_pending', 'feedback', 'status', 'result', 'error'}
+    if any(row.get('event') not in allowed or row.get('goal_id') != goal_id
+           or row.get('request_id') != request_id for row in rows):
+        return False
+    dispatched = [row for row in rows if row['event'] == 'dispatched']
+    accepted = [row for row in rows if row['event'] == 'accepted']
+    results = [row for row in rows if row['event'] == 'result']
+    errors = [row for row in rows if row['event'] == 'error']
+    if (len(dispatched) != 1 or dispatched[0].get('endpoint') != '/mc/manipulation/action'
+            or len(accepted) != 1 or accepted[0].get('accepted') is not True
+            or len(results) != 1 or len(errors) != 1
+            or errors[0].get('reason') != 'Action did not report successful terminal application result'):
+        return False
+    if not (rows.index(dispatched[0]) < rows.index(accepted[0]) < rows.index(results[0]) < rows.index(errors[0])):
+        return False
+    terminal = results[0]
+    result = terminal.get('result')
+    state = result.get('state') if isinstance(result, dict) else None
+    if (type(terminal.get('status')) is not int or terminal['status'] != 6
+            or not isinstance(state, dict) or type(state.get('state')) is not int
+            or state['state'] != 7104050 or state.get('desc') != 'MoveToGoalFailed'):
+        return False
+    return (all(type(row.get('status')) is int and row['status'] in (1, 2, 6)
+                for row in rows if row['event'] == 'status')
+            and all(type(row.get('status')) is int and row['status'] in (0, 1, 2)
+                    for row in rows if row['event'] == 'result_pending'))
+
+
 class ProcessSession:
     def __init__(self, command, emit, *, startup_timeout=20):
         self.emit = emit
@@ -79,6 +122,8 @@ class ProcessSession:
                     raise RuntimeError('WORKER_REQUEST_MISMATCH: no result confirmed')
                 self.emit(event)
                 if event['event'] == 'request_complete':
+                    if recoverable_home_receipt(request, request_id, event, rows):
+                        return rows
                     if type(event.get('returncode')) is not int or event['returncode'] != 0:
                         reasons = [row.get('reason', 'unknown') for row in rows if row['event'] == 'error']
                         raise RuntimeError('WORKER_REQUEST_FAILED: '+('; '.join(reasons) or 'do not retry'))
