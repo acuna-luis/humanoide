@@ -1,5 +1,14 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**02-10-2026 — BOX-01-VISUAL-ALIGN-FRESH:** recogida optimista con ajuste
+visual X/Y previo al agarre, límites originales SPS conservados. El intento085958
+aborta por imagen caducada después de arrancar otra consulta de reposo. Fuentes
+PC reutilizan ahora el worker persistente para dos muestras nuevas de odometría,
+sin ampliar edad2s de imagen ni límites de reposo/frescura. 700 pruebas offline
+pertinentes pasan; nueva carga/maniobra completa PENDIENTES. Sin movimientos
+del agente; cada intento interrumpido conserva su recuperación específica.
+[Secuencia, límites, evidencia y reversión](../box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-de-frescura-del-intento085958).
+
 **01-10-2026 — BOX-01-TABLE90: adaptación probada y HOME medido.**
 Instalados/cargados XML/YAML3e142cd1…; ensayo supervisado en tres tramos cubre
 las diez etapas. Depósito/apertura SUCCEED; operador confirma caja estable sobre

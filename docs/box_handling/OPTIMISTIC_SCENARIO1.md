@@ -1,5 +1,14 @@
 # Escenario 1 con supervisión continua
 
+**02-10-2026 — frescura del ajuste visual:** el reposo previo/posterior a las
+capturas usa ahora un lector de odometría en el worker persistente de salud.
+Evita arrancar/cerrar otro proceso ROSA después de recibir una imagen: en el
+intento085958 esa consulta tardó0,903s y elevó la edad de1,316s a≥2,219s.
+Conserva límite2s de imagen, dos muestras nuevas de odometría, reposo, frescura
+y unicidad del publicador. Sin reintentos ni ampliación de límites. 700 pruebas
+pertinentes correctas; carga/ensayo nuevos PENDIENTES.
+[Diagnóstico y reversión](BOX_AXIS_REPOSITION_20261002.md#revisión-de-frescura-del-intento085958).
+
 **02-10-2026 — recuperación inicial del ajuste visual:** el intento084706
 confirma la adquisición temporal y llega al ajusteX+22,774mm. La distancia
 en mapa primero aumenta6,726mm y después disminuye; se cancelaba a4s sin

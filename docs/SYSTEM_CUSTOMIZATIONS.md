@@ -4053,6 +4053,27 @@ trabajo posterior; no rollback del paquete SPS ni cambios de checkpoint.
 
 ## BOX-01-VISUAL-ALIGN — 02-10-2026, Europe/Madrid
 
+**Revisión BOX-01-VISUAL-ALIGN-FRESH,02-10-2026:** runtime PC consulta reposo
+en health worker persistente por comando base, con lector /mc/odom creado una
+vez bajo QoS SensorData/bestEffort/volatile/keepLast5. Importa en memoria la
+Acquisition original de scenario1_resume_worker; no la modifica ni conserva
+muestras entre peticiones. Mantiene dos muestras nuevas, un publicador,0,5s,
+0,003m/s/0,01rad/s, estabilidad5mm/1° y plazo5s; health/pose y reanudación
+standalone conservan su flujo. La caché de salud no recibe odometría. Motivo:
+consulta posterior al procesamiento tarda0,903s en el intento085958, imagen
+caduca a≥2,219s. Mantiene edad máxima2s y registra edad real antes de decidir.
+Destinos: PC scripts/box_handling/scenario1_runtime.py, scenario1_health_worker.py,
+scenario1_cli.py y tests correspondientes. Dependencia pura adicional transmitida
+en payload health: scenario1_resume_worker.py, sin ROSA al importar. Activación:
+próxima sesión autorizada crea lector al primer base; --check no lo crea.
+Instalado PC y VERIFICADO offline con700 pruebas; nueva carga/ensayo PENDIENTES.
+Sin instalación remota, cambios de parámetros, reinicios, movimientos, commit/push.
+Respaldo exacto previo y final, hashes, resultados y diagnóstico:
+../Humanoide-vla-evidence/20261002_BOX_ALIGNMENT_FRESH_DISPATCH/.
+Rollback selectivo desde before/ de esos tres scripts, tests y notas; preserva
+cambios posteriores, no restaura checkpoints ni estados físicos/remotos.
+[Fuentes, receta y evidencia](box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-de-frescura-del-intento085958).
+
 **Revisión BOX-01-VISUAL-ALIGN-PROGRESS,02-10-2026:** guard PC reconoce una
 única recuperación inicial de distancia≥2mm desde un máximo≥2mm por encima
 de la entrada. Sólo box_pickup, antes de progreso neto/fase final; get1 conserva

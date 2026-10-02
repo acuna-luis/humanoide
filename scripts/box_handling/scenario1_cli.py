@@ -127,6 +127,7 @@ def make_payload(mode, profile, checkpoint):
     health_dependencies = [(name, path) for name, path in MODULES
                            if name in ('cruzr_home_posture_gate', 'scenario1_checks',
                                        'scenario1_live_health')]
+    health_dependencies.append(('scenario1_resume_worker', HERE/'scenario1_resume_worker.py'))
     health_source = ('import sys,types\n'
                      'for _name,_source in '+repr([(name, path.read_text())
                                                    for name, path in health_dependencies])+':\n'

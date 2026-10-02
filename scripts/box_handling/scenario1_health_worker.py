@@ -20,6 +20,11 @@ import tempfile
 import threading
 import time
 
+if __package__:
+    from . import scenario1_resume_worker as base_gate
+else:
+    import scenario1_resume_worker as base_gate
+
 
 TOPICS = {
     'estop': ('/emb/estop_key_state', 'std_msgs/msg/UInt8'),
@@ -59,14 +64,15 @@ def validate_request(value):
         raise ValueError('Invalid health request fields')
     if not isinstance(value['request_id'], str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,80}', value['request_id']):
         raise ValueError('Invalid request_id')
-    if value['command'] not in ('health', 'pose'):
+    if value['command'] not in ('health', 'pose', 'base'):
         raise ValueError('Unsupported read-only request')
     require_home = value.get('require_home', False)
-    if type(require_home) is not bool or value['command'] == 'pose' and require_home:
+    if type(require_home) is not bool or value['command'] != 'health' and require_home:
         raise ValueError('Invalid require_home')
-    timeout = value.get('timeout', 12)
-    if type(timeout) not in (int, float) or not math.isfinite(timeout) or not 0 < timeout <= 12:
-        raise ValueError('Request timeout must be in (0, 12] seconds')
+    maximum = 5 if value['command'] == 'base' else 12
+    timeout = value.get('timeout', maximum)
+    if type(timeout) not in (int, float) or not math.isfinite(timeout) or not 0 < timeout <= maximum:
+        raise ValueError('Request timeout must be in (0, %d] seconds' % maximum)
     return dict(request_id=value['request_id'], command=value['command'],
                 require_home=require_home, timeout=float(timeout))
 
@@ -96,9 +102,14 @@ class Acquisition:
         self.receipts = {}
         self.last_stamp = None
         self.duplicates_ignored = 0
+        self.base = base_gate.Acquisition(requested_ns) if self.request['command'] == 'base' else None
 
     def add(self, key, message, received_ns, received_monotonic_ns):
         if received_monotonic_ns <= self.requested_monotonic_ns:
+            return
+        if self.base is not None:
+            if key == 'odom':
+                self.base.add(message, received_ns)
             return
         message = object_json(message)
         if self.request['command'] == 'health' and key in SAFETY:
@@ -134,7 +145,12 @@ class Acquisition:
         self.samples.append(copy.deepcopy(message))
         self.receipts[wanted] = received_ns
 
-    def complete(self, now_ns, controller=None, status=None):
+    def complete(self, now_ns, controller=None, status=None, publishers=None):
+        if self.base is not None:
+            result = self.base.complete(now_ns, publishers)
+            if result is None:
+                return None
+            return dict(result, event='base_result', request_id=self.request['request_id'])
         if len(self.samples) != 2:
             return None
         if any(not 0 <= now_ns-source_stamp_ns(row) <= MAX_AGE_NS for row in self.samples):
@@ -224,7 +240,7 @@ class NativeReader:
                 if key == 'status':
                     self.status = message
                 live_cache = getattr(self, 'live_cache', None)
-                if live_cache is not None and key != 'pose':
+                if live_cache is not None and key not in ('pose', 'odom'):
                     live_cache.add(key, message, time.time_ns(), time.monotonic_ns())
                 if self.acquisition is not None:
                     self.acquisition.add(key, message, time.time_ns(), time.monotonic_ns())
@@ -302,6 +318,8 @@ class NativeReader:
             raise
 
     def acquire(self, request, check_guard):
+        if request['command'] == 'base':
+            self.ensure_base_reader()
         self.acquisition = Acquisition(request, time.time_ns(), time.monotonic_ns())
         self.controller = None
         self.response_ready.clear()
@@ -331,9 +349,14 @@ class NativeReader:
                     if self.response_ready.is_set() and self.controller is None:
                         self.controller = object_json(self.client.get_result(future, json_format=True))
                     required = (*SAFETY, 'actuator', 'status')
+                elif request['command'] == 'base':
+                    required = ('odom',)
                 else:
                     required = ('pose',)
                 publisher_counts = {key: self.readers[key].getWriterCount() for key in required}
+                if request['command'] == 'base' and (type(publisher_counts['odom']) is not int or
+                                                    not 0 <= publisher_counts['odom'] <= 1):
+                    raise ValueError('Exactly one odometry publisher is required')
                 # Navigation exposes two vendor publishers on this unit. The
                 # previous ROS2 pose reader required fresh advancing samples,
                 # not a unique publisher. Keep health endpoint uniqueness.
@@ -341,13 +364,16 @@ class NativeReader:
                               else all(count == 1 for count in publisher_counts.values()))
                 if not acceptable:
                     continue
-                result = self.acquisition.complete(time.time_ns(), self.controller, self.status)
+                result = self.acquisition.complete(time.time_ns(), self.controller, self.status,
+                    publisher_counts.get('odom'))
                 if result is not None:
                     check_guard()
                     if request['command'] == 'pose':
                         result['publisher_count'] = publisher_counts['pose']
                     return result
-            diagnostic = dict(publishers=publisher_counts, fresh_samples=len(self.acquisition.samples),
+            diagnostic = dict(publishers=publisher_counts,
+                              fresh_samples=len(self.acquisition.base.samples if self.acquisition.base is not None
+                                                else self.acquisition.samples),
                               safety_received=sorted(self.acquisition.safety),
                               actuator_duplicates_ignored=self.acquisition.duplicates_ignored,
                               controller_received=self.controller is not None,
@@ -356,6 +382,19 @@ class NativeReader:
                                json.dumps(diagnostic, sort_keys=True))
         finally:
             self.acquisition = None
+
+    def ensure_base_reader(self):
+        """Reuse one read-only odometry subscription; no ROSA restart per gate."""
+        if 'odom' in self.readers:
+            return
+        from rosa.base._QoS import SensorDataQoS
+        from rosa.utils import resolve_message_type
+        qos = SensorDataQoS()
+        qos.bestEffort()
+        qos.durabilityVolatile()
+        qos.keepLast(5)
+        self.readers['odom'] = self.node.create_reader(resolve_message_type(base_gate.TYPE),
+            base_gate.TOPIC, self.callback('odom'), qos=qos)
 
     def close(self):
         self.rosa.shutdown()

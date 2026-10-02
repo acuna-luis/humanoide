@@ -6,7 +6,8 @@ import threading
 import time
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+from scripts.box_handling.test_scenario1_resume_worker import odometry
 
 try:
     from . import scenario1_health_worker as worker
@@ -35,7 +36,7 @@ def fill_health(collector):
 
 class ProtocolTests(unittest.TestCase):
     def test_only_named_readonly_commands_are_allowed(self):
-        for command in ('health', 'pose'):
+        for command in ('health', 'pose', 'base'):
             self.assertEqual(worker.validate_request({'request_id': 'a.1', 'command': command})['command'], command)
         for command in ('navigate', 'home', 'publish', '', None):
             with self.subTest(command=command), self.assertRaises(ValueError):
@@ -237,6 +238,50 @@ class AcquisitionTests(unittest.TestCase):
         self.assertIsNone(collector.complete(START+10))
 
 
+class BaseAcquisitionTests(unittest.TestCase):
+    def test_base_uses_existing_stationary_validator_and_two_new_samples(self):
+        collector = acquisition('base')
+        self.assertIsInstance(collector.base, worker.base_gate.Acquisition)
+        collector.add('odom', odometry(START-1), START+1, 101)
+        collector.add('pose', stamped(START+1), START+1, 101)
+        self.assertIsNone(collector.complete(START+2, publishers=1))
+        collector.add('odom', odometry(START+1), START+1, 101)
+        collector.add('odom', odometry(START+1), START+2, 102)
+        self.assertIsNone(collector.complete(START+3, publishers=1))
+        collector.add('odom', odometry(START+3), START+3, 103)
+        result = collector.complete(START+4, publishers=1)
+        self.assertEqual(result['event'], 'base_result')
+        self.assertEqual(result['request_id'], 'request-1')
+        self.assertEqual(len(result['samples']), 2)
+        self.assertTrue(result['stationary'])
+
+    def test_moving_stale_and_multiple_publishers_retain_abort_contract(self):
+        for options in ({'linear': (.003001,0,0)}, {'angular': (0,0,.010001)}):
+            with self.subTest(options=options), self.assertRaisesRegex(ValueError, 'moving'):
+                acquisition('base').add('odom', odometry(START+1, **options), START+1, 101)
+        collector = acquisition('base')
+        collector.add('odom', odometry(START+1), START+1, 101)
+        collector.add('odom', odometry(START+2), START+2, 102)
+        with self.assertRaisesRegex(ValueError, 'publisher'):
+            collector.complete(START+3, publishers=2)
+        other = acquisition('base')
+        other.add('odom', odometry(START+1), START+1, 101)
+        with self.assertRaisesRegex(ValueError, 'Stale'):
+            other.complete(START+500_000_002, publishers=1)
+
+    def test_base_disallows_home_and_does_not_reuse_previous_request_samples(self):
+        with self.assertRaises(ValueError):
+            worker.validate_request({'request_id':'b', 'command':'base', 'require_home':True})
+        with self.assertRaises(ValueError):
+            worker.validate_request({'request_id':'b', 'command':'base', 'timeout':5.001})
+        self.assertEqual(worker.validate_request({'request_id':'b','command':'base'})['timeout'],5)
+        previous = acquisition('base')
+        previous.add('odom', odometry(START+1), START+1, 101)
+        previous.add('odom', odometry(START+2), START+2, 102)
+        self.assertTrue(previous.complete(START+3, publishers=1)['stationary'])
+        self.assertIsNone(acquisition('base').complete(START+3, publishers=1))
+
+
 class LeaseTests(unittest.TestCase):
     def test_control_and_general_lease_are_both_required(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -311,6 +356,67 @@ class NativeHandshakeTests(unittest.TestCase):
         self.assertEqual(calls, [('wait', 0), ('call', '{}')])
         self.assertEqual(result['event'], 'health_result')
         self.assertIsNone(native.acquisition)
+
+    def base_native(self, count=1):
+        native, calls = self.make_native()
+        native.readers['odom'] = SimpleNamespace(getWriterCount=lambda:count)
+        def spin():
+            now, receipt = time.time_ns(), time.monotonic_ns()
+            native.acquisition.add('odom', odometry(now-1), now, receipt)
+            native.acquisition.add('odom', odometry(now), now+1, receipt+1)
+        native.spin = spin
+        return native, calls
+
+    def test_base_reader_is_reused_and_every_request_collects_new_odometry(self):
+        native, calls = self.base_native()
+        reports=[]
+        for index in range(2):
+            request=worker.validate_request({'request_id':'base-'+str(index),'command':'base'})
+            reports.append(native.acquire(request, lambda:None))
+        self.assertEqual(calls, [])
+        self.assertGreater(reports[1]['requested_ns'], reports[0]['completed_ns'])
+        for report in reports:
+            self.assertTrue(report['stationary'])
+            self.assertTrue(all(worker.source_stamp_ns(s)>report['requested_ns'] for s in report['samples']))
+        self.assertIsNone(native.acquisition)
+
+    def test_lazy_odometry_subscription_preserves_qos_and_live_health_channels(self):
+        import sys
+        native=worker.NativeReader.__new__(worker.NativeReader)
+        native.readers={}
+        native.node=SimpleNamespace(create_reader=Mock(return_value=object()))
+        qos=Mock()
+        with patch.dict(sys.modules, {'rosa.base._QoS':SimpleNamespace(SensorDataQoS=lambda:qos),
+                                     'rosa.utils':SimpleNamespace(resolve_message_type=lambda name:name)}):
+            native.ensure_base_reader()
+            native.ensure_base_reader()
+        native.node.create_reader.assert_called_once()
+        args=native.node.create_reader.call_args.args
+        self.assertEqual(args[:2],('nav_msgs/msg/Odometry','/mc/odom'))
+        qos.bestEffort.assert_called_once()
+        qos.durabilityVolatile.assert_called_once()
+        qos.keepLast.assert_called_once_with(5)
+        native.live_cache=Mock()
+        native.acquisition=acquisition('base')
+        with patch.object(worker.time,'time_ns',return_value=START+1), \
+                patch.object(worker.time,'monotonic_ns',return_value=101):
+            args[2](json.dumps(odometry(START+1)))
+        native.live_cache.add.assert_not_called()
+        self.assertEqual(len(native.acquisition.base.samples),1)
+
+    def test_base_reader_missing_or_multiple_publishers_fail(self):
+        for count in (0,2):
+            native, _ = self.base_native(count)
+            request=worker.validate_request({'request_id':'base-p','command':'base','timeout':.005})
+            with self.subTest(count=count), self.assertRaises((ValueError,TimeoutError)):
+                native.acquire(request, lambda:None)
+
+    def test_base_lease_revocation_prevents_result(self):
+        native, _ = self.base_native()
+        def guard(): raise RuntimeError('Lease expired')
+        request=worker.validate_request({'request_id':'base-lease','command':'base'})
+        with self.assertRaisesRegex(RuntimeError,'Lease expired'):
+            native.acquire(request, guard)
 
     def test_lease_revoked_during_readiness_prevents_service_call(self):
         native, calls = self.make_native()

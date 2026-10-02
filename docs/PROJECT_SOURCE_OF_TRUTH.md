@@ -1,5 +1,19 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**02-10-2026 — BOX-01-VISUAL-ALIGN-FRESH: reposo sin reiniciar ROSA.**
+Intento085958 pasa get1/cabeza y emparejamiento temporal; segunda imagen tiene
+1,136s al recibirse,1,316s tras poses y≥2,219s tras reposo. La última consulta
+de odometría consumía0,903s:0,773s hasta comenzar adquisición,0,051s de muestras
+y0,079s hasta devolver el resultado. Se aborta antes de ajuste/agarre.
+El reposo visual usa ahora el worker de salud persistente, comando read-only
+base y lector /mc/odom creado una vez. Reutiliza exactamente el validador de
+reanudación: dos muestras posteriores a cada petición, un publicador, edad0,5s,
+reposo0,003m/s/0,01rad/s y presupuesto5s. Imagen conserva edad máxima2s;
+diario añade edad exacta antes de decidir. 700 pruebas pertinentes pasan;
+fuentes instaladas PC, carga/ensayo de esta revisión PENDIENTES. Sin conexión,
+movimientos ni cambios remotos del agente; datos históricos no son estado actual.
+[Fuentes, diagnóstico y reversión](box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-de-frescura-del-intento085958).
+
 **02-10-2026 — BOX-01-VISUAL-ALIGN-PROGRESS: recuperación inicial acotada.**
 Intento084706 confirma adquisición temporal (parejas a62,0/62,3ms), solicita
 X+22,774mm y cancela por ausencia de progreso a4,009s. Distancia en mapa sube

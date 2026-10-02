@@ -841,15 +841,14 @@ class Runtime:
             self.emit('arrival', point=point, measurement=measured)
 
     def stationary_base(self):
-        command = code_command(self.payload['resume_worker'],
-                               ['--lease-file', str(self.session/'control-lease.json')])
-        output = self.native(command, timeout=10)
-        reports = [json.loads(line) for line in output.splitlines() if line.lstrip().startswith('{')]
-        if (len(reports) != 1 or reports[0].get('event') != 'resume_base_check' or
-                reports[0].get('stationary') is not True or
-                type(reports[0].get('publishers')) is not int or reports[0]['publishers'] != 1):
+        # The persistent reader uses the exact resume odometry validator. Two
+        # post-request samples are still required, without ROSA startup/shutdown
+        # consuming the remaining lifetime of the just-measured box image.
+        report = self.health_request('base', timeout=5)
+        if (report.get('event') != 'base_result' or report.get('stationary') is not True or
+                type(report.get('publishers')) is not int or report['publishers'] != 1):
             raise RuntimeError('BOX_ALIGNMENT_BASE_NOT_STATIONARY')
-        self.emit('box_alignment_base', report=reports[0])
+        self.emit('box_alignment_base', report=report)
 
     def capture_box(self):
         # The socket is owned by root inside the container (0600). Use that
@@ -935,8 +934,11 @@ with socket.socket(socket.AF_UNIX) as conn:
         self.emit('box_alignment_time_pair', matches=matches,
                   current_reference=after[-1], samples=len(history))
         self.stationary_base()
-        if not 0 <= time.time_ns()-second['stamp_ns'] <= 2_000_000_000:
-            raise RuntimeError('BOX_ALIGNMENT_DETECTION_STALE_BEFORE_DISPATCH')
+        age_ns = time.time_ns()-second['stamp_ns']
+        self.emit('box_alignment_freshness', image_stamp_ns=second['stamp_ns'],
+                  age_ns=age_ns, max_age_ns=2_000_000_000)
+        if not 0 <= age_ns <= 2_000_000_000:
+            raise RuntimeError('BOX_ALIGNMENT_DETECTION_STALE_BEFORE_DISPATCH: age_ns='+str(age_ns))
         self.emit('box_alignment', phase='observed', observation=second, stability=comparison,
                   reference=after[-1])
         return second, after[-1]

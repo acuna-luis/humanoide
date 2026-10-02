@@ -334,6 +334,55 @@ class AlignmentRuntimeTests(unittest.TestCase):
         machine.capture_box.assert_called_once()
         self.assertGreater(len(history), 1)
 
+    def test_stationary_gate_uses_persistent_reader_without_native_process_start(self):
+        machine = self.machine([])
+        machine.native = Mock(side_effect=AssertionError('No new native process'))
+        machine.health_request = Mock(return_value=dict(event='base_result',stationary=True,publishers=1))
+        machine.stationary_base()
+        machine.health_request.assert_called_once_with('base', timeout=5)
+        machine.native.assert_not_called()
+        for invalid in (dict(event='base_result',stationary=False,publishers=1),
+                        dict(event='base_result',stationary=True,publishers=2),
+                        dict(event='base_result',stationary=True,publishers=True),
+                        dict(event='resume_base_check',stationary=True,publishers=1)):
+            machine.health_request.return_value=invalid
+            with self.assertRaisesRegex(RuntimeError, 'BASE_NOT_STATIONARY'):
+                machine.stationary_base()
+
+    def test_post_capture_stationary_read_preserves_freshness_without_raising_age_limit(self):
+        for latency_ns in (50_000_000, 910_000_000):
+            machine=self.machine([])
+            machine.map_state=Mock(return_value=('utars_nav_map','FSM_WAITNAVIGATE'))
+            machine.map_points=Mock()
+            clock=[100_000_000_000]
+            first=self.observation(stamp=101_000_000_000)[0]
+            second=self.observation(stamp=103_000_000_000)[0]
+            def capture(history,phase):
+                pending=first if phase=='first' else second
+                history.extend(dict(x=1.,y=2.,yaw=0.,stamp_ns=pending['stamp_ns']+n) for n in (0,1))
+                clock[0]=pending['stamp_ns']+1_140_000_000
+                return pending
+            machine.capture_box_with_poses=Mock(side_effect=capture)
+            reads=[0]
+            def poses():
+                reads[0]+=1
+                if reads[0]>1: clock[0]+=180_000_000
+                return [dict(x=1.,y=2.,yaw=0.,stamp_ns=clock[0]+n) for n in (1,2)]
+            machine.pose_references=Mock(side_effect=poses)
+            def base(*args,**kwargs):
+                clock[0]+=latency_ns
+                return dict(event='base_result',stationary=True,publishers=1)
+            machine.health_request=Mock(side_effect=base)
+            with self.subTest(latency_ns=latency_ns), patch.object(runtime.time,'time_ns',side_effect=lambda:clock[0]):
+                if latency_ns==50_000_000:
+                    pending,_=runtime.Runtime.measure_box_for_pickup(machine)
+                    self.assertIs(pending,second)
+                else:
+                    with self.assertRaisesRegex(RuntimeError,'DETECTION_STALE_BEFORE_DISPATCH'):
+                        runtime.Runtime.measure_box_for_pickup(machine)
+            self.assertEqual(machine.health_request.call_count,2)
+            machine.action.assert_not_called()
+
     def test_capture_error_propagates_without_retry_or_motion(self):
         machine = self.machine([])
         error = ValueError('Vision failed')
@@ -368,6 +417,16 @@ class AlignmentRuntimeTests(unittest.TestCase):
 
 
 class AlignmentPayloadTests(unittest.TestCase):
+    def test_health_payload_bootstraps_same_base_validator_without_ros_imports(self):
+        import sys
+        payload=cli.make_payload('check',PROFILE,contract.new_checkpoint(PROFILE))
+        namespace={'__name__':'embedded_health_test','__package__':None}
+        with patch.dict(sys.modules):
+            exec(compile(payload['health_worker'],'embedded-health','exec'),namespace)
+            collector=namespace['Acquisition']({'command':'base','request_id':'b'},100,100)
+            self.assertEqual(collector.base.__class__.__module__,'scenario1_resume_worker')
+            self.assertIsNone(collector.complete(101,publishers=1))
+
     def test_transient_modules_keep_context_and_sps_package_for_old_resumes(self):
         cp = contract.new_checkpoint(PROFILE, policy='assume', execution_profile='optimistic_v1')
         payload = cli.make_payload('check', PROFILE, cp)

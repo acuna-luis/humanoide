@@ -1,5 +1,11 @@
 # Corrección visual de posición antes de recoger
 
+**02-10-2026 — revisión BOX-01-VISUAL-ALIGN-FRESH.** Reposo visual desde el
+worker persistente, con el mismo validador y dos muestras nuevas de odometría.
+Evita caducar la imagen durante arranque/cierre ROSA de otro proceso. Edad
+máxima2s conservada, diagnóstico de edad antes de decidir. 700 pruebas offline
+pertinentes pasan; revisión instalada PC, carga/ensayo PENDIENTES. Detalle al final.
+
 **02-10-2026 — revisión BOX-01-VISUAL-ALIGN-PROGRESS.** El intento084706
 confirma emparejamiento temporal y envía ajusteX+22,774mm, cancelado a4,009s.
 Se reconoce una única recuperación inicial medible antes de mejorar la distancia
@@ -305,3 +311,86 @@ de progreso, manteniendo la revisión temporal. Reanudación: conservar evidenci
 y aplicar recuperación específica con postura/caja/parada comprobadas; no
 reintentar automáticamente la acción cancelada. Sin conexiones, movimientos,
 cambios remotos, commit ni push por el agente.
+
+## Revisión de frescura del intento085958
+
+**02-10-2026, Europe/Madrid — OBSERVADO histórico:**
+`20261002T085958Z_OPTIMISTIC_SCENARIO1_215101` pasa get1 (5mm/0,43°), visión
+y cabeza. Capturas coherentes, emparejadas con poses a67,320/52,869ms. La segunda
+imagen tiene sello1790931604911903000ns; pose seleccionada base_link:
+X0,787601691/Y0,114263272/Z0,311893826m, dentro del gate original en ese instante.
+No se llegó a enviar ajuste de chasis ni agarre nativo. La prueba de recuperación
+de progreso anterior no se ejercitó en este intento.
+
+Edad de imagen al registrar recepción:1,135722s; tras adquirir las poses
+posteriores:1,315706s. Consulta final de reposo:0,903138s desde ese registro
+hasta su devolución, desglosados0,772748s hasta comenzar adquisición de odometría,
+0,051459s para dos muestras y0,078930s hasta devolver/registrar el resultado.
+Imagen≥2,218844s tras reposo y2,223167s al registrar el error. El guard anterior
+no guardaba su instante exacto de comprobación; esos extremos demuestran que
+el límite2s ya se había superado. Salud/lease fallan después durante cierre;
+no son la causa primaria de `BOX_ALIGNMENT_DETECTION_STALE_BEFORE_DISPATCH`.
+
+**VERIFICADO en código:** el gate ejecutaba un proceso nuevo con ROSA para
+cada lectura de reposo. El coste de lanzamiento/retorno posterior a las capturas
+agotaba su frescura. Se sustituye el transporte de esa lectura por una petición
+`base` al worker de salud ya abierto. La primera petición crea una suscripción
+read-only /mc/odom, nav_msgs/msg/Odometry, QoS SensorData/bestEffort/volatile/
+keepLast5; las siguientes reutilizan el lector, sin reutilizar sus muestras.
+
+Cada petición crea la misma `scenario1_resume_worker.Acquisition` original,
+importada en memoria sin iniciar ROSA. Conserva dos sellos/recepciones posteriores
+a la petición, avance temporal, tratamiento de duplicados, frames, cuaternión,
+edad máxima0,5s, único publicador, velocidades≤0,003m/s/0,01rad/s y estabilidad
+≤5mm/1°. Plazo máximo5s. Datos viejos, movimiento, leases, falta/ambigüedad de
+publicadores y errores siguen bloqueando. Odómetro no entra en la caché live
+de salud; se conserva el único hilo de peticiones de telemetría durante capturas.
+Los flujos health/pose y el worker standalone de reanudación no cambian.
+La imagen sigue limitada a2s: un procesado lento todavía aborta. El nuevo evento
+`box_alignment_freshness` registra sello/edad/límite antes de comprobarlo;
+el error incluye age_ns. No se reintenta una captura o acción fallida.
+
+Fuentes PC: [runtime](../../scripts/box_handling/scenario1_runtime.py),
+[worker persistente](../../scripts/box_handling/scenario1_health_worker.py),
+[payload](../../scripts/box_handling/scenario1_cli.py),
+[tests de integración visual](../../scripts/box_handling/test_scenario1_box_alignment.py) y
+[tests de telemetría](../../scripts/box_handling/test_scenario1_health_worker.py).
+Dependencia adicional embebida: [validador original sin cambios](../../scripts/box_handling/scenario1_resume_worker.py).
+SDK, tareas/XML/YAML, SPSbf145fa17e1116fc y parámetros nativos intactos.
+Destinos: estas fuentes PC; próxima sesión transmite health worker al cliente
+Motion/contenedor redescubierto. Lector se activa al primer gate base; --check
+no lo crea. No requiere instalar archivos persistentes ni reiniciar contenedores.
+
+Verificación reproducible sin robot:
+
+```bash
+python3 -B -m unittest scripts.box_handling.test_scenario1_health_worker \
+  scripts.box_handling.test_scenario1_box_alignment \
+  scripts.box_handling.test_scenario1_optimistic
+./scripts/optimistic_scenario1.sh --plan
+bash -n scripts/optimistic_scenario1.sh
+git diff --check
+```
+
+**700 pruebas pertinentes correctas**, cero fallos/errores, con la misma
+exclusión legacy test_scenario1_deposit_install documentada anteriormente.
+Diez nuevas comprueban transporte persistente, dos muestras nuevas por petición,
+datos previos/duplicados/movimiento/frescura/publicadores/lease, creación única
+del lector, caché live intacta y payload importable sin ROSA. La prueba de latencia
+simula imagen1,14s + poses0,18s: reposo0,05s permite continuar; reposo0,91s
+todavía aborta sin movimiento. Es regresión sintética, no medición de latencia
+de esta revisión instalada en robot. Sintaxis/plan/diff-check correctos.
+
+Respaldo íntegro anterior/final de fuentes modificadas y notas, SHA256, estado
+Git, tests.json/tests.log, plan.json y incident-summary.json con hash del diario:
+`../Humanoide-vla-evidence/20261002_BOX_ALIGNMENT_FRESH_DISPATCH/`.
+Instalado PC: sí; cargado en Motion y probado físicamente **de esta revisión:
+PENDIENTES**. Esta intervención no conecta al robot, cambia configuración remota
+ni envía detecciones, comandos físicos o HOME. El ensayo histórico demuestra
+adquisición temporal, no éxito de ajuste/agarre ni estado físico actual.
+
+Rollback selectivo desde before/ de runtime/health worker/CLI, sus tests y estas
+notas, preservando cambios posteriores. Vuelve la consulta standalone de reposo;
+mantiene correcciones temporal/de progreso anteriores. No restaura checkpoints,
+sesiones, permisos ni estados remotos. Reanudar sólo tras verificar físicamente
+parada/postura/caja según el modo de recuperación correspondiente. Sin commit/push.
