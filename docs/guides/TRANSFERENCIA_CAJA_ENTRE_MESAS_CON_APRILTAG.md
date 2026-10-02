@@ -1,5 +1,38 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**02-10-2026 — BOX-01-VISUAL-ALIGN-ODOM-PROGRESS.** Intento094521 pasa
+HOME/get1 y solicita ajusteX21,200mm; cancela a4,008s por falta de progreso.
+Mapa termina a27,095mm, pero odometría registra42,601mm de recorrido y25,800mm
+netos, con residual local4,600mm al desplazamiento solicitado. Discrepancia
+OBSERVADA, causa física/localización PENDIENTE. El guard de recogida ahora cuenta
+mejoras netas≥2mm hacia ese desplazamiento en odometría, desde la postura fresca
+de envío, sin cambiar objetivo ni llegada en mapa. Conserva watchdog4s y todos
+los límites; odometría no autoriza llegada, giro rápido ni agarre. 727 pruebas
+pertinentes pasan; instalado PC, nueva carga/ensayo PENDIENTES. Sin movimientos
+del agente. Tras cancelación sigue exigida recuperación/comprobación presencial.
+[Diagnóstico, alcance y reversión](../box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-de-progreso-odométrico-del-intento094521).
+
+**02-10-2026 — BOX-01-HOME-DIAGNOSTIC. OBSERVADO en el intento093621:**
+HOME inicial rechazado exclusivamente por head_pitch1002=−0,430761rad;
+brazos/torso≤0,000959rad, velocidad0 y consignas dentro del gate en dos muestras.
+Compatible con la cabeza de observación del intento anterior (INFERENCIA).
+Inicio sin etapas ni objetivos; el fallo de lease posterior pertenece al cierre.
+El error PC ahora identifica ejes/posiciones fuera de HOME y conserva el bloqueo
+20D original: no envía recuperación ni HOME automático. Estado físico actual y
+recuperación presencial PENDIENTES.
+VERIFICADO offline:719 pruebas pertinentes y5 del clasificador pasan; sintaxis
+shell, plan local y git diff --check correctos. Carga/ensayo del mensaje PENDIENTES.
+[Evidencia, verificación y continuación](../box_handling/BOX_AXIS_REPOSITION_20261002.md#diagnóstico-home-del-intento093621).
+
+**02-10-2026 — BOX-01-VISUAL-ALIGN-ASSOCIATION:** recogida optimista compara
+geometría entre posturas mediante parejas coherentes promediadas y odometría
+local, conservando2cm/3°. Promedio no se entrega como pose SPS ni objetivo.
+Última captura original dentro del gate sigue obligatoria. El intento092429
+completa llegada/visión, pero la asociación en mapa rechazaba29,626mm de deriva;
+replay local19,290mm/2,120°. 715 pruebas pertinentes pasan; carga/ensayo de nueva
+revisión PENDIENTES. Sin movimientos del agente ni confirmación de agarre.
+[Fuentes, alcance y reversión](../box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-de-asociación-del-intento092429).
+
 **02-10-2026 — BOX-01-VISUAL-ALIGN-ARRIVAL:** ajusteX22,650mm del intento091156
 terminaSUCCEEDED/reposo, con poses posteriores9,630mm/0,452°. Se sustituye
 exigencia terminal5mm por12mm/2°; requiere nueva detección/coherencia/gateXYZ

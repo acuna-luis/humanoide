@@ -33,7 +33,7 @@ if __package__:
     from . import scenario1_resume as resume
     from . import scenario1_live_health as live_health
     from .scenario1_session import ProcessSession
-    from scripts.lib.cruzr_home_posture_gate import classify
+    from scripts.lib.cruzr_home_posture_gate import BODY_ACTUATOR_ALIASES, classify
     from .front_sps_session import check_sps_discovery
 else:
     import scenario1_table90 as table90
@@ -47,7 +47,7 @@ else:
     import scenario1_resume as resume
     import scenario1_live_health as live_health
     from scenario1_session import ProcessSession
-    from cruzr_home_posture_gate import classify
+    from cruzr_home_posture_gate import BODY_ACTUATOR_ALIASES, classify
     from front_sps_session import check_sps_discovery
 
 SETUP = 'source /opt/walker/setup.bash; export ROS2CLI_DISABLE_DAEMON=1 ROSA_MIDDLE_WARE=cyclone ROSA_USE_SHM=OFF; '
@@ -171,6 +171,7 @@ class Runtime:
         self.sensor_min_stamp_ns = 0
         self.action_sessions = {}
         self.health_session = None
+        self.box_association = None
         self.resume_plan = None
         self.resume_validated = False
         self.perception_offset = 0
@@ -458,7 +459,20 @@ class Runtime:
             previous_stamp = current_stamp
             measurement = dict(line.split('=', 1) for line in classify(sample, 0.02))
             if require_home and measurement['MEASURED_HOME'] != '1':
-                raise RuntimeError('HOME_NOT_MEASURED: se exige HOME 20D al inicio/final')
+                # Only inspect axes after the strict classifier validates their
+                # coverage, aliases, numeric values, faults and rest. This is a
+                # diagnostic of the rejected sample, never a recovery command.
+                by_id = {item['id']: item for item in sample['act_item']}
+                outside = [dict(joint=name, id=axis, position_rad=by_id[axis]['position'])
+                           for name, aliases in BODY_ACTUATOR_ALIASES for axis in aliases
+                           if axis in by_id and abs(by_id[axis]['position']) >= 0.02]
+                self.emit('home_not_measured', posture=measurement, outside_home=outside,
+                          stamp=stamp, tolerance_rad=0.02, physical_commands_sent=0)
+                detail = '; '.join(f"{row['joint']}({row['id']})={row['position_rad']:.6f} rad"
+                                   for row in outside)
+                raise RuntimeError('HOME_NOT_MEASURED: se exige HOME 20D al inicio/final; '
+                                   +detail+'; límite |posición| < 0.02 rad. '
+                                   'Recuperación presencial antes de repetir; sin HOME automático')
             measurements.append(measurement)
         self.emit('health', safety=health, posture=measurements, home_required=require_home)
         return report
@@ -849,6 +863,7 @@ class Runtime:
                 type(report.get('publishers')) is not int or report['publishers'] != 1):
             raise RuntimeError('BOX_ALIGNMENT_BASE_NOT_STATIONARY')
         self.emit('box_alignment_base', report=report)
+        return report
 
     def capture_box(self):
         # The socket is owned by root inside the container (0600). Use that
@@ -915,11 +930,12 @@ with socket.socket(socket.AF_UNIX) as conn:
         return pending
 
     def measure_box_for_pickup(self):
+        self.box_association = None  # A previous successful capture cannot authorize this one.
         self.connected()
         self.discover()
         self.hashes()
         box_alignment.pickup_posture(self.health())
-        self.stationary_base()
+        odom_before = self.stationary_base()
         if self.map_state() != ('utars_nav_map', 'FSM_WAITNAVIGATE'):
             raise RuntimeError('BOX_ALIGNMENT_MAP_NOT_READY')
         self.map_points()
@@ -933,14 +949,15 @@ with socket.socket(socket.AF_UNIX) as conn:
         matches = [box_alignment.match_pose_time(pending, history) for pending in (first, second)]
         self.emit('box_alignment_time_pair', matches=matches,
                   current_reference=after[-1], samples=len(history))
-        self.stationary_base()
+        odom_after = self.stationary_base()
         age_ns = time.time_ns()-second['stamp_ns']
         self.emit('box_alignment_freshness', image_stamp_ns=second['stamp_ns'],
                   age_ns=age_ns, max_age_ns=2_000_000_000)
         if not 0 <= age_ns <= 2_000_000_000:
             raise RuntimeError('BOX_ALIGNMENT_DETECTION_STALE_BEFORE_DISPATCH: age_ns='+str(age_ns))
+        self.box_association = box_alignment.association_observation(first, second, odom_before, odom_after)
         self.emit('box_alignment', phase='observed', observation=second, stability=comparison,
-                  reference=after[-1])
+                  reference=after[-1], association=self.box_association)
         return second, after[-1]
 
     def align_box_for_pickup(self, *, empty_entry=False):
@@ -968,7 +985,10 @@ with socket.socket(socket.AF_UNIX) as conn:
         contract.validate_motion_result(self.action('motion',
             {'task_name': box_alignment.HEAD_TASK, 'yaml_args': '{}'}, min(20, budget())))
         pending, reference = self.measure_box_for_pickup()
-        anchor = box_alignment.in_map(pending, reference)
+        budget()
+        anchor = self.box_association
+        if anchor is None:
+            raise RuntimeError('BOX_ALIGNMENT_ASSOCIATION_REQUIRED')
         total, attempt = 0., 0
         while True:
             budget()
@@ -1007,7 +1027,13 @@ with socket.socket(socket.AF_UNIX) as conn:
                       pickup_verified=False)
             total += step
             pending, reference = self.measure_box_for_pickup()
-            perception.validate_pair(anchor, box_alignment.in_map(pending, reference))
+            try:
+                association = box_alignment.validate_association(anchor, self.box_association)
+            except ValueError as exc:
+                self.emit('box_alignment_association', passed=False, anchor=anchor,
+                          current=self.box_association, reason=str(exc))
+                raise
+            self.emit('box_alignment_association', passed=True, measurement=association)
             atomic_json(self.session/'box-alignment.json', dict(record, phase='measured',
                 observation=pending, reference=reference))
             if (box_alignment.violation(pending) > 0 and

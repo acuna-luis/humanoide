@@ -12,11 +12,13 @@ if __package__:
     from .probe_front_box import transform_poses, validate_detection
     from .select_front_box import select_front_box
     from .scenario1_perception import validate_pair
+    from . import scenario1_resume_worker as base_gate
 else:
     import front_sps_contract as sps
     from probe_front_box import transform_poses, validate_detection
     from select_front_box import select_front_box
     from scenario1_perception import validate_pair
+    import scenario1_resume_worker as base_gate
 
 POLICY = MappingProxyType(dict(max_corrections=2, max_step_m=.05,
     max_total_m=.05, inside_margin_m=.02, total_budget_s=70., min_improvement_m=.002,
@@ -112,6 +114,74 @@ def validate_arrival(references, expected):
                          'measurements='+repr(measurements))
     stable_base(references)
     return measurements
+
+
+def odom_reference(report):
+    """Validate the already-acquired read-only rest gate, including its frame."""
+    if (report.get('stationary') is not True or type(report.get('publishers')) is not int or
+            report['publishers'] != 1 or len(report.get('samples', [])) != 2):
+        raise ValueError('BOX_ALIGNMENT_ODOM_REFERENCE_REQUIRED')
+    requested = base_gate.nanoseconds(report['requested_ns'], 'odometry request')
+    completed = base_gate.nanoseconds(report['completed_ns'], 'odometry completion')
+    if completed < requested:
+        raise ValueError('BOX_ALIGNMENT_ODOM_CLOCK_REGRESSION')
+    # The worker verified real receipt times/lease. Revalidate source data at
+    # its recorded completion; do not invent advancing receipts or reacquire.
+    samples = [base_gate.sample(raw, completed) for raw in report['samples']]
+    if (not requested < samples[0]['stamp_ns'] < samples[1]['stamp_ns'] <= completed or
+            samples[0]['frames'] != samples[1]['frames'] or
+            any(completed-sample['stamp_ns'] > base_gate.MAX_AGE_NS or
+                sample['linear'] > .003+1e-12 or sample['angular'] > .01+1e-12 for sample in samples)):
+        raise ValueError('BOX_ALIGNMENT_ODOM_REFERENCE_REQUIRED')
+    if (math.dist(samples[0]['position'], samples[1]['position']) > .005+1e-12 or
+            abs(math.atan2(math.sin(samples[1]['yaw']-samples[0]['yaw']),
+                           math.cos(samples[1]['yaw']-samples[0]['yaw']))) > math.radians(1)+1e-12):
+        raise ValueError('BOX_ALIGNMENT_BASE_UNSTABLE')
+    last = samples[-1]
+    if (last['frames']['frame_id'] != 'odom' or
+            last['frames']['child_frame_id'] not in ('base_link', 'base_footprint')):
+        raise ValueError('BOX_ALIGNMENT_ODOM_FRAME_UNSUPPORTED')
+    return dict(x=last['position'][0], y=last['position'][1], yaw=last['yaw'],
+                stamp_ns=last['stamp_ns'], frames=last['frames'])
+
+
+def association_observation(first, second, before_report, after_report):
+    """Planar odom XY/yaw and stationary base_link Z; comparison geometry only.
+
+    The fixed footprint/base height cancels between observations. These are
+    diagnostic coordinates, never a full odom target or a pickup pose.
+    """
+    validate_pair(first, second)  # same-base diagnostic bounds remain unchanged
+    before, after = odom_reference(before_report), odom_reference(after_report)
+    if before['frames'] != after['frames']:
+        raise ValueError('BOX_ALIGNMENT_ODOM_FRAME_CHANGED')
+    if not (before_report['completed_ns'] < first['stamp_ns'] < second['stamp_ns'] <
+            after_report['requested_ns']):
+        raise ValueError('BOX_ALIGNMENT_ODOM_DOES_NOT_BRACKET_IMAGES')
+    stable_base([before, after])
+    poses = [pending['selection']['selected_pose'] for pending in (first, second)]
+    quaternions = [[pose['orientation'][axis] for axis in 'xyzw'] for pose in poses]
+    quaternions = [[v/math.hypot(*q) for v in q] for q in quaternions]
+    if sum(a*b for a, b in zip(*quaternions)) < 0:
+        quaternions[1] = [-v for v in quaternions[1]]
+    qsum = [a+b for a,b in zip(*quaternions)]
+    average = dict(stamp_ns=second['stamp_ns'], selection=dict(selected_pose=dict(
+        position={axis: sum(pose['position'][axis] for pose in poses)/2 for axis in 'xyz'},
+        orientation={axis: v/math.hypot(*qsum) for axis,v in zip('xyzw', qsum)})))
+    yaw_delta = math.atan2(math.sin(after['yaw']-before['yaw']), math.cos(after['yaw']-before['yaw']))
+    reference = dict(x=(before['x']+after['x'])/2, y=(before['y']+after['y'])/2,
+                     yaw=before['yaw']+yaw_delta/2)
+    return dict(frames=copy.deepcopy(before['frames']), observation=in_map(average, reference),
+                comparison_only=True, reference=reference,
+                image_stamps_ns=[first['stamp_ns'], second['stamp_ns']])
+
+
+def validate_association(anchor, current):
+    if not isinstance(anchor, dict) or not isinstance(current, dict):
+        raise ValueError('BOX_ALIGNMENT_ASSOCIATION_REQUIRED')
+    if anchor['frames'] != current['frames']:
+        raise ValueError('BOX_ALIGNMENT_ODOM_FRAME_CHANGED')
+    return validate_pair(anchor['observation'], current['observation'])
 
 
 def stable_base(references):

@@ -708,5 +708,142 @@ class PickupRecoveryTest(unittest.TestCase):
         self.assertEqual(report['pickup_recovery']['used_ns'], START + 700_000_000)
 
 
+class PickupOdometryProgressTest(unittest.TestCase):
+    def telemetry(self, kind, stamp, **values):
+        payload = sample(kind, stamp, **values)
+        if kind == 'odom':
+            payload['header']['frame_id'] = 'odom'
+            payload['child_frame_id'] = 'base_footprint'
+        return payload
+
+    def machine(self, point='box_pickup', map_yaw=0.):
+        candidate = spec()
+        candidate['reference']['yaw'] = map_yaw
+        candidate['target']['point_yaw'] = map_yaw
+        candidate['point'] = point
+        guard = correction.Guard(candidate, START)
+        for offset in (.1, .2):
+            when = START + round(offset*NS)
+            guard.add('map', self.telemetry('map', when, yaw=map_yaw), when)
+            guard.add('odom', self.telemetry('odom', when), when)
+        guard.arm(START + 200_000_000)
+        return guard
+
+    def tick(self, guard, offset, *, odom_x=1000., odom_y=0., linear=0., angular=0., map_x=.03):
+        when = START + round(offset*NS)
+        guard.add('map', self.telemetry('map', when, x=map_x,
+                                     yaw=guard.spec['reference']['yaw']), when)
+        guard.add('odom', self.telemetry('odom', when, x=odom_x, y=odom_y,
+                                      linear=linear, angular=angular), when)
+        return guard.check(when)
+
+    def test_archived_sparse_pose_trace_renews_progress_without_claiming_arrival(self):
+        fixture = json.loads((Path(__file__).parent/'fixtures'/
+                              'box_alignment_odom_progress_20261002.json').read_text())
+        first = next(row for row in fixture['snapshots'] if row['phase'] == 'armed')['snapshot']
+        guard = correction.Guard(fixture['spec'], first['requested_ns'])
+        # Only last poses were archived, not every DDS message. Seed a synthetic
+        # stationary earlier sample, then the exact archived dispatch poses.
+        for kind in ('map', 'odom'):
+            origin = first['last_pose'][kind]
+            earlier = first['requested_ns']+1000
+            guard.add(kind, self.telemetry(kind, earlier, x=origin['x'], y=origin['y'],
+                                          yaw=origin['yaw']), earlier)
+            guard.add(kind, self.telemetry(kind, origin['stamp_ns'], x=origin['x'],
+                y=origin['y'], yaw=origin['yaw']), origin['received_ns'])
+        guard.arm(first['armed_ns'])
+        for row in fixture['snapshots']:
+            if row['phase'] not in ('progress', 'failed'):
+                continue
+            for kind, origin in sorted(row['snapshot']['last_pose'].items(),
+                                       key=lambda item: item[1]['received_ns']):
+                if origin['stamp_ns'] == guard.summary()['last_stamp_ns'][kind]:
+                    continue
+                guard.add(kind, self.telemetry(kind, origin['stamp_ns'], x=origin['x'],
+                    y=origin['y'], yaw=origin['yaw']), origin['received_ns'])
+            report = guard.check(row['time_ns'])
+        self.assertIsNone(report['failure'])
+        self.assertGreater(report['distance_m'], .027)
+        self.assertLess(report['pickup_odometry']['distance_m'], .005)
+        self.assertGreater(report['progress_ns'], report['armed_ns'])
+        self.assertEqual(report['progress_source'], 'odom_relative_goal')
+        self.assertFalse(report['pickup_odometry']['arrival_authorized'])
+        self.assertFalse(report['arrival_verified'])
+        self.assertFalse(report['settled'])
+
+    def test_offset_uses_own_frame_heading_and_dispatch_pose(self):
+        guard = self.machine(map_yaw=math.pi/2)
+        target = guard.summary()['pickup_odometry']['target']
+        self.assertAlmostEqual(target['point_x'], 1000.)
+        self.assertAlmostEqual(target['point_y'], .03)
+        report = self.tick(guard, .3, odom_y=.004)
+        self.assertAlmostEqual(report['pickup_odometry']['distance_m'], .026)
+        self.assertEqual(report['progress_source'], 'odom_relative_goal')
+        self.assertEqual(guard.spec['target'], dict(point_x=0., point_y=0., point_yaw=math.pi/2))
+
+    def test_stopped_wrong_way_and_subthreshold_motion_keep_four_second_watchdog(self):
+        for displacement in (0., .001, -.001):
+            guard = self.machine()
+            for index in range(3, 42):
+                self.tick(guard, index/10, odom_x=1000.+displacement)
+            with self.subTest(displacement=displacement), self.assertRaisesRegex(ValueError, 'no significant progress'):
+                self.tick(guard, 4.2, odom_x=1000.+displacement)
+
+    def test_repeated_return_to_same_best_distance_does_not_renew_timer(self):
+        guard = self.machine()
+        self.tick(guard, .3, odom_x=999.997)
+        for index in range(4, 43):
+            self.tick(guard, index/10, odom_x=999.997 if (index//5)%2 else 1000.)
+        with self.assertRaisesRegex(ValueError, 'no significant progress'):
+            self.tick(guard, 4.3, odom_x=999.997)
+        self.assertEqual(guard.summary()['pickup_odometry']['progress_ns'], START+300_000_000)
+
+    def test_overshoot_does_not_renew_progress_or_authorize_fast_turn(self):
+        guard = self.machine()
+        self.tick(guard, .3, odom_x=999.970)
+        for index in range(4, 43):
+            self.tick(guard, index/10, odom_x=999.969)
+        with self.assertRaisesRegex(ValueError, 'no significant progress'):
+            self.tick(guard, 4.3, odom_x=999.969)
+        other = self.machine()
+        with self.assertRaisesRegex(ValueError, r'limit=0\.600000000'):
+            self.tick(other, .3, odom_x=999.970, angular=.61)
+
+    def test_map_health_speed_path_and_frame_checks_remain_mandatory(self):
+        for values, error in ((dict(map_x=.046), 'worsened'),
+                              (dict(odom_x=999.919), 'excursion'),
+                              (dict(odom_x=999.97, linear=.100001), 'velocity')):
+            with self.subTest(error=error), self.assertRaisesRegex(ValueError, error):
+                self.tick(self.machine(), .3, **values)
+        guard = self.machine()
+        self.tick(guard, .3, odom_x=999.997)
+        with self.assertRaisesRegex(ValueError, 'stale'):
+            guard.check(START+800_000_001)
+        guard = self.machine()
+        payload=self.telemetry('odom', START+300_000_000, x=999.997)
+        payload['child_frame_id']='other'
+        with self.assertRaisesRegex(ValueError, 'frame changed'):
+            guard.add('odom', payload, START+300_000_000)
+
+    def test_get1_and_unrecognized_frames_do_not_use_odometry_progress(self):
+        guard = self.machine(point='get1')
+        self.tick(guard, .3, odom_x=999.997)
+        self.assertIsNone(guard.summary()['pickup_odometry']['target'])
+        self.assertEqual(guard.summary()['progress_ns'], guard.armed_ns)
+        candidate=spec();candidate['point']='box_pickup'
+        guard=warm(correction.Guard(candidate, START));guard.arm(START+200_000_000)
+        tick(guard, .3, odom_x=999.997)
+        self.assertIsNone(guard.summary()['pickup_odometry']['target'])
+
+    def test_map_lag_still_aborts_after_last_real_improvement(self):
+        guard=self.machine()
+        self.tick(guard, .3, odom_x=999.97)
+        for index in range(4,43):
+            self.tick(guard, index/10, odom_x=999.97)
+        with self.assertRaisesRegex(ValueError, 'no significant progress'):
+            self.tick(guard, 4.3, odom_x=999.97)
+        self.assertEqual(guard.summary()['distance_m'], .03)
+
+
 if __name__ == '__main__':
     unittest.main()

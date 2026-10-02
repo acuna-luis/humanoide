@@ -18,6 +18,73 @@ from scripts.box_handling import scenario1_runtime as runtime
 PROFILE = json.loads((Path(__file__).with_name('scenario1_current_geometry.json')).read_text())
 
 
+class HomeDiagnosticTests(unittest.TestCase):
+    def machine(self, changes=None):
+        events = []
+        machine = runtime.Runtime({'checkpoint': contract.new_checkpoint(PROFILE)},
+                                  lambda event, **values: events.append(dict(event=event, **values)))
+        samples = []
+        for ns in (250_000_000, 260_000_000):
+            items = [dict(id=aliases[-1], error_code=0, status=7, position=0.,
+                          velocity=0., cmd_pos=0.) for _, aliases in runtime.BODY_ACTUATOR_ALIASES]
+            for item in items:
+                item.update((changes or {}).get(item['id'], {}))
+            samples.append(dict(header=dict(stamp=dict(sec=100, nanosec=ns)), act_item=items))
+        machine.health_request = Mock(return_value=dict(
+            controller={'controller': [{'name': 'manipulation_controller', 'state': 'running'},
+                {'name': 'sdk_controller', 'state': 'initialized'},
+                {'name': 'vla_sdk_controller', 'state': 'initialized'}]},
+            status={'status_list': []}, safety={'estop': {'data': 0}, 'servo': {'data': 0},
+                'charger': {'data': 0}, 'battery': {'batteries': [{'batsoc': 90}, {'batsoc': 90}]}},
+            actuator=samples))
+        machine.action, machine.navigate = Mock(), Mock()
+        return machine, events
+
+    def test_observation_head_still_blocks_home_without_recovery_motion(self):
+        machine, events = self.machine({1002: dict(position=-.4307609799981366, cmd_pos=-.43)})
+        with patch.object(runtime.time, 'time', return_value=100.3), self.assertRaisesRegex(
+                RuntimeError, r'HOME_NOT_MEASURED.*head_pitch\(1002\)=-0.430761 rad'):
+            machine.health(require_home=True)
+        machine.action.assert_not_called()
+        machine.navigate.assert_not_called()
+        self.assertEqual(events[0]['event'], 'home_not_measured')
+        self.assertEqual(events[0]['posture']['MEASURED_HOME'], '0')
+        self.assertEqual(events[0]['physical_commands_sent'], 0)
+        self.assertEqual([row['id'] for row in events[0]['outside_home']], [1002])
+        self.assertFalse(any(event['event'] == 'health' for event in events))
+
+    def test_exact_home_boundary_and_torso_alias_remain_rejected(self):
+        machine, events = self.machine({11002: dict(position=.02, cmd_pos=.02)})
+        with patch.object(runtime.time, 'time', return_value=100.3), self.assertRaisesRegex(
+                RuntimeError, r'lifter_pitch_3\(11002\)=0.020000 rad'):
+            machine.health(require_home=True)
+        self.assertEqual(events[0]['outside_home'][0]['id'], 11002)
+        machine.action.assert_not_called()
+
+    def test_fault_precedes_position_diagnostic(self):
+        machine, events = self.machine({1002: dict(position=-.43, cmd_pos=-.43, error_code=1)})
+        with patch.object(runtime.time, 'time', return_value=100.3), self.assertRaisesRegex(
+                ValueError, 'actuadores no habilitados'):
+            machine.health(require_home=True)
+        self.assertEqual(events, [])
+        machine.action.assert_not_called()
+
+    def test_home_requires_both_fresh_samples_and_nonhome_check_is_unchanged(self):
+        machine, events = self.machine()
+        machine.health_request.return_value['actuator'][1]['act_item'][1].update(
+            position=-.43, cmd_pos=-.43)
+        with patch.object(runtime.time, 'time', return_value=100.3), self.assertRaisesRegex(
+                RuntimeError, 'head_pitch'):
+            machine.health(require_home=True)
+        self.assertEqual(events[0]['stamp']['nanosec'], 260_000_000)
+        events.clear()
+        with patch.object(runtime.time, 'time', return_value=100.3):
+            machine.health(require_home=False)
+        self.assertEqual(events[0]['event'], 'health')
+        self.assertEqual([row['MEASURED_HOME'] for row in events[0]['posture']], ['1', '0'])
+        machine.action.assert_not_called()
+
+
 class SimulatedRuntime(runtime.Runtime):
     def __init__(self, directory, stop_after='verify_home'):
         self.events = []

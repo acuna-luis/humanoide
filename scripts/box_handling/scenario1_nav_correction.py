@@ -212,6 +212,11 @@ class Guard:
         self._best_distance = _errors(self.spec['reference'], self.spec['target'])[0]
         self._progress = None
         self._progress_ns = None
+        self._progress_source = None
+        self._pickup_odom_target = None
+        self._pickup_odom_progress_m = None
+        self._pickup_odom_distance_m = None
+        self._pickup_odom_progress_ns = None
         self._pickup_initial_distance_m = None
         self._pickup_recovery_peak_m = None
         self._pickup_recovery_ns = None
@@ -333,6 +338,19 @@ class Guard:
                     raise ValueError('Correction yaw excursion exceeded in ' + kind)
                 if self._yaw_path[kind] > math.radians(self._yaw_limits['path_deg']) + _EPS:
                     raise ValueError('Correction accumulated yaw budget exceeded in ' + kind)
+                if kind == 'odom' and self._pickup_odom_target is not None:
+                    # Compare within odom against the requested relative offset
+                    # anchored at dispatch. A fresh map estimate may lag wheel
+                    # odometry. Only new best-distance improvements count: travel,
+                    # reversing, oscillations and overshoot do not renew this timer.
+                    distance = _errors(sample, self._pickup_odom_target)[0]
+                    self._pickup_odom_distance_m = distance
+                    if (self._settle_started_ns is None and
+                            self._pickup_odom_progress_m - distance >= .002 - _EPS):
+                        self._pickup_odom_progress_m = distance
+                        self._pickup_odom_progress_ns = received_ns
+                        self._progress_ns = received_ns
+                        self._progress_source = 'odom_relative_goal'
                 if kind == 'map':
                     distance, yaw = _errors(sample, self.spec['target'])
                     if distance > self._best_distance + POLICY['max_worsening_m'] + _EPS:
@@ -359,6 +377,7 @@ class Guard:
                         self._alignment_started = True
                         self._progress = (min(self._progress[0], distance), yaw)
                         self._progress_ns = received_ns
+                        self._progress_source = 'map'
                     positional_progress = self._progress[0] - distance >= .002 - _EPS
                     final_progress = (distance <= self.distance_tolerance_m + _EPS and
                                       self._progress[1] - yaw >= math.radians(.2) - _EPS)
@@ -373,6 +392,7 @@ class Guard:
                                           yaw if positional_progress else min(self._progress[1], yaw))
                         self._heading_progress = heading if positional_progress else min(self._heading_progress, heading)
                         self._progress_ns = received_ns
+                        self._progress_source = 'map'
                         if recovery_progress:
                             self._pickup_recovery_ns = received_ns
             recent.append(sample)
@@ -405,8 +425,24 @@ class Guard:
         self._alignment_started = self._progress[0] <= self.distance_tolerance_m + _EPS
         self._best_distance = min(self._best_distance, self._progress[0])
         self._progress_ns = now_ns
+        self._progress_source = 'map'
         self._pickup_initial_distance_m = self._progress[0]
         self._pickup_recovery_peak_m = self._progress[0]
+        if (self.spec['point'] == 'box_pickup' and
+                self._frames['odom'] in (('odom', 'base_link'), ('odom', 'base_footprint'))):
+            # Two fresh stationary streams establish the same starting chassis
+            # posture. Express its map-goal offset in the local odometry axes;
+            # never subtract map and odom positions or publish this as a TF/goal.
+            mapped, odom = self._origins['map'], self._origins['odom']
+            angle = odom['yaw'] - mapped['yaw']
+            dx = self.spec['target']['point_x'] - mapped['x']
+            dy = self.spec['target']['point_y'] - mapped['y']
+            self._pickup_odom_target = dict(
+                point_x=odom['x'] + math.cos(angle)*dx - math.sin(angle)*dy,
+                point_y=odom['y'] + math.sin(angle)*dx + math.cos(angle)*dy,
+                point_yaw=_angle(odom['yaw'] + self.spec['target']['point_yaw'] - mapped['yaw']))
+            self._pickup_odom_progress_m = _errors(odom, self._pickup_odom_target)[0]
+            self._pickup_odom_distance_m = self._pickup_odom_progress_m
 
     def check(self, now_ns):
         now_ns = self._clock(now_ns)
@@ -483,7 +519,13 @@ class Guard:
                 'yaw_limits': dict(self._yaw_limits),
                 'progress_phase': 'final_alignment' if self._alignment_started else 'approach',
                 'progress_ns': self._progress_ns,
+                'progress_source': self._progress_source,
                 'progress_distance_m': self._progress[0] if self._progress else None,
+                'pickup_odometry': {'target': copy.deepcopy(self._pickup_odom_target),
+                                    'distance_m': self._pickup_odom_distance_m,
+                                    'progress_distance_m': self._pickup_odom_progress_m,
+                                    'progress_ns': self._pickup_odom_progress_ns,
+                                    'arrival_authorized': False},
                 'pickup_recovery': {'initial_distance_m': self._pickup_initial_distance_m,
                                     'peak_distance_m': self._pickup_recovery_peak_m,
                                     'used_ns': self._pickup_recovery_ns},

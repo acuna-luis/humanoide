@@ -18,6 +18,7 @@ from scripts.box_handling.scenario1_console import ConsoleReporter
 from scripts.box_handling.test_front_sps import report
 from scripts.box_handling.test_scenario1_perception import selection
 from scripts.box_handling.test_scenario1_runtime import PROFILE
+from scripts.box_handling.test_scenario1_resume_worker import odometry
 
 SUCCESS = dict(event='result', status=4, result=dict(state=dict(desc='SUCCEED', state=1101001),
                                                    dmsg='navigation_start SUCCEEDED'))
@@ -27,6 +28,13 @@ def posture(position=0., head=-.43):
     from scripts.lib.cruzr_home_posture_gate import BODY_ACTUATOR_ALIASES
     return dict(actuator=[dict(act_item=[dict(id=aliases[0], position=head if aliases[0] == 1002 else position)
                                         for _, aliases in BODY_ACTUATOR_ALIASES])]*2)
+
+
+def base_report(completed, x=1., y=2., yaw=0.):
+    rows=[odometry(completed-n,x=x,yaw=yaw) for n in (2,1)]
+    for row in rows: row['pose']['pose']['position']['y']=y
+    return dict(event='base_result',stationary=True,publishers=1,requested_ns=completed-3,
+                completed_ns=completed,samples=rows)
 
 
 class AlignmentPlanTests(unittest.TestCase):
@@ -183,6 +191,83 @@ class AlignmentPlanTests(unittest.TestCase):
         self.assertAlmostEqual(result[0]['yaw_error_deg'],.1)
 
 
+class OdomAssociationTests(unittest.TestCase):
+    def fixture(self):
+        return json.loads((Path(__file__).parent/'fixtures/box_alignment_association_20261002.json').read_text())
+
+    def observation(self):
+        first=selection(stamp=100_000_000_000,x=.60)
+        second=selection(stamp=100_100_000_000,x=.61)
+        return first,second,base_report(99_900_000_000),base_report(100_200_000_000)
+
+    def test_real_capture_pairs_replay_without_widening_consistency_or_xyz_gates(self):
+        f=self.fixture();original=copy.deepcopy(f)
+        pairs=[alignment.association_observation(*f['captures'][i:i+2],*f['base_reports'][i:i+2]) for i in (0,2)]
+        result=alignment.validate_association(*pairs)
+        self.assertAlmostEqual(result['translation_m'],.019289749389739964)
+        self.assertAlmostEqual(result['rotation_deg'],2.120403378595516)
+        self.assertEqual(result['max_translation_m'],.02)
+        self.assertEqual(result['max_rotation_deg'],3.)
+        with self.assertRaises(ValueError):
+            perception_previous=alignment.in_map(f['captures'][1],f['map_references'][0])
+            perception_current=alignment.in_map(f['captures'][3],f['map_references'][1])
+            runtime.perception.validate_pair(perception_previous,perception_current)
+        sps.validate_position(f['captures'][3]['selection']['selected_pose'])
+        self.assertEqual(f,original)
+
+    def test_pair_mean_is_comparison_only_and_quaternion_signs_are_equivalent(self):
+        first,second,before,after=self.observation()
+        second['selection']['selected_pose']['orientation']['w']=-1.
+        original=copy.deepcopy([first,second])
+        result=alignment.association_observation(first,second,before,after)
+        self.assertAlmostEqual(result['observation']['selection']['selected_pose']['position']['x'],1.605)
+        self.assertEqual(result['image_stamps_ns'],[first['stamp_ns'],second['stamp_ns']])
+        self.assertTrue(result['comparison_only'])
+        self.assertEqual([first,second],original)
+
+    def test_bad_odom_evidence_never_becomes_association(self):
+        changes=(lambda r:r.update(publishers=2), lambda r:r.update(stationary=False),
+                 lambda r:r['samples'].pop(),lambda r:r.update(completed_ns=1),
+                 lambda r:r['samples'][1].update(header=copy.deepcopy(r['samples'][0]['header'])),
+                 lambda r:r['samples'][1]['twist']['twist']['linear'].update(x=.003001),
+                 lambda r:r['samples'][1].update(child_frame_id='other'),
+                 lambda r:[s.update(child_frame_id='camera_frame') for s in r['samples']],
+                 lambda r:r['samples'][1]['pose']['pose']['position'].update(x=1.006))
+        for mutate in changes:
+            data=list(self.observation());mutate(data[3])
+            with self.subTest(mutate=mutate),self.assertRaises((ValueError,KeyError)):
+                alignment.association_observation(*data)
+
+    def test_odom_must_bracket_images_and_stay_stationary_in_same_frame(self):
+        for failure in ('bracket','frame','moving','stale'):
+            first,second,before,after=self.observation()
+            if failure=='bracket':first['stamp_ns']=99_899_999_999
+            if failure=='frame':
+                for row in after['samples']:row['header']['frame_id']='reset_odom'
+            if failure=='moving':
+                for row in after['samples']:row['pose']['pose']['position']['x']+=.006
+            if failure=='stale':after['completed_ns']+=500_000_001
+            with self.subTest(failure=failure),self.assertRaises(ValueError):
+                alignment.association_observation(first,second,before,after)
+
+    def test_changed_box_and_between_measurement_frame_reset_still_abort(self):
+        previous=alignment.association_observation(*self.observation())
+        for kind in ('translation','rotation','frame'):
+            current=copy.deepcopy(previous)
+            current['observation']['stamp_ns']+=1
+            if kind=='translation':current['observation']['selection']['selected_pose']['position']['x']+=.020001
+            if kind=='rotation':
+                current['observation']['selection']['selected_pose']['orientation'].update(z=math.sin(math.radians(3.001)/2),w=math.cos(math.radians(3.001)/2))
+            if kind=='frame':current['frames']['frame_id']='reset_odom'
+            with self.subTest(kind=kind),self.assertRaises(ValueError):
+                alignment.validate_association(previous,current)
+
+    def test_average_cannot_hide_inconsistent_pair_or_missing_association(self):
+        data=list(self.observation());data[1]['selection']['selected_pose']['position']['x']+=.02
+        with self.assertRaises(ValueError):alignment.association_observation(*data)
+        with self.assertRaises(ValueError):alignment.validate_association(None,None)
+
+
 class AlignmentRuntimeTests(unittest.TestCase):
     def machine(self, observations):
         directory = tempfile.TemporaryDirectory(); self.addCleanup(directory.cleanup)
@@ -200,7 +285,14 @@ class AlignmentRuntimeTests(unittest.TestCase):
         machine.action = Mock(return_value=copy.deepcopy(SUCCESS))
         machine.armed = True
         machine.live_monitor_enabled = True
-        machine.measure_box_for_pickup = Mock(side_effect=observations)
+        readings = iter(observations)
+        machine.box_association = None
+        def measure():
+            pending, reference = next(readings)
+            machine.box_association = dict(frames=dict(frame_id='test_odom',child_frame_id='base_link'),
+                observation=alignment.in_map(pending, reference),comparison_only=True)
+            return pending, reference
+        machine.measure_box_for_pickup = Mock(side_effect=measure)
         machine.pose_references = Mock(return_value=[dict(x=1.0209, y=2., yaw=0.),
                                                    dict(x=1.0209, y=2., yaw=0.)])
         return machine
@@ -266,6 +358,24 @@ class AlignmentRuntimeTests(unittest.TestCase):
         self.assertEqual(machine.action.call_count,3) # head, navigation, native grasp
         self.assertEqual(machine.checkpoint['completed'][-1],'grasp')
         self.assertEqual(json.loads((machine.session/'box-alignment-reference.json').read_text())['stamp_ns'],200)
+
+    def test_real_four_capture_replay_proceeds_with_latest_original_selection(self):
+        f=OdomAssociationTests().fixture()
+        observations=iter(zip([f['captures'][1],f['captures'][3]],f['map_references']))
+        associations=iter(alignment.association_observation(*f['captures'][i:i+2],*f['base_reports'][i:i+2]) for i in (0,2))
+        machine=self.machine([])
+        def measure():
+            machine.box_association=next(associations)
+            return next(observations)
+        machine.measure_box_for_pickup=Mock(side_effect=measure)
+        machine.pose_references.return_value=[f['map_references'][1]]*2
+        machine.stage(dict(stage='grasp'))
+        self.assertEqual(machine.action.call_count,3) # simulated head/nav/grasp
+        self.assertEqual(machine.measure_box_for_pickup.call_count,2)
+        reference=json.loads((machine.session/'box-alignment-reference.json').read_text())
+        self.assertEqual(reference,f['captures'][3])
+        self.assertAlmostEqual(reference['selection']['selected_pose']['position']['x'],.7435803965735293)
+        self.assertNotIn('comparison_only',reference)
 
     def test_native_terminal_residual_with_box_still_outside_uses_second_visual_goal(self):
         machine=self.machine([self.observation(x=.795),
@@ -346,7 +456,8 @@ class AlignmentRuntimeTests(unittest.TestCase):
             machine = self.machine([])
             machine.map_state = Mock(return_value=('utars_nav_map', 'FSM_WAITNAVIGATE'))
             machine.map_points = Mock()
-            machine.stationary_base = Mock()
+            machine.stationary_base = Mock(side_effect=[base_report(99_900_000_000),
+                                                       base_report(100_350_000_000)])
             first = self.observation(stamp=100_000_000_000)[0]
             second = self.observation(stamp=100_100_000_000)[0]
             observations = iter([first, second])
@@ -443,7 +554,7 @@ class AlignmentRuntimeTests(unittest.TestCase):
             machine.pose_references=Mock(side_effect=poses)
             def base(*args,**kwargs):
                 clock[0]+=latency_ns
-                return dict(event='base_result',stationary=True,publishers=1)
+                return base_report(clock[0])
             machine.health_request=Mock(side_effect=base)
             with self.subTest(latency_ns=latency_ns), patch.object(runtime.time,'time_ns',side_effect=lambda:clock[0]):
                 if latency_ns==50_000_000:

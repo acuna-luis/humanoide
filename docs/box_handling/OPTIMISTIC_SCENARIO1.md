@@ -1,5 +1,38 @@
 # Escenario 1 con supervisión continua
 
+**02-10-2026 — BOX-01-VISUAL-ALIGN-ODOM-PROGRESS.** Intento094521 pasa
+HOME/get1 y solicita ajusteX21,200mm; cancela a4,008s por falta de progreso.
+Mapa termina a27,095mm, pero odometría registra42,601mm de recorrido y25,800mm
+netos, con residual local4,600mm al desplazamiento solicitado. Discrepancia
+OBSERVADA, causa física/localización PENDIENTE. El guard de recogida ahora cuenta
+mejoras netas≥2mm hacia ese desplazamiento en odometría, desde la postura fresca
+de envío, sin cambiar objetivo ni llegada en mapa. Conserva watchdog4s y todos
+los límites; odometría no autoriza llegada, giro rápido ni agarre. 727 pruebas
+pertinentes pasan; instalado PC, nueva carga/ensayo PENDIENTES. Sin movimientos
+del agente. Tras cancelación sigue exigida recuperación/comprobación presencial.
+[Diagnóstico, alcance y reversión](BOX_AXIS_REPOSITION_20261002.md#revisión-de-progreso-odométrico-del-intento094521).
+
+**02-10-2026 — BOX-01-HOME-DIAGNOSTIC. OBSERVADO en el intento093621:**
+HOME inicial rechazado exclusivamente por head_pitch1002=−0,430761rad;
+brazos/torso≤0,000959rad, velocidad0 y consignas dentro del gate en dos muestras.
+Compatible con la cabeza de observación del intento anterior (INFERENCIA).
+Inicio sin etapas ni objetivos; el fallo de lease posterior pertenece al cierre.
+El error PC ahora identifica ejes/posiciones fuera de HOME y conserva el bloqueo
+20D original: no envía recuperación ni HOME automático. Estado físico actual y
+recuperación presencial PENDIENTES.
+VERIFICADO offline:719 pruebas pertinentes y5 del clasificador pasan; sintaxis
+shell, plan local y git diff --check correctos. Carga/ensayo del mensaje PENDIENTES.
+[Evidencia, verificación y continuación](BOX_AXIS_REPOSITION_20261002.md#diagnóstico-home-del-intento093621).
+
+**02-10-2026 — asociación tras mover el chasis:** dos capturas coherentes por
+postura; su media geométrica se compara usando odometría local, mismo frame,
+en vez de comparar sólo la última captura transformada al mapa. Mantiene2cm/3°;
+promedio sólo diagnóstico. Última pose original sigue usada por el agarre con
+XYZ/TF/frescura originales. Intento092429 llega6,8mm y observaX74,358cm; replay
+asociación19,290mm/2,120° pasa. No demuestra agarre ni calibración de odometría.
+715 pruebas pertinentes correctas; nueva carga/ensayo PENDIENTES.
+[Diagnóstico y reversión](BOX_AXIS_REPOSITION_20261002.md#revisión-de-asociación-del-intento092429).
+
 **02-10-2026 — precisión terminal del ajuste visual:** intento091156 completa
 navegación y reposo, pero poses finales9,630mm/0,452° superan la exigencia5mm PC.
 Llegada terminal ahora12mm/2°, con dos poses nuevas estables; después exige

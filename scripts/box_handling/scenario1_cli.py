@@ -53,6 +53,7 @@ MODULES = [('cruzr_home_posture_gate', ROOT/'scripts/lib/cruzr_home_posture_gate
            ('probe_front_box', HERE/'probe_front_box.py'),
            ('front_sps_contract', HERE/'front_sps_contract.py'),
            ('scenario1_perception', HERE/'scenario1_perception.py'),
+           ('scenario1_resume_worker', HERE/'scenario1_resume_worker.py'),
            ('scenario1_box_alignment', HERE/'scenario1_box_alignment.py'),
            ('scenario1_runtime', HERE/'scenario1_runtime.py')]
 BOOTSTRAP = '''import json,sys,types

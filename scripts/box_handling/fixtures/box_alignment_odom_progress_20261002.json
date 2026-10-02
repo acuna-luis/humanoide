@@ -1,0 +1,2111 @@
+{
+  "incident": "20261002T094521Z_OPTIMISTIC_SCENARIO1_327808",
+  "source_sha256": "b4111c10d765216a75ada3fb1d74bb7618f60de23fd8f49f4ca298a03759b178",
+  "spec": {
+    "version": 1,
+    "point": "box_pickup",
+    "target": {
+      "point_x": 1.6790540688351834,
+      "point_y": 0.296950426565379,
+      "point_yaw": 1.6054344365933422
+    },
+    "reference": {
+      "x": 1.6797882579345287,
+      "y": 0.2757629121841553,
+      "yaw": 1.6054344365933422,
+      "stamp_ns": 1790934327349996800
+    },
+    "attempt": 1
+  },
+  "snapshots": [
+    {
+      "time_ns": 1790934327410846700,
+      "phase": "preparing",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": false,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": null,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 0,
+          "odom": 0
+        },
+        "frames": {},
+        "last_stamp_ns": {
+          "map": null,
+          "odom": null
+        },
+        "last_pose": {
+          "map": null,
+          "odom": null
+        },
+        "path_m": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "max_excursion_m": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "yaw_path_deg": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": null,
+        "progress_distance_m": null,
+        "pickup_recovery": {
+          "initial_distance_m": null,
+          "peak_distance_m": null,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.0,
+        "max_angular_speed_rad_s": 0.0,
+        "distance_m": 0.02120023111402704,
+        "yaw_error_deg": 0.0,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934327553289166,
+      "phase": "armed",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 2,
+          "odom": 10
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934327540140288,
+          "odom": 1790934327511696259
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6797882579345287,
+            "y": 0.2757629121841553,
+            "yaw": 1.6054344365933422,
+            "stamp_ns": 1790934327540140288,
+            "received_ns": 1790934327542995466
+          },
+          "odom": {
+            "x": 0.25944717997146294,
+            "y": 0.7662809887184364,
+            "yaw": 2.1380780460331597,
+            "stamp_ns": 1790934327511696259,
+            "received_ns": 1790934327532453471
+          }
+        },
+        "path_m": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "max_excursion_m": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "yaw_path_deg": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.02120023111402704,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.0,
+        "max_angular_speed_rad_s": 0.0,
+        "distance_m": 0.02120023111402704,
+        "yaw_error_deg": 0.0,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934327670516934,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 3,
+          "odom": 16
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934327639776512,
+          "odom": 1790934327596701694
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6797882579345287,
+            "y": 0.2757629121841553,
+            "yaw": 1.6054344365933422,
+            "stamp_ns": 1790934327639776512,
+            "received_ns": 1790934327649691092
+          },
+          "odom": {
+            "x": 0.25944717997146294,
+            "y": 0.7662809887184364,
+            "yaw": 2.1380780460331597,
+            "stamp_ns": 1790934327596701694,
+            "received_ns": 1790934327639264596
+          }
+        },
+        "path_m": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "max_excursion_m": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "yaw_path_deg": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.02120023111402704,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.0,
+        "max_angular_speed_rad_s": 0.0,
+        "distance_m": 0.02120023111402704,
+        "yaw_error_deg": 0.0,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934327925777301,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 5,
+          "odom": 36
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934327836471808,
+          "odom": 1790934327871705818
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6797882579345287,
+            "y": 0.2757629121841553,
+            "yaw": 1.6054344365933422,
+            "stamp_ns": 1790934327836471808,
+            "received_ns": 1790934327841776972
+          },
+          "odom": {
+            "x": 0.25944717997146294,
+            "y": 0.7662809887184364,
+            "yaw": 2.1380780460331597,
+            "stamp_ns": 1790934327871705818,
+            "received_ns": 1790934327915610184
+          }
+        },
+        "path_m": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "max_excursion_m": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "yaw_path_deg": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.02120023111402704,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.0,
+        "max_angular_speed_rad_s": 0.0,
+        "distance_m": 0.02120023111402704,
+        "yaw_error_deg": 0.0,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934328182631927,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 8,
+          "odom": 54
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934328119964160,
+          "odom": 1790934328124701498
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6797882579345287,
+            "y": 0.2757629121841553,
+            "yaw": 1.6054344365933422,
+            "stamp_ns": 1790934328119964160,
+            "received_ns": 1790934328130017222
+          },
+          "odom": {
+            "x": 0.25944717997146294,
+            "y": 0.7662809887184364,
+            "yaw": 2.1380780460331597,
+            "stamp_ns": 1790934328124701498,
+            "received_ns": 1790934328172440113
+          }
+        },
+        "path_m": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "max_excursion_m": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "yaw_path_deg": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.02120023111402704,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.0,
+        "max_angular_speed_rad_s": 0.0,
+        "distance_m": 0.02120023111402704,
+        "yaw_error_deg": 0.0,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934328441602563,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 11,
+          "odom": 73
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934328419791360,
+          "odom": 1790934328366713388
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6797882579345287,
+            "y": 0.2757629121841553,
+            "yaw": 1.6054344365933422,
+            "stamp_ns": 1790934328419791360,
+            "received_ns": 1790934328431426146
+          },
+          "odom": {
+            "x": 0.25944717997146294,
+            "y": 0.7662809887184364,
+            "yaw": 2.1380780460331597,
+            "stamp_ns": 1790934328366713388,
+            "received_ns": 1790934328420978015
+          }
+        },
+        "path_m": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "max_excursion_m": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "yaw_path_deg": {
+          "map": 0.0,
+          "odom": 0.0
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.02120023111402704,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.0,
+        "max_angular_speed_rad_s": 0.0,
+        "distance_m": 0.02120023111402704,
+        "yaw_error_deg": 0.0,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934328697593535,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 13,
+          "odom": 92
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934328609942016,
+          "odom": 1790934328634714635
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6797882579345287,
+            "y": 0.2757629121841553,
+            "yaw": 1.6054344365933422,
+            "stamp_ns": 1790934328609942016,
+            "received_ns": 1790934328613258520
+          },
+          "odom": {
+            "x": 0.2602359746582194,
+            "y": 0.765039709933096,
+            "yaw": 2.13650855643074,
+            "stamp_ns": 1790934328634714635,
+            "received_ns": 1790934328687411396
+          }
+        },
+        "path_m": {
+          "map": 0.0,
+          "odom": 0.0014707040755667262
+        },
+        "max_excursion_m": {
+          "map": 0.0,
+          "odom": 0.0014707039405643173
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.0,
+          "odom": 0.08992513020832418
+        },
+        "yaw_path_deg": {
+          "map": 0.0,
+          "odom": 0.08992513020832418
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.02120023111402704,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.010550515328305723,
+        "max_angular_speed_rad_s": 0.011344640137963144,
+        "distance_m": 0.02120023111402704,
+        "yaw_error_deg": 0.0,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934328950763480,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 16,
+          "odom": 111
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934328909997312,
+          "odom": 1790934328888709491
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6799374338592197,
+            "y": 0.2697506664938637,
+            "yaw": 1.6032927353030806,
+            "stamp_ns": 1790934328909997312,
+            "received_ns": 1790934328919583652
+          },
+          "odom": {
+            "x": 0.26380383593190176,
+            "y": 0.7594212735163929,
+            "yaw": 2.136785525184111,
+            "stamp_ns": 1790934328888709491,
+            "received_ns": 1790934328940581192
+          }
+        },
+        "path_m": {
+          "map": 0.006014228799117999,
+          "odom": 0.008126263211816304
+        },
+        "max_excursion_m": {
+          "map": 0.006014096083114819,
+          "odom": 0.008126262597945895
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.12271044490971189,
+          "odom": 0.11637369791646922
+        },
+        "yaw_path_deg": {
+          "map": 0.12271044490971189,
+          "odom": 0.19042968750033384
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.027214100788262127,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.02620611871869486,
+        "max_angular_speed_rad_s": 0.011344640137963144,
+        "distance_m": 0.027214100788262127,
+        "yaw_error_deg": 0.12271044490971189,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934329206386924,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 18,
+          "odom": 130
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934329109819648,
+          "odom": 1790934329152702373
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6799644544593535,
+            "y": 0.26888452588488904,
+            "yaw": 1.6034643651849738,
+            "stamp_ns": 1790934329109819648,
+            "received_ns": 1790934329112224777
+          },
+          "odom": {
+            "x": 0.2639108009627008,
+            "y": 0.7592529707493965,
+            "yaw": 2.1369701710196924,
+            "stamp_ns": 1790934329152702373,
+            "received_ns": 1790934329196200581
+          }
+        },
+        "path_m": {
+          "map": 0.008445669167040409,
+          "odom": 0.008475248443653932
+        },
+        "max_excursion_m": {
+          "map": 0.007663058346002635,
+          "odom": 0.008400461647262924
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.15937629505728793,
+          "odom": 0.11637369791646922
+        },
+        "yaw_path_deg": {
+          "map": 0.20587581307567493,
+          "odom": 0.27506510416595015
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.028863101193221188,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.02620611871869486,
+        "max_angular_speed_rad_s": 0.011344640137963144,
+        "distance_m": 0.028080662082504808,
+        "yaw_error_deg": 0.11287677703890094,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934329463537375,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 21,
+          "odom": 149
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934329410078464,
+          "odom": 1790934329406699882
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.679978099860945,
+            "y": 0.26891353362215,
+            "yaw": 1.6042161777365174,
+            "stamp_ns": 1790934329410078464,
+            "received_ns": 1790934329421038366
+          },
+          "odom": {
+            "x": 0.26278740204789763,
+            "y": 0.7610199806874585,
+            "yaw": 2.1369701710196907,
+            "stamp_ns": 1790934329406699882,
+            "received_ns": 1790934329453337314
+          }
+        },
+        "path_m": {
+          "map": 0.008649578860507602,
+          "odom": 0.010569132218318369
+        },
+        "max_excursion_m": {
+          "map": 0.007663058346002635,
+          "odom": 0.008400461647262924
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.15937629505728793,
+          "odom": 0.11637369791646922
+        },
+        "yaw_path_deg": {
+          "map": 0.2659219962182474,
+          "odom": 0.3173828124999797
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.028863101193221188,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.02620611871869486,
+        "max_angular_speed_rad_s": 0.011344640137963144,
+        "distance_m": 0.028052115771304238,
+        "yaw_error_deg": 0.06980109085049377,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934329717527656,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 23,
+          "odom": 168
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934329610005504,
+          "odom": 1790934329657709148
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.679996179113287,
+            "y": 0.26892134242486687,
+            "yaw": 1.603438284645095,
+            "stamp_ns": 1790934329610005504,
+            "received_ns": 1790934329612421451
+          },
+          "odom": {
+            "x": 0.26075681871535217,
+            "y": 0.7642188461989549,
+            "yaw": 2.1366008793485314,
+            "stamp_ns": 1790934329657709148,
+            "received_ns": 1790934329707336240
+          }
+        },
+        "path_m": {
+          "map": 0.008682362630421643,
+          "odom": 0.014358064760866429
+        },
+        "max_excursion_m": {
+          "map": 0.007663058346002635,
+          "odom": 0.008400461647262924
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.15937629505728793,
+          "odom": 0.11637369791646922
+        },
+        "yaw_path_deg": {
+          "map": 0.3330514915961702,
+          "odom": 0.4125976562500957
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.028863101193221188,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.02620611871869486,
+        "max_angular_speed_rad_s": 0.011344640137963144,
+        "distance_m": 0.028044912721062576,
+        "yaw_error_deg": 0.11437108190138155,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934329970666393,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 26,
+          "odom": 186
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934329899775232,
+          "odom": 1790934329903696166
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6801175257355339,
+            "y": 0.26987568972515097,
+            "yaw": 1.6029238802275123,
+            "stamp_ns": 1790934329899775232,
+            "received_ns": 1790934329908021311
+          },
+          "odom": {
+            "x": 0.2587533059939238,
+            "y": 0.7673758450352166,
+            "yaw": 2.1366008793485296,
+            "stamp_ns": 1790934329903696166,
+            "received_ns": 1790934329949875175
+          }
+        },
+        "path_m": {
+          "map": 0.00964766387817621,
+          "odom": 0.018097142928016535
+        },
+        "max_excursion_m": {
+          "map": 0.007663058346002635,
+          "odom": 0.008400461647262924
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.16571888903942467,
+          "odom": 0.1216634114581593
+        },
+        "yaw_path_deg": {
+          "map": 0.4343979649465315,
+          "odom": 0.4866536458341639
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.028863101193221188,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.02620611871869486,
+        "max_angular_speed_rad_s": 0.011344640137963144,
+        "distance_m": 0.027095614323105956,
+        "yaw_error_deg": 0.1438442839917531,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934330228471852,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 29,
+          "odom": 205
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934330190169856,
+          "odom": 1790934330175724119
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6801382637976867,
+            "y": 0.2698837814466792,
+            "yaw": 1.6048175057792446,
+            "stamp_ns": 1790934330190169856,
+            "received_ns": 1790934330197202026
+          },
+          "odom": {
+            "x": 0.2565047609467195,
+            "y": 0.7709087526323287,
+            "yaw": 2.1384473377043287,
+            "stamp_ns": 1790934330175724119,
+            "received_ns": 1790934330218303343
+          }
+        },
+        "path_m": {
+          "map": 0.009680552920684007,
+          "odom": 0.02228491047429754
+        },
+        "max_excursion_m": {
+          "map": 0.007663058346002635,
+          "odom": 0.008400461647262924
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.16571888903942467,
+          "odom": 0.1216634114581593
+        },
+        "yaw_path_deg": {
+          "map": 0.5428947170389263,
+          "odom": 0.5924479166683216
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.028863101193221188,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.02620611871869486,
+        "max_angular_speed_rad_s": 0.011344640137963144,
+        "distance_m": 0.027088350940918403,
+        "yaw_error_deg": 0.0353475318993583,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934330479498750,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 31,
+          "odom": 223
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934330380110592,
+          "odom": 1790934330419698482
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6801188883121385,
+            "y": 0.2698810193597248,
+            "yaw": 1.6059935430529555,
+            "stamp_ns": 1790934330380110592,
+            "received_ns": 1790934330383905692
+          },
+          "odom": {
+            "x": 0.25454566524044525,
+            "y": 0.7739758276312367,
+            "yaw": 2.1402937960601136,
+            "stamp_ns": 1790934330419698482,
+            "received_ns": 1790934330469286473
+          }
+        },
+        "path_m": {
+          "map": 0.00971222989814479,
+          "odom": 0.025924279888329745
+        },
+        "max_excursion_m": {
+          "map": 0.007663058346002635,
+          "odom": 0.009123343277128694
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.16571888903942467,
+          "odom": 0.12695312500046005
+        },
+        "yaw_path_deg": {
+          "map": 0.6288596926296894,
+          "odom": 0.7088216145852488
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.028863101193221188,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.02620611871869486,
+        "max_angular_speed_rad_s": 0.011344640137963144,
+        "distance_m": 0.02709034231943234,
+        "yaw_error_deg": 0.032034440434345036,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934330733353013,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 34,
+          "odom": 242
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934330669987072,
+          "odom": 1790934330680717697
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.68011522840009,
+            "y": 0.2698814351888127,
+            "yaw": 1.607192126943556,
+            "stamp_ns": 1790934330669987072,
+            "received_ns": 1790934330680916345
+          },
+          "odom": {
+            "x": 0.25246067492809365,
+            "y": 0.7772286881170566,
+            "yaw": 2.141124702320224,
+            "stamp_ns": 1790934330680717697,
+            "received_ns": 1790934330723165311
+          }
+        },
+        "path_m": {
+          "map": 0.009725720206988047,
+          "odom": 0.029787993995146346
+        },
+        "max_excursion_m": {
+          "map": 0.007663058346002635,
+          "odom": 0.012987046424941003
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.16571888903942467,
+          "odom": 0.1745605468757725
+        },
+        "yaw_path_deg": {
+          "map": 0.6975334909534721,
+          "odom": 0.767008463544145
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.028863101193221188,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.02620611871869486,
+        "max_angular_speed_rad_s": 0.011344640137963144,
+        "distance_m": 0.027089783198962936,
+        "yaw_error_deg": 0.1007082387581276,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934330986761013,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 37,
+          "odom": 260
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934330969797376,
+          "odom": 1790934330904701581
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6801102068525,
+            "y": 0.26987812534063094,
+            "yaw": 1.6081039547322824,
+            "stamp_ns": 1790934330969797376,
+            "received_ns": 1790934330976509073
+          },
+          "odom": {
+            "x": 0.2505075627247909,
+            "y": 0.7802699943772883,
+            "yaw": 2.142140254415904,
+            "stamp_ns": 1790934330904701581,
+            "received_ns": 1790934330955490063
+          }
+        },
+        "path_m": {
+          "map": 0.00973336786820314,
+          "odom": 0.03340243622415423
+        },
+        "max_excursion_m": {
+          "map": 0.007663058346002635,
+          "odom": 0.01660147691744278
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.16571888903942467,
+          "odom": 0.23803710937579897
+        },
+        "yaw_path_deg": {
+          "map": 0.754734473481563,
+          "odom": 0.8357747395875917
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.028863101193221188,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.02620611871869486,
+        "max_angular_speed_rad_s": 0.011344640137963144,
+        "distance_m": 0.02709289429195629,
+        "yaw_error_deg": 0.15295212269489328,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934331243280654,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 39,
+          "odom": 280
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934331159937792,
+          "odom": 1790934331190714156
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6801141470888143,
+            "y": 0.269879648369691,
+            "yaw": 1.6086006689830945,
+            "stamp_ns": 1790934331159937792,
+            "received_ns": 1790934331169464561
+          },
+          "odom": {
+            "x": 0.24810736295042496,
+            "y": 0.784001798133457,
+            "yaw": 2.1425095460870685,
+            "stamp_ns": 1790934331190714156,
+            "received_ns": 1790934331233088608
+          }
+        },
+        "path_m": {
+          "map": 0.009739817938001417,
+          "odom": 0.03783947564958611
+        },
+        "max_excursion_m": {
+          "map": 0.007663058346002635,
+          "odom": 0.02103850128678625
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.18141175289042938,
+          "odom": 0.2591959635427628
+        },
+        "yaw_path_deg": {
+          "map": 0.7968260093076595,
+          "odom": 0.8675130208388517
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.028863101193221188,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.02620611871869486,
+        "max_angular_speed_rad_s": 0.011344640137963144,
+        "distance_m": 0.027091526314033273,
+        "yaw_error_deg": 0.18141175289042938,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934331497375401,
+      "phase": "progress",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": null,
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 42,
+          "odom": 298
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934331450178816,
+          "odom": 1790934331435697108
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6801134154778914,
+            "y": 0.2698764672083424,
+            "yaw": 1.6087231727007496,
+            "stamp_ns": 1790934331450178816,
+            "received_ns": 1790934331455445521
+          },
+          "odom": {
+            "x": 0.24609628258437585,
+            "y": 0.7871243727910077,
+            "yaw": 2.143155806511598,
+            "stamp_ns": 1790934331435697108,
+            "received_ns": 1790934331487195358
+          }
+        },
+        "path_m": {
+          "map": 0.009757184131706814,
+          "odom": 0.04155362662886756
+        },
+        "max_excursion_m": {
+          "map": 0.007663058346002635,
+          "odom": 0.024752638660095323
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.19828495729438705,
+          "odom": 0.29622395833454246
+        },
+        "yaw_path_deg": {
+          "map": 0.8533557971865731,
+          "odom": 0.9362792968816879
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.028863101193221188,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.02620611871869486,
+        "max_angular_speed_rad_s": 0.011344640137963144,
+        "distance_m": 0.02709467642500804,
+        "yaw_error_deg": 0.18843069888672878,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    },
+    {
+      "time_ns": 1790934331561222893,
+      "phase": "failed",
+      "snapshot": {
+        "version": 1,
+        "point": "box_pickup",
+        "attempt": 1,
+        "armed": true,
+        "failure": "Correction made no significant progress",
+        "velocity_violation": null,
+        "requested_ns": 1790934327391536387,
+        "armed_ns": 1790934327553229914,
+        "settle_started_ns": null,
+        "settled_ns": null,
+        "settled": false,
+        "samples": {
+          "map": 42,
+          "odom": 304
+        },
+        "frames": {
+          "odom": {
+            "frame_id": "odom",
+            "child_frame_id": "base_footprint"
+          },
+          "map": {
+            "frame_id": "map",
+            "child_frame_id": null
+          }
+        },
+        "last_stamp_ns": {
+          "map": 1790934331450178816,
+          "odom": 1790934331498719015
+        },
+        "last_pose": {
+          "map": {
+            "x": 1.6801134154778914,
+            "y": 0.2698764672083424,
+            "yaw": 1.6087231727007496,
+            "stamp_ns": 1790934331450178816,
+            "received_ns": 1790934331455445521
+          },
+          "odom": {
+            "x": 0.2455291578842994,
+            "y": 0.788004405112109,
+            "yaw": 2.1433404523471733,
+            "stamp_ns": 1790934331498719015,
+            "received_ns": 1790934331550897341
+          }
+        },
+        "path_m": {
+          "map": 0.009757184131706814,
+          "odom": 0.042600568516048425
+        },
+        "max_excursion_m": {
+          "map": 0.007663058346002635,
+          "odom": 0.025799576714195426
+        },
+        "max_yaw_excursion_deg": {
+          "map": 0.19828495729438705,
+          "odom": 0.30151367187618167
+        },
+        "yaw_path_deg": {
+          "map": 0.8533557971865731,
+          "odom": 0.9468587239654243
+        },
+        "yaw_limits": {
+          "excursion_deg": 15.000000000000178,
+          "path_deg": 40.000000000000355
+        },
+        "progress_phase": "approach",
+        "progress_ns": 1790934327553229914,
+        "progress_distance_m": 0.02120023111402704,
+        "pickup_recovery": {
+          "initial_distance_m": 0.02120023111402704,
+          "peak_distance_m": 0.028863101193221188,
+          "used_ns": null
+        },
+        "max_linear_speed_m_s": 0.02620611871869486,
+        "max_angular_speed_rad_s": 0.011344640137963144,
+        "distance_m": 0.02709467642500804,
+        "yaw_error_deg": 0.18843069888672878,
+        "distance_tolerance_m": 0.005,
+        "policy": {
+          "max_corrections": 2,
+          "max_initial_distance_m": 0.05,
+          "max_initial_yaw_deg": 5.0,
+          "action_timeout_s": 30.0,
+          "total_budget_s": 70.0,
+          "max_excursion_m": 0.08,
+          "max_path_m": 0.12,
+          "max_worsening_m": 0.015,
+          "max_linear_speed_m_s": 0.1,
+          "max_approach_angular_speed_rad_s": 0.6,
+          "max_angular_speed_rad_s": 1.2,
+          "alignment_linear_speed_m_s": 0.02,
+          "max_yaw_excursion_deg": 195.0,
+          "yaw_excursion_margin_deg": 15.0,
+          "max_yaw_path_deg": 400.0,
+          "source_age_s": 0.5,
+          "receive_age_s": 0.5,
+          "no_progress_s": 4.0,
+          "settle_timeout_s": 1.5
+        },
+        "arrival_verified": false,
+        "publishers": {
+          "map": 2,
+          "odom": 1
+        },
+        "telemetry_failure": null
+      }
+    }
+  ],
+  "scope": "sparse archived monitor snapshots; not a complete telemetry replay or physical qualification"
+}

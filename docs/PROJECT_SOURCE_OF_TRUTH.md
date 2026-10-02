@@ -1,5 +1,44 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**02-10-2026 — BOX-01-VISUAL-ALIGN-ODOM-PROGRESS.** Intento094521 pasa
+HOME/get1 y solicita ajusteX21,200mm; cancela a4,008s por falta de progreso.
+Mapa termina a27,095mm, pero odometría registra42,601mm de recorrido y25,800mm
+netos, con residual local4,600mm al desplazamiento solicitado. Discrepancia
+OBSERVADA, causa física/localización PENDIENTE. El guard de recogida ahora cuenta
+mejoras netas≥2mm hacia ese desplazamiento en odometría, desde la postura fresca
+de envío, sin cambiar objetivo ni llegada en mapa. Conserva watchdog4s y todos
+los límites; odometría no autoriza llegada, giro rápido ni agarre. 727 pruebas
+pertinentes pasan; instalado PC, nueva carga/ensayo PENDIENTES. Sin movimientos
+del agente. Tras cancelación sigue exigida recuperación/comprobación presencial.
+[Diagnóstico, alcance y reversión](box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-de-progreso-odométrico-del-intento094521).
+
+**02-10-2026 — BOX-01-HOME-DIAGNOSTIC. OBSERVADO en el intento093621:**
+HOME inicial rechazado exclusivamente por head_pitch1002=−0,430761rad;
+brazos/torso≤0,000959rad, velocidad0 y consignas dentro del gate en dos muestras.
+Compatible con la cabeza de observación del intento anterior (INFERENCIA).
+Inicio sin etapas ni objetivos; el fallo de lease posterior pertenece al cierre.
+El error PC ahora identifica ejes/posiciones fuera de HOME y conserva el bloqueo
+20D original: no envía recuperación ni HOME automático. Estado físico actual y
+recuperación presencial PENDIENTES.
+VERIFICADO offline:719 pruebas pertinentes y5 del clasificador pasan; sintaxis
+shell, plan local y git diff --check correctos. Carga/ensayo del mensaje PENDIENTES.
+[Evidencia, verificación y continuación](box_handling/BOX_AXIS_REPOSITION_20261002.md#diagnóstico-home-del-intento093621).
+
+**02-10-2026 — BOX-01-VISUAL-ALIGN-ASSOCIATION: comparación local de parejas.**
+Intento092429 completa ajusteX23,953mm/llegada6,8mm y vuelve a detectar: caja
+X0,743580m, ambas capturas dentro del gate y coherentes. Falla asociación anterior
+porque últimas poses transformadas al mapa difieren29,626mm; odometría y mapa
+registran desplazamientos distintos. Asociación nueva usa media geométrica de
+cada pareja coherente y odometría local en reposo antes/después, mismo frame.
+Replay exacto:19,290mm/2,120°, dentro del mismo límite20mm/3°; sólo promedio de
+comparación. Última captura original sigue siendo referencia para SPS/agarre.
+No cambia objetivos mapa, llegada12mm/2°, XYZ, guard, presupuestos o poses físicas.
+715 pruebas pertinentes pasan; revisión instalada PC, carga/ensayo PENDIENTES.
+Ensayo histórico no envió agarre y no prueba estado actual ni identidad física;
+discrepancia odom/mapa/percepción sigue sin calibración demostrada. Sin conexión,
+movimientos ni cambios remotos del agente.
+[Fuentes, evidencia y reversión](box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-de-asociación-del-intento092429).
+
 **02-10-2026 — BOX-01-VISUAL-ALIGN-ARRIVAL: precisión terminal y nueva visión.**
 Intento091156 supera frescura/progreso: objetivoX+22,650mm, navegaciónSUCCEEDED
 y reposo confirmado. Las dos poses posteriores quedan9,630mm/0,452°; la llegada

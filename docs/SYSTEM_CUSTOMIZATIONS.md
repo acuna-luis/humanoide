@@ -4053,6 +4053,83 @@ trabajo posterior; no rollback del paquete SPS ni cambios de checkpoint.
 
 ## BOX-01-VISUAL-ALIGN — 02-10-2026, Europe/Madrid
 
+**02-10-2026 — BOX-01-VISUAL-ALIGN-ODOM-PROGRESS.** Intento094521 pasa
+HOME/get1 y solicita ajusteX21,200mm; cancela a4,008s por falta de progreso.
+Mapa termina a27,095mm, pero odometría registra42,601mm de recorrido y25,800mm
+netos, con residual local4,600mm al desplazamiento solicitado. Discrepancia
+OBSERVADA, causa física/localización PENDIENTE. El guard de recogida ahora cuenta
+mejoras netas≥2mm hacia ese desplazamiento en odometría, desde la postura fresca
+de envío, sin cambiar objetivo ni llegada en mapa. Conserva watchdog4s y todos
+los límites; odometría no autoriza llegada, giro rápido ni agarre. 727 pruebas
+pertinentes pasan; instalado PC, nueva carga/ensayo PENDIENTES. Sin movimientos
+del agente. Tras cancelación sigue exigida recuperación/comprobación presencial.
+Destino exacto PC: scripts/box_handling/scenario1_nav_correction.py,
+test_scenario1_nav_correction.py y fixture box_alignment_odom_progress_20261002.json.
+CLI vigente transmite guard en memoria al cliente nativo Motion redescubierto;
+no instala/reinicia servicios ni cambia SDK/vendor/SPS. Reutiliza dos muestras
+nuevas por stream y postura estacionaria previas al envío; sólo box_pickup y
+odom→base_link/base_footprint. El objetivo local es diagnóstico del desplazamiento
+relativo; no se publica TF ni objetivo. Sólo mejoras de distancia≥2mm al mejor
+error anterior renuevan progreso; no cuentan recorrido, retroceso, sobrepaso ni
+oscilación repetida. No se renueva durante reposo terminal. get1 sin cambios.
+Mapa fresco, presupuestos de ambos frames, empeoramiento, velocidades, salud,
+lease, llegada y percepción siguen obligatorios. Logs añaden pickup_odometry y
+progress_source; el progreso inicial en mapa mantiene su concesión única previa.
+Fuente reproducible, hashes y verificación/activación/reversión: expediente
+siguiente. Backup exacto before/ y after/ (incluye árbol con cambios sin commit),
+manifiestos y resultados: ../Humanoide-vla-evidence/20261002_BOX_ALIGNMENT_ODOM_PROGRESS/.
+Reversión selectiva guard/test/notas desde before/, retirar sólo fixture nueva,
+preservar revisiones previas y cambios posteriores; sin rollback de checkpoints.
+[Receta y limitaciones](box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-de-progreso-odométrico-del-intento094521).
+
+**02-10-2026 — BOX-01-HOME-DIAGNOSTIC. OBSERVADO en el intento093621:**
+HOME inicial rechazado exclusivamente por head_pitch1002=−0,430761rad;
+brazos/torso≤0,000959rad, velocidad0 y consignas dentro del gate en dos muestras.
+Compatible con la cabeza de observación del intento anterior (INFERENCIA).
+Inicio sin etapas ni objetivos; el fallo de lease posterior pertenece al cierre.
+El error PC ahora identifica ejes/posiciones fuera de HOME y conserva el bloqueo
+20D original: no envía recuperación ni HOME automático. Estado físico actual y
+recuperación presencial PENDIENTES.
+Destino exacto: PC, scripts/box_handling/scenario1_runtime.py y
+scripts/box_handling/test_scenario1_runtime.py; cargados en memoria por el CLI
+existente en la próxima sesión autorizada. Instalado PC; carga remota y prueba
+física del nuevo mensaje PENDIENTES. HOME clasificador/20D/tolerancia0,02rad,
+salud, lease, watchdog y tarea HOME sin cambios. Depende del clasificador original,
+cuya tabla de aliases reutiliza después de validar por completo la muestra.
+Verificación:719 pruebas pertinentes y5 del clasificador pasan; plan/sintaxis/diff
+correctos. No se ha conectado ni movido el robot en esta intervención.
+Registro técnico home_not_measured incluye sello, ejes y clasificación rechazada;
+mensaje conserva HOME_NOT_MEASURED y exige recuperación presencial.
+Fuentes reproducibles/versiones SHA256 y receta: enlace siguiente. Respaldos
+exactos del árbol local previo (incluyendo modificaciones sin commit) y final:
+../Humanoide-vla-evidence/20261002_BOX_HOME_DIAGNOSTIC/.
+Reversión selectiva desde before/ de runtime/test/notas; conservar cambios
+anteriores de asociación y posteriores del usuario. Sin remoto, SDK, commit ni push.
+[Diagnóstico, aplicación y verificación](box_handling/BOX_AXIS_REPOSITION_20261002.md#diagnóstico-home-del-intento093621).
+
+**Revisión BOX-01-VISUAL-ALIGN-ASSOCIATION,02-10-2026:** fuentes PC en
+scripts/box_handling/scenario1_box_alignment.py, scenario1_runtime.py,
+scenario1_cli.py y test/fixture asociados. La
+asociación entre posturas compara medias de dos detecciones coherentes en
+odometría local; mapa sigue guiando/validando navegación. Reutiliza informes
+de reposo existentes antes/después y parser original scenario1_resume_worker,
+añadido al payload supervisor antes del planificador. No agrega consultas ni
+publicadores. Exige dos muestras nuevas, fuentes frescas, reposo/estabilidad,
+odom→base_link/base_footprint, mismos frames y tiempos que encierran las imágenes.
+Conserva2cm/3°, gateXYZ y última pose original; promedio nunca es autorización
+ni pose física. El ensayo092429 completó llegada6,8mm y visiónX0,743580m:
+comparación previa en mapa29,626mm, nueva local19,290mm/2,120° en replay.
+No prueba identidad física/calibración; agarre no enviado. Vigente: instalado
+PC y VERIFICADO con715 pruebas pertinentes; carga/ensayo nuevos PENDIENTES.
+Activación: próxima sesión optimista autorizada transmite helpers en memoria
+a Motion/cliente nativo redescubierto, sin instalación/reinicio/remoto/SDK/vendor.
+Respaldos exactos previos/finales, SHA256 y resultados:
+../Humanoide-vla-evidence/20261002_BOX_ALIGNMENT_ODOM_ASSOCIATION/.
+Rollback selectivo de tres fuentes/test/notas desde before/, retirar fixture
+nueva, conservar cambios posteriores; sin restaurar estados remotos/checkpoint.
+[Fuentes, dependencia, receta y límites](box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-de-asociación-del-intento092429).
+Sin conexión/movimiento, commit ni push del agente.
+
 **Revisión BOX-01-VISUAL-ALIGN-ARRIVAL,02-10-2026:** precisión terminal PC
 5→12mm, yaw2° conservado; dos poses nuevas estables y después doble detección
 obligatoria. El guard conserva umbral5mm para giro rápido y todos los límites
