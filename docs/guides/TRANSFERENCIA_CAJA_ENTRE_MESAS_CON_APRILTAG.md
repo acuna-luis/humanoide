@@ -1,5 +1,19 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**02-10-2026 — BOX-01-MULTI-CYCLE. IMPLEMENTADO PC; ensayo físico PENDIENTE.**
+Optimistic admite `--run --cycle N` (por defecto1): N recogidas/depósitos completos
+en una conexión/sesión, con lectores, clientes y SPS compartidos. Cada caja
+termina con HOME20D medido; antes de otra se revalida salud/reposo/HOME desde
+telemetría fresca, contenedores, hashes y mapa/puntos. No reintenta fallos:
+interrumpe toda la tanda y conserva checkpoint/contexto por caja y batch.json.
+Preparación inicial una vez; consultas frescas de mapa/llegada/percepción se
+mantienen. Mismo punto/altura de depósito: operador confirma que retirará cada
+caja entre depósitos. Deadline global900s sin ampliar ni renovar por caja.
+--plan/--check siguen sin movimiento; N>1 incompatible con resume/pausas parciales.
+VERIFICADO offline:743 pruebas pertinentes correctas; ensayo/ahorro físico
+PENDIENTES. Sin conexión, movimiento, commit ni push del agente.
+[Uso, ahorro, verificación y reversión](../box_handling/SCENARIO1_MULTI_CYCLE_20261002.md).
+
 **02-10-2026 — BOX-01-VISUAL-ALIGN-ODOM-PROGRESS.** Intento094521 pasa
 HOME/get1 y solicita ajusteX21,200mm; cancela a4,008s por falta de progreso.
 Mapa termina a27,095mm, pero odometría registra42,601mm de recorrido y25,800mm

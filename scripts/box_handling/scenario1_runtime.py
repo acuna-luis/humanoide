@@ -174,6 +174,16 @@ class Runtime:
         self.box_association = None
         self.resume_plan = None
         self.resume_validated = False
+        self.cycle_count = contract.cycle_count(payload.get('cycle_count', 1))
+        self.cycle_index = 1
+        if self.cycle_count > 1:
+            contract.validate_checkpoint(self.checkpoint, payload['profile'])
+        if self.cycle_count > 1 and (
+                self.execution_profile != 'optimistic_v1' or self.policy != 'assume' or
+                self.checkpoint['version'] != 2 or self.checkpoint['stop_after'] != 'verify_home' or
+                self.checkpoint['completed'] or self.checkpoint['in_flight'] is not None or
+                self.checkpoint['failure'] is not None or payload.get('resume_plan') is not None):
+            raise ValueError('MULTI_CYCLE_REQUIRES_FRESH_FULL_OPTIMISTIC_RUN')
         self.perception_offset = 0
         self.perception_last_read = float('-inf')
         if payload.get('resume_plan') is not None:
@@ -1063,11 +1073,59 @@ with socket.socket(socket.AF_UNIX) as conn:
 
     def save(self):
         atomic_json(self.session/'checkpoint.json', self.checkpoint)
-        self.emit('checkpoint', checkpoint=self.checkpoint)
+        if self.cycle_count > 1:
+            directory = self.session/'cycles'/f'{self.cycle_index:04d}'
+            created = not directory.exists()
+            directory.mkdir(parents=True, exist_ok=True)
+            atomic_json(directory/'checkpoint.json', self.checkpoint)
+            if created:
+                for parent in (directory.parent, self.session):
+                    descriptor = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
+                    try:
+                        os.fsync(descriptor)
+                    finally:
+                        os.close(descriptor)
+            if created or self.checkpoint['completed'] == list(contract.STAGES):
+                atomic_json(self.session/'batch.json', dict(requested_cycles=self.cycle_count,
+                    current_cycle=self.cycle_index,
+                    completed_cycles=(self.cycle_index if self.checkpoint['completed'] == list(contract.STAGES)
+                                      else self.cycle_index-1)))
+            self.emit('checkpoint', checkpoint=self.checkpoint, cycle_index=self.cycle_index)
+        else:
+            self.emit('checkpoint', checkpoint=self.checkpoint)
+
+    def next_cycle(self, message):
+        if (not self.armed or self.cycle_count <= 1 or
+                set(message) != {'command', 'cycle_index'} or message['command'] != 'next_cycle' or
+                type(message['cycle_index']) is not int or
+                message['cycle_index'] != self.cycle_index+1 or
+                message['cycle_index'] > self.cycle_count):
+            raise RuntimeError('NEXT_CYCLE_OUT_OF_ORDER')
+        checkpoint = contract.next_cycle_checkpoint(self.checkpoint, self.payload['profile'])
+        self.connected()
+        self.timed('cycle_containers', self.discover)
+        self.timed('cycle_dependencies', self.hashes)
+        self.timed('cycle_live_health', self.quick_health)
+        if self.map_state() != ('utars_nav_map', 'FSM_WAITNAVIGATE'):
+            raise RuntimeError('NEXT_CYCLE_MAP_NOT_READY')
+        self.map_points()  # Revalidate coordinates; never load/relocalize here.
+        self.connected()
+        home = self.check_live_health(stationary=True, after_ns=self.last_action_end_ns, require_home=True)
+        self.emit('cycle_boundary', cycle_index=message['cycle_index'], home=home,
+                  map_name='utars_nav_map', physical_commands_sent=0)
+        self.checkpoint = checkpoint
+        self.cycle_index = message['cycle_index']
+        self.box_association = None
+        self.save()
+        self.emit('cycle_ready', cycle_index=self.cycle_index, cycle_count=self.cycle_count,
+                  checkpoint=self.checkpoint)
 
     def stage(self, message):
         if not self.armed:
             raise RuntimeError('RUN_NOT_ARMED')
+        if self.cycle_count > 1 and (type(message.get('cycle_index')) is not int or
+                                    message['cycle_index'] != self.cycle_index):
+            raise RuntimeError('STAGE_CYCLE_MISMATCH')
         stage = message['stage']
         started = time.monotonic()
         entry_box_state = self.checkpoint['box_state']
@@ -1131,7 +1189,8 @@ with socket.socket(socket.AF_UNIX) as conn:
                 home_verified=stage == 'verify_home', **verification)
             self.save()
             self.emit('stage_complete', stage=stage, elapsed_s=round(time.monotonic()-started, 3),
-                      logical_assumption=logical_assumption)
+                      logical_assumption=logical_assumption,
+                      **({'cycle_index': self.cycle_index} if self.cycle_count > 1 else {}))
         except BaseException as exc:
             self.checkpoint = contract.fail_stage(self.checkpoint, stage, str(exc))
             self.save()
@@ -1197,7 +1256,14 @@ with socket.socket(socket.AF_UNIX) as conn:
                 except queue.Empty:
                     continue
                 if message == {'command': 'finish'}:
+                    if self.cycle_count > 1:
+                        contract.next_cycle_checkpoint(self.checkpoint, self.payload['profile'])
+                        if self.cycle_index != self.cycle_count:
+                            raise RuntimeError('MULTI_CYCLE_INCOMPLETE')
                     return 0
+                if message.get('command') == 'next_cycle':
+                    self.next_cycle(message)
+                    continue
                 if message.get('command') == 'resume' and not self.armed:
                     if self.resume_plan is None or message['stop_after'] != self.checkpoint['stop_after']:
                         raise RuntimeError('RESUME_PLAN_REQUIRED')

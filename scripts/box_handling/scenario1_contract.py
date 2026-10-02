@@ -314,6 +314,27 @@ def next_stage(checkpoint):
     return None if index > STAGES.index(cp['stop_after']) else STAGES[index]
 
 
+def cycle_count(value):
+    if type(value) is not int or value < 1:
+        raise ValueError('--cycle requiere un entero positivo')
+    return value
+
+
+def next_cycle_checkpoint(checkpoint, profile):
+    """Start another box only after a complete optimistic cycle, never a retry.
+
+    This pure contract checks recorded completion. The runtime must separately
+    validate fresh HOME, rest, health, map and unchanged dependencies.
+    """
+    cp = validate_checkpoint(checkpoint, profile)
+    if (cp['version'] != 2 or execution_profile(cp) != 'optimistic_v1' or
+            cp['stop_after'] != 'verify_home' or cp['completed'] != list(STAGES) or
+            cp['failure'] is not None or cp['in_flight'] is not None or
+            cp['box_state'] != 'released'):
+        raise ValueError('NEXT_CYCLE_REQUIRES_COMPLETE_HOME: no repetir una etapa interrumpida')
+    return new_checkpoint(profile, policy='assume', execution_profile='optimistic_v1')
+
+
 def begin_stage(checkpoint, stage):
     """Return the checkpoint that MUST be persisted before executing this stage."""
     cp = validate_checkpoint(checkpoint)

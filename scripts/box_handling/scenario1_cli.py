@@ -94,6 +94,23 @@ def claim_resume(source, destination):
         os.close(descriptor)
 
 
+def archive_cycle(evidence, index, checkpoint):
+    """Preserve each box's checkpoint and compatible single-box resume context."""
+    directory = evidence/'cycles'/f'{index:04d}'
+    created = not directory.exists()
+    directory.mkdir(parents=True, exist_ok=True)
+    atomic_json(directory/'checkpoint.json', contract.validate_checkpoint(checkpoint))
+    if (evidence/'context.json').exists() and not (directory/'context.json').exists():
+        atomic_json(directory/'context.json', json.loads((evidence/'context.json').read_text()))
+    if created:
+        for parent in (directory.parent, evidence):
+            descriptor = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+
+
 def make_payload(mode, profile, checkpoint):
     bundle = build_bundle()
     extra = {}
@@ -301,6 +318,10 @@ def parser(policy='ask', execution_profile='standard_v1'):
     mode.add_argument('--check', action='store_true', help='Comprobaciones completas sin iniciar adaptadores SPS ni mover')
     mode.add_argument('--plan', action='store_true', help='Mostrar perfil y etapas sin conectar al robot')
     mode.add_argument('--run', action='store_true', help='Ejecutar '+('con confirmaciones presenciales' if policy == 'ask' else 'sin preguntas'))
+    if execution_profile == 'optimistic_v1':
+        p.add_argument('--cycle', type=int, default=1, metavar='N',
+                            help='Recoger y depositar N cajas en una sesión; HOME medido entre cajas. '
+                            'Mismo depósito: despejar entre cajas. N>1: ciclos completos, sin --resume; por defecto 1')
     p.add_argument('--resume', type=Path, metavar='CHECKPOINT',
                    help='Reanudar desde un checkpoint; combinar con --plan o --check para no mover')
     p.add_argument('--from-stage', choices=contract.STAGES,
@@ -334,6 +355,9 @@ def _main(args):
     execution_profile = getattr(args, 'execution_profile', 'standard_v1')
     wrapper = entrypoint_name(policy, execution_profile)
     moving = is_moving(args)
+    cycle_count = contract.cycle_count(getattr(args, 'cycle', 1))
+    if cycle_count > 1 and (execution_profile != 'optimistic_v1' or args.resume or args.stop_after != 'cycle'):
+        raise ValueError('--cycle N requiere optimistic y ciclos completos; incompatible con --resume o --stop-after parcial')
     if not args.resume and (args.from_stage or args.box_state or args.recovery_confirmed):
         raise ValueError('--from-stage, --box-state y --recovery-confirmed requieren --resume CHECKPOINT')
     if args.benchmark_checks and (moving or args.plan):
@@ -375,6 +399,9 @@ def _main(args):
               'Se conservan errores, reposo, límites de caja, llegada y HOME medido.')
         print('Recogida: ajuste visual automático de X/Y fuera de rango; hasta 2 ajustes, '
               '50 mm de corrección solicitada en total, objetivo 20 mm dentro del límite. Ensayo físico pendiente.')
+        if cycle_count > 1:
+            print('Tanda: '+str(cycle_count)+' cajas en una sesión; HOME medido entre cajas. '
+                  'Cada caja exige espacio de depósito libre. Cualquier fallo detiene la tanda.')
     correction_status = nav_correction.qualification_report()
     if correction_status['motion_enabled']:
         approach = format(nav_correction.POLICY['max_approach_angular_speed_rad_s'], '.2f').replace('.', ',')
@@ -387,6 +414,9 @@ def _main(args):
     if args.plan:
         print(json.dumps(dict(profile=profile, stages=list(contract.STAGES[contract.progress_index(checkpoint):contract.STAGES.index(stop_after)+1]),
             policy=policy, execution_profile=execution_profile,
+            cycle_count=cycle_count,
+            batch=dict(shared_session=True, cycles=cycle_count, measured_home_between_boxes=True,
+                       session_time_limit_s=900, automatic_retries=0),
             interstage_health=('live_snapshot_and_fresh_stationary_actuators'
                                if execution_profile == 'optimistic_v1' else 'full_acquisition'),
             sensor_qualification=sensor_profile['qualification'] if sensor_profile else None,
@@ -415,6 +445,7 @@ def _main(args):
     payload['policy'] = policy
     payload['execution_profile'] = execution_profile
     payload['check_repetitions'] = args.benchmark_checks
+    payload['cycle_count'] = cycle_count
     if sensor_profile is not None:
         payload['sensor_profile'] = sensor_profile
         atomic_json(evidence/'sensor-profile.json', sensor_profile)
@@ -440,6 +471,10 @@ def _main(args):
             'entrypoint': hashlib.sha256((ROOT/'scripts'/wrapper).read_bytes()).hexdigest()})
     print('Evidencia: '+str(evidence), flush=True)
     connection = None
+    batch = (dict(version=1, requested_cycles=cycle_count, current_cycle=1,
+                  completed_cycles=0, status='preparing', failure=None) if cycle_count > 1 else None)
+    if batch is not None:
+        atomic_json(evidence/'batch.json', batch)
     with ExitStack() as stack:
         for name in ('/tmp/cruzr_blue_workbin_cycle.lock', '/tmp/cruzr-improved-scenario1.lock'):
             lock = stack.enter_context(open(name, 'a'))
@@ -451,6 +486,9 @@ def _main(args):
             print('Comprobaciones técnicas completadas; mapa='+ready['map_name']+' '+ready['nav_state'], flush=True)
             if not moving:
                 rc = connection.process.wait(timeout=10)
+                if batch is not None:
+                    batch['status'] = 'checked' if rc == 0 else 'check_failed'
+                    atomic_json(evidence/'batch.json', batch)
                 if policy == 'sensors' and sensor_profile['qualification'] != 'qualified':
                     print('SENSORES_PENDIENTES: faltan referencias cualificadas por postura; --run no ejecutará movimientos.')
                 print(('RESUME_CHECK_OK; origen sin consumir, sin movimiento.' if args.resume else 'CHECK_OK')
@@ -476,8 +514,46 @@ def _main(args):
                 claim_resume(args.resume, evidence/'checkpoint.json')
             connection.send({'command': 'arm'})
             connection.wait('armed')
-            while (stage := contract.next_stage(checkpoint)) is not None:
+            cycle_index = 1
+            if batch is not None:
+                batch['status'] = 'running'
+                atomic_json(evidence/'batch.json', batch)
+                archive_cycle(evidence, cycle_index, checkpoint)
+                print('Caja 1/'+str(cycle_count), flush=True)
+            while True:
+                stage = contract.next_stage(checkpoint)
+                if stage is None:
+                    if batch is None:
+                        break
+                    next_checkpoint = contract.next_cycle_checkpoint(checkpoint, profile)
+                    archive_cycle(evidence, cycle_index, checkpoint)
+                    batch.update(completed_cycles=cycle_index, status='box_complete')
+                    atomic_json(evidence/'batch.json', batch)
+                    if cycle_index == cycle_count:
+                        break
+                    cycle_index += 1
+                    batch.update(current_cycle=cycle_index, status='transition_pending')
+                    atomic_json(evidence/'batch.json', batch)
+                    # Durable new-box intent before requesting the transition.
+                    # Prior completions remain in their own per-box directories.
+                    checkpoint = next_checkpoint
+                    atomic_json(evidence/'checkpoint.json', checkpoint)
+                    archive_cycle(evidence, cycle_index, checkpoint)
+                    connection.send({'command': 'next_cycle', 'cycle_index': cycle_index})
+                    ready_cycle = connection.wait('cycle_ready')
+                    if (type(ready_cycle.get('cycle_index')) is not int or
+                            ready_cycle['cycle_index'] != cycle_index or
+                            type(ready_cycle.get('cycle_count')) is not int or
+                            ready_cycle.get('cycle_count') != cycle_count or
+                            contract.validate_checkpoint(ready_cycle['checkpoint'], profile) != checkpoint):
+                        raise RuntimeError('NEXT_CYCLE_PROTOCOL_MISMATCH')
+                    batch['status'] = 'running'
+                    atomic_json(evidence/'batch.json', batch)
+                    print('Caja '+str(cycle_index)+'/'+str(cycle_count), flush=True)
+                    continue
                 message = {'command': 'stage', 'stage': stage}
+                if batch is not None:
+                    message['cycle_index'] = cycle_index
                 if policy == 'ask' and stage == 'verify_held':
                     confirm('Compruebe caja superior separada de la inferior, sujeta estable por ambas abrazaderas y libre para retroceder.', 'SUJETA')
                     message['confirmed_box'] = 'held'
@@ -490,16 +566,28 @@ def _main(args):
                 # Local intent prevents reuse of a stale successful checkpoint after a link loss.
                 checkpoint = contract.begin_stage(checkpoint, stage)
                 atomic_json(evidence/'checkpoint.json', checkpoint)
+                if batch is not None:
+                    archive_cycle(evidence, cycle_index, checkpoint)
                 print('Etapa '+str(contract.STAGES.index(stage)+1)+'/'+str(len(contract.STAGES))+
                       ': '+stage_label(stage), flush=True)
                 connection.send(message)
-                connection.wait('stage_complete', timeout=420)
+                completed_stage = connection.wait('stage_complete', timeout=420)
+                if batch is not None and (completed_stage.get('stage') != stage or
+                        type(completed_stage.get('cycle_index')) is not int or
+                        completed_stage['cycle_index'] != cycle_index):
+                    raise RuntimeError('STAGE_CYCLE_PROTOCOL_MISMATCH')
                 checkpoint = contract.validate_checkpoint(json.loads((evidence/'checkpoint.json').read_text()), profile)
+                if batch is not None:
+                    archive_cycle(evidence, cycle_index, checkpoint)
             connection.send({'command': 'finish'})
             rc = connection.process.wait(timeout=15)
             if rc:
                 raise RuntimeError('Supervisor terminó con error')
-            if stop_after == 'navigate_get1':
+            if batch is not None:
+                batch['status'] = 'completed'
+                atomic_json(evidence/'batch.json', batch)
+                print('TANDA_COMPLETA_HOME_MEDIDO; cajas='+str(cycle_count)+'; evidencia de caja: '+policy)
+            elif stop_after == 'navigate_get1':
                 print('GET1_ALCANZADO; prueba de navegación terminada, sin agarre.')
             elif stop_after == 'deposit':
                 print('DEPOSITO_TERMINADO; pausado antes de verificar liberación y HOME. Compruebe el apoyo y las abrazaderas.')
@@ -511,9 +599,17 @@ def _main(args):
                       if stop_after == 'verify_held' else 'CICLO_COMPLETO_HOME_MEDIDO; evidencia de caja: '+policy)
             print('Checkpoint: '+str(evidence/'checkpoint.json'))
             return 0
+        except BaseException as exc:
+            if batch is not None:
+                batch.update(status='interrupted', failure=str(exc) or type(exc).__name__)
+                atomic_json(evidence/'batch.json', batch)
+            raise
         finally:
             if connection:
                 connection.close()
+            if batch is not None and (evidence/'checkpoint.json').exists():
+                archive_cycle(evidence, batch['current_cycle'],
+                              json.loads((evidence/'checkpoint.json').read_text()))
 
 
 def main(argv=None, *, policy='ask', execution_profile='standard_v1'):

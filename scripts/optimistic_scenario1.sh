@@ -5,6 +5,8 @@
 # Preserve the tested geometry, native model/HOME pins and live safety checks.
 # Before native pickup, correct bounded X/Y visual range errors with fresh
 # detection and guarded navigation. Native action failures still stop the cycle.
+# --cycle N repeats full cycles in one monitored session, with fresh HOME and
+# independent checkpoints per box; it never retries an interrupted action.
 set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 export PYTHONDONTWRITEBYTECODE=1
