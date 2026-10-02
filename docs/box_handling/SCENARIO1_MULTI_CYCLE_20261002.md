@@ -6,6 +6,14 @@ ensayo físico con varias cajas y ahorro real de tiempo PENDIENTES. El agente
 no se ha conectado ni ha enviado movimiento. El operador confirma que retirará
 cada caja entre depósitos; conserva el punto/altura de depósito existente.
 
+
+**Actualización OBSERVADA — intento105632 del operador:** --cycle2 completó la
+primera caja, HOME y una transición en la misma sesión; la segunda pasó llegada
+tras ajuste y se detuvo antes del agarre por orientación estimada5,482°>3°,
+con traslación6,657mm≤20mm. Carga/transición demostradas; dos depósitos y ahorro
+comparado PENDIENTES. No confundir con una tanda completa ni atribuir el fallo a
+recalcular el mapa. [Diagnóstico y evidencia](BOX_ASSOCIATION_ROTATION_20261002.md).
+
 ## Uso y preparación
 
 ```bash

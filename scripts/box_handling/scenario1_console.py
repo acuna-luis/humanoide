@@ -168,6 +168,17 @@ class ConsoleReporter:
             return self.detail(mapping(event.get('detail')), clean(event.get('kind') or name))
         if name == 'arrival':
             return ['  Llegada '+clean(event.get('point'))+': '+residual(event.get('measurement'))]
+        if name == 'box_alignment_association' and event.get('passed') is False:
+            measurement = mapping(event.get('measurement'))
+            values = [number(measurement.get(key)) for key in (
+                'translation_m', 'max_translation_m', 'rotation_deg', 'max_rotation_deg')]
+            if any(value is None or value < 0 for value in values):
+                return ['  AVISO: Asociación de caja tras el ajuste rechazada: '+clean(event.get('reason'))]
+            distance, max_distance, angle, max_angle = values
+            return ['  AVISO: Asociación de caja tras el ajuste rechazada: posición '+
+                    decimal(distance*1000, 2)+' mm (máximo '+decimal(max_distance*1000, 2)+
+                    ' mm); orientación '+decimal(angle, 2)+'° (máximo '+decimal(max_angle, 2)+
+                    '°). Agarre no iniciado.']
         if name == 'box_alignment':
             phase = event.get('phase')
             if phase == 'prepare_head':
@@ -181,7 +192,7 @@ class ConsoleReporter:
                 return ['  Llegada del ajuste '+clean(event.get('attempt'))+': '+
                         residual(event.get('measurements'))+'. Se vuelve a medir la caja.']
             if phase == 'ready':
-                return ['  Caja dentro del rango; ajustes visuales: '+clean(event.get('attempts'))+
+                return ['  Caja dentro del rango; ajustes visuales: '+clean(str(event.get('attempts', '')))+
                         '. Se vuelve a validar en el agarre.']
             return []
         if name == 'get1_correction':

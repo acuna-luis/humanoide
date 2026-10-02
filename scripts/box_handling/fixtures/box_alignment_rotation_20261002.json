@@ -1,0 +1,72 @@
+{
+  "source": "../Humanoide-vla-evidence/20261002T105632Z_OPTIMISTIC_SCENARIO1_503729/events.jsonl",
+  "source_sha256": "3bf747fba98509eb630882bd0674e1bf21b5390c183bafbd92d9d35cd2701ec6",
+  "anchor": {
+    "frames": {
+      "frame_id": "odom",
+      "child_frame_id": "base_footprint"
+    },
+    "observation": {
+      "stamp_ns": 1790938734373012000,
+      "selection": {
+        "selected_pose": {
+          "position": {
+            "x": 0.7396862415601883,
+            "y": -0.03475147565489294,
+            "z": 0.30880079921885895
+          },
+          "orientation": {
+            "x": 0.0199660074841288,
+            "y": -0.008767817748356194,
+            "z": 0.7521889873358762,
+            "w": -0.6585865252551895
+          }
+        }
+      }
+    },
+    "comparison_only": true,
+    "reference": {
+      "x": -0.05404405723646051,
+      "y": -0.010222157392481078,
+      "yaw": -0.15686728996857924
+    },
+    "image_stamps_ns": [
+      1790938732853224000,
+      1790938734373012000
+    ]
+  },
+  "current": {
+    "frames": {
+      "frame_id": "odom",
+      "child_frame_id": "base_footprint"
+    },
+    "observation": {
+      "stamp_ns": 1790938747812822000,
+      "selection": {
+        "selected_pose": {
+          "position": {
+            "x": 0.733239221062675,
+            "y": -0.035867798564018526,
+            "z": 0.3100262027757744
+          },
+          "orientation": {
+            "x": -0.009433620981874368,
+            "y": 0.022196030273630013,
+            "z": 0.766183969770534,
+            "w": -0.6421685662673997
+          }
+        }
+      }
+    },
+    "comparison_only": true,
+    "reference": {
+      "x": -0.02924320026070054,
+      "y": -0.013352009638889661,
+      "yaw": -0.14920448779206708
+    },
+    "image_stamps_ns": [
+      1790938746212844000,
+      1790938747812822000
+    ]
+  }
+}

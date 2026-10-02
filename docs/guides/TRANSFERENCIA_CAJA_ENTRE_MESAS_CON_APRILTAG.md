@@ -1,5 +1,18 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**02-10-2026 — BOX-01-ASSOCIATION-DIAGNOSTIC. OBSERVADO intento105632.**
+Tanda de2: primera caja completa diez etapas/HOME y transición en la misma sesión;
+segunda llega tras ajusteX+20,373mm a1,443mm/0,445°, con nueva caja dentroXYZ.
+Rechazo posterior entre posturas:6,657mm≤20mm, pero orientación5,482°>3°.
+Parejas individuales coherentes; fallo antes del agarre nativo de segunda caja.
+Operador no pudo comprobar inmovilidad: causa física/perceptiva PENDIENTE.
+Mensaje/diario PC ahora muestran ambos valores sin cambiar tolerancias/reintentos.
+VERIFICADO offline:750 pruebas pertinentes correctas; nueva carga PENDIENTE.
+Tanda cargada y una transición OBSERVADAS; dos depósitos/ahorro comparado no
+verificados. Nuevo diagnóstico instalado PC, carga PENDIENTE. Sin comandos
+remotos del agente; estado físico actual/reanudación requieren comprobación.
+[Hallazgo, fuentes, respaldo y verificación](../box_handling/BOX_ASSOCIATION_ROTATION_20261002.md).
+
 **02-10-2026 — BOX-01-MULTI-CYCLE. IMPLEMENTADO PC; ensayo físico PENDIENTE.**
 Optimistic admite `--run --cycle N` (por defecto1): N recogidas/depósitos completos
 en una conexión/sesión, con lectores, clientes y SPS compartidos. Cada caja

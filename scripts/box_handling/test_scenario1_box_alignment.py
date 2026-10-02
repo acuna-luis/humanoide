@@ -195,6 +195,18 @@ class OdomAssociationTests(unittest.TestCase):
     def fixture(self):
         return json.loads((Path(__file__).parent/'fixtures/box_alignment_association_20261002.json').read_text())
 
+    def test_second_box_real_association_rejects_rotation_with_position_inside_policy(self):
+        fixture=json.loads((Path(__file__).parent/'fixtures/box_alignment_rotation_20261002.json').read_text())
+        original=copy.deepcopy(fixture)
+        with self.assertRaises(runtime.perception.SelectionConsistencyError) as raised:
+            alignment.validate_association(fixture['anchor'],fixture['current'])
+        measurement=raised.exception.measurement
+        self.assertAlmostEqual(measurement['translation_m'],.006656715707471316)
+        self.assertAlmostEqual(measurement['rotation_deg'],5.482393026773553)
+        self.assertLess(measurement['translation_m'],measurement['max_translation_m'])
+        self.assertGreater(measurement['rotation_deg'],measurement['max_rotation_deg'])
+        self.assertEqual(fixture,original)
+
     def observation(self):
         first=selection(stamp=100_000_000_000,x=.60)
         second=selection(stamp=100_100_000_000,x=.61)
@@ -376,6 +388,26 @@ class AlignmentRuntimeTests(unittest.TestCase):
         self.assertEqual(reference,f['captures'][3])
         self.assertAlmostEqual(reference['selection']['selected_pose']['position']['x'],.7435803965735293)
         self.assertNotIn('comparison_only',reference)
+
+    def test_real_rotation_rejection_is_logged_and_stops_before_native_grasp(self):
+        f=json.loads((Path(__file__).parent/'fixtures/box_alignment_rotation_20261002.json').read_text())
+        machine=self.machine([])
+        associations=iter((f['anchor'],f['current']))
+        observations=iter((self.observation(),self.observation(x=.77,stamp=200,base_x=1.0209)))
+        def measure():
+            machine.box_association=next(associations)
+            return next(observations)
+        machine.measure_box_for_pickup=Mock(side_effect=measure)
+        with self.assertRaises(runtime.perception.SelectionConsistencyError):
+            machine.stage(dict(stage='grasp'))
+        self.assertEqual(machine.action.call_count,2) # simulated head and navigation only
+        self.assertEqual(machine.checkpoint['completed'],['navigate_get1','enable_vision'])
+        self.assertEqual(machine.checkpoint['failure']['stage'],'grasp')
+        self.assertFalse((machine.session/'box-alignment-reference.json').exists())
+        rejected=[call for call in machine.emit.call_args_list
+                  if call.args==('box_alignment_association',) and call.kwargs['passed'] is False]
+        self.assertEqual(len(rejected),1)
+        self.assertAlmostEqual(rejected[0].kwargs['measurement']['rotation_deg'],5.482393026773553)
 
     def test_native_terminal_residual_with_box_still_outside_uses_second_visual_goal(self):
         machine=self.machine([self.observation(x=.795),

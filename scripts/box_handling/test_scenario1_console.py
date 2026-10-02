@@ -98,6 +98,29 @@ class ReporterTests(unittest.TestCase):
         self.assertIn('código 0', output)
         self.assertIn('parada física no confirmada', output)
 
+    def test_failed_association_shows_both_measurements_and_never_claims_grasp(self):
+        event = dict(event='box_alignment_association', passed=False,
+                     measurement=dict(translation_m=.006656715707471316,
+                                      max_translation_m=.02, rotation_deg=5.482393026773553,
+                                      max_rotation_deg=3.))
+        original = copy.deepcopy(event)
+        output = '\n'.join(ConsoleReporter().render(event))
+        self.assertIn('posición 6,66 mm (máximo 20,00 mm)', output)
+        self.assertIn('orientación 5,48° (máximo 3,00°)', output)
+        self.assertIn('Agarre no iniciado', output)
+        self.assertEqual(event, original)
+        self.assertEqual(ConsoleReporter().render(dict(event, passed=True)), [])
+
+    def test_failed_association_without_measurements_preserves_reason(self):
+        for measurement in (None, {}, dict(translation_m=float('inf'))):
+            output = '\n'.join(ConsoleReporter().render(dict(event='box_alignment_association',
+                passed=False, measurement=measurement, reason='ODOM_FRAME_CHANGED')))
+            self.assertIn('ODOM_FRAME_CHANGED', output)
+
+    def test_zero_visual_adjustments_are_visible(self):
+        output = '\n'.join(ConsoleReporter().render(dict(event='box_alignment', phase='ready', attempts=0)))
+        self.assertIn('ajustes visuales: 0.', output)
+
     def test_repeated_obstacle_reports_always_warn_and_preserve_provider_detail(self):
         reporter, clock = self.reporter()
         reporter.render(feedback())

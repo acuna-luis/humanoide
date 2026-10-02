@@ -13,6 +13,21 @@ MAX_TRANSLATION_M = 0.02
 MAX_ROTATION_DEG = 3.0
 
 
+class SelectionConsistencyError(ValueError):
+    """Rejected geometry with diagnostics; retains the original failure policy."""
+    def __init__(self, measurement):
+        self.measurement = copy.deepcopy(measurement)
+        for key, value in self.measurement.items():
+            if isinstance(value, float) and not math.isfinite(value):
+                self.measurement[key] = None
+        super().__init__(
+            'Selected pose changed beyond 0.02m / 3 degree consistency policy: '
+            f"translation={measurement['translation_m']*1000:.3f} mm "
+            f"(max {measurement['max_translation_m']*1000:.3f} mm); "
+            f"rotation={measurement['rotation_deg']:.3f} degrees "
+            f"(max {measurement['max_rotation_deg']:.3f} degrees)")
+
+
 def observe_position_rejection(validate, pose, bounds, report):
     """Observe the original gate's failure; never recover or substitute a pose.
 
@@ -78,13 +93,14 @@ def _compare(previous, current):
     difference = math.dist(previous_quaternion, quaternion)
     total = math.hypot(*(a + b for a, b in zip(previous_quaternion, quaternion)))
     rotation = math.degrees(4.0 * math.atan2(min(difference, total), max(difference, total)))
+    measurement = dict(previous_stamp_ns=previous_stamp, stamp_ns=stamp,
+                       translation_m=translation, rotation_deg=rotation,
+                       max_translation_m=MAX_TRANSLATION_M, max_rotation_deg=MAX_ROTATION_DEG,
+                       reachability_checked=False)
     if (not math.isfinite(translation) or translation > MAX_TRANSLATION_M + 1e-12
             or rotation > MAX_ROTATION_DEG + 1e-12):
-        raise ValueError('Selected pose changed beyond 0.02m / 3 degree consistency policy')
-    return dict(previous_stamp_ns=previous_stamp, stamp_ns=stamp,
-                translation_m=translation, rotation_deg=rotation,
-                max_translation_m=MAX_TRANSLATION_M, max_rotation_deg=MAX_ROTATION_DEG,
-                reachability_checked=False)
+        raise SelectionConsistencyError(measurement)
+    return measurement
 
 
 def validate_pair(previous, current):

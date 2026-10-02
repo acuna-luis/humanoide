@@ -1041,7 +1041,9 @@ with socket.socket(socket.AF_UNIX) as conn:
                 association = box_alignment.validate_association(anchor, self.box_association)
             except ValueError as exc:
                 self.emit('box_alignment_association', passed=False, anchor=anchor,
-                          current=self.box_association, reason=str(exc))
+                          current=self.box_association, reason=str(exc),
+                          measurement=(exc.measurement if isinstance(
+                              exc, perception.SelectionConsistencyError) else None))
                 raise
             self.emit('box_alignment_association', passed=True, measurement=association)
             atomic_json(self.session/'box-alignment.json', dict(record, phase='measured',

@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 
 from scripts.box_handling import front_sps_contract as sps
 from scripts.box_handling.scenario1_perception import (
-    guard_selection, observe_position_rejection, stable_report, validate_pair)
+    SelectionConsistencyError, guard_selection, observe_position_rejection, stable_report, validate_pair)
 from scripts.box_handling.scenario1_runtime import guarded_adapter_source
 from scripts.box_handling.test_front_sps import report
 
@@ -168,6 +168,26 @@ class SelectionConsistencyTest(unittest.TestCase):
         for current in (selection(stamp=200, x=.800001), selection(stamp=200, angle_deg=3.000001)):
             with self.subTest(current=current), self.assertRaises(ValueError):
                 validate_pair(selection(), current)
+
+    def test_rejection_reports_measured_translation_and_full_rotation_without_returning_pose(self):
+        for x, angle in ((.805, 1.), (.785, 5.5), (.805, 5.5)):
+            with self.subTest(x=x, angle=angle), self.assertRaises(SelectionConsistencyError) as raised:
+                validate_pair(selection(), selection(stamp=200, x=x, angle_deg=angle))
+            measurement = raised.exception.measurement
+            self.assertAlmostEqual(measurement['translation_m'], abs(x-.78))
+            self.assertAlmostEqual(measurement['rotation_deg'], angle)
+            self.assertEqual(measurement['max_translation_m'], .02)
+            self.assertEqual(measurement['max_rotation_deg'], 3.)
+            self.assertFalse(measurement['reachability_checked'])
+            self.assertNotIn('reference', measurement)
+            self.assertIn('translation=', str(raised.exception))
+            self.assertIn('rotation=', str(raised.exception))
+
+    def test_overflowing_distance_rejects_and_diagnostic_remains_json_serializable(self):
+        with self.assertRaises(SelectionConsistencyError) as raised:
+            validate_pair(selection(x=-1e308), selection(stamp=200, x=1e308))
+        self.assertIsNone(raised.exception.measurement['translation_m'])
+        json.dumps(raised.exception.measurement, allow_nan=False)
 
     def test_sign_flipped_quaternion_has_zero_rotation_difference(self):
         previous = selection(angle_deg=30.)
