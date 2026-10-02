@@ -90,6 +90,14 @@ class ReporterTests(unittest.TestCase):
                 self.assertTrue(reporter.render(event))
                 self.assertTrue(reporter.render(event))
 
+    def test_cancel_acknowledgment_preserves_zero_code_and_unverified_stop(self):
+        reporter, _ = self.reporter()
+        event = {'event': 'action', 'kind': 'navigation', 'detail': {
+            'event': 'cancel_response', 'response': {'return_code': 0}}}
+        output = '\n'.join(reporter.render(event))
+        self.assertIn('código 0', output)
+        self.assertIn('parada física no confirmada', output)
+
     def test_repeated_obstacle_reports_always_warn_and_preserve_provider_detail(self):
         reporter, clock = self.reporter()
         reporter.render(feedback())

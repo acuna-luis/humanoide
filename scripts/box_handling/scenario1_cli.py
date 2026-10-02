@@ -22,6 +22,7 @@ if __package__:
     from . import scenario1_contract as contract
     from . import scenario1_sensors as sensors
     from . import scenario1_nav_correction as nav_correction
+    from . import scenario1_box_alignment as box_alignment
     from . import scenario1_resume as resume
     from .scenario1_console import ConsoleReporter, stage_label
     from .front_box_integration import build_bundle, TASK_ROOT, META_ROOT, SNAPSHOT
@@ -30,6 +31,7 @@ else:
     import scenario1_contract as contract
     import scenario1_sensors as sensors
     import scenario1_nav_correction as nav_correction
+    import scenario1_box_alignment as box_alignment
     import scenario1_resume as resume
     from scenario1_console import ConsoleReporter, stage_label
     from front_box_integration import build_bundle, TASK_ROOT, META_ROOT, SNAPSHOT
@@ -47,6 +49,11 @@ MODULES = [('cruzr_home_posture_gate', ROOT/'scripts/lib/cruzr_home_posture_gate
            ('scenario1_session', HERE/'scenario1_session.py'),
            ('scenario1_nav_correction', HERE/'scenario1_nav_correction.py'),
            ('scenario1_resume', HERE/'scenario1_resume.py'),
+           ('select_front_box', HERE/'select_front_box.py'),
+           ('probe_front_box', HERE/'probe_front_box.py'),
+           ('front_sps_contract', HERE/'front_sps_contract.py'),
+           ('scenario1_perception', HERE/'scenario1_perception.py'),
+           ('scenario1_box_alignment', HERE/'scenario1_box_alignment.py'),
            ('scenario1_runtime', HERE/'scenario1_runtime.py')]
 BOOTSTRAP = '''import json,sys,types
 payload=json.loads(sys.stdin.readline())
@@ -364,6 +371,8 @@ def _main(args):
     if execution_profile == 'optimistic_v1':
         print('Optimista: salud recibida continuamente; sin repetir la adquisición completa entre etapas. '
               'Se conservan errores, reposo, límites de caja, llegada y HOME medido.')
+        print('Recogida: ajuste visual automático de X/Y fuera de rango; hasta 2 ajustes, '
+              '50 mm de corrección solicitada en total, objetivo 20 mm dentro del límite. Ensayo físico pendiente.')
     correction_status = nav_correction.qualification_report()
     if correction_status['motion_enabled']:
         approach = format(nav_correction.POLICY['max_approach_angular_speed_rad_s'], '.2f').replace('.', ',')
@@ -385,6 +394,9 @@ def _main(args):
                                       physical_qualification=table90.PHYSICAL_QUALIFICATION)
                                  if table90.is_table90(profile) else None),
             get1_correction=dict(nav_correction.qualification_report(), policy=dict(nav_correction.POLICY)),
+            box_alignment=(dict(enabled=True, physical_validation='pending',
+                                phase='before_native_grasp', policy=dict(box_alignment.POLICY))
+                           if execution_profile == 'optimistic_v1' else None),
             resume=resume_plan), indent=2, ensure_ascii=False))
         return 0
     if moving:

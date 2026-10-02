@@ -3,6 +3,8 @@
 # between stages; preserve faults, stationary transitions and measured HOME.
 # This branch defaults to table90, tested in a supervised cycle on 2026-10-01.
 # Preserve the tested geometry, native model/HOME pins and live safety checks.
+# Before native pickup, correct bounded X/Y visual range errors with fresh
+# detection and guarded navigation. Native action failures still stop the cycle.
 set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 export PYTHONDONTWRITEBYTECODE=1

@@ -1,6 +1,7 @@
 """Synthetic guard regressions only: no ROS imports, connections or commands."""
 import json
 import math
+from pathlib import Path
 import unittest
 
 from scripts.box_handling import scenario1_nav_correction as correction
@@ -598,6 +599,113 @@ class TerminalSettlingTest(unittest.TestCase):
             armed().settled(START+200_000_000)
         with self.assertRaisesRegex(ValueError, 'not been armed'):
             warm().begin_settle(START+200_000_000)
+
+
+class PickupRecoveryTest(unittest.TestCase):
+    def machine(self, distance=.03, point='box_pickup'):
+        candidate = spec(x=distance)
+        candidate['point'] = point
+        guard = correction.Guard(candidate, START)
+        for offset in (.1, .2):
+            when = START + int(offset * NS)
+            guard.add('map', sample('map', when, x=distance), when)
+            guard.add('odom', sample('odom', when), when)
+        guard.arm(START + 200_000_000)
+        return guard
+
+    def recover(self):
+        guard = self.machine()
+        tick(guard, .4, map_x=.036)
+        tick(guard, .7, map_x=.033)
+        return guard
+
+    def test_recorded_distance_trace_survives_initial_recovery_without_claiming_arrival(self):
+        fixture = json.loads((Path(__file__).parent / 'fixtures' /
+                              'box_alignment_progress_20261002.json').read_text())
+        guard = self.machine(fixture['initial_distance_m'])
+        for row in fixture['samples']:
+            report = tick(guard, .2 + row['elapsed_s'], map_x=row['distance_m'],
+                          odom_x=1000. + fixture['initial_distance_m'] - row['distance_m'])
+        self.assertIsNotNone(report['pickup_recovery']['used_ns'])
+        self.assertAlmostEqual(report['progress_distance_m'], fixture['initial_distance_m'])
+        self.assertGreater(report['distance_m'], .005)
+        self.assertFalse(report['arrival_verified'])
+        self.assertFalse(report['settled'])
+        # This is a projection of recorded distances, not archived raw poses.
+        # Holding at the last position must still cancel four seconds after
+        # that single recovery, without requiring a native terminal response.
+        when = .2 + fixture['samples'][-1]['elapsed_s']
+        deadline = (report['pickup_recovery']['used_ns'] - START) / NS + 4.
+        while when + .1 < deadline:
+            when += .1
+            tick(guard, when, map_x=report['distance_m'])
+        with self.assertRaisesRegex(ValueError, 'no significant progress'):
+            tick(guard, deadline, map_x=report['distance_m'])
+
+    def test_stationary_pickup_retains_four_second_watchdog(self):
+        guard = self.machine()
+        for index in range(3, 42):
+            tick(guard, index / 10)
+        with self.assertRaisesRegex(ValueError, 'no significant progress'):
+            tick(guard, 4.2)
+        self.assertIsNone(guard.summary()['pickup_recovery']['used_ns'])
+
+    def test_away_motion_alone_does_not_renew_watchdog(self):
+        guard = self.machine()
+        for index in range(3, 42):
+            tick(guard, index / 10, map_x=.03 + (index - 2) * .0001)
+        with self.assertRaisesRegex(ValueError, 'no significant progress'):
+            tick(guard, 4.2, map_x=.034)
+
+    def test_repeated_retreats_cannot_renew_recovery(self):
+        guard = self.recover()
+        first = guard.summary()['pickup_recovery']['used_ns']
+        for index in range(8, 47):
+            tick(guard, index / 10, map_x=.036 if (index // 5) % 2 else .033)
+        self.assertEqual(guard.summary()['progress_ns'], first)
+        with self.assertRaisesRegex(ValueError, 'no significant progress'):
+            tick(guard, 4.7, map_x=.033)
+
+    def test_subthreshold_return_and_retreat_do_not_count(self):
+        for peak, returned in ((.0319, .030), (.036, .0341)):
+            with self.subTest(peak=peak, returned=returned):
+                guard = self.machine()
+                tick(guard, .4, map_x=peak)
+                tick(guard, .7, map_x=returned)
+                self.assertIsNone(guard.summary()['pickup_recovery']['used_ns'])
+
+    def test_return_after_net_progress_is_not_initial_recovery(self):
+        guard = self.machine()
+        tick(guard, .3, map_x=.027)
+        tick(guard, .4, map_x=.034)
+        report = tick(guard, .7, map_x=.031)
+        self.assertIsNone(report['pickup_recovery']['used_ns'])
+        self.assertEqual(report['progress_ns'], START + 300_000_000)
+
+    def test_get1_retains_previous_best_distance_watchdog(self):
+        guard = self.machine(point='get1')
+        for index in range(3, 42):
+            tick(guard, index / 10, map_x=.036 if index < 20 else .033)
+        with self.assertRaisesRegex(ValueError, 'no significant progress'):
+            tick(guard, 4.2, map_x=.033)
+
+    def test_worsening_speed_excursion_and_staleness_still_abort_after_recovery(self):
+        cases = (({'map_x': .045001}, 'worsened'),
+                 ({'linear': .100001}, 'velocity'),
+                 ({'odom_x': 1000.080001}, 'excursion'))
+        for options, reason in cases:
+            with self.subTest(reason=reason), self.assertRaisesRegex(ValueError, reason):
+                tick(self.recover(), .8, **options)
+        guard = self.recover()
+        with self.assertRaisesRegex(ValueError, 'stale'):
+            guard.check(START + 1_200_000_001)
+
+    def test_normal_net_progress_continues_after_recovery(self):
+        guard = self.recover()
+        report = tick(guard, .8, map_x=.027)
+        self.assertEqual(report['progress_ns'], START + 800_000_000)
+        self.assertAlmostEqual(report['progress_distance_m'], .027)
+        self.assertEqual(report['pickup_recovery']['used_ns'], START + 700_000_000)
 
 
 if __name__ == '__main__':

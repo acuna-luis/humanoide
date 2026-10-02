@@ -20,6 +20,9 @@ def optimistic_machine(directory):
     machine.checkpoint = contract.new_checkpoint(PROFILE, policy='assume',
                                                  execution_profile='optimistic_v1')
     machine.quick_health = Mock()
+    # Exercise transition policy independently of the visual planner/transport.
+    # The planner and its real stage entry are covered in test_scenario1_box_alignment.
+    machine.align_box_for_pickup = Mock()
     return machine
 
 

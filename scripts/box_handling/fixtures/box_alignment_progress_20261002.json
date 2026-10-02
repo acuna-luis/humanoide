@@ -1,0 +1,127 @@
+{
+  "incident": "20261002T084706Z_OPTIMISTIC_SCENARIO1_181758",
+  "source_sha256": "038579023ebee1b6a63ba3ff151c0103db87311ccb2221500fd341da7f66e548",
+  "note": "Recorded guard distances and receipt times; no individual map/odom poses were archived. Tests project distances onto a synthetic axis, with synthetic odometry/yaw, not a full raw telemetry replay.",
+  "initial_distance_m": 0.02277435216789735,
+  "samples": [
+    {
+      "elapsed_s": 0.116488676,
+      "phase": "progress",
+      "distance_m": 0.02277435216789735,
+      "odom_path_m": 0.0,
+      "odom_max_excursion_m": 0.0
+    },
+    {
+      "elapsed_s": 0.367884118,
+      "phase": "progress",
+      "distance_m": 0.02277435216789735,
+      "odom_path_m": 0.0,
+      "odom_max_excursion_m": 0.0
+    },
+    {
+      "elapsed_s": 0.619443178,
+      "phase": "progress",
+      "distance_m": 0.02277435216789735,
+      "odom_path_m": 0.0,
+      "odom_max_excursion_m": 0.0
+    },
+    {
+      "elapsed_s": 0.870384841,
+      "phase": "progress",
+      "distance_m": 0.02277435216789735,
+      "odom_path_m": 0.0,
+      "odom_max_excursion_m": 0.0
+    },
+    {
+      "elapsed_s": 1.126577863,
+      "phase": "progress",
+      "distance_m": 0.02278063401755212,
+      "odom_path_m": 0.0005982525065454821,
+      "odom_max_excursion_m": 0.0005982525018623461
+    },
+    {
+      "elapsed_s": 1.379087087,
+      "phase": "progress",
+      "distance_m": 0.028153152131429854,
+      "odom_path_m": 0.008599879785846169,
+      "odom_max_excursion_m": 0.008599879706479527
+    },
+    {
+      "elapsed_s": 1.631631088,
+      "phase": "progress",
+      "distance_m": 0.029500644981937645,
+      "odom_path_m": 0.008998717091887378,
+      "odom_max_excursion_m": 0.008849151527015315
+    },
+    {
+      "elapsed_s": 1.88278005,
+      "phase": "progress",
+      "distance_m": 0.02949403220013664,
+      "odom_path_m": 0.011242166293930642,
+      "odom_max_excursion_m": 0.00884915152820935
+    },
+    {
+      "elapsed_s": 2.139671985,
+      "phase": "progress",
+      "distance_m": 0.02948256307216484,
+      "odom_path_m": 0.014682118205451802,
+      "odom_max_excursion_m": 0.00884915152820935
+    },
+    {
+      "elapsed_s": 2.393512028,
+      "phase": "progress",
+      "distance_m": 0.028692842480740482,
+      "odom_path_m": 0.018570759501083285,
+      "odom_max_excursion_m": 0.00884915152820935
+    },
+    {
+      "elapsed_s": 2.646781615,
+      "phase": "progress",
+      "distance_m": 0.028693363481147052,
+      "odom_path_m": 0.02270867267406595,
+      "odom_max_excursion_m": 0.00884915152820935
+    },
+    {
+      "elapsed_s": 2.899669956,
+      "phase": "progress",
+      "distance_m": 0.026466500654581077,
+      "odom_path_m": 0.026721949906543155,
+      "odom_max_excursion_m": 0.008874086497875152
+    },
+    {
+      "elapsed_s": 3.155685819,
+      "phase": "progress",
+      "distance_m": 0.026151791116026942,
+      "odom_path_m": 0.03076015432708266,
+      "odom_max_excursion_m": 0.012912290061866751
+    },
+    {
+      "elapsed_s": 3.409353125,
+      "phase": "progress",
+      "distance_m": 0.025893932911292158,
+      "odom_path_m": 0.034574014058096285,
+      "odom_max_excursion_m": 0.016726149712986152
+    },
+    {
+      "elapsed_s": 3.661473877,
+      "phase": "progress",
+      "distance_m": 0.026051530404977225,
+      "odom_path_m": 0.03856236410258715,
+      "odom_max_excursion_m": 0.020714499686541175
+    },
+    {
+      "elapsed_s": 3.913783932,
+      "phase": "progress",
+      "distance_m": 0.023164174257376643,
+      "odom_path_m": 0.04220173351738629,
+      "odom_max_excursion_m": 0.024353868895093486
+    },
+    {
+      "elapsed_s": 4.008766936,
+      "phase": "failed",
+      "distance_m": 0.022301181497844116,
+      "odom_path_m": 0.04344809289890709,
+      "odom_max_excursion_m": 0.025600226753174794
+    }
+  ]
+}

@@ -1,5 +1,29 @@
 # Escenario 1 con supervisión continua
 
+**02-10-2026 — recuperación inicial del ajuste visual:** el intento084706
+confirma la adquisición temporal y llega al ajusteX+22,774mm. La distancia
+en mapa primero aumenta6,726mm y después disminuye; se cancelaba a4s sin
+superar aún la distancia inicial en2mm. Ahora cuenta una única recuperación
+inicial≥2mm, sólo durante aproximación visual y antes de progreso neto. Mantiene
+4s sin progreso, límites de trayectoria/velocidad, llegada5mm/2° y nueva visión.
+VERIFICADO offline; ejecución de revisión y éxito físico PENDIENTES.
+[Diagnóstico y reversión selectiva](BOX_AXIS_REPOSITION_20261002.md#revisión-de-progreso-del-intento084706).
+
+**02-10-2026 — corrección temporal del ajuste visual:** poses adquiridas durante
+la detección, dos muestras a≤0,5s de cada imagen y estabilidad de toda la serie.
+Corrige la comparación con una consulta posterior al procesamiento que abortó
+el intento083606. Sin ampliar edades/límites ni reintentar acciones fallidas.
+VERIFICADO offline; nueva prueba real PENDIENTE.
+[Diagnóstico y reversión selectiva](BOX_AXIS_REPOSITION_20261002.md#revisión-temporal-del-intento083606).
+
+**02-10-2026 — BOX-01-VISUAL-ALIGN:** la recogida optimista comprueba la caja
+antes de preparar brazos y corrige automáticamente X/Y que excedan el gate,
+hasta dos objetivos y 50 mm solicitados en total. Repite detección/TF y exige
+llegada de ajuste 5 mm / 2°; gate XYZ y fallos nativos conservados. Añade cabeza
+en observación y salud completa para esta fase, sin cambiar las transiciones
+rápidas restantes. VERIFICADO offline; carga/ensayo físico PENDIENTES.
+[Secuencia, límites, evidencia y reversión](BOX_AXIS_REPOSITION_20261002.md).
+
 **01-10-2026 — BOX-01-TABLE90: adaptación probada y HOME medido.**
 Instalados/cargados XML/YAML3e142cd1…; ensayo supervisado en tres tramos cubre
 las diez etapas. Depósito/apertura SUCCEED; operador confirma caja estable sobre
@@ -68,10 +92,14 @@ dispensado. El descubrimiento y los hashes siguen ejecutándose; su coste previo
 era del orden de 0,2 s, no un tiempo garantizado. No hay ahorro total medido de
 este perfil ni un objetivo garantizado de cinco segundos entre etapas.
 
-Navegación, llegada 2 cm/2° en get1 y 5 cm/3° en put1, correcciones supervisadas,
-percepción SPS y estabilidad de sus dos capturas no cambian. Tampoco cambian
+Navegación, llegada 2 cm/2° en get1 y 5 cm/3° en put1, correcciones del waypoint,
+percepción SPS y estabilidad de sus dos capturas se conservan. La nueva fase
+visual previa al agarre puede desplazar el chasis respecto de get1; no edita
+ese punto ni exige volver a él después del ajuste. Tampoco cambian
 el [selector y límite XYZ](FRONT_BOX_DEPTH_GATE_20260928.md) del paquete instalado
-`bf145fa17e1116fc`: una selección fuera de límites falla sin escoger otra caja.
+`bf145fa17e1116fc`: una selección nativa fuera de límites falla sin escoger otra
+caja. La fase visual nueva intenta corregir antes de iniciar esa acción, con
+salud completa y brazos/torso HOME; no recupera acciones de agarre fallidas.
 Los bloqueos, plazos, resultado de aplicación, checkpoints y HOME medido siguen
 vigentes. Este perfil reduce esperas de adquisición entre etapas; no elimina
 las verificaciones bloqueantes ni convierte FT sin cualificar en evidencia.

@@ -1,0 +1,22 @@
+{
+  "source": "20261002T081640Z_OPTIMISTIC_SCENARIO1_102007/events.jsonl",
+  "source_sha256": "b64e6c573eb2cce2d61afc43786fd793ee0d733233329982808706654779bf83",
+  "historical_not_current": true,
+  "position_base_link_m": {
+    "x": 0.7909284808515973,
+    "y": 0.09943778448581805,
+    "z": 0.31117874288896163
+  },
+  "reference_map": {
+    "x": 1.6747319039015784,
+    "y": 0.27454969908551513,
+    "yaw": 1.6072163165047282,
+    "stamp_ns": 1790928992513210112
+  },
+  "expected_displacement_base_m": {"x": 0.020928480851597264, "y": 0.0},
+  "expected_target_map": {
+    "point_x": 1.6739698573354762,
+    "point_y": 0.29546430153898684,
+    "point_yaw": 1.6072163165047282
+  }
+}

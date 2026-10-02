@@ -1,5 +1,46 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**02-10-2026 — BOX-01-VISUAL-ALIGN-PROGRESS: recuperación inicial acotada.**
+Intento084706 confirma adquisición temporal (parejas a62,0/62,3ms), solicita
+X+22,774mm y cancela por ausencia de progreso a4,009s. Distancia en mapa sube
+22,774→29,501mm y baja a22,301mm; aún fuera de llegada5mm. El guard sólo
+reconocía superar la distancia inicial en2mm. Ahora reconoce una única
+recuperación inicial≥2mm después de alejarse≥2mm, sólo en box_pickup y antes
+de progreso neto/fase final. Conserva4s sin progreso y todos los límites; ciclos
+de retroceso/retorno no renuevan esta concesión. Añade poses y sello de progreso
+al diario; muestra código0 de cancelación sin afirmar parada. VERIFICADO offline;
+revisión instalada en PC, carga/ensayo nuevos PENDIENTES. Mapa/odom del ensayo
+difieren y no se archivaban poses individuales: causa física PENDIENTE. Sin
+conexión/movimientos del agente; no reiniciar el ciclo tras cancelación sin
+recuperación/comprobación física. Sin agarre ni HOME enviados en ese intento.
+[Fuentes, evidencia y reversión](box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-de-progreso-del-intento084706).
+
+**02-10-2026 — BOX-01-VISUAL-ALIGN-TIME: corregida adquisición temporal.**
+Intento083606 pasa get1 y preparación de cabeza; falla antes de agarre/ajuste
+por BOX_ALIGNMENT_POSE_TIME_MISMATCH. Consultas antes/después separadas3,140683s,
+deriva de extremos0,003904mm/0,009393°; imagen exacta no archivada. Se recogía
+pose después del procesamiento y se exigía diferencia≤0,5s con esa imagen.
+Ahora recoge poses durante cada captura, empareja dos a≤0,5s y comprueba toda
+la serie estable5mm/1°. Mantiene datos frescos, watchdogs/gates y añade evidencia
+de capturas antes del rechazo. Sólo fuentes PC; sin conexión/movimientos del
+agente. VERIFICADO offline; nueva carga y ensayo real PENDIENTES. No inferir
+estado físico actual de estas lecturas históricas.
+[Diagnóstico, fuentes y respaldo exacto](box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-temporal-del-intento083606).
+
+**02-10-2026 — BOX-01-VISUAL-ALIGN: ajuste visual previo a recogida optimista.**
+El intento081640 llega get1 a3,970mm/0,426° pero SPS rechaza X0,790928m,
+exceso0,928mm; son gates distintos. Fuentes PC añaden cabeza en observación,
+doble detección/TF exacta y corrección de ejes X/Y incumplidos antes de mover
+brazos, con torso/brazos HOME medidos. Dos objetivos máximo,50mm solicitados
+en total, objetivo20mm dentro del gate y llegada5mm/2°. Nueva medición,
+asociación geométrica en mapa y validación SPS original antes del agarre único.
+Z/fallos nativos o de vigilancia abortan; no reintenta una recogida ya fallida.
+Bundlebf145fa17e1116fc intacto; sin conexiones, instalación o movimientos del
+agente. VERIFICADO offline; carga remota y ensayo físico PENDIENTES. Replay del
+caso solicita+20,928mm en X; no usa ese registro como estado actual. El rechazo
+anterior pudo preparar brazos: no demuestra HOME ni autoriza reinicio desde cero.
+[Fuentes, comprobaciones, respaldo y reversión](box_handling/BOX_AXIS_REPOSITION_20261002.md).
+
 **01-10-2026 — BOX-01-TABLE90: adaptación probada y HOME medido.**
 Instalados/cargados XML/YAML3e142cd1…; ensayo supervisado en tres tramos cubre
 las diez etapas. Depósito/apertura SUCCEED; operador confirma caja estable sobre

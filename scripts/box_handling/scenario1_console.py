@@ -168,6 +168,19 @@ class ConsoleReporter:
             return self.detail(mapping(event.get('detail')), clean(event.get('kind') or name))
         if name == 'arrival':
             return ['  Llegada '+clean(event.get('point'))+': '+residual(event.get('measurement'))]
+        if name == 'box_alignment':
+            phase = event.get('phase')
+            if phase == 'prepare_head':
+                return ['  Preparando cabeza para medir la caja antes del agarre']
+            if phase == 'in_flight':
+                delta = mapping(event.get('displacement_base_m'))
+                axes = ', '.join(axis.upper()+': '+decimal(delta.get(axis, 0)*1000, 1)+' mm'
+                                 for axis in 'xy' if delta.get(axis))
+                return ['  Ajuste visual de caja '+clean(event.get('attempt'))+': '+axes]
+            if phase == 'ready':
+                return ['  Caja dentro del rango; ajustes visuales: '+clean(event.get('attempts'))+
+                        '. Se vuelve a validar en el agarre.']
+            return []
         if name == 'get1_correction':
             measured = residual(event.get('measurements'))
             if event.get('phase') == 'blocked_before_dispatch':
@@ -265,7 +278,7 @@ class ConsoleReporter:
             if name == 'cancel_response':
                 code = mapping(event.get('response')).get('return_code')
                 if code is not None:
-                    reason = 'código '+clean(code)
+                    reason = 'código '+clean(str(code))
             return ['  '+labels[name]+(': '+reason if reason else '')]
         if name == 'accepted' and event.get('accepted') is False:
             return ['  Orden no aceptada'+(': '+reason if reason else '')]

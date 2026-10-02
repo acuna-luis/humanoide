@@ -4051,6 +4051,70 @@ Reversión selectiva de ambos módulos y pruebas desde`before/`, preservando
 trabajo posterior; no rollback del paquete SPS ni cambios de checkpoint.
 [Formato, receta de verificación y alcance](box_handling/FORCE_IMPROVED_SCENARIO1.md#medidas-de-caja-en-consola--29-09-2026).
 
+## BOX-01-VISUAL-ALIGN — 02-10-2026, Europe/Madrid
+
+**Revisión BOX-01-VISUAL-ALIGN-PROGRESS,02-10-2026:** guard PC reconoce una
+única recuperación inicial de distancia≥2mm desde un máximo≥2mm por encima
+de la entrada. Sólo box_pickup, antes de progreso neto/fase final; get1 conserva
+su regla previa. No amplía4s sin progreso, límites físicos, edades ni gates.
+Archiva últimas poses de cada frame, referencia de progreso y uso de recuperación.
+Consola conserva código0 de cancelación y advertencia de parada no comprobada.
+Motivo: intento084706 cancela tras4,009s con distancia22,301mm, después del
+retorno desde29,501mm; solicitud inicial22,774mm. Adquisición temporal anterior
+OBSERVADA en este ensayo; corrección completa/agarre no demostrados. Fuente
+reproducible: scenario1_nav_correction.py, scenario1_console.py y tests/fixture
+box_alignment_progress_20261002.json. Destinos: PC, mismos paths scripts/
+box_handling; próxima sesión transmite guard en memoria al cliente Motion
+redescubierto, sin instalación remota/reinicio. Instalado en PC y VERIFICADO
+offline; carga/ensayo de revisión PENDIENTES. Backups íntegros antes/después,
+SHA256 y resultados690 pruebas:
+../Humanoide-vla-evidence/20261002_BOX_ALIGNMENT_PROGRESS/.
+Restaurar selectivamente guard/consola/tests previos, retirar fixture nueva y
+revertir estas notas preservando cambios posteriores. Sin estados remotos.
+[Diagnóstico, dependencias, evidencia y reversión](box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-de-progreso-del-intento084706).
+Sin conexión/movimientos del agente, commit ni push.
+
+**Revisión BOX-01-VISUAL-ALIGN-TIME,02-10-2026:** fuentes PC supervisor,
+planificador temporal y test actualizados para adquirir poses mientras procesa
+visión. Dos sellos a≤0,5s de cada imagen y estabilidad de todas las muestras;
+referencia nueva para objetivo, detección≤2s después del reposo. Mantiene gates,
+workers, hashes, límites físicos y protocolo de salud/reanudación. Nuevo hilo
+espera sólo la captura, sin ROS writers; el hilo principal consulta la sesión
+de salud. Límite12s por captura y256 muestras, evidencias antes del rechazo.
+Corrige el fallo083606 posterior a cabeza, sin agarre ni corrección enviados.
+VERIFICADO offline; carga/ensayo de revisión PENDIENTES. Backup íntegro del
+árbol local previo y hashes antes/después:
+../Humanoide-vla-evidence/20261002_BOX_ALIGNMENT_TIME_PAIR/.
+Reversión selectiva y diagnóstico:
+[revisión temporal](box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-temporal-del-intento083606).
+Sin conexión, cambios remotos ni movimientos del agente; sin commit/push.
+
+IMPLEMENTADO en PC; VERIFICADO offline; carga remota/prueba física PENDIENTES.
+Motivo: llegada get1 correcta no garantiza caja dentro del gate; intento081640
+rechazado por X0,790928m, exceso0,928mm. Optimistic añade preparación de cabeza
+y observación visual antes del agarre nativo, torso/brazos HOME, detecciones
+coherentes y TF exacta. Sólo corrige X/Y incumplidos con free_nav supervisado:
+dos objetivos,50mm solicitados acumulados,20mm hacia dentro del límite original,
+llegada5mm/2°, nueva detección y asociación geométrica en mapa antes de agarrar.
+Z fuera de rango y cualquier fallo de acción/salud/guard siguen abortando.
+No cambia gateXYZ, tareas vendor, SDK ni paquete SPSbf145fa17e1116fc.
+
+Destinos PC: scripts/optimistic_scenario1.sh y scripts/box_handling/
+scenario1_box_alignment.py, scenario1_runtime.py, scenario1_nav_correction.py,
+scenario1_cli.py, scenario1_console.py; tests y fixture saneada relacionados.
+Activación: próxima invocación optimista autorizada; transmisión en memoria al
+host Motion/cliente nativo en el contenedor redescubierto, procesos temporales.
+Dependencia extra de cabeza verificada por hash antes de usar y en --check;
+se conserva la identidad persistida de dependencias para reanudaciones anteriores.
+Fuentes/hash, aplicación, requisitos, límites reales del guard, verificación,
+estado instalado/cargado/probado, pendientes, evidencia y receta de rollback:
+[expediente BOX-01-VISUAL-ALIGN](box_handling/BOX_AXIS_REPOSITION_20261002.md).
+Backup externo íntegro antes/después y manifiestos SHA256:
+../Humanoide-vla-evidence/20261002_BOX_AXIS_REPOSITION/.
+Revertir selectivamente fuentes PC respaldadas y retirar archivos nuevos,
+sin tocar estados remotos ni checkpoints. Sólo cambios locales; sin conexión,
+movimiento, instalación remota, reinicios, commit ni push.
+
 ## BOX-01-TABLE90-CANDIDATE — 01-10-2026, Europe/Madrid
 
 VIGENTE: instalado, cargado y probado físicamente con mismo montaje declarado.
