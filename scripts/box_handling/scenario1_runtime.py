@@ -998,14 +998,13 @@ with socket.socket(socket.AF_UNIX) as conn:
             result = self.action('navigation', goal,
                 min(nav_correction.POLICY['action_timeout_s'], budget()), correction=spec)
             contract.validate_navigation_result(result)
-            # A terminal result and stationary guard are insufficient: measure
-            # two fresh map arrivals and then the actual box again.
+            # Success/rest still require two fresh map poses. Native navigation
+            # has centimeter terminal precision; after this correspondence gate
+            # the new visual measurement decides pickup or another bounded goal.
             references = self.pose_references()
-            if any(math.hypot(row['x']-expected['point_x'], row['y']-expected['point_y']) > .005+1e-12 or
-                   abs(math.atan2(math.sin(row['yaw']-expected['point_yaw']),
-                                  math.cos(row['yaw']-expected['point_yaw']))) > math.radians(2)+1e-12
-                   for row in references):
-                raise RuntimeError('BOX_ALIGNMENT_ARRIVAL_NOT_CONFIRMED: 5 mm / 2 degrees required')
+            measurements = box_alignment.validate_arrival(references, expected)
+            self.emit('box_alignment', phase='arrival', attempt=attempt, measurements=measurements,
+                      pickup_verified=False)
             total += step
             pending, reference = self.measure_box_for_pickup()
             perception.validate_pair(anchor, box_alignment.in_map(pending, reference))

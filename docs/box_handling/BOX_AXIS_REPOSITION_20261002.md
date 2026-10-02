@@ -1,5 +1,11 @@
 # Corrección visual de posición antes de recoger
 
+**02-10-2026 — revisión BOX-01-VISUAL-ALIGN-ARRIVAL.** Llegada terminal12mm/2°
+para volver a observar la caja tras éxito/reposo nativo; sustituye el criterio
+PC de5mm citado en revisiones históricas. Ventana5mm del guard para giro rápido
+intacta. Sólo nueva visión/gateXYZ permite recoger o usar el segundo ajuste
+presupuestado. 708 pruebas pertinentes pasan; nueva carga/ensayo PENDIENTES.
+
 **02-10-2026 — revisión BOX-01-VISUAL-ALIGN-FRESH.** Reposo visual desde el
 worker persistente, con el mismo validador y dos muestras nuevas de odometría.
 Evita caducar la imagen durante arranque/cierre ROSA de otro proceso. Edad
@@ -87,8 +93,9 @@ Nunca se usa esa pose archivada como objetivo físico.
    únicamente dentro de **5 mm** del objetivo, con traslación ≤0,02 m/s.
    get1 conserva su umbral anterior de 20 mm. La trayectoria nativa puede
    describir un arco; los ejes se refieren al desplazamiento del objetivo final.
-7. Exigir resultado exitoso, dos muestras nuevas de reposo y llegada medida
-   ≤5 mm / 2°, después repetir toda la medición visual. Comparar geometría de
+7. Exigir resultado exitoso, dos muestras nuevas de reposo y llegada terminal
+   ≤12 mm / 2° en dos poses nuevas estables; después repetir toda la medición visual.
+   Este criterio de precisión del mapa no autoriza el agarre. Comparar geometría de
    caja en el mapa con la referencia inicial, ≤20 mm / 3°, para impedir que el
    cambio de chasis se confunda con cambio de caja. Es asociación geométrica,
    no prueba de identidad física si otra caja ocupa una pose indistinguible.
@@ -104,7 +111,7 @@ Nunca se usa esa pose archivada como objetivo físico.
 
 No se reintenta un agarre fallido, navegación rechazada, pérdida de salud/datos,
 ambigüedad, cambio de mapa/geometría de caja ni violación de vigilancia. No se amplían
-los límites, recortan coordenadas, cambia de caja para pasar el gate, relocaliza
+los límites XYZ/de movimiento, recortan coordenadas, cambia de caja para pasar el gate, relocaliza
 durante el ajuste ni envía HOME automáticamente al fallar.
 
 ## Fuentes y activación
@@ -394,3 +401,88 @@ notas, preservando cambios posteriores. Vuelve la consulta standalone de reposo;
 mantiene correcciones temporal/de progreso anteriores. No restaura checkpoints,
 sesiones, permisos ni estados remotos. Reanudar sólo tras verificar físicamente
 parada/postura/caja según el modo de recuperación correspondiente. Sin commit/push.
+
+## Revisión de llegada del intento091156
+
+**02-10-2026, Europe/Madrid — OBSERVADO histórico:**
+`20261002T091156Z_OPTIMISTIC_SCENARIO1_244792` llega get1 a10,7mm/0,41°,
+prepara cabeza y mide cajaX0,792649615m. Edad de segunda imagen0,993809s:
+la revisión de frescura anterior está cargada y se observa en este intento.
+Solicitud de correcciónX+22,649615mm en base_link, Y0. Objetivo mapa:
+X1,674653343/Y0,290748126m, yaw1,606405957rad. Navegación status4/SUCCEEDED.
+La recuperación inicial de progreso se usa una vez; distancia máxima inicial
+30,759mm y distancia al resultado2,039mm. Reposo confirmado por el guard, dos
+muestras posteriores al terminal; después del asentamiento la distancia de
+mapa es9,630466mm. Las dos poses solicitadas por el supervisor confirman
+9,629522/9,629890mm y0,451711/0,452175°. Ese error explica el rechazo5mm PC.
+
+Odómetro: recorrido87,220mm y excursión máxima68,271mm, dentro de120/80mm.
+En asentamiento la pose de mapa cambia mientras odometría queda en reposo;
+no atribuir esa diferencia sólo a frenado/desplazamiento real. **INFERENCIA:**
+precisión del controlador y/o actualización de localización explican el error
+residual; el diario por sí solo no separa sus causas. El análisis histórico
+[ArcPrecise](ARC_PRECISE_ARRANQUE_20260922.md) documenta tolerancia0,012m e
+histéresis0,005m. No se consultó hoy la configuración remota ni se modificó.
+No se capturó la caja después del ajuste; su posición final/gate son **PENDIENTES**.
+No se envió agarre nativo, segunda corrección ni HOME.
+
+**Cambio local:** criterio terminal de precisión5→12mm, yaw2° conservado,
+dos poses nuevas y estabilidad5mm/1°; sólo después de acción exitosa y reposo
+medido por el guard. Un resultado fuera de12mm/2° sigue abortando antes de
+capturar/recoger. Este cambio no se aplica a `distance_tolerance` del guard:
+la ventana que permite giro final rápido conserva5mm; vigilancia física,
+frescura, empeoramiento15mm, excursión80mm, recorrido120mm, velocidades,
+watchdogs, paros y cancelación permanecen intactos. get1 tampoco cambia.
+
+Pasar ese criterio terminal sólo habilita nueva doble detección con salud,
+postura, reposo, asociación geométrica de caja en mapa≤20mm/3°, TF exacta y
+frescura originales. Si caja cumple XYZ, prepara referencia comparativa y el
+agarre nativo vuelve a detectar/validar sin recibir una pose archivada como
+autorización. Si sigue fuera, exige mejora≥2mm y permite únicamente el segundo
+objetivo ya previsto, con límite50mm solicitado acumulado/70s. Fallos nativos,
+de salud, identidad, datos, presupuesto o mejora siguen deteniendo el ciclo.
+La consola muestra distancia/yaw terminales y «Se vuelve a medir la caja».
+
+Fuentes modificadas: [planificador/gate terminal](../../scripts/box_handling/scenario1_box_alignment.py),
+[runtime](../../scripts/box_handling/scenario1_runtime.py),
+[consola](../../scripts/box_handling/scenario1_console.py),
+[tests](../../scripts/box_handling/test_scenario1_box_alignment.py) y
+[fixture histórica](../../scripts/box_handling/fixtures/box_alignment_arrival_20261002.json).
+Policy congelada explicita max_arrival_distance_m0,012 y max_arrival_yaw_deg2.
+Plan local expone esos valores; caller no puede inyectar una policy más amplia.
+Fixture conserva objetivo/poses reales, métricas y SHA256 del diario, saneados.
+Las posiciones de caja posteriores en tests son sintéticas, no resultados
+físicos del ensayo. Nueva revisión instalada en PC; carga Motion/cliente nativo
+y validación física **PENDIENTES**. Revisiones anteriores sí observadas hasta
+navegación/reposo; éxito de ajuste visual completo/agarre no demostrado.
+
+Receta offline:
+
+```bash
+python3 -B -m unittest scripts.box_handling.test_scenario1_box_alignment \
+  scripts.box_handling.test_scenario1_nav_correction \
+  scripts.box_handling.test_scenario1_optimistic
+./scripts/optimistic_scenario1.sh --plan
+bash -n scripts/optimistic_scenario1.sh
+git diff --check
+```
+
+**708 pruebas pertinentes pasan**, cero errores/fallos; misma suite/exclusión
+legacy test_scenario1_deposit_install. Ocho nuevas cubren replay exacto de
+poses9,63mm, límites inclusivos12mm/2°, no finitos/cantidad/estabilidad/yaw,
+ventana de giro5mm intacta, nueva visión antes de agarre, segundo ajuste visual
+(47,2mm solicitados totales), fallos de identidad/yaw/mejora y residual visible.
+Sintaxis, plan local y diff-check correctos. Evidencia, módulos/resultados,
+respaldo anterior/final y manifiestosSHA256:
+`../Humanoide-vla-evidence/20261002_BOX_ALIGNMENT_VISUAL_ARRIVAL/`.
+
+Activación: próxima sesión optimista autorizada transmite helpers en memoria
+a Motion/cliente en contenedor redescubierto, sin instalación remota/reinicio.
+Dependencias/SDK/vendor/SPSbf145fa17e1116fc/XML/YAML/mapa intactos. Esta intervención
+no conecta al robot ni envía detecciones, comandos físicos o HOME.
+Rollback: restaurar selectivamente los tres scripts/test/notas desde before/,
+retirar fixture nueva y conservar cambios posteriores; vuelve llegada5mm PC,
+manteniendo revisiones anteriores. No restaura estados remotos/checkpoints.
+Punto de reanudación: conservar diario/checkpoint y comprobar físicamente
+parada/postura/caja para recuperación específica, sin inferir estado actual
+del ensayo ni reiniciar automáticamente un ciclo fallido. Sin commit/push.

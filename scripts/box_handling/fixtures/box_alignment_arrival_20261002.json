@@ -1,0 +1,45 @@
+{
+  "incident": "20261002T091156Z_OPTIMISTIC_SCENARIO1_244792",
+  "source_sha256": "627719ec896ed80970451eb9aed1757227ec74911c69134167913b7cc1542821",
+  "historical_not_current": true,
+  "target_map": {
+    "point_x": 1.6746533428184378,
+    "point_y": 0.290748125670359,
+    "point_yaw": 1.6064059571485156
+  },
+  "reference_map": {
+    "x": 1.675459716808807,
+    "y": 0.26811286903225945,
+    "yaw": 1.6064059571485156,
+    "stamp_ns": 1790932324368106496
+  },
+  "displacement_base_m": {
+    "x": 0.022649615495300868,
+    "y": 0.0
+  },
+  "position_base_link_m": {
+    "x": 0.7926496154953009,
+    "y": 0.11935806522506656,
+    "z": 0.3150939340775052
+  },
+  "post_navigation_references": [
+    {
+      "x": 1.6733183103554146,
+      "y": 0.3002846542277388,
+      "yaw": 1.5985221110462948,
+      "stamp_ns": 1790932335248259072
+    },
+    {
+      "x": 1.6733147560700081,
+      "y": 0.30028452836125635,
+      "yaw": 1.5985140202799886,
+      "stamp_ns": 1790932335348582656
+    }
+  ],
+  "settled": true,
+  "settled_distance_m": 0.009630465601783409,
+  "settled_yaw_error_deg": 0.45008941439236344,
+  "odom_path_m": 0.08722037958124239,
+  "odom_max_excursion_m": 0.06827062975706996,
+  "note": "No post-navigation box detection was taken; subsequent box positions in tests are synthetic, never evidence of actual pickup readiness."
+}

@@ -177,6 +177,9 @@ class ConsoleReporter:
                 axes = ', '.join(axis.upper()+': '+decimal(delta.get(axis, 0)*1000, 1)+' mm'
                                  for axis in 'xy' if delta.get(axis))
                 return ['  Ajuste visual de caja '+clean(event.get('attempt'))+': '+axes]
+            if phase == 'arrival':
+                return ['  Llegada del ajuste '+clean(event.get('attempt'))+': '+
+                        residual(event.get('measurements'))+'. Se vuelve a medir la caja.']
             if phase == 'ready':
                 return ['  Caja dentro del rango; ajustes visuales: '+clean(event.get('attempts'))+
                         '. Se vuelve a validar en el agarre.']

@@ -1,5 +1,14 @@
 # Escenario 1 con supervisión continua
 
+**02-10-2026 — precisión terminal del ajuste visual:** intento091156 completa
+navegación y reposo, pero poses finales9,630mm/0,452° superan la exigencia5mm PC.
+Llegada terminal ahora12mm/2°, con dos poses nuevas estables; después exige
+nueva visión y los gates originales antes de agarrar o usar el segundo ajuste
+ya previsto. El guard conserva ventana5mm para giro rápido y todos los límites
+de movimiento/presupuesto. Sustituye sólo el umbral de llegada5mm citado en
+revisiones históricas siguientes. 708 pruebas pertinentes pasan; carga/ensayo
+nuevos PENDIENTES. [Diagnóstico y reversión](BOX_AXIS_REPOSITION_20261002.md#revisión-de-llegada-del-intento091156).
+
 **02-10-2026 — frescura del ajuste visual:** el reposo previo/posterior a las
 capturas usa ahora un lector de odometría en el worker persistente de salud.
 Evita arrancar/cerrar otro proceso ROSA después de recibir una imagen: en el

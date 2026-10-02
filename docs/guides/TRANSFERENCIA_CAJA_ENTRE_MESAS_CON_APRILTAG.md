@@ -1,5 +1,14 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**02-10-2026 — BOX-01-VISUAL-ALIGN-ARRIVAL:** ajusteX22,650mm del intento091156
+terminaSUCCEEDED/reposo, con poses posteriores9,630mm/0,452°. Se sustituye
+exigencia terminal5mm por12mm/2°; requiere nueva detección/coherencia/gateXYZ
+antes de recoger o calcular el segundo ajuste dentro de los presupuestos.
+Ventana5mm del guard para giro rápido y límites físicos conservados. Revisión
+PC verificada con708 pruebas pertinentes; carga/ensayo PENDIENTES. Sin movimientos
+del agente ni confirmación de agarre/estado físico actual.
+[Fuentes, límites, evidencia y reversión](../box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-de-llegada-del-intento091156).
+
 **02-10-2026 — BOX-01-VISUAL-ALIGN-FRESH:** recogida optimista con ajuste
 visual X/Y previo al agarre, límites originales SPS conservados. El intento085958
 aborta por imagen caducada después de arrancar otra consulta de reposo. Fuentes

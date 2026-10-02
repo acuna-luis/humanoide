@@ -4053,6 +4053,30 @@ trabajo posterior; no rollback del paquete SPS ni cambios de checkpoint.
 
 ## BOX-01-VISUAL-ALIGN — 02-10-2026, Europe/Madrid
 
+**Revisión BOX-01-VISUAL-ALIGN-ARRIVAL,02-10-2026:** precisión terminal PC
+5→12mm, yaw2° conservado; dos poses nuevas estables y después doble detección
+obligatoria. El guard conserva umbral5mm para giro rápido y todos los límites
+de movimiento/frescura/presupuesto. Motivo: intento091156 terminaSUCCEEDED y
+reposo, poses finales9,630mm/0,452°; el gate PC abortaba antes de validar la caja.
+Separa llegada terminal de criterio XYZ de recogida, que permanece intacto.
+Nueva policy congelada explicita12mm/2°. Caja fuera de gate usa, si hay mejora,
+el segundo objetivo ya autorizado≤50mm solicitados totales; fallos/identidad/
+no mejora siguen abortando. Consola muestra residual y anuncia nueva medición.
+Fuentes/destinos PC: scripts/box_handling/scenario1_box_alignment.py,
+scenario1_runtime.py, scenario1_console.py, test_scenario1_box_alignment.py y
+fixtures/box_alignment_arrival_20261002.json. Próxima sesión autorizada transmite
+helpers al host/cliente Motion redescubierto en memoria. Sin cambios de vendor,
+SDK, YAML/XML, paquete SPS, mapa ni parámetros remotos. Instalado/verificado PC
+con708 pruebas pertinentes; nueva carga/prueba física PENDIENTES. El diario
+confirma cargadas revisiones previas y navegación/reposo, no agarre ni detección
+posterior. Configuración12mm del proveedor es histórica, no recotejada hoy.
+Backup/hashes íntegros antes/después, fixture saneada y resultados:
+../Humanoide-vla-evidence/20261002_BOX_ALIGNMENT_VISUAL_ARRIVAL/.
+Rollback selectivo desde before/ de tres fuentes/test/notas; retirar fixture
+nueva, preservar cambios posteriores, sin restaurar estados remotos/checkpoint.
+[Fuentes, receta y detalle](box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-de-llegada-del-intento091156).
+Sin conexión/movimientos del agente, commit ni push.
+
 **Revisión BOX-01-VISUAL-ALIGN-FRESH,02-10-2026:** runtime PC consulta reposo
 en health worker persistente por comando base, con lector /mc/odom creado una
 vez bajo QoS SensorData/bestEffort/volatile/keepLast5. Importa en memoria la

@@ -19,7 +19,8 @@ else:
     from scenario1_perception import validate_pair
 
 POLICY = MappingProxyType(dict(max_corrections=2, max_step_m=.05,
-    max_total_m=.05, inside_margin_m=.02, total_budget_s=70., min_improvement_m=.002))
+    max_total_m=.05, inside_margin_m=.02, total_budget_s=70., min_improvement_m=.002,
+    max_arrival_distance_m=.012, max_arrival_yaw_deg=2.))
 HEAD_TASK = 'cruzr/move_head_lower'
 HEAD_PATH = '/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/'+HEAD_TASK+'.xml'
 HEAD_SHA256 = 'f3a73626f97b471d4a0a03c98c24de32243651116c497328e69b5ddc57ea46c1'
@@ -83,6 +84,34 @@ def in_map(pending, reference):
     result['selection']['selected_pose'] = transform_poses(
         [pending['selection']['selected_pose']], transform)[0]
     return result
+
+
+def validate_arrival(references, expected):
+    """Allow native terminal precision before recapturing, never authorize grasp.
+
+    The map correspondence gate is distinct from the unchanged box XYZ gate
+    and the navigation guard's 5 mm window for permitting faster final turns.
+    """
+    if len(references) != 2:
+        raise ValueError('BOX_ALIGNMENT_ARRIVAL_REQUIRES_TWO_POSES')
+    measurements = []
+    for row in references:
+        values = [row[key] for key in ('x', 'y', 'yaw')]
+        values += [expected[key] for key in ('point_x', 'point_y', 'point_yaw')]
+        if any(type(value) not in (int, float) or not math.isfinite(value) for value in values):
+            raise ValueError('BOX_ALIGNMENT_INVALID_ARRIVAL_POSE')
+        distance = math.hypot(row['x']-expected['point_x'], row['y']-expected['point_y'])
+        yaw = abs(math.degrees(math.atan2(math.sin(row['yaw']-expected['point_yaw']),
+                                         math.cos(row['yaw']-expected['point_yaw']))))
+        measurements.append(dict(distance_m=distance, yaw_error_deg=yaw,
+            distance_tolerance_m=POLICY['max_arrival_distance_m'],
+            yaw_tolerance_deg=POLICY['max_arrival_yaw_deg']))
+    if any(row['distance_m'] > POLICY['max_arrival_distance_m']+1e-12 or
+           row['yaw_error_deg'] > POLICY['max_arrival_yaw_deg']+1e-12 for row in measurements):
+        raise ValueError('BOX_ALIGNMENT_ARRIVAL_NOT_CONFIRMED: 12 mm / 2 degrees required; '+
+                         'measurements='+repr(measurements))
+    stable_base(references)
+    return measurements
 
 
 def stable_base(references):

@@ -146,6 +146,42 @@ class AlignmentPlanTests(unittest.TestCase):
         for invalid in (dict(spec, point='anything'), dict(spec, attempt=3)):
             with self.assertRaises(ValueError): nav.validate_spec(invalid)
 
+    def test_archived_terminal_poses_allow_recapture_with_original_turn_window(self):
+        fixture=json.loads((Path(__file__).parent/'fixtures/box_alignment_arrival_20261002.json').read_text())
+        measurements=alignment.validate_arrival(fixture['post_navigation_references'],fixture['target_map'])
+        self.assertAlmostEqual(measurements[0]['distance_m'],.00962952172244532)
+        self.assertAlmostEqual(measurements[1]['yaw_error_deg'],.4521746747502925)
+        self.assertTrue(fixture['settled'])
+        self.assertTrue(fixture['historical_not_current'])
+        spec=nav.make_spec(fixture['target_map'],fixture['reference_map'],1,point='box_pickup')
+        self.assertEqual(nav.distance_tolerance(spec),.005)
+        self.assertEqual(measurements[0]['distance_tolerance_m'],.012)
+
+    def test_terminal_pose_distance_yaw_bounds_are_inclusive_and_not_configurable(self):
+        expected=dict(point_x=0.,point_y=0.,point_yaw=0.)
+        refs=[dict(x=.012,y=0.,yaw=math.radians(2.))]*2
+        alignment.validate_arrival(refs,expected)
+        for x,yaw in ((.012000001,0.),(0.,math.radians(2.000001))):
+            with self.subTest(x=x,yaw=yaw), self.assertRaisesRegex(ValueError,'ARRIVAL_NOT_CONFIRMED'):
+                alignment.validate_arrival([dict(x=x,y=0.,yaw=yaw)]*2,expected)
+        with self.assertRaises(TypeError):
+            alignment.POLICY['max_arrival_distance_m']=1.
+
+    def test_terminal_pose_checks_count_finiteness_and_stability(self):
+        expected=dict(point_x=0.,point_y=0.,point_yaw=0.)
+        valid=dict(x=0.,y=0.,yaw=0.)
+        for invalid in ([],[valid],[valid]*3,[dict(valid,x=float('nan'))]*2,
+                        [dict(valid,y=True)]*2):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                alignment.validate_arrival(invalid,expected)
+        with self.assertRaisesRegex(ValueError,'BASE_UNSTABLE'):
+            alignment.validate_arrival([dict(valid,x=-.004),dict(valid,x=.004)],expected)
+
+    def test_terminal_pose_yaw_wrap_uses_shortest_difference(self):
+        rows=[dict(x=0.,y=0.,yaw=-math.pi+math.radians(.1))]*2
+        result=alignment.validate_arrival(rows,dict(point_x=0.,point_y=0.,point_yaw=math.pi))
+        self.assertAlmostEqual(result[0]['yaw_error_deg'],.1)
+
 
 class AlignmentRuntimeTests(unittest.TestCase):
     def machine(self, observations):
@@ -215,11 +251,47 @@ class AlignmentRuntimeTests(unittest.TestCase):
 
     def test_wrong_arrival_blocks_recapture_and_pickup(self):
         machine = self.machine([self.observation()])
-        machine.pose_references.return_value[1]['x'] += .006
-        with self.assertRaisesRegex(RuntimeError, 'ARRIVAL_NOT_CONFIRMED'):
+        for row in machine.pose_references.return_value:
+            row['x'] += .013
+        with self.assertRaisesRegex(ValueError, 'ARRIVAL_NOT_CONFIRMED'):
             machine.align_box_for_pickup()
         self.assertEqual(machine.action.call_count, 2)
         machine.measure_box_for_pickup.assert_called_once()
+
+    def test_native_terminal_residual_recaptures_box_before_native_grasp(self):
+        machine=self.machine([self.observation(),self.observation(x=.77,stamp=200,base_x=1.0309)])
+        machine.pose_references.return_value=[dict(x=1.0309,y=2.,yaw=0.)]*2
+        machine.stage(dict(stage='grasp'))
+        self.assertEqual(machine.measure_box_for_pickup.call_count,2)
+        self.assertEqual(machine.action.call_count,3) # head, navigation, native grasp
+        self.assertEqual(machine.checkpoint['completed'][-1],'grasp')
+        self.assertEqual(json.loads((machine.session/'box-alignment-reference.json').read_text())['stamp_ns'],200)
+
+    def test_native_terminal_residual_with_box_still_outside_uses_second_visual_goal(self):
+        machine=self.machine([self.observation(x=.795),
+            self.observation(x=.7922,stamp=200,base_x=1.015),
+            self.observation(x=.77,stamp=300,base_x=1.0372)])
+        machine.pose_references.side_effect=[[dict(x=1.015,y=2.,yaw=0.)]*2,
+                                            [dict(x=1.0372,y=2.,yaw=0.)]*2]
+        machine.align_box_for_pickup()
+        self.assertEqual(machine.action.call_count,3)
+        requests=machine.action.call_args_list[1:]
+        self.assertEqual([call.kwargs['correction']['attempt'] for call in requests],[1,2])
+        self.assertAlmostEqual(requests[1].kwargs['correction']['target']['point_x'],1.0372)
+        record=json.loads((machine.session/'box-alignment.json').read_text())
+        self.assertAlmostEqual(record['total_requested_m'],.0472)
+
+    def test_native_terminal_residual_never_forgives_visual_or_yaw_failure(self):
+        for failure in ('yaw','identity','no_improvement'):
+            after=self.observation(x=.77,stamp=200,base_x=1.0309)
+            if failure=='identity':after=self.observation(x=.73,stamp=200,base_x=1.0309)
+            if failure=='no_improvement':after=self.observation(x=.7908,stamp=200,base_x=1.0309)
+            machine=self.machine([self.observation(),after])
+            machine.pose_references.return_value=[dict(x=1.0309,y=2.,yaw=math.radians(2.001) if failure=='yaw' else 0.)]*2
+            with self.subTest(failure=failure), self.assertRaises((ValueError,RuntimeError)):
+                machine.stage(dict(stage='grasp'))
+            self.assertEqual(machine.action.call_count,2)
+            self.assertFalse((machine.session/'box-alignment-reference.json').exists())
 
     def test_unrecoverable_detection_never_dispatches_nav_or_grasp(self):
         for observation in (self.observation(x=.9), self.observation(z=0)):
@@ -454,6 +526,12 @@ class AlignmentPayloadTests(unittest.TestCase):
                                    displacement_base_m=dict(x=.0209, y=0)))
         self.assertTrue(any('X: 20,9 mm' in row for row in rows))
         self.assertFalse(any('Y:' in row for row in rows))
+
+    def test_console_reports_terminal_residual_as_pending_visual_measurement(self):
+        rows=ConsoleReporter().render(dict(event='box_alignment',phase='arrival',attempt=1,
+            measurements=[dict(distance_m=.00963,yaw_error_deg=.45)],pickup_verified=False))
+        self.assertIn('9,6 mm','\n'.join(rows))
+        self.assertIn('Se vuelve a medir la caja','\n'.join(rows))
 
     def test_native_adapter_keeps_gate_and_rejects_selection_changed_since_alignment(self):
         from scripts.box_handling.test_scenario1_perception import PositionRejectionObservationTest

@@ -1,5 +1,20 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**02-10-2026 — BOX-01-VISUAL-ALIGN-ARRIVAL: precisión terminal y nueva visión.**
+Intento091156 supera frescura/progreso: objetivoX+22,650mm, navegaciónSUCCEEDED
+y reposo confirmado. Las dos poses posteriores quedan9,630mm/0,452°; la llegada
+PC exigía5mm y abortaba antes de volver a ver la caja. Se cambia sólo esa
+precisión terminal a12mm/2°, coherente con la tolerancia12mm documentada del
+controlador nativo (histórica, sin consulta de configuración actual del agente).
+No basta para agarrar: exige nueva pareja visual, salud/reposo, identidad
+geométrica y gateXYZ original; si sigue fuera permite el segundo objetivo ya
+presupuestado. Conserva ventana5mm del guard para giro rápido, límites físicos,
+dos objetivos/50mm/70s y aborto ante fallo. 708 pruebas pertinentes pasan.
+Revisiones previas cargadas y éxito/reposo de esta navegación OBSERVADOS;
+agarre/corrección visual completa no probados. Revisión nueva instalada PC;
+carga/ensayo PENDIENTES. Sin conexión/movimientos del agente; estado actual
+desconocido. [Fuentes, respaldo y reversión](box_handling/BOX_AXIS_REPOSITION_20261002.md#revisión-de-llegada-del-intento091156).
+
 **02-10-2026 — BOX-01-VISUAL-ALIGN-FRESH: reposo sin reiniciar ROSA.**
 Intento085958 pasa get1/cabeza y emparejamiento temporal; segunda imagen tiene
 1,136s al recibirse,1,316s tras poses y≥2,219s tras reposo. La última consulta
