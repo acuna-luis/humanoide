@@ -45,6 +45,7 @@ arms_only_config_path="/opt/walker/manipulation_meta_tasks/share/manipulation_me
 arms_only_config_sha256="4e8d79a40e8b1f1fa5915de27ef60676fce4c9b5cec41cacfc0a1d9a7d117a44"
 vendor_full_body_config_sha256="5f08b30cd5032a9fccd6b3becd933ff3884d9795d02f98cc2433fc0da33fc62a"
 minimum_battery_soc=30
+source "$script_dir/pico_effector_profile.sh"
 
 if [[ "${CRUZR_TELEOP_DEBUG:-0}" == "1" ]]; then
   PS4='+ ${BASH_SOURCE##*/}:${LINENO}: '
@@ -142,7 +143,7 @@ check_robot_teleop_profile_loaded() {
       "$robot_user@$motion_ip" bash -s -- \
         "$motion_app_container" "$arms_only_config_path" \
         "$expected_sha" "$expected_teleop_task" \
-        "$profile_name" "$expected_waist" "$expected_leg" <<'REMOTE'
+        "$profile_name" "$expected_waist" "$expected_leg" "$expected_motion_hand" <<'REMOTE'
 set -Eeuo pipefail
 container="$1"
 config_path="$2"
@@ -151,6 +152,7 @@ task_name="$4"
 profile_name="$5"
 expected_waist="$6"
 expected_leg="$7"
+expected_hand="$8"
 
 [[ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null)" == "true" ]] || exit 31
 actual_sha="$(docker exec "$container" sha256sum "$config_path" | awk '{print $1}')"
@@ -167,10 +169,10 @@ block="$(sed -n "${last_start},$((last_start + 79))p" "$latest")"
 waist="$(sed -nE 's/.*Waist tele mode: ([0-9]+).*/\1/p' <<<"$block" | sed -n '1p')"
 leg="$(sed -nE 's/.*Leg tele mode: ([0-9]+).*/\1/p' <<<"$block" | sed -n '1p')"
 hand="$(sed -nE 's/.*Hand type: ([^ ]+).*/\1/p' <<<"$block" | sed -n '1p')"
-[[ "$waist" == "$expected_waist" && "$leg" == "$expected_leg" && "$hand" == "clamp" ]] || {
-  printf 'TELEOP_PROFILE_NOT_LOADED=profile:%s,hand:%s,waist:%s,leg:%s,expected:clamp/%s/%s\n' \
+[[ "$waist" == "$expected_waist" && "$leg" == "$expected_leg" && "$hand" == "$expected_hand" ]] || {
+  printf 'TELEOP_PROFILE_NOT_LOADED=profile:%s,hand:%s,waist:%s,leg:%s,expected:%s/%s/%s\n' \
     "$profile_name" "${hand:-unknown}" "${waist:-unknown}" \
-    "${leg:-unknown}" "$expected_waist" "$expected_leg"
+    "${leg:-unknown}" "$expected_hand" "$expected_waist" "$expected_leg"
   exit 34
 }
 printf 'TELEOP_PROFILE_CONFIG_SHA256=%s\n' "$actual_sha"
@@ -191,12 +193,41 @@ REMOTE
   printf '%s\n' "$output"
 }
 
+check_v4_hand_states() {
+  local helper_b64 output rc=0
+  helper_b64="$(base64 -w0 "$script_dir/check_pico_v4_hand_states.py")"
+  output="$({
+    CRUZR_INTERNAL_ASKPASS=1 SSH_ASKPASS="$motion_askpass" \
+    SSH_ASKPASS_REQUIRE=force DISPLAY="${DISPLAY:-:0}" \
+    setsid -w timeout 20s ssh -o ConnectTimeout=6 \
+      -o PreferredAuthentications=password -o PubkeyAuthentication=no \
+      -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=accept-new \
+      "$robot_user@$motion_ip" bash -s -- "$motion_ros_container" "$helper_b64" <<'REMOTE'
+set -Eeuo pipefail
+container="$1"
+helper_b64="$2"
+docker exec -i "$container" bash -s -- "$helper_b64" <<'INNER'
+set -Eeo pipefail
+# ROS setup reads optional unset variables; restore nounset after sourcing it.
+source /opt/ros/humble/setup.bash
+set -u
+export ROS2CLI_DISABLE_DAEMON=1
+code="$(printf '%s' "$1" | base64 -d)"
+timeout 11 python3 -c "$code"
+INNER
+REMOTE
+  } 2>&1)" || rc=$?
+  printf '%s\n' "$output"
+  ((rc == 0)) || die "Faltan estados v4 válidos de siete articulaciones por mano; no se enviará START."
+}
+
 check_robot_arms_only_loaded() {
   check_robot_teleop_profile_loaded \
     "arms-only" "$arms_only_config_sha256" 0 0
 }
 
 check_robot_full_body_loaded() {
+  [[ "$pico_effector" == "clamp" ]] || die "El perfil v4 sólo admite brazos y manos."
   check_robot_teleop_profile_loaded \
     "vendor-full-body" "$vendor_full_body_config_sha256" 1 2
 }
@@ -407,8 +438,8 @@ PY
 
   progress "MOVIMIENTO 2/2: comprobando paros, batería, cargador, efector, tarea y velocidad articular"
 
-  local output
-  if ! output="$({
+  local output preflight_rc=0 reason
+  output="$({
     CRUZR_INTERNAL_ASKPASS=1 \
     SSH_ASKPASS="$motion_askpass" \
     SSH_ASKPASS_REQUIRE=force \
@@ -422,12 +453,15 @@ PY
       -o StrictHostKeyChecking=accept-new \
       "$robot_user@$motion_ip" bash -s -- \
         "$motion_ros_container" "$motion_app_container" \
-        "$expected_teleop_task" "$minimum_battery_soc" <<'REMOTE'
+        "$expected_teleop_task" "$minimum_battery_soc" "${expected_hw_types// /,}" <<'REMOTE'
 set -Eeuo pipefail
 ros_container="$1"
 motion_container="$2"
 expected_task="$3"
 minimum_soc="$4"
+expected_hw_types="${5:-cruzr_s2_v1}"
+# SSH joins remote argv with spaces; transfer the allowlist as one comma token.
+expected_hw_types="${expected_hw_types//,/ }"
 
 for container in "$ros_container" "$motion_container"; do
   [[ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null)" == "true" ]] || {
@@ -440,12 +474,13 @@ environment="$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}
 hw_type="$(awk -F= '$1=="HW_TYPE" {print substr($0,index($0,"=")+1)}' <<<"$environment")"
 tele_device="$(awk -F= '$1=="TELE_DEVICE" {print substr($0,index($0,"=")+1)}' <<<"$environment")"
 transmit="$(awk -F= '$1=="transmit" {print substr($0,index($0,"=")+1)}' <<<"$environment")"
-[[ "$hw_type" == "cruzr_s2_v1" ]] || { printf 'HW_TYPE_ERROR=%s\n' "$hw_type"; exit 22; }
+[[ " $expected_hw_types " == *" $hw_type "* && -n "$hw_type" ]] || { printf 'HW_TYPE_ERROR=%s\n' "$hw_type"; exit 22; }
 [[ "$tele_device" == "pico" ]] || { printf 'TELE_DEVICE_ERROR=%s\n' "$tele_device"; exit 23; }
 [[ "$transmit" == "local" ]] || { printf 'TRANSMIT_ERROR=%s\n' "$transmit"; exit 24; }
 
+# Consume the inventory completely: head can give sort SIGPIPE under pipefail.
 latest="$(find /etc/walker/log/motion -maxdepth 1 -type f \
-  -name 'robot_app*.log' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+  -name 'robot_app*.log' -printf '%T@ %p\n' | sort -nr | sed -n '1p' | cut -d' ' -f2-)"
 [[ -n "$latest" && -f "$latest" ]] || exit 25
 last_task_line="$(grep "BTree task: '" "$latest" | tail -n1 || true)"
 last_task="$(sed -E "s/.*BTree task: '([^']+)'.*/\1/" <<<"$last_task_line")"
@@ -461,7 +496,12 @@ source /opt/ros/humble/setup.bash
 export ROS2CLI_DISABLE_DAEMON=1
 
 topic_once() {
-  timeout 8 ros2 topic echo --once "$1"
+  local rc=0
+  timeout 8 ros2 topic echo --once "$1" || rc=$?
+  if ((rc != 0)); then
+    printf 'MOTION_TOPIC_READ_FAILED=%s; rc=%s\n' "$1" "$rc" >&2
+    return "$rc"
+  fi
 }
 
 estop="$(topic_once /emb/estop_key_state)"
@@ -483,7 +523,7 @@ charge="$(topic_once /emb/chrg_input_status)"
 lock="$(topic_once /sys/state/module_lock_info)"
 grep -Eq 'locked:[[:space:]]+false' <<<"$lock" || exit 36
 
-action_status="$(timeout 8 ros2 topic echo --once /mc/manipulation/action/_action/status)"
+action_status="$(topic_once /mc/manipulation/action/_action/status)"
 active_count="$(awk '$1 == "status:" && ($2 == 1 || $2 == 2 || $2 == 3) {count++} END {print count+0}' <<<"$action_status")"
 [[ "$active_count" == "1" ]] || exit 37
 
@@ -511,8 +551,28 @@ printf 'HW_TYPE=%s\nTELE_DEVICE=%s\nTRANSMIT=%s\n' \
   "$hw_type" "$tele_device" "$transmit"
 printf 'ACTIVE_TASK=%s\n' "$last_task"
 REMOTE
-  } 2>&1)"; then
+  } 2>&1)" || preflight_rc=$?
+  if ((preflight_rc != 0)); then
     printf '%s\n' "$output" >&2
+    case "$preflight_rc" in
+      21) reason="contenedor requerido sin ejecución confirmada" ;;
+      22) reason="tipo de hardware no compatible" ;;
+      23) reason="dispositivo de teleoperación distinto de PICO" ;;
+      24) reason="transporte local no confirmado" ;;
+      25) reason="registro Motion no disponible" ;;
+      26) reason="última tarea Motion distinta de la tarea PICO requerida" ;;
+      31) reason="paro principal sin liberación confirmada" ;;
+      32) reason="paro de servos sin liberación confirmada" ;;
+      33) reason="no se recibieron dos estados de batería" ;;
+      34) reason="batería por debajo del mínimo de $minimum_battery_soc %" ;;
+      35) reason="cargador sin desconexión confirmada" ;;
+      36) reason="bloqueo de módulos sin liberación confirmada" ;;
+      37) reason="no hay exactamente una acción activa" ;;
+      38) reason="reposo articular no confirmado: faltan velocidades o alguna supera 0,02 rad/s" ;;
+      124) reason="consulta agotó su tiempo; revisar el canal indicado en la salida" ;;
+      *) reason="consulta SSH/ROS fallida; revisar la salida anterior" ;;
+    esac
+    printf 'MOTION_PREFLIGHT_FAILED=rc:%s; %s\n' "$preflight_rc" "$reason" >&2
     die "El preflight Motion no permite una prueba física. No se enviará START."
   fi
   printf '%s\n' "$output"
@@ -970,14 +1030,14 @@ check_pc() {
   latest_log_has_pico ||
     die "No se encontró discovery del PICO en el journal reciente o la consulta agotó ${command_timeout_seconds}s."
 
-  progress "CHECK 6/7: comprobando baseline oficial 4.7.0, arm=clamp y binario sin parches"
+  progress "CHECK 6/7: comprobando baseline oficial 4.7.0, cliente=$required_arm y binario sin parches"
   local environment backend_sha256 pico_control_sha256 backend_version ui_version
   environment="$(
     timeout "${command_timeout_seconds}s" \
       systemctl show "$backend_unit" -p Environment --value
   )" || die "systemd no devolvió el entorno del backend dentro de ${command_timeout_seconds}s."
-  [[ " $environment " == *" arm=$required_arm "* ]] ||
-    die "El backend no está fijado a arm=$required_arm; reinstale el drop-in del PC."
+  [[ " $environment " == *" arm=$backend_required_arm "* ]] ||
+    die "El backend no está fijado a arm=$backend_required_arm; reinstale el drop-in del PC."
   [[ " $environment " == *" LC_NUMERIC=C "* ]] ||
     die "El backend no fija LC_NUMERIC=C; reinstale el drop-in de locale numérico."
   backend_version="$(dpkg-query -W -f='${Version}' ubt-controller 2>/dev/null)" ||
@@ -1024,13 +1084,13 @@ check_pc() {
   info "PICO_IDENTITY_OK=$pico_serial,source:$pico_identity_source"
   info "PICO_STREAM_OK=$pico_ip->$pc_pico_ip:63901"
   info "PICO_TRACKING_OK=vr_status:$vr_status"
-  info "BACKEND_OK=ubt-controller:$backend_version,arm:$required_arm,ws:8082"
+  info "BACKEND_OK=ubt-controller:$backend_version,arm:$backend_required_arm,ws:8082"
   info "OFFICIAL_COMPATIBILITY_BASELINE_OK=robot-v0.2.0/controller-$backend_version/ui-$ui_version"
   info "BACKEND_VENDOR_BINARY_SHA256_OK=$backend_sha256"
-  info "PICO_CONTROL_VENDOR_CLI_OK=$pico_control_sha256,arm_type=clamp"
+  info "PICO_CONTROL_VENDOR_CLI_OK=$pico_control_sha256,arm_type=$required_arm"
   info "HEARTBEAT_WATCHDOG=vendor-default-unmodified"
   info "PICO_ENABLE_PROTOCOL=verified-live-vendor-Y->Left.b_button->tele_operation.enable:1"
-  info "PICO_ARM_SELECTION_LIVE=requested:clamp,pc-observed:gripper,motion-hand:clamp,pc-label-pending"
+  info "PICO_EFFECTOR_SELECTED=$pico_effector; CLIENT_ARM_TYPE=$required_arm; MOTION_HAND_REQUIRED=$expected_motion_hand"
   info "PICO_STOP_PROTOCOL=verified-official-client->operation_type:1"
   info "BACKEND_STATE_SOURCE=passive-log-no-websocket"
   info "STOP_DIAGNOSTIC_NOTE=preflight-and-final-verification-do-not-open-websocket"
@@ -1331,6 +1391,10 @@ liberados; ruedas preparadas; suelo llano; envolvente completa y recorrido
 Escriba exactamente: $confirmation_expected
 EOF
   else
+    local hand_control_instructions="No use gatillos con abrazaderas."
+    if [[ "$pico_effector" == "v4" ]]; then
+      hand_control_instructions="Los gatillos mandan apertura/cierre de manos; pruebe primero en vacío. No es seguimiento independiente de dedos."
+    fi
     confirmation_expected="INICIAR TELEOPERACION OFICIAL DE BRAZOS"
     cat <<EOF
 
@@ -1340,8 +1404,9 @@ Esta ventana permite mover uno o ambos brazos con sus grips después de pulsar
 Y una vez. El perfil arms-only mantiene cintura y elevador fuera del control.
 Con ambos brazos use recorridos pequeños, sincronizados y dentro del alcance;
 suelte los grips ante resistencia, retraso o cualquier movimiento del torso.
-No use gatillos, joysticks, clicks, X/A/B ni comandos de chasis/elevador.
-Confirme ahora: abrazaderas vacías, postura actual despejada, cargador fuera,
+${hand_control_instructions}
+No use joysticks, clicks, X/A/B ni comandos de chasis/elevador.
+Confirme ahora: $effector_description vacías, postura actual despejada, cargador fuera,
 paros liberados, persona junto al paro y nadie dentro de la trayectoria.
 
 Escriba exactamente: $confirmation_expected
@@ -1354,6 +1419,9 @@ EOF
 
   start_pico_camera
   check_robot_teleop_safety
+  if [[ "$pico_effector" == "v4" ]]; then
+    check_v4_hand_states
+  fi
   if ((full_body == 1)); then
     start_motion_safety_monitor
   fi
@@ -1363,7 +1431,7 @@ EOF
   start_line="$(($(wc -l < "$backend_log") + 1))"
   "$pico_control_executable" \
     --websocket_url ws://127.0.0.1:8082 \
-    --arm_type clamp --enable_hand_pose 0 --push_rate 90 &
+    --arm_type "$required_arm" --enable_hand_pose 0 --push_rate 90 &
   official_client_pid=$!
 
   deadline=$((SECONDS + 10))
@@ -1440,7 +1508,7 @@ EOF
       tail -n 20 "$motion_safety_monitor_file" >&2 || true
       die "Motion registró fallo IK, sobreesfuerzo, error EtherCAT o se perdió su monitor; se solicitará STOP."
     fi
-    if ((full_body == 1)) &&
+    if { ((full_body == 1)) || [[ "$pico_effector" == "v4" ]]; } &&
        tail -n "+$start_line" "$backend_log" |
          grep -qE '(Left|Right) hand state:.*"thumbstick"[[:space:]]*:[[:space:]]*true'; then
       die "Se detectó click de joystick, que conmuta protección de fuerza; se solicitará STOP."
@@ -2208,6 +2276,12 @@ EOF
 }
 
 mode="${1:---check}"
+if [[ "$pico_effector" == "v4" ]]; then
+  case "$mode" in
+    --check|--check-arms-only|--check-motion-ready|--check-reload-ready|--teleoperate|--stop|--help|-h) ;;
+    *) die "Modo no habilitado para manos v4: $mode" ;;
+  esac
+fi
 case "$mode" in
   --check)
     check_pc
@@ -2225,6 +2299,10 @@ case "$mode" in
   --check-motion-ready)
     check_pc
     check_robot_teleop_safety
+    if [[ "$pico_effector" == "v4" ]]; then
+      check_v4_hand_states
+      check_robot_arms_only_loaded
+    fi
     info "MOTION_READY_CHECK_OK=1; no se envió START ni se movió el robot."
     ;;
   --teleoperate)

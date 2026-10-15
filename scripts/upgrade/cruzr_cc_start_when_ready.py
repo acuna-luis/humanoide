@@ -229,7 +229,7 @@ def main(argv=None):
     if not 20 <= args.timeout <= MAX_WAIT_S:
         parser.error('--timeout must be between 20 and 420 seconds')
     deadline = time.monotonic() + args.timeout
-    if os.environ.get('HW_TYPE') != 'cruzr_s2_v1':
+    if os.environ.get('HW_TYPE') not in ('cruzr_s2_v1', 'cruzr_s2_v1_sps'):
         log('BLOCKED=unexpected_hardware')
         return 78
     try:

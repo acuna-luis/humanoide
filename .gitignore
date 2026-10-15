@@ -60,3 +60,6 @@ htmlcov/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Grabaciones PICO locales: conservar archivos grandes fuera de Git.
+/recordings/pico/*.motion

@@ -88,6 +88,31 @@ class GateTests(unittest.TestCase):
             execute.assert_called_once_with('rosa', gate.COMMAND)
             self.assertEqual(gate.COMMAND[1:4], ['run','control_center','control_center'])
 
+    def test_sps_profile_keeps_motion_and_camera_readiness_required(self):
+        for ready in (False, True):
+            with self.subTest(ready=ready), \
+                 patch.dict(os.environ, HW_TYPE='cruzr_s2_v1_sps'), \
+                 patch.object(gate.Path, 'read_bytes', return_value=b'vendor'), \
+                 patch.object(gate, 'EXPECTED_SHA256', gate.hashlib.sha256(b'vendor').hexdigest()), \
+                 patch.object(gate, 'wait_ready', return_value=ready) as motion, \
+                 patch.object(gate, 'wait_cameras', return_value=True) as cameras, \
+                 patch.object(gate, 'probe', return_value=True), \
+                 patch.object(gate, 'claim_boot_voice', return_value=False), \
+                 patch.object(gate.os, 'execvp') as execute:
+                result=gate.main([])
+                self.assertEqual(result, 0 if ready else 75)
+                motion.assert_called_once()
+                self.assertEqual(cameras.call_count, int(ready))
+                execute.assert_not_called()
+
+    def test_unknown_hardware_is_rejected_before_readiness(self):
+        with patch.dict(os.environ, HW_TYPE='unknown'), \
+             patch.object(gate, 'wait_ready') as motion, \
+             patch.object(gate.os, 'execvp') as execute:
+            self.assertEqual(gate.main([]),78)
+            motion.assert_not_called()
+            execute.assert_not_called()
+
     def test_cameras_require_all_six_and_two_advancing_rounds(self):
         def run(rounds):
             elapsed = [0]
