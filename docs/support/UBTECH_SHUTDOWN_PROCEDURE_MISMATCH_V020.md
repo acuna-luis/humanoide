@@ -1,5 +1,13 @@
 # Discrepancia del procedimiento de apagado — Cruzr S2 v0.2.0
 
+**15-10-2026 — BOOT-CC-SPS-20261015 / selector CC:** HW_TYPE SPS instalado y
+sólo CC recreado con mismaimagen/orden/montajes. Guard de arranque actualizado
+para reconocer identificadorSPS conservando gates yvoz;18tests pasan.
+Principal1 ybrazos asegurados confirmados; Motion no reiniciado, sinHOME/START.
+Consignas latentes siguen pendientes: apagado supervisado en preparación,
+paro mantenido. Detalle/rollback/evidencia en PICO_MANOS_V4_20261015.
+
+
 **22-09 09:17 Europe/Madrid — preparación de apagado para COMM-01.** Usuario
 confirma HOME y ambos brazos físicamente asegurados. Nueva lectura ROS2 de20
 articulaciones: máximo absoluto 0.002589rad, velocidad0, stamp

@@ -1,5 +1,14 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**Ampliación 15-10 — postura PICO incompleta:** logs HW confirman rechazo
+`send a jump command` (>0,087rad) en cuatro ejes, no contacto según operador.
+Cancelación a auto_task deja consignas latentes~1,57rad; HOME/reset/rearme
+bloqueados por guía de recuperación. Sin nuevos movimientos/restart.
+Selector CC preparado offline en prepare_pico_v4_cc_env.py (sólo CC, no global),
+NO instalado. Recuperación documentada y corrección/ensayo todavía pendientes.
+Detalle/evidencia en PICO_MANOS_V4_20261015 y20261015_PICO_V4_PROFILE.
+
+
 **Actualización 28-09-2026 — recuperación comunicada por el operador.**
 El operador informa que recolocó los brazos, liberó E-stop y el robot funciona
 en HOME. OBSERVADO por operador; no constituye procedimiento validado para
@@ -1725,3 +1734,14 @@ confirmó x86 3/3, cámaras 2/2, `JoystickMode`, seguridad `0 0 0` y
 `movement=none restart=none`. Antes de cualquier movimiento debe repetirse el
 preflight físico; esta evidencia no valida una trayectoria de recuperación
 desde una postura distinta de home.
+
+
+### MOTION-BOOT-FT-WATCHDOG-20261008 — OBSERVADO; arranque incompleto
+
+08-10-2026 Europe/Madrid. Usuario informa reinicio sin HOME. Diagnóstico sólo lectura: docker ps/inspect/logs y consultas ROSA pasivas con timeout; sin HOME, enable, reset, reinicio ni cambio de configuración. Arranque redescubierto: manipulation_robot_app StartedAt08:43:29Z, hw08:43:30Z, ambos RestartCount1.
+
+Logs nativos (hora mostrada por robot): 16:43:28,875 dispositivo EtherCAT `SubDevice_6002 [KunWeiTech FT Sensors]` en `SAFEOP ERROR`, `Sync manager watchdog` (0x1b). Master no logra OP (`0x98110024`), se desinicializa y hw registra traza fatal en servoEnableCB. A16:43:29,463 manipulation_robot_app falla al esperar/iniciar force_torque_sensor_controller y termina con `Failed to initialize robot_rosa_client or setup sensor controller`; posteriormente se reinicia el proceso. No evidencia de HOME completado en el arranque consultado. Es fallo de cadena hardware/controlador, independiente del gate Python de diferencia cmd_pos del ensayo anterior. Raíz física del watchdog (sensor, conexión, alimentación, sincronización) PENDIENTE, no diagnosticada por estos logs.
+
+Consulta /mc/actuator_state --once timeout5 rc124 sin muestra. Servicio list_controllers tipo redescubierto rosa_control_msgs/srv/ListControllers: timeout5 rc124 esperando disponibilidad; una primera consulta con tipo estándar controller_manager_msgs fue incompatible, no constituye evidencia de estado. Contenedores Up no demuestra control operativo. Hay desfase de reloj observado entre host/CLI: conservar tiempos de origen, no inferir coincidencia exacta de segundos.
+
+Evidencia: `../Humanoide-vla-evidence/20261008_RESTART_NO_HOME_READONLY/` con resultados de consultas y SHA256SUMS. No configuración ni movimiento del robot/PC. Cambios únicamente documentales, backup before/after. Pendiente recuperar/discutir inicialización FT/EtherCAT sin anular watchdog; verificar caja sujeta/apoyada/retirada y trayectoria antes de cualquier HOME. No reiterar ciclo de cajas con control no confirmado.

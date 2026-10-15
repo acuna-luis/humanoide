@@ -1,5 +1,57 @@
 # Catálogo operativo de funcionalidades del Cruzr S2
 
+**05-10-2026 — MAP-HEAD-RELOCALIZE-20261005. OBSERVADO, sólo lectura.**
+Tras nuevo guardado, cabeza movida por vnav_head_processor/navigation durante
+relocation_start fusion. Navegador termina barrido con stop_rotate y centro0/0;
+Motion confirma IsReached, cabezaREADY. Relocalización exteriorstatus4/READY/
+FSM_WaitNavigate, mientras VSLAM aúnLOCATION_LOST: no demuestra recuperación
+visual ni precisión física. Mapa nuevo2471puntos/56poses; lectura4443/38 anterior
+ya histórica. Sin acciones, movimientos o cambios remotos del agente.
+[Secuencia, UUID, límites y evidencia](../incidents/2026-10-05_UTARS_NAV_MAP_LOCALIZATION.md#actualización-posterior--cabeza-y-relocalización-del-mapa-nuevo).
+
+**05-10-2026 — VOICE-MAPPING-08. OBSERVADO; traducción no integrada.**
+Cartografía emite TTS chino: «cerrando bucle; reduzca velocidad/espere» y «bucle
+completado; continúe mapeando o guarde». Literales en libmapping2d_lidar.so,
+fuera de adaptadores de workers/Control Center/freno; estas últimas bibliotecas
+sí están cargadas. Cartografía del operador posteriormente guarda2D/visual y
+FSM_Mapping SUCCEEDED; calidad/localización posterior no comprobadas.
+Sin audio nuevo, movimiento, reinicio o cambios remotos del agente.
+[Textos, origen, evidencia y continuación](../voice/AVISOS_MAPEO_CHINO_20261005.md).
+
+**05-10-2026 — MAP-QUALITY-20261005. OBSERVADO, sólo lectura.**
+Última relocalización utars_nav_map falla; VSLAM=LOCATION_LOST y pose visual
+no fiable. Mapa visual presente4443puntos/38poses, pero candidatos no superan
+consistencia de solver (ejemplo17<20). Cobertura/calibración/causa PENDIENTES.
+API y archivos actuales no contienen destinos: get1/put1 ausentes; escenario1
+bloqueado por Require one unique get1. No copiar coordenadas de un marco antiguo.
+Sin relocalización/movimiento, reinicio ni edición del mapa por el agente.
+[Hallazgos, límites, evidencia y continuación](../incidents/2026-10-05_UTARS_NAV_MAP_LOCALIZATION.md).
+
+**05-10-2026 — VOICE-VOLUME-READONLY. OBSERVADO, sin cambios.**
+cruzr_say_english.sh envía volume=100; PulseAudio en Vision y dentro de
+walker-voice.speech_service-1 muestra salida predeterminada100%, mute=no.
+Salida analógica activa: alsa_output.platform-sound.analog-stereo. Consulta sólo
+lectura; sin audio ni cambio de volumen. Amplificación adicional no ensayada.
+Receta manual tras acceso SSH a walker@192.168.11.3:
+`pactl set-sink-volume alsa_output.platform-sound.analog-stereo 110%`;
+reversión al valor observado: mismo comando con100%. Puede distorsionar.
+Evidencia y respaldo documental: ../Humanoide-vla-evidence/20261005_VOICE_VOLUME_READONLY/.
+
+
+**05-10-2026 — VOICE-TTS-HELLO-MATEO. VERIFICADO técnico; escucha PENDIENTE.**
+Petición explícita: decir «Hello Mateo». Vision192.168.11.3: docker ps descubre
+walker-voice.speech_service-1; --check confirma sys_task_msgs/action/Tts y un
+servidor. Comando versionado: ./scripts/cruzr_say_english.sh "Hello Mateo";
+objetivo0cbb2742-6939-4e17-a1f6-743c2177c220 aceptado, desc=Success, status=4.
+Wrapper sale27 por exigir texto SUCCEED; no se repite la reproducción. Revisión
+de esa validación PENDIENTE. Fuente SHA256442760e137480abb38e232396aa79d9f84c34b1f4b359d2565c1028b797a58c7.
+Sólo audio transitorio; sin movimiento, instalación, reinicio ni configuración
+remota modificada. Escucha humana no confirmada; estado físico no inferido.
+Evidencia/resultado y respaldo documental before/after:
+../Humanoide-vla-evidence/20261005_HELLO_MATEO/.
+Reversión documental selectiva desde before/; no hay configuración que restaurar.
+
+
 **22-09-2026 — VOICE-ES-01: inventario para todos los avisos en español.**
 Localizados textos TtsClient, WAV y aviso de arranque propio en inglés.
 Conversión no instalada; soporte TTS español pendiente. Primera lectura SSH

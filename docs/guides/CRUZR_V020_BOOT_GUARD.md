@@ -1,5 +1,76 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+**15-10-2026 — BOOT-CC-SPS-20261015 / selector CC:** HW_TYPE SPS instalado y
+sólo CC recreado con mismaimagen/orden/montajes. Guard de arranque actualizado
+para reconocer identificadorSPS conservando gates yvoz;18tests pasan.
+Principal1 ybrazos asegurados confirmados; Motion no reiniciado, sinHOME/START.
+Consignas latentes siguen pendientes: apagado supervisado en preparación,
+paro mantenido. Detalle/rollback/evidencia en PICO_MANOS_V4_20261015.
+
+
+**15-10-2026 — HANDS-V4-BUS-IDENTITY-20261015: INSTALADO y CARGADO; arranque verificado.**
+Actualiza el estado offline anterior. Operador confirma manos vacías, trayectoria
+libre, otros mandos detenidos y persona junto al paro. Aclara finalmente paro
+principal liberado. Antes de recarga: lecturas nuevas principal0/servo0,
+cargador0 (antes se observó carga2; no se omitió el bloqueo), baterías84,1/71,7%.
+Las consultas iniciales de paros con timeout corto expiraron; tipo UInt8 explícito,
+RELIABLE/VOLATILE y timeout10 recibieron0/0. No se fingieron estados.
+
+Aplicación reproducible desde PC, sin activar por este instalador:
+`python scripts/hands/install_v4_bus_profile.py --check --evidence /RUTA`
+y `--install` en lugar de `--check`. Instalador verifica hash original y PID1
+esperando arranque, conserva propietario/permisos y sustituye atómicamente.
+Acepta un perfil ya corregido como comprobación sin cambio. Destino Motion,
+walker-motion.hw-1, /opt/walker/ubt_ethercat_master/bin/eni_cruzr_kw_unified_noimu.xml.
+Original SHA1b0c9323a7dc1fa627aa4bfddae216374cea2f68157b7a0e8739176f42843d1d;
+instalado SHA678c7d6bae1608709400383d85c6e0e5edae7032b365d11977cb56bc984250e8.
+Backup remoto: /etc/walker/customizations/hands-v4-bus-20261015/
+eni_cruzr_kw_unified_noimu.xml.before y receipt.json. Original externo también
+en evidencia. Sólo dos valores XML cambiados, todas las comprobaciones conservadas.
+
+Activación autorizada: un único `docker restart --time 5
+walker-system.control_center-1` en Vision (rc0); no restart de hw, no start ROS
+forzado ni HOME adicional. Guard pasa y CC recorre Recover/SelfCheck/StartMotion.
+El maestro selecciona automáticamente el ENI corregido y actualiza por sí mismo
+/opt/walker/ubt_ethercat_master/share/ubt_ethercat_master/config/dynamic_config.yaml:
+last_eni pasa de eni_cruzr_kw_noimu.xml a eni_cruzr_kw_unified_noimu.xml.
+Este cambio persistente es efecto del arranque; no restaurar el valor antiguo
+como configuración vigente de manos. Tiempos PC/robot difieren alrededor de52s;
+no comparar sus marcas directamente. Logs Docker del nuevo ciclo:
+07:51:52Z selecciona perfil; versión4 obtenida de ambas manos;
+07:51:56Z maestro SAFEOP→OP. No repite el fallo de selección/IMU observado antes.
+
+Controladores manipulation, fuerza/par y estados en running, servicio responde.
+Muestras nuevas /ecat/left_hand/state y right_hand/state: palm_connect=True,
+servo_cnt=7, velocidades0 y servo_status publicados0 (no se interpreta ese0
+como diagnóstico universal). Dos errores de SDO en direcciones antiguas18001/2
+y objeto2004:7 ausente en8001 aparecen durante inicialización; no impidieron
+OP/HOME/telemetría. Causa/impacto de esos avisos aún PENDIENTES, no borrados.
+/mc/left_hand/joint_states y /mc/right_hand/joint_states aún no figuran en el
+listado tras carga; el checker actual depende de ellos y no queda certificado
+CHECK_OK. No forzar su gate; adaptación del control v4 es fase siguiente.
+
+CC registra LimbMotion/StartMotion succ y JoystickMode. Muestra posterior de22
+actuadores:20 ejes de cuerpo cerca de HOME, máximo0,00278034rad,
+velocidad máxima0 y error_code0; dedos no incluidos en HOME20D.
+Paso1 resuelto para inicialización del bus y recepción de estados v4; teleoperación,
+movimientos de dedos, grabación/replay v4 y arranque en frío posterior PENDIENTES.
+No se envió START PICO ni tarea de demostración de manos.
+
+Reversión: sólo con control detenido/esperando, estado físico preparado y sin
+otros mandos, comprobar hash instalado, comprobar SHA original del .before y
+restaurar únicamente ese XML conservando permisos. Recargar mediante arranque
+supervisado; no copiar dynamic_config antiguo sobre la selección actual ni
+retirar sensores para sortear el fallo. Antes de recrear contenedor/actualizar,
+conservar copia externa y reaplicar selectivamente según ficha. Persistencia en
+recreación Docker no verificada. No se ejecutó rollback.
+
+Fuentes/scripts, recetas, metadata, validación offline, install.json, postcheck,
+logs antes/después, estados de manos y body-final-classification.json en
+../Humanoide-vla-evidence/20261015_HANDS_V4_BUS_DIAG/.
+Documentación before-install-docs/ y after/, SHA256SUMS. No commit/push.
+
+
 **23-09-2026 — VOICE-BOOT-06: anuncio inglés automático retirado.**
 Watcher conserva comprobaciones y visual; sólo se retira announce() de --watch.
 Aviso nativo español intacto.31 tests pasan y hash remoto verificado; sin restart
@@ -645,3 +716,38 @@ actualizadas en docs/vla/UBTECH_PROCEDIMIENTO_CAJAS_20260914.md.
 Evidencia, copia fuente, hashes y backups documentales:
 ../Humanoide-vla-evidence/20260914_READY410_BOOT_AND_VENDOR/.
 Cambios persistentes sólo documentación PC; cero cambios remotos.
+
+
+### MOTION-BOOT-FOLLOWUP-20261008 — OBSERVADO, HOME pendiente
+
+08-10-2026 Europe/Madrid. Operador reinicia de nuevo; agente sigue arranque sólo con docker ps/top/logs y servicio pasivo list_controllers con timeout5. No start, servo enable, HOME, publicación, restart ni configuración. Vision ya publica servicios mientras Motion inicia contenedores; hw proceso rosa_control_node espera `/mc/rosa_control/start` (log nuevo16:51:35 y16:53:16). Manipulation espera repetidamente list_controllers, consulta pasiva rc124.
+
+Control Center nuevo registra boot ready y transición a WaitEStopRelease a16:52:23 hora nativa; servo_estop reportado released, no confirmación equivalente del paro principal en la evidencia compacta. Anuncio pide girar/liberar paro. A16:52:30 heartbeat marca ethercat slave offline. Hasta últimas consultas16:53:21 no transición posterior observada ni HOME confirmado. No confundir errores6002 del arranque16:43 (persisten en docker logs) con el nuevo arranque: no se observó repetición nueva del watchdog. El heartbeat offline mientras hw espera start no demuestra por sí solo sensor averiado. Se solicita al operador estado físico de ambos paros y caja sin tocar controles; respuesta pendiente.
+
+Evidencia y recetas de consultas en `../Humanoide-vla-evidence/20261008_BOOT_FOLLOWUP_READONLY/`, SHA256SUMS, backup before/after documental. No cambios persistentes robot/PC aparte de documentación. Pendiente: condición que libera WaitEStopRelease y completar inicialización hardware/sensores/controladores y HOME medido; no liberar paros sin revisar caja, trayectoria y persona junto al paro porque puede iniciar movimiento automático. No se afirma listo para ciclo.
+
+
+Actualización de MOTION-BOOT-FOLLOWUP-20261008, misma intervención: operador informa E-stop liberado. CC lo detecta a16:53:34 hora nativa y pasa WaitEStopRelease→EnterWorkMode→SelfChecking. Controladores se inicializan; consulta list_controllers rc0 confirma force_torque_sensor_controller y manipulation_controller running. Audio_loopback del self-check pasa false, mientras alimentación/cámaras/relojes/ficheros/servo_power pasan true en el informe; no se anula ninguna comprobación por el agente. Motion registra BTree tick succeeded a16:54:12. Durante trayectoria inicial de cabeza hay rechazos de comandos menores que límite−0,688727rad, sin inferir estado actual desde esos mensajes.
+
+Consulta pasiva de actuadores necesita QoS best_effort (default reliable no recibía y timeout124, no significa ausência de telemetría); ayuda de CLI contrastada y evidenciada. Primera muestra fresca: HOME20D=1, máx posición0,002493rad, velocidad0, delta0,002493 y sin error_code. Segunda muestra posterior: brazos en HOME (máx0,000959rad), velocidad0, sin fallos, pero cabeza1002 posición−0,430665rad y consigna−0,43; HOME20D=0. No atribuir esa nueva consigna al agente, que no mandó órdenes. No declarar estado actual full HOME ni autorización de movimiento; hardware/controladores sí disponibles en la consulta. Ambas muestras/hashes/classificaciones guardadas. Estado de caja no informado. Fin del seguimiento del arranque solicitado con resultado técnico y límite de postura explícito.
+
+
+### BOOT-WAIT-MAIN-ESTOP-20261008 — OBSERVADO en último encendido
+
+08-10-2026 Europe/Madrid. Usuario informa nuevo arranque sin HOME. Consultas únicamente lectura SSH/docker; sin comandos de movimiento, restart, servicio de arranque ni configuración. Inicio consultas con SSH255 a ambos hosts; rutaPC momentánea por red10.183, luego Wi-Fi vuelve a192.168.42.215 y ruta.11 via.42.2. eno1DOWN. No atribuir esos timeouts al hardware, se recuperó enlace sin intervención del agente.
+
+Nuevo arranque: Motion hw/manipulation StartedAt10:41:07Z restart0; VisionCC10:39:24Z. Logs docker persisten fallos6002 de18:35 hora nativa del encendido anterior, no son repetición demostrada en nuevo arranque18:41. Guard CC inicialmente MOTION_RESPONSES0/3, luego1/3,2/3 y3/3, MOTION_READY1; cámaras2/2, seis topics con timestamps avanzantes. CCvendor inició y registra boot ready a18:42:06 hora nativa. Paro principal is_estop:pressed/state1; servo_estop released/state0. FSM llega WaitEStopRelease: éste es el bloqueo actual antes de HOME. No se afirma HOME enviado ni completado, ni fallo nuevo de sensor.
+
+Evidencia `../Humanoide-vla-evidence/20261008_NO_HOME_LATEST_READONLY/`, SHA256SUMS y before/after documental. No cambios persistentes robot/PC salvo documentación. Reanudación: operador verifica objeto sujeto/apoyado/retirado, recorrido/personas y persona junto al paro antes de liberar, porque liberación puede continuar secuencia automática y movimiento. No enviar HOME adicional en paralelo. Estado físico de caja pendiente.
+
+
+### BOOT-HOME-AFTER-RELEASE-20261008 — VERIFICADO técnico en muestra
+
+08-10-2026 Europe/Madrid. Operador informa paro liberado; seguimiento agente sólo lectura SSH/docker y suscripción best_effort /mc/actuator_state. CC detecta state0 a18:43:03 hora nativa, pasa EnterWorkMode/SelfChecking, StartMotion a18:43:16 y LimbMotion a18:43:25. StartMotion succ a18:43:42 y pasa JoystickMode. La transición JoystickMode no demuestra por sí sola ausencia de HOME: muestra pasiva posterior rc0 confirma HOME20D=1, máxposición0,002780rad, brazos0,001055rad, velocidad0 y sin error_code. Robot final en joystick (no auto_task); no se cambió modo ni se envió HOME por agente. Selfcheck audio_loopback false (similitud0,027757<0,4), resto de12checkslistados pasa; secuencia nativa continúa, no modificación de checks por agente. No declarar autorización física/caja libre desde telemetría.
+
+Evidencia consultas, muestra original/clasificación, logs y SHA256SUMS en `../Humanoide-vla-evidence/20261008_AFTER_ESTOP_RELEASE_READONLY/`. Cambios sólo documentales con before/after. Pendiente: localización para get1 y modo adecuado al escenario si operador solicita ejecución; no arranque automático del ciclo.
+
+
+### BOOT-STATUS-1314-20261008 — OBSERVADO, espera paro principal
+
+08-10-2026 Europe/Madrid. Nuevo seguimiento sólo lectura de arranque solicitado por usuario; docker inspect/logs, sin acciones, HOME, reinicio ni configuración. Motion hw/manipulation StartedAt11:14:05Z restart0; CC11:12:29Z. Guard pasa MOTION3/3 y CAMERA2/2 (seis topics avanzantes). CCvendor bootready y WaitEStopRelease, log nativo19:14:57: paro principal state1, servo_estop state0. Hasta última consulta hardware sigue esperando /mc/rosa_control/start (19:17:33). HOME no enviado/completado observado. No confundir HOME del arranque previo con éste. No fallo nuevo6002 en evidencia compacta; no certificado estado físico. Antes de liberar paro comprobar objeto/recorrido/persona junto al paro ya que secuencia puede mover automáticamente. Evidencia `../Humanoide-vla-evidence/20261008_BOOT_STATUS_CURRENT_READONLY/`, SHA256SUMS, before/after documental. Sin cambios de sistema salvo documentación.
