@@ -1,5 +1,336 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**15-10-2026 — BOOT-CC-SPS-20261015 / selector CC:** HW_TYPE SPS instalado y
+sólo CC recreado con mismaimagen/orden/montajes. Guard de arranque actualizado
+para reconocer identificadorSPS conservando gates yvoz;18tests pasan.
+Principal1 ybrazos asegurados confirmados; Motion no reiniciado, sinHOME/START.
+Consignas latentes siguen pendientes: apagado supervisado en preparación,
+paro mantenido. Detalle/rollback/evidencia en PICO_MANOS_V4_20261015.
+
+
+**Ampliación 15-10 — postura PICO incompleta:** logs HW confirman rechazo
+`send a jump command` (>0,087rad) en cuatro ejes, no contacto según operador.
+Cancelación a auto_task deja consignas latentes~1,57rad; HOME/reset/rearme
+bloqueados por guía de recuperación. Sin nuevos movimientos/restart.
+Selector CC preparado offline en prepare_pico_v4_cc_env.py (sólo CC, no global),
+NO instalado. Recuperación documentada y corrección/ensayo todavía pendientes.
+Detalle/evidencia en PICO_MANOS_V4_20261015 y20261015_PICO_V4_PROFILE.
+
+
+**15-10-2026 — PICO-V4-CC-SELECTION-20261015: PICO aún NO habilitado.**
+CC con HW_TYPE antiguo seleccionó tarea clamp al entrar en teleop; Motion síSPS.
+Inicialización de brazos incompleta/asimétrica, medida/consigna difieren~1,57rad.
+Se cancela pasando a auto_task; velocidad medida0/sinfallos, consigna antigua aún
+no coincide. Sin START PC ni HOME; no declarar postura lista ni teleop v4 probada.
+Selector CC, recuperación a HOME y ensayo v4 pendientes. Detalle en ficha PICO v4.
+Evidencia20261015_PICO_V4_PROFILE fueraGit; no restart/cambioenvCC en esta fase.
+
+
+**15-10-2026 — PICO-V4-PROFILE-20261015: SPS CARGADO; HOME y estados v4 VERIFICADOS.**
+[Estado, receta, respaldos y reversión de manos v4](PICO_MANOS_V4_20261015.md).
+YAML v4 sólo brazos instalado, no cargado; HW_TYPE SPS aplicado y Motion recreado.
+Selector PC y comprobación de siete articulaciones preparados,19 tests pasan.
+HOME medido antes del paro; operador confirma paro principal pulsado para migración.
+Respaldos Motion/Vision externos y hashes verificados. Ethernet eno1 confirmado.
+Mismas imágenes,3+59 archivos restaurados/verificados; operador libera paro.
+CC termina StartMotion y JoystickMode; HOME20D máximo0,002493rad/velocidad0/sinfallos.
+Ambos controladores v4 cargados; estados frescos7ejes/mano pasan checker ROS2.
+Sin START PICO: tarea TeleopMode v4, ensayo de gatillos y replay aún pendientes.
+No se requiere otro reinicio; seguimiento posterior sólo lectura.
+Evidencia privada ../Humanoide-vla-evidence/20261015_PICO_V4_PROFILE/.
+
+
+**15-10-2026 — HANDS-V4-BUS-IDENTITY-20261015: INSTALADO y CARGADO; arranque verificado.**
+Actualiza el estado offline anterior. Operador confirma manos vacías, trayectoria
+libre, otros mandos detenidos y persona junto al paro. Aclara finalmente paro
+principal liberado. Antes de recarga: lecturas nuevas principal0/servo0,
+cargador0 (antes se observó carga2; no se omitió el bloqueo), baterías84,1/71,7%.
+Las consultas iniciales de paros con timeout corto expiraron; tipo UInt8 explícito,
+RELIABLE/VOLATILE y timeout10 recibieron0/0. No se fingieron estados.
+
+Aplicación reproducible desde PC, sin activar por este instalador:
+`python scripts/hands/install_v4_bus_profile.py --check --evidence /RUTA`
+y `--install` en lugar de `--check`. Instalador verifica hash original y PID1
+esperando arranque, conserva propietario/permisos y sustituye atómicamente.
+Acepta un perfil ya corregido como comprobación sin cambio. Destino Motion,
+walker-motion.hw-1, /opt/walker/ubt_ethercat_master/bin/eni_cruzr_kw_unified_noimu.xml.
+Original SHA1b0c9323a7dc1fa627aa4bfddae216374cea2f68157b7a0e8739176f42843d1d;
+instalado SHA678c7d6bae1608709400383d85c6e0e5edae7032b365d11977cb56bc984250e8.
+Backup remoto: /etc/walker/customizations/hands-v4-bus-20261015/
+eni_cruzr_kw_unified_noimu.xml.before y receipt.json. Original externo también
+en evidencia. Sólo dos valores XML cambiados, todas las comprobaciones conservadas.
+
+Activación autorizada: un único `docker restart --time 5
+walker-system.control_center-1` en Vision (rc0); no restart de hw, no start ROS
+forzado ni HOME adicional. Guard pasa y CC recorre Recover/SelfCheck/StartMotion.
+El maestro selecciona automáticamente el ENI corregido y actualiza por sí mismo
+/opt/walker/ubt_ethercat_master/share/ubt_ethercat_master/config/dynamic_config.yaml:
+last_eni pasa de eni_cruzr_kw_noimu.xml a eni_cruzr_kw_unified_noimu.xml.
+Este cambio persistente es efecto del arranque; no restaurar el valor antiguo
+como configuración vigente de manos. Tiempos PC/robot difieren alrededor de52s;
+no comparar sus marcas directamente. Logs Docker del nuevo ciclo:
+07:51:52Z selecciona perfil; versión4 obtenida de ambas manos;
+07:51:56Z maestro SAFEOP→OP. No repite el fallo de selección/IMU observado antes.
+
+Controladores manipulation, fuerza/par y estados en running, servicio responde.
+Muestras nuevas /ecat/left_hand/state y right_hand/state: palm_connect=True,
+servo_cnt=7, velocidades0 y servo_status publicados0 (no se interpreta ese0
+como diagnóstico universal). Dos errores de SDO en direcciones antiguas18001/2
+y objeto2004:7 ausente en8001 aparecen durante inicialización; no impidieron
+OP/HOME/telemetría. Causa/impacto de esos avisos aún PENDIENTES, no borrados.
+/mc/left_hand/joint_states y /mc/right_hand/joint_states aún no figuran en el
+listado tras carga; el checker actual depende de ellos y no queda certificado
+CHECK_OK. No forzar su gate; adaptación del control v4 es fase siguiente.
+
+CC registra LimbMotion/StartMotion succ y JoystickMode. Muestra posterior de22
+actuadores:20 ejes de cuerpo cerca de HOME, máximo0,00278034rad,
+velocidad máxima0 y error_code0; dedos no incluidos en HOME20D.
+Paso1 resuelto para inicialización del bus y recepción de estados v4; teleoperación,
+movimientos de dedos, grabación/replay v4 y arranque en frío posterior PENDIENTES.
+No se envió START PICO ni tarea de demostración de manos.
+
+Reversión: sólo con control detenido/esperando, estado físico preparado y sin
+otros mandos, comprobar hash instalado, comprobar SHA original del .before y
+restaurar únicamente ese XML conservando permisos. Recargar mediante arranque
+supervisado; no copiar dynamic_config antiguo sobre la selección actual ni
+retirar sensores para sortear el fallo. Antes de recrear contenedor/actualizar,
+conservar copia externa y reaplicar selectivamente según ficha. Persistencia en
+recreación Docker no verificada. No se ejecutó rollback.
+
+Fuentes/scripts, recetas, metadata, validación offline, install.json, postcheck,
+logs antes/después, estados de manos y body-final-classification.json en
+../Humanoide-vla-evidence/20261015_HANDS_V4_BUS_DIAG/.
+Documentación before-install-docs/ y after/, SHA256SUMS. No commit/push.
+
+
+**15-10-2026 — HANDS-V4-BUS-IDENTITY-20261015. VERIFICADO offline; no instalado.**
+Ampliación/corrección del diagnóstico HANDS-V4-PREFLIGHT: no atribuir el fallo a
+una IMU averiada. `dynamic_config.yaml` recuerda `eni_cruzr_kw_noimu.xml`, perfil
+sin IMU EtherCAT que ya se utilizaba con abrazaderas. El escaneo del arranque
+fallido contiene 27 dispositivos, incluidos ambos sensores Kunwei y dos
+`hand unified`. El candidato vendor `eni_cruzr_kw_unified_noimu.xml` coincide
+en número, orden de vendor/product y tipos salvo el puente 18000: vendor ENI
+0xffffffff frente a vendor físico 0xe0000002. Su InitCmd también exige literalmente
+ffffffff. La comparación no prueba por sí sola el algoritmo interno de selección
+ni la causa única del fallo; el mensaje de IMU es insuficiente para diagnosticar
+hardware y la activación del derivado sigue PENDIENTE.
+
+Receta reproducible exclusivamente offline:
+`python scripts/hands/prepare_v4_bus_profile.py --input ORIGINAL --output DERIVADO`.
+Sólo acepta SHA256 original
+1b0c9323a7dc1fa627aa4bfddae216374cea2f68157b7a0e8739176f42843d1d.
+Cambia sólo VendorId del puente a 3758096386 y Validate/Data de su check vendor
+a 020000e0 (mismo valor y comprobación que el perfil anterior de esta unidad).
+No suprime comprobaciones, no altera PDO, sensores, límites ni watchdogs.
+SHA256 derivado: 678c7d6bae1608709400383d85c6e0e5edae7032b365d11977cb56bc984250e8.
+Verificación: exactamente dos hojas XML distintas, 27 identidades vendor/product
+coinciden con el escaneo, fuentes alteradas rechazadas. Direcciones físicas
+actuales de manos 18001/18002 difieren de las direcciones de configuración
+8001/8002; su asignación por maestro aún no verificada. No inferir publicación
+fresca ni manos operativas de este ensayo offline.
+
+Destino previsto, NO aplicado: Motion, contenedor walker-motion.hw-1,
+/opt/walker/ubt_ethercat_master/bin/eni_cruzr_kw_unified_noimu.xml.
+Antes de aplicar: copia externa original ya conservada; respaldo remoto y
+comprobación hash inmediata. No modificar dynamic_config ni forzar start como
+supuesto arreglo. Cargar mediante secuencia de arranque revisada sólo después
+de confirmar estado físico, paros, zona y exclusión de otros mandos: puede
+iniciar homing. Después verificar bus, controladores y estados frescos de manos.
+Reversión prevista: restaurar exactamente el XML original respaldado y verificar
+su SHA; cualquier recarga vuelve a requerir comprobar estado físico.
+
+Evidencia: ../Humanoide-vla-evidence/20261015_HANDS_V4_BUS_DIAG/ (logs,
+inventario, perfiles originales/derivado y offline-validation.json).
+Cambios de esta intervención sólo en PC: receta y documentación; robot sólo
+consultado. Backup documental before/, estado after/ y SHA256SUMS en evidencia.
+Revertir sólo esta ficha y la receta si se descarta; conservar cambios ajenos.
+Pendientes: instalación, carga, validación física y adaptación PICO v4.
+No commit/push.
+
+
+**15-10-2026 — HANDS-V4-PREFLIGHT-20261015. OBSERVADO; activación PENDIENTE.**
+Operador informa instalación de manos v4 con el robot apagado. Diagnóstico sólo
+lectura: el escaneo EtherCAT reconoce dispositivos 18001 y 18002 como
+`hand unified`, pero el intento de inicialización de las 07:34:45–50 UTC falla
+por dispositivo 10000 no encontrado (mensaje vendor: IMU de movimiento, primer
+dispositivo del puerto 2 del switch de cintura). No demuestra avería de IMU ni
+modelo v4 por sí solo. El contenedor hw se reinicia una vez; la instancia actual
+queda esperando `/mc/rosa_control/start`, sin proceso EtherCAT en `ps`.
+La aplicación espera ListControllers y la consulta de ese servicio agota timeout;
+los topics `/mc/left_hand/joint_states` y `/mc/right_hand/joint_states` faltan.
+Los topics `/ecat/*_hand/state` por sí solos no prueban publicación fresca.
+`check_hands.sh --model auto` rechaza correctamente la detección.
+
+Existe tarea instalada `teleoperation/cruzr_v4_pico_teleoperation` y YAML
+`cruzr_v4_pico_tele.yaml` con hand_type=v4, waist_mode=1 y leg_mode=2.
+El lanzador PC actual sigue fijado a clamp y bloquea gatillos; no reutilizarlo
+para v4 sin adaptación deliberada de tarea, cliente, controles y validaciones.
+Para grabar/reproducir manos se requiere el perfil `utars_with_v4_hand`;
+el inspector local de motion actual sólo admite Utars de abrazaderas.
+Primero resolver arranque/topología, después configurar y comprobar v4 con
+cintura/elevador bloqueados si se mantiene alcance sólo brazos. No sustituir ENI
+por una variante noimu ni cambiar HW_TYPE como supuesto arreglo.
+
+Evidencia privada: `../Humanoide-vla-evidence/20261015_HANDS_V4_PREFLIGHT/`
+(metadata de tarea/YAML, listado de servicios/topics, logs, StartedAt/reinicios,
+procesos y respuesta de controladores). Rutas remotas consultadas:
+Motion, contenedores `walker-motion.hw-1` y
+`walker-motion.manipulation_robot_app-1`; `/opt/walker/`.
+No movimiento, HOME, reinicio, START ni modificación de robot/PC de control.
+Cambios únicamente documentales PC en esta ficha y fuentes especializadas;
+respaldo selectivo before/, copia after/ y SHA256SUMS en evidencia.
+Reversión: retirar sólo el bloque HANDS-V4-PREFLIGHT-20261015; conservar cambios
+anteriores del usuario. Configuración instalada v4 observada, carga y prueba
+física PENDIENTES. Reanudar con diagnóstico del fallo de inicialización del bus.
+No commit/push.
+
+
+**14-10-2026 — PICO-REPLAY-WORKFLOW-20261014. VERIFICADO técnico y confirmado por operador.**
+La reproducción corregida de la copia lenta terminó con is_finished=true y bag played successfully; operador confirma funcionamiento perfecto. No HOME enviado. Procedimiento reutilizable [grabación/reproducción PICO](PICO_GRABAR_REPRODUCIR_PROCEDIMIENTO.md) e inspector local scripts/teleoperation/inspect_pico_motion.py para no repetir investigación del SDK en cada toma. Reutilizar orden articular por nombres, evitar --loop1 en build conocida, leer nombre real con timestamp y preparar derivados sólo cuando necesarios. Mantener confirmación física y preflight fresco; no reutilizar salud/postura histórica. Cuatro pruebas del inspector pasan y grabación real validada estructuralmente. Read-only local en esta intervención, sin otro replay ni configuración robot. Nueva guía, inspector/tests y enlaces PC. Before/after, hashes y validación ../Humanoide-vla-evidence/20261014_PICO_REPLAY_WORKFLOW/. Reversión selectiva documental/herramienta, sin modificar SDK ni motion; no commit/push.
+
+
+**06-10-2026 — NET-ETHERNET-MAPPING-LINK-20261006. VERIFICADO por lectura.**
+Tras conexión del operador, eno1UP/carrier1/IP192.168.11.250/24/perfilcruzr-s2.
+RutaVision192.168.11.3 directaeno1, ya NOvíaWi-Fi.5pings forzadoseno1:
+0%pérdida,media0,962ms,máx1,635ms. Enlace web/mapeoEthernet comprobado;
+no prueba capturaVSLAM ni seguridadfísica. Antesde nueva captura recargarweb
+Ctrl+Shift+R para peticiónfusion; no recargar duranteguardadoactivo. Sin cambio
+red/mapa o movimiento delagente. Evidencia/backups documentales selectivos:
+../Humanoide-vla-evidence/20261006_ETHERNET_MAPPING_LINK_CHECK/.
+
+**06-10-2026 — PC-WIFI-USB-DISCONNECT-20261006. OBSERVADO, sólo lectura.**
+KernelPC17:59:28CEST: USB2-1 disconnect y deauth dewlx80afcad40bd6; adaptador
+rtw88_8822bu reaparece17:59:30. Asociación17:59:35 falla a17:59:39 con
+4WAY_HANDSHAKE_TIMEOUT; NetworkManager restablece conexión/IP42.215 a17:59:44.
+Causa de desconexiónUSB (retiradamanual/puerto/hardware/driver) PENDIENTE.
+No se culpa a señal débil: lectura actual−28dBm,5GHz5745MHz. Ruta Vision11.3
+vía42.2/wlx80afcad40bd6; eno1DOWN/sinIP, conexión actualNOEthernet. Prueba
+20pings por destino en~3,8s: Vision0%pérdida,media32,838ms,máx179,732ms;
+gateway0%pérdida,media32,061ms,máx177,713ms. Interfaz sinerrores/drops
+acumulados desde recreación; no prueba estabilidad prolongada. Corte observado
+puede afectar web/vídeo/control; vínculo exacto con aviso rojo PENDIENTE.
+No explica por sí solo topictrack_image inexistente y peticiónsinmap_type.
+Ante repetición revisar puerto/adaptador/driver antes de control físico; Ethernet
+es alternativa cuando se verifiqueenlace/ruta. No se modificó red/USB/powersave,
+reinició servicio ni envió movimiento. Evidencia/kernel/ruta/link/pings:
+../Humanoide-vla-evidence/20261006_WIFI_LINK_CHECK/. Backup documentalbefore/
+after/ ySHA256SUMS, reversiónselectiva. git diff--check correcto; sincommit/push.
+
+## TELEOP-PREFLIGHT-SIGPIPE-20261006 — selección de log Motion
+
+**06-10-2026, Europe/Madrid. VERIFICADO offline; instalado PC; comprobación
+remota PENDIENTE.** Operador informa preflight13:08:58 rc141, sin START y STOP
+confirmado por la herramienta. No se consultó ni movió el robot por el agente.
+141 corresponde a128+SIGPIPE13. Causa concreta del intento físico INFERENCIA:
+la tubería de inventario `find | sort -nr | head -n1 | cut` puede cerrar la
+entrada de `head` antes de terminar `sort`; `pipefail` propaga141 y aborta antes
+de las consultas de paros/batería. Reproducido con100000 rutas sintéticas usando
+la misma tubería: revisión anterior141, nueva0 y mismo log más reciente.
+No se atribuye el error a Ethernet, PICO o un paro físico sin evidencia.
+
+**Cambio y destino:** PC, `scripts/teleoperation/cruzr_pico_teleop_pc.sh`, función
+`check_robot_teleop_safety`, heredoc remoto leído por SSH: sustituir `head -n1`
+por `sed -n '1p'`, que consume toda la salida. Se conservan ordenación, selección,
+propagación de errores y todos los gates. No se instala archivo persistente en
+Motion; la próxima consulta transmite el fragmento actualizado. Dependencias:
+mismas herramientas shell/find/sort/sed/cut y SSH existentes. No reinicios ni
+cambios de modo, red, cámara, firmware o robot.
+
+**Verificación:** `python3 -m unittest
+scripts.teleoperation.test_pico_motion_preflight_diagnostics -v`:7 pruebas
+correctas. Nueva regresión de inventario voluminoso y error real de `find`
+continúa bloqueando; gates31–38, tarea incorrecta, timeout/SSH y éxito conservados.
+`bash -n` y `git diff --check` correctos. Ensayo físico no realizado.
+
+**Aplicación y reanudación:** usar las fuentes locales actuales; ejecutar primero
+la consulta sin movimiento:
+
+```bash
+PICO_TELEOP_CAMERA=off CRUZR_IFACE=eno1 CRUZR_PC_IP=192.168.11.250 \
+  ./scripts/teleoperation/probar_pico.sh --check-motion-ready
+```
+
+Sólo si pasa y se comprueban de nuevo las condiciones físicas/exclusividad,
+el operador puede repetir `--teleoperate` con las mismas variables y la
+confirmación presencial. Este cambio no demuestra que el estado físico sea apto.
+
+**Respaldo/reversión/evidencia:**
+`../Humanoide-vla-evidence/20261006_PICO_PREFLIGHT_SIGPIPE/`: before/, baseline.json
+con HEAD/hash de fuentes y cambios previos, tests.log, checks.json, after/ y
+SHA256SUMS. Revertir selectivamente script/tests desde before/ conservando cambios
+posteriores ajenos; no restaurar todo el checkout. Estado instalado PC, carga
+transitoria remota y prueba física PENDIENTES. Fuente reproducible: script y
+`test_pico_motion_preflight_diagnostics.py`; no commit/push.
+
+## TELEOP-PREFLIGHT-DIAG-20261006 — diagnóstico previo a START
+
+06-10-2026, Europe/Madrid. **OBSERVADO** estado técnico; **VERIFICADO offline**
+diagnóstico; ensayo físico de esta revisión **PENDIENTE**.
+
+11:30:19, --check con PICO_TELEOP_CAMERA=off/CRUZR_IFACE=eno1/
+CRUZR_PC_IP=192.168.11.250 pasa7/7 rc0. ADB ausente: el modo off ya soportado
+exige peer XR, serialPA94Y0MGKB070822G en el backend y vr_status1; no omite
+identidad/tracking. Gafas42.211→PC42.215:63901. No cámara ni START lanzados.
+Evidencia: ../Humanoide-vla-evidence/20261006T093019Z_PICO_ETHERNET_CAMERA_OFF_CHECK/.
+
+El operador aporta intento11:31:05 que aborta en preflight Motion antes de START
+con mensaje genérico y cierre STOP confirmado. Causa precisa **PENDIENTE**:
+el registro aportado no contiene código de salida ni requisito fallido.
+No se atribuye ese intento a HOME, movimiento, paros, cable o falta de muestras.
+Consulta instrumentada posterior del mismo cuerpo remoto devuelve26 y
+ACTIVE_TASK_ERROR=cruzr/home; después el registro Motion muestra otra activación
+PICO. No hubo cambio de modo del agente. A11:34:56 el --check-reload-ready
+versionado devuelve0: paros0/0, baterías66,4/70,7%, cargador desconectado,
+velocidades inmóviles, una acción y tarea teleoperation/cruzr_clamp_pico_teleoperation.
+Esta consulta posterior no reconstruye el fallo original ni certifica estado físico.
+
+**Cambio local:** [cruzr_pico_teleop_pc.sh](../../scripts/teleoperation/cruzr_pico_teleop_pc.sh)
+conserva el rc de SSH/preflight e informa MOTION_PREFLIGHT_FAILED con requisito.
+Códigos21..26: contenedores/hardware/dispositivo/transporte/log/tarea;
+31..38: paros, dos baterías/mínimo30%, cargador, módulos, una acción y velocidad
+articular≤0,02rad/s.124: timeout; otros: error de consulta. `topic_once()` conserva
+rc y añade MOTION_TOPIC_READ_FAILED con nombre del canal; acción usa el mismo
+lector y los mismos argumentos ROS/QoS que antes. Sin cambios de criterio,
+velocidad, umbrales, cola de control, postura, timeout o autorización de START.
+Los mensajes significan falta de confirmación, no diagnóstico físico categórico.
+[Tests](../../scripts/teleoperation/test_pico_motion_preflight_diagnostics.py):
+5 pruebas offline ejecutan fragmentos reales con dobles SSH/ROS; preservan todos
+los rechazos31..38, tarea26, timeout124, errorSSH255 y aceptación con datos sanos.
+Sin tráfico/movimiento en esos tests. `bash -n` y `git diff --check` correctos.
+
+**Estado posterior:** a11:41:59 --check-motion-ready de la revisión nueva se
+bloquea en la ruta, antes de los gates Motion: selecciona wlx80afcad40bd6,
+no eno1. Lectura final: eno1DOWN, sinIPv4, carrier0, Link detected:no;
+Motion/Vision vía192.168.42.2 con origen192.168.42.215. La causa física de la
+pérdida de portadora no está identificada. No se cambió red ni se relajó el
+requisito Ethernet. Rutas verificadas previamente por eno1 quedan históricas.
+Recuperar enlace físico y comprobar la ruta antes de repetir:
+
+```bash
+ip route get 192.168.11.2
+ip route get 192.168.11.3
+PICO_TELEOP_CAMERA=off CRUZR_IFACE=eno1 CRUZR_PC_IP=192.168.11.250 \
+  ./scripts/teleoperation/probar_pico.sh --check-motion-ready
+```
+
+Ambas rutas deben mostrar deveno1/src192.168.11.250. --check-motion-ready no
+inicia control; --teleoperate permanece para operador local con preflight y
+confirmación física actuales. No se ejecutó ventana de movimiento por el agente.
+La captura del transporte RTM/WebRTC real sigue PENDIENTE; ruta válida no basta.
+
+**Destino/activación/reversión:** PC, script y test anteriores. Revisión instalada
+localmente, aplicada al próximo lanzamiento; gate físico con nuevo diagnóstico
+no alcanzado en la última consulta por fallo de ruta. Sin instalación o cambio
+persistente remoto. Reversión selectiva desde before/, conservando trabajo ajeno;
+retirar el nuevo test si se revierte. No restaurar estados físicos o rutas por
+copiar un respaldo documental.
+
+**Evidencia:** ../Humanoide-vla-evidence/20261006T093305Z_PICO_MOTION_PREFLIGHT_READONLY/ contiene before/, consultas
+pasivas/contendores, script diagnóstico transitorio, tarea/acción, resumen,
+check-motion-ready.log y rc, final_network.json, tests.log/tests.json, source
+hashes, after/ y SHA256SUMS. Sigue pendiente reconstruir el requisito exacto del
+intento11:31 y verificar enlace/tráfico/sesión física tras reconexión.
+
 **2026-09-11 — Recuperación sin teleoperación: preparación integrada; ejecución NO resuelta.**
 El usuario indicó teleoperación no disponible: se retira la petición de volver
 manualmente a PICO como siguiente paso. Nuevo `cruzr_prepare_recovery.py` lee
@@ -2416,3 +2747,315 @@ worktree existente y no reinicies el diagnóstico. Empieza con el snapshot de
 la sección 19.2, sin mover el robot, y continúa únicamente desde la decisión
 pendiente de la sección 19.3.
 ```
+
+
+### PICO-MOTION-FIRST-RECORD-20261014 — VERIFICADO archivo local, reproducción pendiente
+
+14-10-2026 Europe/Madrid. Operador confirma record --help en contenedor Motion y realiza grabación con abrazaderas. El recorder agrega timestamp al nombre: prueba_pico_01_20261014_192429.motion (50bytes reportados, contenido no inspeccionado) y prueba_pico_01_20261014_192800.motion (5,2MB). El intento de docker cp usando basename sin timestamp falló por archivo inexistente. Operador copió el segundo al PC.
+
+Revisión local sin robot ni reproducción: /home/lacuna/grabaciones_cruzr/prueba_pico_01_20261014_192800.motion, SHA2560191fb331c6f2ebc5be0cfb5f8d6c9a2369600e6a07b77dc14d3d990c0003af9. JSON robotUtars/sourceutars_teleop, grupos head(2),left_arm(7),right_arm(7); cada grupo8421 muestras, duración16,84s, tiempos crecientes y q finitos. Brazo izquierdo constante, derecho cambia y cabeza cambia; no es archivo sólo de brazo derecho. No incluye cintura/elevador/chasis/dedos en este archivo. q inicial brazos no cero (postura PICO, no HOME); final no retorna al mismo inicio. No inferir q como medido vs consigna sin contrato del recorder. Validación estructural no verifica límites/collision ni autoriza reproducción; movimientos y objeto durante toma reportados sólo por operador.
+
+Evidencia resumen y hashes documentales: ../Humanoide-vla-evidence/20261014_PICO_MOTION_FIRST_RECORD/. Archivo grande conservado fuera de Git en ruta PC indicada. Cambios sólo documentación con before/after; no config, deploy, servicios, movimiento ni modo. Pendiente auditar trayectoria/entrada/salida y cabeza antes de cualquier player autorizado, con estado físico fresco. No commit/push.
+
+
+### PICO-MOTION-REPLAY-20261014 — intento físico autorizado; reproducción FALLIDA
+
+14-10-2026 Europe/Madrid. Usuario autoriza reproducir y confirma condiciones físicas, interrumpe preparación y luego autoriza continuar. Receta y resultado [PICO_MOTION_PRUEBA_01_20261014](PICO_MOTION_PRUEBA_01_20261014.md). Original motion conservado; editor vendor genera copia con posiciones idénticas y tiempos2x (33,68s), hash1e8d7ac8250708907e4c962c66a5c7a06fb34b6f7389059cc52f09ff561d65cb. SDK joint_order y joint_states por nombre eliminan falsa diferencia al comparar raw motores; preflight fresco máxdelta0,002876rad, reposo, actuadores habilitados sin fallos, paros0/0, cargador0, baterías28,6/36,8%, controladores activos y sin acción Motion activa. Modo últimoobservadojoystick, sin cambio por agente.
+
+Una llamada player --robot utars --input copia_lenta --loop1 a11:52:51Z termina en1s con std::bad_any_cast. Wrapper rc0 pero stderr abortado: NO éxito. No retry, no HOME. Telemetría posterior velocidades0 y cambio máximo0,000095874rad; no certificación continua de parada ni trayectoria. Causa SDK concreta PENDIENTE. No parche del SDK ni reducción de gates. Evidencia, comandos, hashes/estado before-after documentales en ../Humanoide-vla-evidence/20261014_PICO_REPLAY_PRECHECK/. Reversión: borrar sólo derivada temporal y cambios documentales de ficha si se desea; original no alterado. No commit/push.
+
+
+### PICO-PLAYER-LOOP-20261014 — VERIFICADO causa y corrección de invocación
+
+14-10-2026 Europe/Madrid. Se confirma que bad_any_cast del único intento player fue causado por --loop1 añadido en comando del agente: parser guarda explícito como string y lo extrae int. Default1síint. Ocurre antes de rosa::init/cliente/archivo. Se corrige receta omitiendo --loop (una pasada por defecto). No cambia SDK vendor. Dos pruebas con interposer de diagnóstico que termina obligatoriamente ANTES de init: opción explícita reproduce aborto, omisión alcanza marcador rc86. Cero movimiento/cliente en diagnóstico. Compilación temporal eliminada. Fuente versionada scripts/teleoperation/pico_player_parser_probe.cpp, ELF pinned8744a30ecce20c414dcf67b60d9aa7ac486bab752d5eee3de08a7336d65ddf0d.
+
+[Receta, trazabilidad y comandos corregidos](PICO_MOTION_PRUEBA_01_20261014.md). Evidencia ../Humanoide-vla-evidence/20261014_PICO_PLAYER_BAD_ANY_DIAG/; before/after documental y SHA256SUMS. Reproducción de trayectoria con comando corregido PENDIENTE; no retomar físicamente bajo esta petición de diagnóstico/corrección. No configuración persistente robot/PC ni alteración motion. No commit/push.
+
+
+### PICO-XR-USB-20261014 — túnel configurado; flujo USB pendiente de interfaz PICO
+
+14-10-2026 Europe/Madrid. Usuario solicita XR por USB. PICO físico PA94Y0MGKB070822G descubierto device usb1-4, XRoboToolkit1.1.1. Backend sistema ubt-controller activo, UI inactiva, puertos8082/63901 disponibles. STOPoperation_type1 comprobado por log pasivo sin abrir WebSocket (conexiónWS4.7.0 puede arrancar publisher). Antes reverse vacío; cambio autorizado sólo `adb -s PA94Y0MGKB070822G reverse tcp:63901 tcp:63901`, después UsbFfs mappingcorrecto. Sin start de teleop/robot ni cambio de red Motion/Vision.
+
+Fuente/receta scripts/teleoperation/configure_pico_xr_usb.sh: --check pasivo, --configure mismo mapping con identidadUSB/STOP/listener, --remove elimina sólo puerto63901. Invocar con bash; script no ejecuta controlrobot. --help,--check,bash-n verificados. Túnel ADB transitorio; puede perderse al desconectar/reiniciar. PCserviceIP en gafas debe ser127.0.0.1. Solicitud al operador: introducirIP, conectar y Head+Controllers/Senddata sinY/START. En última consulta aún TCP directoWi-Fi42.211→42.215:63901; no confundir reverse existente con flujoUSB yaactivo. EstadoXRUSB/tracking pendiente hasta observarpeerloopback e identidadtracking; conservarWi-Firobot paraPC→Motion si noEthernet.
+
+Reversión: --remove (con backendSTOP) y restaurar PCserviceIP de interfazPICO al valor real de Wi-Fi si se desea volver; no eliminarotrosreverse. No se cambia firmware/SDK/servicios ni restriccionescargador. Evidencia before/after reverse, estado, sockets, check y hashes: ../Humanoide-vla-evidence/20261014_PICO_XR_USB/. before/afterdocumentales y nuevo scriptPC. No commit/push.
+
+
+Actualización PICO-XR-USB-20261014 — VERIFICADO transporte y tracking: operador confirma Connected/Working tras introducir127.0.0.1. Socket posterior sólo loopback127.0.0.1→127.0.0.1:63901 y mappingUsbFfs. Diagnóstico canónico PICO_TELEOP_CAMERA=off probar_pico.sh --check a15:32:31CEST pasa7/7 rc0: identidadPICO porADBUSB, trackingvr_status1, backend4.7vendorhashintacto, UIinactiva y STOP. PC→Motion/Vision descubierto Etherneteno1/IP192.168.11.250; no se cambió esa conexión por el agente. No START ni movimiento. Conservado sólo túnelADB63901; estado operativoUSB confirmado, permiso físico no inferido.
+
+
+### PICO-RECORD-06-COPY-20261014 — VERIFICADO copia local
+
+14-10-2026 Europe/Madrid. Usuario solicita traer prueba_pico_06_20261014_214758.motion al repo local. Archivo encontrado en RAÍZ del contenedor Motion walker-motion.manipulation_robot_app-1 (/prueba_pico_06_20261014_214758.motion), no /tmp/pico_grabaciones ni carpeta host. Copia por SSH/dockerexeccat a recordings/pico/prueba_pico_06_20261014_214758.motion,11403700bytes, SHA256a615d38f941b03f3b615408e981b4120d46bd40f3247c56234fc0825dd68537b idéntico al remoto. Original remoto intacto, destino nuevo sin sobrescribir. Inspector local pasa validación estructural; no replay ni orden de robot. .gitignore añade /recordings/pico/*.motion para conservar archivos grandes localmente sin incluir enGit. Respaldo antes, copia verificada, inspección y hashes en ../Humanoide-vla-evidence/20261014_PICO_RECORD_06_COPY/. Fuente reproducible: dockerexeccat de ruta original y comparaciónSHA256; scripts/teleoperation/inspect_pico_motion.py para inspección. Reversión: retirar sólo copia y línea nueva de ignore/notas si procede, preservando original remoto y cambios posteriores. No commit/push.
+
+
+**15-10-2026 10:42 CEST — continuación PICO v4, pendiente conexión XR.**
+Operador pide seguir. Chequeo PC con cámaraoff y Etherneteno1 se detiene enCHECK2:
+ADB no muestra dispositivos y no se detecta peerXR activo en63901. El clienteADB
+arranca automáticamente su servidor localtcp5037 (antes detenido); no se cambia
+configuración persistente. configure_pico_xr_usb.sh --check confirma visor físico
+PA94Y0MGKB070822G ausente porUSB. No se configura túnel ni se envía START, modo
+robot, HOME o movimiento. Tarea TeleopMode v4 todavía sin cargar; robot permanece
+en modo anterior. Se solicita al operador elecciónUSB/Wi-Fi y preparar visor.
+Reanudación: establecer XR y tracking neutro, comprobar STOP y seguridad frescos,
+cargar modo v4 sólo brazos y verificar0/0 antes de ensayo. Evidencia privada
+20261015_PICO_V4_PROFILE/pico-connection-before-mode.json ycc-before-pico-mode.json.
+ServidorADB transitorio; dejarlo activo permite continuar, sin autorizar control.
+
+
+**15-10-2026 10:46 CEST — PICO-V4-PROFILE: USB reconectado; XR pendiente de interfaz.**
+Operador eligeUSB. PICO PA94Y0MGKB070822G reconocido deviceusb1-3.
+Reverse anterior vacío; con backendSTOP confirmado por log pasivo, receta
+`bash scripts/teleoperation/configure_pico_xr_usb.sh --configure` instala sólo
+`tcp:63901 tcp:63901`; --check posterior confirma túnel e identidad.
+Check PC descubre XRoboToolkit cerrado. Se abre únicamente su actividad
+com.xrobotoolkit.client/com.unity3d.player.UnityPlayerActivity mediante ADB;
+rc0. No modifica APK/configuración persistente, no START ni modo/movimiento robot.
+Se pide al operador IP127.0.0.1, conectar, Head+Controllers/Senddata, sinY/grips.
+Connected/Working y tracking aún pendientes. Evidencia usb-before.json,
+usb-configure.json,usb-after-check.json,xr-activity.json,xr-open-app.json en
+20261015_PICO_V4_PROFILE privado. Rollback transporte: con backendSTOP,
+`bash scripts/teleoperation/configure_pico_xr_usb.sh --remove` retira sólo63901;
+volver a IPWi-Fi real en interfaz si se elige otro transporte. Túnel transitorio,
+puede desaparecer al desconectar/reiniciar. No se cerró app ni se quitó túnel.
+
+
+### 15-10-2026 — apagado completo y nuevo arranque supervisado (OBSERVADO)
+
+El guard de CC con SPS completó Motion 3/3 y cámaras 2/2; CC alcanzó
+`WaitEStopRelease`. Con brazos asegurados contra caída, manos vacías y paro
+principal pulsado, se solicitó una única vez `/emb/pm_shutdown`
+(`emb_task_msgs/srv/ShutDown`, deadline_sec=15, confirm_str=confirm-to-shutdown).
+Respuesta `success=True`; evidencia privada `shutdown-logical-request.json` en
+`../Humanoide-vla-evidence/20261015_PICO_V4_PROFILE/`. El operador confirmó
+pantalla y luces superiores apagadas, después apagado completo de ambas partes,
+indicador verde del chasis apagado y brazos estables. Recuperación fuera de HOME
+con soportes; no se envió HOME ni se alteraron límites o protección de saltos.
+
+El operador informa nuevo encendido en orden chasis → KEY1 → botón de encendido
+y mantiene el paro principal pulsado. Consulta de lectura descubre de nuevo
+Motion y Vision activos (`reboot-container-discovery.json`). Se comprueba
+arranque sin liberar el paro ni activar PICO. HOME actual, eliminación de
+consignas latentes y funcionamiento físico de PICO v4 siguen PENDIENTES.
+
+Verificación posterior del nuevo arranque: gate Motion 3/3, cámaras 2/2 con
+timestamps avanzando; HW_TYPE efectivo SPS tanto en app Motion como en CC.
+CC nativo alcanza `WaitEStopRelease`, principal=1 y servos=0. No se libera paro
+ni se envía movimiento. Avisos MQTT rc14 y consulta de versión embedded agotada
+observados; no se atribuyen automáticamente a fallo de brazos. Evidencia:
+`reboot-first-readiness.json`, `reboot-cc-profile.json`, `reboot-native-cc.json`.
+
+
+### 15-10-2026 — HOME tras ciclo completo (VERIFICADO)
+
+El operador informa liberación del paro principal y HOME normal. Lectura nueva
+confirma StartMotion terminado con éxito y CC en AutoTaskMode. Telemetría:
+{"axis_count": 20, "max_abs_position_rad": 0.002684466378799872, "max_cmd_position_delta_rad": 0.002684466378799983, "max_velocity": 0.0, "faults": []}. Las diferencias anteriores de ~1,57 rad ya no
+aparecen en esta muestra. Evidencia privada reboot-home-verification.json y
+reboot-home-summary.json en 20261015_PICO_V4_PROFILE. Sin órdenes nuevas del
+agente. No demuestra todavía inicialización PICO v4 correcta. Selfcheck general
+passed=true, con avisos individuales audio_loopback y señal Wi-Fi; MQTT rc14
+persiste. No se alteró ni omitió ninguna comprobación. Próximo paso: comprobar
+seguimiento USB y continuidad de inicialización v4 antes de activar teleop.
+
+
+### PICO-V4-SSH-ALLOWLIST-20261015 — transporte de lista de hardware (15-10-2026)
+
+Tras HOME, USB XR vuelve a enviar HEAD+CONTROLLERS (vr_status=1), enlace robot
+Ethernet eno1 y backend STOP. Check v4 rechazó erróneamente HW_TYPE SPS: SSH
+concatena argumentos remotos y separaba la lista con espacios en dos argumentos.
+Se corrige sólo transporte de expected_hw_types a un token separado por comas y
+se reconstruye la lista en remoto. Se conserva la misma lista permitida por
+perfil: clamp sólo base; v4 base/SPS. Sin cambio de gates físicos o hardware.
+Fuente PC scripts/teleoperation/cruzr_pico_teleop_pc.sh; prueba de regresión en
+test_pico_motion_preflight_diagnostics.py simula reconstrucción SSH y rechazo
+de hardware desconocido. 16 tests pasan y bash -n correcto. Backup externo
+20261015_PICO_V4_PROFILE/before-ssh-hw-list-fix; reversión del fragmento desde
+esa copia, sin reinstalar cambios ajenos del archivo. Activación próxima
+ejecución del script; no requiere reiniciar robot/PC. Sin START ni cambio de
+modo durante estas comprobaciones. Control de manos desde XR aún no habilitado.
+
+Check real posterior: HW_TYPE SPS aceptado; siguiente gate rechaza correctamente
+ACTIVE_TASK_ERROR=cruzr/home (rc26). Aún no se ha cargado tarea PICO v4.
+Tracking USB vr_status=1 y STOP confirmados; no START ni cambio de modo.
+
+
+### 15-10-2026 — tarea PICO v4 inicializada (VERIFICADO; sesión manual pendiente)
+
+Con confirmación física actual: manos vacías, recorrido libre, soportes retirados,
+cargador fuera, otros mandos detenidos y persona junto al paro. Lecturas nuevas
+pre-v4-mode-safety.json: paros0/0, batería64,1/67,1%, cargador0, módulos sin
+bloqueo. Cuerpo20D en reposo sinfaults/delta máximo0,002589rad y siete estados
+v4 válidos por mano. Perfil v4 instalado con init_time12, init_resettrue,
+anticolisióntrue, cintura0/elevador0, sin modificar parámetros de inicialización.
+
+Cambio autorizado mediante cc.api.work_mode.switch workMode=teleop aceptado.
+Ahora sí selecciona teleoperation/cruzr_v4_pico_teleoperation, Hand typev4,
+waist0/leg0. Vigilancia de hardware durante inicialización no observa nuevos
+'jump command', SAFEOP ERROR ni avisos de fuerza/fault del patrón vigilado.
+Telemetría final:20D, velocidad0, sinerror_code y delta máximo0,00342212rad
+(~0,20°); ambos brazos alcanzan consignas iniciales v4. Operador confirma ambos
+brazos estables. Perfil cargado SHA01a5ca8acba16bbe136a3bdbcb4a593667d672f8ee9613b98631699fc429b582.
+No demuestra aún respuesta a grips/gatillos ni ensayo de agarre.
+
+Evidencia privada: v4-mode-switch-after-reboot.json, v4-init-app-log.json,
+v4-init-hw-watch-0..7.json, v4-mode-status-after-init.json y
+v4-init-actuator-check/summary.json. Estado vigente teleop, PC STOP, sinSTART.
+No HOME adicional, reboot ni reset. Para salir, usar STOP oficial y transición
+controlada; no apagar desde la postura PICO sin recuperación adecuada.
+
+Durante check posterior tracking cae a vr_status0: USB reverse aún válido,
+XRoboToolkit resumed, pero Android mWakefulness=Asleep. Operador despierta y
+se coloca el visor; se repite check antes de START. No se deshabilita tracking,
+watchdog o suspensión del dispositivo. No seleccionar seguimiento óptico Hands:
+perfil actual Head+Controllers, cliente hand con enable_hand_pose0.
+
+
+### PICO-XR-USB-20261015 — recuperación tras suspensión (OBSERVADO)
+
+Tras reactivar Send data, check aún vr_status0. Captura privada
+xr-current-screen.png confirma Head/Controller/Send seleccionados, Hands no,
+PC127.0.0.1 yWorking; visorAwake yTCP/reverse activos. Journal del PC registra
+`device missing` a11:26:41 Europe/Madrid; reconexión efectiva aún no demostrada.
+No atribuir el bloqueo a una configuración incorrecta del operador ni afirmar
+que Working equivale a seguimiento válido.
+
+Se reinicia sólo app PICO com.xrobotoolkit.client mediante ADB force-stop y
+am start de UnityPlayerActivity. Sin reinicio de PC/robot ni START, backendSTOP,
+tarea v4 permanece cargada. Evidencia xr-app-restart-after-sleep.json; capturas
+y logs privados fueraGit. Receta reproducible: confirmar backendSTOP con
+configure_pico_xr_usb.sh --check, adb -s PA94Y0MGKB070822G shell am force-stop
+com.xrobotoolkit.client; adb -s PA94Y0MGKB070822G shell am start -n
+com.xrobotoolkit.client/com.unity3d.player.UnityPlayerActivity; reconectar
+127.0.0.1 yactivar Head+Controllers/Send data; repetir probar_pico_v4.sh --check.
+No se cambiaron ajustes persistentes de suspensión ni binarios. Reversión:
+cerrar app si no se usa; no restaurar sesiones de control transitorias.
+Resultado de recuperación PENDIENTE al registrar este punto.
+
+
+### 15-10-2026 — XR recuperado y corrección de lector ROS (VERIFICADO)
+
+Tras reinicio de app y reconexión del operador, vr_status1 comprobado. App con
+Shared network ha activado redUSB: PICO192.168.224.184→PC192.168.224.6:63901,
+ruta por enxdabcd609068b, sysfs usb1/1-3:1.0. PC→robot sigue eno1/.11.250.
+No se cambió NetworkManager desde el agente; el reverse anterior queda
+configurado pero el stream actual usa redUSB directa. No llamarlo Wi-Fi.
+
+Preflight real pasa paros, baterías63,3/66,3%, cargador fuera, reposo, tarea
+v4 activa, una acción. Lector de manos aborta por AMENT_TRACE_SETUP_FILES no
+definida al source del setupROS bajo nounset. Se corrige únicamente ese source
+en check_v4_hand_states de scripts/teleoperation/cruzr_pico_teleop_pc.sh:
+carga con set -Eeo pipefail y restaura set -u inmediatamente después; sin
+omitir lectura, nombres/velocidades/timestamps. Prueba de regresión con
+variable opcional ausente, 17tests pasan y bash -n correcto. Backup previo en
+before-v4-ros-setup-fix, misma evidencia externa. Activación próxima ejecución;
+reversión selectiva del fragmento desde backup. Sin cambios robot/SDK.
+
+Se abre lanzador oficial v4, ventana120s, mismo cliente vendor hand y
+enable_hand_pose0, cámaraoff. Perfil cargado0/0 ytracking1 comprobados.
+Confirmación textual basada en condiciones físicas que el operador acaba de
+confirmar. Al registrar este punto está revalidando preflight antes de START;
+resultado, enable y efectos físicos aún PENDIENTES. No se marca ensayo completo.
+
+Ensayo11:33–11:34 Europe/Madrid: preflight completo, V4_HAND_STATES_OK,
+START oficial arm_typehand/enable_hand_pose0 y mandos frescos/neutros. No se
+observa Y/enable1 en15s; cliente solicita STOP y confirma operation_type1.
+Sin habilitación física demostrada. Operador confirma estar preparado para
+siguiente aviso; se reintenta una ventana idéntica, sin ampliar timeout.
+
+
+### 15-10-2026 — primer control PICO v4 con respuesta física confirmada
+
+Segundo intento oficial ~11:35 Europe/Madrid: preflight nuevo pasa, estados
+v4 válidos, mandos frescos/neutros; START arm_typehand y Y/enable1 observados.
+Ventana120s, sólo brazos/manos, cabeza según perfil, cintura/elevador0. El
+operador confirma: «Sí, brazo y mano responden bien», siguiendo grip y apertura/
+cierre con gatillo, ensayo en vacío. Consulta de logs durante sesión sin los
+patrones de salto/Excessive force/SAFEOP/fault en alcance recogido; no equivale
+a certificar cualquier trayectoria. Evidencias v4-physical-test-operator-report
+y v4-session-live-log-check.json. Captura/dataset/replay con v4 NO ensayados.
+Sesión aún activa al registrar; STOP final pendiente de verificación. No
+modificaciones de parámetros de movimiento ni protecciones durante la prueba.
+
+
+### 15-10-2026 11:37 Europe/Madrid — PICO v4 probado en vacío; STOP final verificado
+
+Ventana oficial120s terminada con código0. Cliente envía operation_type1 y
+confirma OFFICIAL_TELEOP_STOP_CONFIRMED1; UI detenida, sinnuevoHOME ni cambio
+de modo. CC mantiene teleop, brazos en postura final PICO, NO declarar HOME.
+Lectura final cuerpo20D: velocidad0, sinfaults, delta máximo0,00235399rad.
+Manos: dos muestras avanzando por lado, siete nombres correctos, velocidades
+≤0,02rad/s, V4_HAND_STATES_OK. Estado estable medido después de STOP.
+
+Resultado: inicialización v4 correcta y operador confirma movimiento de brazo
+porgrip y apertura/cierre de mano porgatillo. No se ensayó agarre de objeto,
+seguimiento óptico de dedos, captura ni replayv4. Sin cambio de límites, fuerza,
+watchdogs o anticolisión. Fuente de control PCvendorarmhand y perfil v4 0/0.
+Se conserva baseline globalPCclamp: override del cliente hand comprobado ahora
+en esta sesión. Evidence v4-session-final-actuators/summary/hands.json y
+v4-official-session-backend.log (privados). Fuentes exactas respaldadas en
+after-v4-teleop-verified-sources conSHA256SUMS.
+
+Repetición con tarea v4 ya cargada y condiciones físicas comprobadas:
+PICO_TELEOP_CAMERA=off CRUZR_IFACE=eno1 CRUZR_PC_IP=192.168.11.250
+PICO_OFFICIAL_TELEOP_SECONDS=120 bash scripts/teleoperation/probar_pico_v4.sh
+--teleoperate (una única línea). El script exige confirmación y gates de nuevo;
+Y una vez sólo al aviso, sin grip/gatillo hasta enableconfirmado. Si tras
+reinicio está auto_task/HOME, hace falta cargar tarea v4 de forma supervisada;
+no sustituir automáticamente por clamp ni saltarse ACTIVE_TASK_ERROR.
+Mantener visor despierto/puesto; tras sueño, Working solo no demuestra vr_status1.
+
+
+### PICO-V4-COMPLETE-CAPTURE-20261015 — grabador pasivo complementario
+
+15-10-2026 Europe/Madrid. Fuente nueva PC:
+`scripts/teleoperation/record_pico_v4_complete.sh`; SHA256 dc6735d24ec3dba975f8e4f2d97f1c2773c1352e3c48120e39c65f4e9678fde8.
+Motivo: record nativo sólo conserva posiciones mandadas, insuficientes para
+cierre cur observado en toma01. Nuevo lanzador añade ROSbag con mensajes
+completos de manos (órdenes/estados MC y EtherCAT), órdenes cabeza/brazos,
+estado articular del cuerpo y estados medidos de manos. Mantener .motion nativo
+en paralelo si se necesita formatoSDK. Bag incluye datos para estudiar modos/
+esfuerzos; no es un player ni transforma automáticamente bag a.motion.
+
+Descubrimiento actual: walker-ros.ros2-1 incluye ros2bag con sqlite3; topics
+y tipos contrastados. --check predeterminado consulta herramientas y canales
+manos, sin escribir ni iniciar captura. --record NOMBRE exige terminal, nombre
+alfanumérico/_/-, usaSSH interactivo conocido hacia walker@192.168.11.2.
+No SDKedit, parámetros del robot, START, cambio de modo o reproducción.
+QoS best_effort/volatile keep_last2000 por topic, caché16MiB; suscripción
+compatible con publishers BEST_EFFORT. QoS se escribe sólo para sesión nueva.
+
+Archivos nuevos sesión: /tmp/pico_v4_capture_NOMBRE_UTC_PID en ROScontainer,
+rosbag/sqlite+metadata yqos.yaml. TrasCtrl+C exporta a hostMotion
+/home/walker/grabaciones_v4_completas/NOMBRE_UTC_PID y ejecuta baginfo. Rechaza
+sobrescritura. No depende de mantener sólo /tmp: copiahost comprobada.
+Reversión: conservar/exportar grabaciones, retirar selectivamente lanzador y
+sus carpetas de prueba si se decide; no restaurar estado transitorio de control.
+No servicio/autostart instalado ni configuración persistente de robot/PC cambiada.
+
+VALIDACIÓN: bash-n y --help correctos; --check real pasa. --record ensayado
+pasivamente, Ctrl+C limpia/cierra, copiahost ybaginfo terminan rc0. Prueba
+8,4006s, 9190mensajes, sqlite8.175.616B, cuenta manos medidas832/830,
+whole_joint_states4184, buscmd834/832, busstate840/838. No mensajes de
+órdenesMC en esta captura en reposo; captura durante teleop aún PENDIENTE.
+No afirmar que una simple creación de bag garantiza cobertura de toda demo:
+revisar recuentos y rango de dedos en toma corta activa antes de reproducción.
+Carpeta host /home/walker/grabaciones_v4_completas/
+comprobacion_pasiva_20261015T100041Z_431556. SHA256 DB
+a36c35802f2ae67cdc890b14e2ceaa3fdff5a82f4e7bde15bc33f046cded85a8.
+Evidencia privada v4-complete-capture-tools.json y
+v4-complete-capture-passive-proof.json con hashes yrecuentos.
+
+Procedimiento para operador desde raíz repoPC:
+
+```bash
+bash scripts/teleoperation/record_pico_v4_complete.sh --record prueba_v4_02
+```
+
+Dejar abierto hasta Subscribed, mantener grabador.motion anterior en otra
+terminal si se requiere. Iniciar teleop v4 por procedimiento ya comprobado y
+hacer toma corta en vacío con condiciones físicas actuales. Ctrl+C sólo en
+terminal de grabación guarda/copia; no detiene teleop. Revisar datos antes de
+repetición. No ejecutar ros2bagplay sobre topics de mando directamente: el
+reproductor/continuidad/modos de esfuerzo requieren adaptación y validación
+propias. Reproducción bag completa y nueva toma activa PENDIENTES.
