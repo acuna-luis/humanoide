@@ -999,7 +999,8 @@ with socket.socket(socket.AF_UNIX) as conn:
                 # The native adapter still captures twice and runs the XYZ gate.
                 atomic_json(self.session/'box-alignment-reference.json', pending)
                 self.emit('box_alignment', phase='ready', attempts=attempt,
-                          total_requested_m=total, observation=pending)
+                          total_requested_m=total, observation=pending,
+                          inside_margin_m=policy['inside_margin_m'])
                 return
             if attempt >= policy['max_corrections'] or total+step > policy['max_total_m']+1e-12:
                 raise RuntimeError('BOX_ALIGNMENT_LIMIT: no further visual correction allowed')

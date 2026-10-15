@@ -1,5 +1,35 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**06-10-2026 — BOX-01-VISUAL-ALIGN-INSIDE-MARGIN. VERIFICADO offline.**
+Intento090347 acepta X0,786254m sin ajustar; agarre posterior rechaza0,790663m
+(variación4,409mm). Preparación optimista ahora exige margen interior20mm en
+X/Y aunque la caja cumpla el gate nativo: X[0,43;0,77]/Y[−0,37;0,37]m.
+Replay solicita X+16,254mm antes del agarre; nueva visión/progreso/presupuestos
+siguen obligatorios. Gate SPS original y aborto tras fallo nativo intactos.
+Consola muestra ajustes0. 725 pruebas pertinentes correctas; revisión instalada
+PC, carga remota y ensayo físico PENDIENTES. Sin conexión ni movimiento del agente.
+[Criterio vigente, fuentes y reversión](../box_handling/BOX_AXIS_REPOSITION_20261002.md#box-01-visual-align-inside-margin--06-10-2026).
+
+**06-10-2026 — NAV-GET1-20261006. VERIFICADO técnico.**
+Tras confirmación física actual del operador, `optimistic_scenario1.sh --check
+--stop-after get1` rc0 y `--run --stop-after get1` rc0. Destinos ya presentes en
+el mapa nuevo; get1 X1,090119m/Y−0,523853m/yaw0,013935rad. Navegación status4,
+FSM_WAITNAVIGATE y dos poses frescas: 7,049mm/0,427° dentro de 20mm/2°.
+Dos muestras posteriores de odometría muestran velocidad cero. Sólo navegación;
+sin agarre, depósito, HOME enviado ni configuración remota persistente cambiada.
+VSLAM_LOCATION_LOST auxiliar persiste; precisión física independiente y nueva
+medición HOME final PENDIENTES. Avisos de lease pertenecen al cierre tras éxito.
+[Resultado y comandos](../box_handling/GET1_PUT1_MAPA_Y_EJECUTOR.md#nav-get1-20261006--traslado-al-destino-del-mapa-nuevo).
+
+**05-10-2026 — MAP-QUALITY-20261005. OBSERVADO, sólo lectura.**
+Última relocalización utars_nav_map falla; VSLAM=LOCATION_LOST y pose visual
+no fiable. Mapa visual presente4443puntos/38poses, pero candidatos no superan
+consistencia de solver (ejemplo17<20). Cobertura/calibración/causa PENDIENTES.
+API y archivos actuales no contienen destinos: get1/put1 ausentes; escenario1
+bloqueado por Require one unique get1. No copiar coordenadas de un marco antiguo.
+Sin relocalización/movimiento, reinicio ni edición del mapa por el agente.
+[Hallazgos, límites, evidencia y continuación](../incidents/2026-10-05_UTARS_NAV_MAP_LOCALIZATION.md).
+
 **02-10-2026 — BOX-01-VISUAL-ALIGN-ODOM-PROGRESS.** Intento094521 pasa
 HOME/get1 y solicita ajusteX21,200mm; cancela a4,008s por falta de progreso.
 Mapa termina a27,095mm, pero odometría registra42,601mm de recorrido y25,800mm
@@ -1307,3 +1337,34 @@ Durante todas las pruebas de movimiento deben permanecer desconectados el
 cargador y Ethernet, debe haber espacio libre para robot y caja, y una segunda
 persona debe mantener preparado el paro físico. El detector, ROS 2 y estos
 scripts no sustituyen una función de seguridad certificada.
+
+
+### BOX-TINY-CORRECTION-DIAG-20261007 — OBSERVADO (Europe/Madrid)
+
+Revisión de sólo lectura del ensayo `20261007T114551Z_OPTIMISTIC_SCENARIO1_1037361`: llegada a get1 9,5 mm / 0,46°. Caja X previa 0,790496832870 m; solicitud de ajuste X 2,496832870 mm hacia el límite interior 0,788 m (margen efectivo 2 mm; el texto antiguo de 20 mm no refleja esa política). Las dos mediciones de llegada conservan exactamente el error solicitado de 2,496832870 mm y yaw 0°, aceptados por tolerancia 20 mm / 2°. Odometría antes y después conserva la misma posición: no se observa desplazamiento del chasis. Nueva X 0,790102098093 m: mejora visual 0,394734777 mm; permanece 0,102098093 mm fuera del máximo nativo 0,79 m y 2,102098093 mm fuera del límite interior. `BOX_ALIGNMENT_NO_IMPROVEMENT` interrumpe antes del agarre. La tolerancia de llegada permite dar por terminado un ajuste menor que ella sin desplazamiento; variación de detección no demuestra movimiento físico de la caja. Los errores posteriores de lease son consecuencias del cierre. No se cambiaron políticas ni se enviaron órdenes al robot. Evidencia: `../Humanoide-vla-evidence/20261007_BOX_TINY_CORRECTION_DIAG/` y events.jsonl del ensayo. Pendiente: resolver la relación entre correcciones pequeñas y tolerancia de llegada; no hay autorización de movimiento en esta revisión.
+
+
+### BOX-ALIGNMENT-MIN-STEP-20261007 — instalado en PC; prueba física PENDIENTE
+
+2026-10-07 (Europe/Madrid). Autorización: modificar el escenario para evitar objetivos de corrección pequeños que terminan sin desplazamiento, caso `20261007T114551Z_OPTIMISTIC_SCENARIO1_1037361`. Fuente reproducible: `scripts/box_handling/scenario1_box_alignment.py`, `scenario1_console.py` y `scenario1_cli.py`; pruebas en `test_scenario1_box_alignment.py` y `test_scenario1_console.py`. Sólo se cambiaron fuentes locales del PC, sin comandos de robot ni despliegue remoto.
+
+`POLICY.min_correction_m=.025`: para cada eje X/Y afectado cuya corrección necesaria es menor o igual que `max_arrival_distance_m`, se solicita `max(min_correction_m, corrección_necesaria + max_arrival_distance_m + min_improvement_m)` con su signo original. Se verifica que la posición proyectada permanece dentro del margen interior en ambos sentidos y se conserva el control vectorial de 50 mm por paso, 50 mm acumulados y dos intentos del runtime. Los ejes sin violación no se corrigen. Un objetivo así no puede aprobarse en el punto original dentro de la tolerancia de llegada. Las detecciones y límites nativos de agarre, asociación, salud y watchdogs se conservan. La detección nueva sigue decidiendo el agarre; el cálculo no prueba espacio físico libre, exactitud del mapa o estabilidad de la caja.
+
+El archivo del usuario observado al comenzar esta intervención contiene margen interior 20 mm, llegada 12 mm y progreso mínimo 2 mm; se preservaron esos valores. Con la política histórica del ensayo (margen 2 mm, llegada 20 mm, progreso 3 mm), la solicitud original de 2,496833 mm pasa a 25,496833 mm. El objetivo es más profundo, sin ampliar el rango XYZ. La consola normal imprime ahora X/Y/Z en cm de cada observación validada, identificando base_link y que Z no es altura al suelo; el banner explica el mínimo configurado.
+
+Activación: el ejecutor carga estos archivos en la siguiente ejecución autorizada. Revisar primero `./scripts/optimistic_scenario1.sh --plan` y `--check`; tras una interrupción comprobar estado físico y usar la recuperación adecuada, sin repetir automáticamente el ciclo. No se efectuó ensayo físico. Verificación sintética: 94 pruebas de alineación/consola y 123 de SPS/navegación/runtime superadas (217 total); --plan y git diff --check correctos. Aviso de ResourceWarning de un lock temporal en las pruebas relacionadas, sin fallos. Resultados exactos en la evidencia. Rollback selectivo: retirar sólo `min_correction_m` y el bloque adicional de `displacement`, y los cambios de presentación; los archivos previos completos están respaldados para comparación, sin sobrescribir cambios posteriores del usuario. Dependencias: gate XYZ de front_sps_contract y políticas actuales de navegación/runtime.
+
+Backup antes/estado después, hashes SHA256, pruebas y plan: `../Humanoide-vla-evidence/20261007_BOX_ALIGNMENT_MIN_STEP/`. Pendiente: verificar físicamente avance, detección posterior y agarre, con zona despejada y controles físicos de AGENTS.md. No commit ni push.
+
+
+### HEALTH-POST-GRASP-DELTA-20261008 — VERIFICADO en evidencia histórica del robot
+
+2026-10-08, Europe/Madrid. Petición: diagnosticar fallo durante demo sin mover ni cambiar robot/PC. Sólo consultas SSH de lectura a Motion/Vision: docker ps, inspect, archivos existentes de /tmp y docker logs acotados. Sin ROS/ROSA acciones, publicaciones, reinicios ni configuración. Se preservaron los cambios locales.
+
+Ensayo `20261008T082522Z_OPTIMISTIC_SCENARIO1_1659473`: recogida goal `5130c75e-2c37-4aaf-af45-b4f48dcb2cd6` devuelve status4/SUCCEED a 08:26:34,298 UTC (10:26:34 CEST). Log Motion confirma `Clamp box succeed` y `BTree tick succeeded` (log nativo UTC+8 16:26:34). Checkpoint completa grasp/verify_held (sujeción asumida) y falla antes de retreat; no se lanzó retroceso por este ejecutor.
+
+Snapshot conservado en Motion `/tmp/cruzr-scenario1-zq6fa4uz/live-health.json`, escrito 1791447995257351540 ns, dos muestras de actuadores después del resultado: todas las velocidades reportadas son 0.0; no error_code en articulaciones afectadas, status4663. Diferencia cmd_pos-position: brazo izquierdo 4003 =0,010812102450 rad (0,619488°); brazo derecho 5002 =0,011170135544 rad (0,640002°), ambos superiores al gate estacionario 0,01 rad (0,572958°). Ésta es la causa concreta de `LIVE_HEALTH_SETTLING`, no velocidad residual en esas muestras. Muestras de fuente a 41,58/21,58 ms del error final, status de la acción4 y snapshot sin error latched. Replay offline con tiempos históricos reproduce exactamente LiveHealthPending. No es lectura del estado físico actual, ni prueba de sujeción o ausencia de contacto.
+
+`scenario1_runtime.quick_health()` espera 0,5 s; `scenario1_live_health.validate_snapshot()` rechaza reposo si velocidad >0,02 o delta >0,01. El script no distingue en consola cuál de esas condiciones falla. Ampliar sólo el tiempo no garantiza resolver una diferencia estacionaria. No se relajó ningún gate. Diferencia de criterios entre éxito nativo y validación posterior explica que Motion termine bien y el escenario interrumpa. Causa física del pequeño error de seguimiento (carga, calibración/contacto/control) PENDIENTE; no atribuir a Wi-Fi o mapa. Los errores de lease son posteriores al aborto.
+
+Observación separada: al consultar a 08:32 UTC los contenedores Motion manipulation_robot_app y hw ya se habían reiniciado, con StartedAt08:29:34/08:29:29 y RestartCount1; este agente no los reinició. No confundir estado después del reinicio con el fallo anterior. Dependencias actuales redescubiertas mediante docker ps. No cambios persistentes del sistema remoto. Evidencia saneada de consultas, snapshot histórico, logs y replay: `../Humanoide-vla-evidence/20261008_HEALTH_TRANSITION_READONLY/`, SHA256SUMS. Cambios locales únicamente este registro; before/after documentales conservados. Pendiente revisar el criterio posterior al agarre con carga y registrar diagnóstico detallado de joint/delta sin ocultar fallos; cualquier cambio de lógica o movimiento requiere nueva petición y condiciones físicas actuales.

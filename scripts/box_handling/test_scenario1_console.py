@@ -36,9 +36,27 @@ def box_measurement(*, event='detected', stamp=200, index=1):
 
 
 class ReporterTests(unittest.TestCase):
+    def test_alignment_observation_shows_xyz_without_verbose(self):
+        event = dict(event='box_alignment', phase='observed', observation=dict(
+            selection=dict(selected_pose=dict(position=dict(x=.7904968, y=.1586128, z=.9284701)))))
+        original = copy.deepcopy(event)
+        lines = ConsoleReporter().render(event)
+        self.assertIn('X=79,050 cm', lines[0])
+        self.assertIn('Y=15,861 cm', lines[0])
+        self.assertIn('Z=92,847 cm', lines[0])
+        self.assertEqual(event, original)
+
     def reporter(self, verbose=False):
         clock = SimpleNamespace(now=0.)
         return ConsoleReporter(verbose=verbose, clock=lambda: clock.now), clock
+
+    def test_box_ready_prints_zero_corrections_and_preparation_margin(self):
+        reporter, _ = self.reporter()
+        event = dict(event='box_alignment', phase='ready', attempts=0, inside_margin_m=.002)
+        original = copy.deepcopy(event)
+        self.assertEqual(reporter.render(event), [
+            '  Caja dentro del margen interior de 2 mm; ajustes visuales: 0. Se vuelve a validar en el agarre.'])
+        self.assertEqual(event, original)
 
     def test_fifty_hertz_feedback_prints_at_most_twice_in_one_second(self):
         reporter, clock = self.reporter()

@@ -219,7 +219,7 @@ def validate_snapshot(snapshot, *, now_ns, now_monotonic_ns, stationary=False,
         raise LiveHealthPending('LIVE_HEALTH_PENDING: two actuator samples after the action result required')
     posture = [_actuator_health(message) for message in actuators]
     if stationary:
-        if any(row['max_abs_velocity'] > .02 or row['max_abs_command_delta'] > .01 for row in posture):
+        if any(row['max_abs_velocity'] > .02 or row['max_abs_command_delta'] > .015 for row in posture):
             raise LiveHealthPending('LIVE_HEALTH_SETTLING: rest/command agreement not yet measured')
         posture = [dict(line.split('=', 1) for line in home_gate.classify(message, .02))
                    for message in actuators]

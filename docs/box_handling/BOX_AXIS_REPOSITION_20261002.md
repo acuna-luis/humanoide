@@ -1,5 +1,150 @@
 # Corrección visual de posición antes de recoger
 
+**07-10-2026 — BOX-MARGIN-CONSOLE-20261007. VERIFICADO offline; instaladoPC.**
+Usuario pide cambiar20mm. Margen real actual editado porusuario inside_margin_m
+0,002(2mm) se conserva; antes CLI/ready mostraban20mm fijo. CLI leePOLICY y
+supervisor incorpora inside_margin_m enevento ready; consola muestra margen
+real delevento, sininventar20mm enlogs antiguos (fallbackmargenconfigurado).
+Cambios sólo presentacióneventos, sin alterar planificación/gates/valoresusuario.
+Fuentes: scenario1_cli.py,scenario1_runtime.py,scenario1_console.py ytestconsola.
+35testsconsola pasan y --plan localcorrecto; sin ejecución/consulta robot.
+El runtime se transmite en próxima ejecución normal, carga/prueba remotaPENDIENTES.
+Evidencia before/after, tests.log,plan.log,SHA256SUMS:
+../Humanoide-vla-evidence/20261007_BOX_MARGIN_CONSOLE/. Reversión selectiva de
+fuentes desdesu before/, conservando cambiosusuario posteriores. No commit/push.
+
+**07-10-2026 — BOX-BASE-UNSTABLE-DIAG. OBSERVADO offline.**
+Intento112123_977522 tras llegadaajuste8,1mm falla durantecapturavisual.
+Historialmapa de request30 aúltima request39 cambia10,435197mm, giro0,052642°;
+última pareja39 cambia≈10,439mm en~90,528ms. stable_base admite5mm/1°,
+porloque rechazo esdesplazamiento aparente, no toleranciaarrival. No se distingue
+movimientoreal desaltoSLAM; no debaja delcontrol de estabilidad oautorreintento.
+Configuraciónactual observada editada poroperador: inside_margin_m0,002 y
+max_arrival_distance_m0,018; nocambiada porelagente, pruebas físicas deestas
+relajacionesno certificadas. Sólolectura diario/código ydocumentaciónPC.
+Evidencia yrespaldo documental selectivo: ../Humanoide-vla-evidence/20261007_BOX_ALIGNMENT_BASE_UNSTABLE_DIAG/.
+No ROS/movimiento/configuraciónremota. Estadofísicoactual pendiente.
+
+**06-10-2026 — BOX-GET1-DISTANCE-DIAG. OBSERVADO offline.**
+Diario134210_433140: llegada get1 reporta9,7mm/0,33°. Tras dos ajustes,
+última pose archivada queda15,304mm del get1 de ESTA ejecución
+(X−0,166060932/Y0,800009887/yaw−3,113288720); no son coordenadas de mapas
+anteriores ni una lectura física actual. Caja X0,804998160→0,776323314→
+0,779033661m base_link. Primer objetivo34,998mm mejora28,675mm; segundo
+6,323mm (<ventana terminal12mm) termina con residual8,476mm y nueva caja
+2,710mm más lejos. NO_IMPROVEMENT aborta antes del agarre: exteriorXYZ
+admite últimaX, pero margen interior exigeX≤0,77m. Sin cambios de ejecutor,
+órdenes o conexión al robot. Mejora de planificación de objetivos pequeños
+sigue PENDIENTE; no se aplica el mínimo20mm propuesto anteriormente en el chat.
+Evidencia/backups documentales selectivos:
+../Humanoide-vla-evidence/20261006_BOX_GET1_DISTANCE_DIAG/.
+
+**06-10-2026 — BOX-01-VISUAL-ALIGN-ENVELOPE-DIAG. OBSERVADO offline.**
+Diario132500_391413: caja X0,837857869/Y0,086008026/Z0,926560129m base_link.
+Preparación exige X≤0,77m: solicitud X+67,857869mm>50mm por objetivo;
+aborta antes de navegación correctiva/agarre. Es límite de un objetivo,
+distinto del presupuesto acumulado del intento131056. Llegada get1 válida
+no demuestra alcance de caja. Sin órdenes/conexión ni modificación de límites;
+estado físico actual PENDIENTE. Evidencia y respaldo documental selectivo:
+../Humanoide-vla-evidence/20261006_BOX_ALIGNMENT_ENVELOPE_DIAG/.
+
+**06-10-2026 — BOX-01-VISUAL-ALIGN-LIMIT-DIAG. OBSERVADO offline.**
+Diario131056_357497: X inicial0,808542620m solicita+38,542620mm;
+llegada residual10,197mm/0,438°. Nueva X0,783235489m cumple gate exterior,
+pero queda13,235489mm fuera del margen interior (Xmáx0,77m). Segundo objetivo
+llevaría el total solicitado a51,778109mm>50mm; aborta después de UN ajuste
+por presupuesto acumulado, no por agotar dos intentos. Mejora visual25,307130mm.
+No se alcanzó agarre. Lectura de diario local, sin conexión/comandos al robot;
+postura/parada/caja actuales PENDIENTES. No se cambian límites ni planificador.
+Evidencia/backups/hashes: ../Humanoide-vla-evidence/20261006_BOX_ALIGNMENT_LIMIT_DIAG/.
+Reversión sólo documental selectiva desde before/, preservando cambios ajenos.
+
+## BOX-01-VISUAL-ALIGN-INSIDE-MARGIN — 06-10-2026
+
+**VERIFICADO offline; instalado PC; carga remota y ensayo físico PENDIENTES.**
+Fecha Europe/Madrid. Petición: solucionar el rechazo de posición después de que
+la preparación declarara la caja dentro del rango. El operador dice haber
+llevado el robot a HOME antes de ejecutar; esto no demuestra HOME después del
+nuevo fallo. No se consultó ni movió el robot en esta intervención.
+
+Diario local20261006T090347Z_OPTIMISTIC_SCENARIO1_389599/events.jsonl:
+preparación phase=ready, attempts=0, X0,7862544401792924m,
+Y0,1085135373474658m, Z0,7235547702272845m. Sólo quedaban3,745560mm hasta
+Xmáx0,79m. La detección posterior del agarre fue X0,7906630007712482m,
+Y0,10856005879087316m, Z0,7229042095552463m: diferenciaX4,408561mm y
+exceso0,663001mm. Variación de estimación/postura/objeto OBSERVADA; causa física
+no identificada. El intento090212 también muestra aceptación0,787905m y
+rechazo0,790360m; no se atribuye exclusivamente a ruido visual.
+
+**Cambio:** `displacement()` ahora aplica el margen20mm también a valores
+que aún cumplen el gate nativo. Preparación: X[0,43;0,77], Y[−0,37;0,37]m.
+El caso real solicita X+0,0162544401792924m/Y0, con el mismo cálculo del objetivo
+en mapa desde la pose fresca y yaw final conservado. `violation()` mide el
+exceso sobre ese intervalo interior: el segundo ajuste exige mejora visual≥2mm
+incluso si ambas medidas cumplen el gate exterior. Sin margen después de dos
+ajustes, aborto antes de iniciar el agarre. Sin cambio de selector, referencia
+original, XYZ SPS (X[0,41;0,79],Y[−0,39;0,39],Z[0,01;1,49]m), Z/elevador,
+TF exacta, salud/HOME, percepción/coherencia, asociación, llegada, watchdog,
+velocidad, trayectoria ni presupuestos2 objetivos/50mm/70s. Tolerancia aritmética
+1e−12m sólo en el margen añadido, para sus límites representables; el gate nativo
+no cambia. Tras navegación se vuelve a medir, y el agarre obtiene sus propias
+capturas y validaciones. No se reintenta ni se navega después de un fallo nativo.
+Los20mm reducen sensibilidad al borde; no garantizan precisión física ni éxito.
+
+Consola informa el margen interior y muestra `ajustes visuales: 0`; antes
+`clean(value or '')` convertía ese0 a texto vacío. Sólo se cambia la presentación
+del contador de esta fase; diario original y decisiones independientes.
+
+**Destino/fuentes reproducibles:** PC, archivos relativos al repositorio:
+[planificador](../../scripts/box_handling/scenario1_box_alignment.py),
+[CLI](../../scripts/box_handling/scenario1_cli.py),
+[consola](../../scripts/box_handling/scenario1_console.py),
+[tests de ajuste](../../scripts/box_handling/test_scenario1_box_alignment.py),
+[tests de consola](../../scripts/box_handling/test_scenario1_console.py),
+[fixture histórica](../../scripts/box_handling/fixtures/box_alignment_inside_margin_20261006.json).
+La fixture conserva valores originales y SHA256 del diario; no es pose actual
+ni se importa por un ejecutor físico. Misma dependencia del worker SPS/modelo/
+tareas y pines existentes. El wrapper transmite estas fuentes en memoria al
+supervisor transitorio de Motion en la próxima ejecución; no requiere instalar
+ni reiniciar paquetes remotos. No se ha activado allí esta revisión.
+
+**Verificación:** 725 pruebas pasan; módulos/argumentos exactos en
+test_command.json y salida tests.log. Exclusión legacy
+`test_scenario1_deposit_install`, con errores preexistentes ya documentados.
+Regresiones: caso exacto aceptado→rechazado sin alterar poses, límites interiores,
+ambos signos/ejes, una corrección antes del único agarre, necesidad de segundo
+ajuste aunque la primera medida esté dentro del gate exterior, falta de progreso,
+agotamiento de dos ajustes, abortos previos y contador0. La aritmética de replay
+llevaría la segunda X a0,774409m, dentro del gate exterior; no se simula como una
+nueva observación real. Sintaxis Python/shell, plan local y git diff --check
+correctos. No pruebas físicas, consultas remotas, instalaciones o reinicios.
+
+**Activación y continuación:** tras recuperación presencial específica y
+HOME fresco, abrazaderas vacías y condiciones físicas actuales comprobadas,
+usar el mismo entrypoint. `--check` sólo valida dependencias/estado, no prueba
+la trayectoria ni la incertidumbre visual:
+
+```bash
+./scripts/optimistic_scenario1.sh --check
+./scripts/optimistic_scenario1.sh --run --stop-after grasp
+```
+
+No ejecutar automáticamente esos comandos tras el rechazo: la tarea nativa
+prepara brazos antes de consultar SPS. Este fallo no demuestra que sigan en
+HOME; verificar caja sujeta/apoyada/retirada y trayectoria antes de recuperarlos.
+Sigue vigente el requisito de persona junto al paro y control exclusivo.
+
+**Respaldo/evidencia/reversión:**
+../Humanoide-vla-evidence/20261006_BOX_ALIGNMENT_INSIDE_MARGIN/ contiene before/
+con todos los cambios locales previos conservados, baseline.json (HEAD+hashes),
+incident.json, test_command.json/tests.log, plan.log/static_checks.json,
+after/ y SHA256SUMS. Reversión selectiva de los archivos de esta intervención
+desde before/, conservando cualquier cambio posterior ajeno; retirar la fixture
+nueva si se revierte. No restaurar todo el checkout ni coordenadas antiguas.
+Sin configuración persistente remota modificada. El historial anterior queda
+conservado; este criterio sustituye continuar inmediatamente por cumplir sólo
+el gate exterior.
+
 **02-10-2026 — revisión BOX-01-VISUAL-ALIGN-ASSOCIATION.** Asociación entre
 posturas mediante media de cada pareja coherente en odometría local; mantiene
 20mm/3° y última pose original para SPS. Sustituye asociación de últimas
@@ -87,9 +232,10 @@ Nunca se usa esa pose archivada como objetivo físico.
    de llegada. Cada captura tiene límite12s y la serie ≤256 muestras; después
    del reposo final se exige edad de la segunda detección ≤2s. Los límites de
    frescura del lector ordinario, percepción/SPS y guard permanecen vigentes.
-5. Si X/Y cumplen el gate, continuar sin mover el chasis. Si alguno lo supera,
-   corregir únicamente los ejes incumplidos: objetivo 20 mm dentro de la cara
-   correspondiente de [.41,.79] / [−.39,.39] m. Z fuera de [.01,1.49] m aborta;
+5. Si X/Y cumplen el margen interior de 20 mm, continuar sin mover el chasis.
+   En caso contrario, corregir únicamente los ejes que incumplen ese margen:
+   X en [.43,.77] / Y en [−.37,.37] m. El gate nativo de recogida conserva
+   X[.41,.79] / Y[−.39,.39] m. Z fuera de [.01,1.49] m aborta;
    no hay ajuste de elevador para compensarlo. Z en base_link no es altura al suelo.
 6. Enviar `navigation_start/free_nav` al objetivo medido, conservar yaw final
    y vigilar con el guard existente mapa/odom, velocidad, recorrido, progreso,
@@ -106,12 +252,12 @@ Nunca se usa esa pose archivada como objetivo físico.
    inicial, ≤20 mm / 3°, para impedir que el
    cambio de chasis se confunda con cambio de caja. Es asociación geométrica,
    no prueba de identidad física si otra caja ocupa una pose indistinguible.
-8. Permitir como máximo dos correcciones, con mejora del exceso ≥2 mm cuando
-   siga fuera del gate, ≤50 mm por objetivo y **≤50 mm de desplazamiento
+8. Permitir como máximo dos correcciones, con mejora del exceso respecto del
+   margen interior ≥2 mm cuando siga incumpliéndolo, ≤50 mm por objetivo y **≤50 mm de desplazamiento
    solicitado acumulado**. Presupuesto global 70 s y por navegación ≤30 s.
    El guard conserva además excursión ≤80 mm y recorrido ≤120 mm **por acción**;
    50 mm solicitados no son una cota de recorrido real ni distancia de frenado.
-9. Cuando una nueva medida cumpla el gate, guardar una referencia de comparación
+9. Cuando una nueva medida cumpla el margen interior, guardar una referencia de comparación
    y ejecutar el agarre nativo una vez. Su adaptador conserva las dos capturas,
    el gate XYZ original y comparación con esa referencia antes de entregar la
    selección. Una nueva desviación o cualquier fallo nativo detiene el ciclo.
@@ -798,3 +944,8 @@ incident-summary.json, tests.json/tests.txt y plan en
 Reversión selectiva de guard/test/notas desde before/ y retirada de la fixture
 nueva; conservar las revisiones anteriores de asociación/HOME y cambios
 posteriores. No restaurar checkpoint ni estado remoto. Sin commit ni push.
+
+15-10-2026 — preparación de publicación: se conserva POLICYmax_corrections7
+editado en copia local; CLI ahora muestra el valor vigente, sin fijarlo en2.
+Prueba de escenario con25mm iniciales +24mm solicitados después espera49mm;
+permanece presupuesto total50mm. Ajuste de mensaje/prueba, sin ejecución física.

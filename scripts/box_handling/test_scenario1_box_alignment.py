@@ -38,6 +38,35 @@ def base_report(completed, x=1., y=2., yaw=0.):
 
 
 class AlignmentPlanTests(unittest.TestCase):
+    def test_tiny_archived_request_cannot_succeed_without_base_motion(self):
+        # Reproduce the actual 2.497 mm no-op with the operator's old policy.
+        policy = dict(alignment.POLICY, inside_margin_m=.002,
+                      max_arrival_distance_m=.02, min_improvement_m=.003)
+        pending = selection(x=.7904968328695736)
+        with patch.object(alignment, 'POLICY', policy):
+            delta = alignment.displacement(pending)
+            self.assertAlmostEqual(delta['x'], .0254968328695736)
+            expected = alignment.target(dict(x=0., y=0., yaw=0.), delta)
+            unchanged = [dict(x=0., y=0., yaw=0.)]*2
+            with self.assertRaisesRegex(ValueError, 'ARRIVAL_NOT_CONFIRMED'):
+                alignment.validate_arrival(unchanged, expected)
+            # Even the maximum allowed residual leaves the requested visual
+            # improvement and the inner margin in the planned geometry.
+            worst_x = pending['selection']['selected_pose']['position']['x']-(delta['x']-.02)
+            self.assertLessEqual(worst_x, .788-.003+1e-12)
+
+    def test_small_corrections_both_axes_and_signs_stay_inside_native_gate(self):
+        for x, y in ((.779, 0.), (.421, 0.), (.6, .379), (.6, -.379), (.779, .379)):
+            pending = selection(x=x, y=y)
+            delta = alignment.displacement(pending)
+            self.assertLessEqual(math.hypot(*delta.values()), alignment.POLICY['max_step_m'])
+            projected = dict(pending['selection']['selected_pose']['position'])
+            for axis in 'xy':
+                projected[axis] -= delta[axis]
+                if delta[axis]:
+                    self.assertGreater(abs(delta[axis]), alignment.POLICY['max_arrival_distance_m'])
+            sps.validate_position(dict(pending['selection']['selected_pose'], position=projected))
+
     def test_map_samples_near_image_are_used_despite_processing_delay(self):
         history = [dict(x=1., y=2., yaw=0., stamp_ns=stamp) for stamp in
                    (99_900_000_000, 100_100_000_000, 101_400_000_000, 101_500_000_000)]
@@ -82,6 +111,25 @@ class AlignmentPlanTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'BOX_POSITION_REJECTED'):
             sps.validate_position(pending['selection']['selected_pose'])
 
+    def test_archived_in_range_then_rejected_incident_requires_proactive_margin(self):
+        fixture = json.loads((Path(__file__).parent/'fixtures/box_alignment_inside_margin_20261006.json').read_text())
+        pending = fixture['ready']
+        original = copy.deepcopy(pending)
+        sps.validate_position(pending['selection']['selected_pose'])
+        delta = alignment.displacement(pending)
+        self.assertEqual(delta, fixture['expected_displacement_base_m'])
+        self.assertAlmostEqual(delta['x'], .0162544401792924)
+        self.assertEqual(pending, original)
+        rejected = fixture['native_rejection']['position']
+        with self.assertRaisesRegex(ValueError, 'BOX_POSITION_REJECTED'):
+            sps.validate_position(dict(pending['selection']['selected_pose'], position=rejected))
+        # Replay the later observed estimate with the planned translation;
+        # this is arithmetic evidence, never a replacement perception result.
+        translated = dict(rejected, x=rejected['x']-delta['x'], y=rejected['y']-delta['y'])
+        sps.validate_position(dict(pending['selection']['selected_pose'], position=translated))
+        self.assertAlmostEqual(translated['x'], .7744085605919558)
+        self.assertTrue(fixture['historical_not_current'])
+
     def test_each_violated_axis_and_both_signs(self):
         for x, y, expected in ((.405, 0, dict(x=-.025, y=0.)),
                                 (.8, 0, dict(x=.03, y=0.)),
@@ -93,10 +141,26 @@ class AlignmentPlanTests(unittest.TestCase):
                 for axis in 'xy':
                     self.assertAlmostEqual(delta[axis], expected[axis])
 
-    def test_exact_limits_and_in_range_never_request_motion(self):
-        for x in (.41, .6, .79):
-            for y in (-.39, 0, .39):
+    def test_inside_margin_and_its_exact_limits_never_request_motion(self):
+        for x in (.43, .6, .77):
+            for y in (-.37, 0, .37):
                 self.assertEqual(alignment.displacement(selection(x=x, y=y)), dict(x=0., y=0.))
+                self.assertEqual(alignment.violation(selection(x=x, y=y)), 0.)
+
+    def test_native_gate_edge_requires_margin_on_each_axis_without_widening_gate(self):
+        for x, y, expected in ((.41, 0, dict(x=-.02, y=0.)),
+                                (.79, 0, dict(x=.02, y=0.)),
+                                (.6, -.39, dict(x=0., y=-.02)),
+                                (.6, .39, dict(x=0., y=.02)),
+                                (.785, .385, dict(x=.015, y=.015))):
+            pending = selection(x=x, y=y)
+            sps.validate_position(pending['selection']['selected_pose'])
+            delta = alignment.displacement(pending)
+            for axis in 'xy':
+                self.assertAlmostEqual(delta[axis], expected[axis])
+            self.assertAlmostEqual(alignment.violation(pending), math.hypot(*expected.values()))
+        with self.assertRaisesRegex(ValueError, 'BOX_POSITION_REJECTED'):
+            sps.validate_position(selection(x=.7907)['selection']['selected_pose'])
 
     def test_z_and_large_correction_are_not_recoverable(self):
         for pending in (selection(z=0), selection(z=1.5), selection(x=.821),
@@ -306,6 +370,51 @@ class AlignmentRuntimeTests(unittest.TestCase):
         machine.action.assert_called_once()
         self.assertEqual(machine.action.call_args.args[1]['task_name'], 'cruzr/move_head_lower')
         self.assertTrue((machine.session/'box-alignment-reference.json').exists())
+
+    def test_in_range_near_edge_corrects_before_one_native_grasp(self):
+        machine = self.machine([self.observation(x=.7862544401792924),
+            self.observation(x=.77, stamp=200, base_x=1.0162544401792924)])
+        machine.pose_references.return_value = [dict(x=1.0162544401792924,y=2.,yaw=0.)]*2
+        machine.stage(dict(stage='grasp'))
+        self.assertEqual([c.args[0] for c in machine.action.call_args_list],
+                         ['motion', 'navigation', 'motion'])
+        self.assertAlmostEqual(machine.action.call_args_list[1].kwargs['correction']['target']['point_x'],
+                               1.0162544401792924)
+        self.assertEqual(machine.measure_box_for_pickup.call_count, 2)
+
+    def test_near_edge_without_visual_progress_aborts_before_grasp(self):
+        machine = self.machine([self.observation(x=.786),
+            self.observation(x=.7859, stamp=200, base_x=1.016)])
+        machine.pose_references.return_value = [dict(x=1.016,y=2.,yaw=0.)]*2
+        with self.assertRaisesRegex(RuntimeError, 'BOX_ALIGNMENT_NO_IMPROVEMENT'):
+            machine.stage(dict(stage='grasp'))
+        self.assertEqual(machine.action.call_count, 2)
+        self.assertFalse((machine.session/'box-alignment-reference.json').exists())
+
+    def test_first_correction_inside_gate_but_near_edge_requires_second_measurement(self):
+        machine = self.machine([self.observation(x=.795),
+            self.observation(x=.78, stamp=200, base_x=1.015),
+            self.observation(x=.77, stamp=300, base_x=1.04)])
+        machine.pose_references.side_effect = [[dict(x=1.015,y=2.,yaw=0.)]*2,
+                                             [dict(x=1.04,y=2.,yaw=0.)]*2]
+        machine.stage(dict(stage='grasp'))
+        self.assertEqual([c.args[0] for c in machine.action.call_args_list],
+                         ['motion', 'navigation', 'navigation', 'motion'])
+        self.assertEqual(machine.measure_box_for_pickup.call_count, 3)
+        # First request is 25 mm; the second is 10 + 12 + 2 = 24 mm.
+        self.assertAlmostEqual(json.loads((machine.session/'box-alignment.json').read_text())['total_requested_m'], .049)
+
+    def test_two_corrections_cannot_grasp_with_margin_still_missing(self):
+        machine = self.machine([self.observation(x=.795),
+            self.observation(x=.78, stamp=200, base_x=1.015),
+            self.observation(x=.777, stamp=300, base_x=1.03)])
+        machine.pose_references.side_effect = [[dict(x=1.015,y=2.,yaw=0.)]*2,
+                                             [dict(x=1.03,y=2.,yaw=0.)]*2]
+        with self.assertRaisesRegex(RuntimeError, 'BOX_ALIGNMENT_LIMIT'):
+            machine.stage(dict(stage='grasp'))
+        self.assertEqual([c.args[0] for c in machine.action.call_args_list],
+                         ['motion', 'navigation', 'navigation'])
+        self.assertFalse((machine.session/'box-alignment-reference.json').exists())
 
     def test_rejected_box_corrects_before_one_native_grasp_and_checkpoints_once(self):
         machine = self.machine([self.observation(), self.observation(x=.77, stamp=200, base_x=1.0209)])

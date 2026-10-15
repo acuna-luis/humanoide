@@ -170,6 +170,15 @@ class ConsoleReporter:
             return ['  Llegada '+clean(event.get('point'))+': '+residual(event.get('measurement'))]
         if name == 'box_alignment':
             phase = event.get('phase')
+            if phase == 'observed':
+                position = mapping(mapping(mapping(event.get('observation')).get('selection'))
+                                   .get('selected_pose')).get('position')
+                position = mapping(position)
+                if any(number(position.get(axis)) is None for axis in 'xyz'):
+                    return []
+                return ['  Caja medida en base_link: '+', '.join(
+                    axis.upper()+'='+decimal(position[axis]*100, 3)+' cm' for axis in 'xyz')+
+                    ' (Z no es altura al suelo).']
             if phase == 'prepare_head':
                 return ['  Preparando cabeza para medir la caja antes del agarre']
             if phase == 'in_flight':
@@ -181,7 +190,11 @@ class ConsoleReporter:
                 return ['  Llegada del ajuste '+clean(event.get('attempt'))+': '+
                         residual(event.get('measurements'))+'. Se vuelve a medir la caja.']
             if phase == 'ready':
-                return ['  Caja dentro del rango; ajustes visuales: '+clean(event.get('attempts'))+
+                margin = event.get('inside_margin_m')
+                label = ('margen interior de '+format(margin*1000, 'g').replace('.', ',')+' mm'
+                         if type(margin) in (int, float) and math.isfinite(margin)
+                         else 'margen configurado')
+                return ['  Caja dentro del '+label+'; ajustes visuales: '+clean(str(event.get('attempts', '')))+
                         '. Se vuelve a validar en el agarre.']
             return []
         if name == 'get1_correction':

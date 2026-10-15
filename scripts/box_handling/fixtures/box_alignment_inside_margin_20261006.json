@@ -1,0 +1,52 @@
+{
+  "historical_not_current": true,
+  "source_journal": "20261006T090347Z_OPTIMISTIC_SCENARIO1_389599/events.jsonl",
+  "source_sha256": "4531d51ab5da76c1479381d806dc7970ef122f6f403ee510998ec2a005aaf4d8",
+  "ready": {
+    "stamp_ns": 1791277415514500000,
+    "selection": {
+      "selected_pose": {
+        "position": {
+          "x": 0.7862544401792924,
+          "y": 0.1085135373474658,
+          "z": 0.7235547702272845
+        },
+        "orientation": {
+          "x": 0.009255492568476421,
+          "y": 0.0055140846536390065,
+          "z": 0.7190357175106572,
+          "w": -0.6948896082628387
+        }
+      }
+    }
+  },
+  "native_rejection": {
+    "event": "position_rejected",
+    "frame_id": "base_link",
+    "position": {
+      "x": 0.7906630007712482,
+      "y": 0.10856005879087316,
+      "z": 0.7229042095552463
+    },
+    "bounds_m": {
+      "x": [
+        0.41,
+        0.79
+      ],
+      "y": [
+        -0.39,
+        0.39
+      ],
+      "z": [
+        0.01,
+        1.49
+      ]
+    },
+    "reason": "BOX_POSITION_REJECTED: selected box base_link x=0.7907 m outside [0.41, 0.79] m (10 mm reserve); no other box substituted",
+    "time_ns": 1791277421464109865
+  },
+  "expected_displacement_base_m": {
+    "x": 0.01625444017929234,
+    "y": 0.0
+  }
+}

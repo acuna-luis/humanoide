@@ -20,8 +20,8 @@ else:
     from scenario1_perception import validate_pair
     import scenario1_resume_worker as base_gate
 
-POLICY = MappingProxyType(dict(max_corrections=2, max_step_m=.05,
-    max_total_m=.05, inside_margin_m=.02, total_budget_s=70., min_improvement_m=.002,
+POLICY = MappingProxyType(dict(max_corrections=7, max_step_m=.05,
+    max_total_m=.05, min_correction_m=.01, inside_margin_m=.02, total_budget_s=70., min_improvement_m=.002,
     max_arrival_distance_m=.012, max_arrival_yaw_deg=2.))
 HEAD_TASK = 'cruzr/move_head_lower'
 HEAD_PATH = '/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/'+HEAD_TASK+'.xml'
@@ -46,7 +46,7 @@ def observe(report, now_ns):
 
 
 def displacement(pending):
-    """Correct only violated planar axes, aiming 20 mm inside the unchanged gate."""
+    """Move violated planar axes inside the gate, avoiding sub-tolerance goals."""
     position = pending['selection']['selected_pose']['position']
     low, high = sps.POSITION_BOUNDS_M['z']
     if not low <= position['z'] <= high:
@@ -55,19 +55,39 @@ def displacement(pending):
     for axis in 'xy':
         value = position[axis]
         low, high = sps.POSITION_BOUNDS_M[axis]
-        if value < low:
-            delta[axis] = value-(low+POLICY['inside_margin_m'])
-        elif value > high:
-            delta[axis] = value-(high-POLICY['inside_margin_m'])
+        low += POLICY['inside_margin_m']
+        high -= POLICY['inside_margin_m']
+        if value < low-1e-12:
+            delta[axis] = value-low
+        elif value > high+1e-12:
+            delta[axis] = value-high
+    # A target within the arrival radius can succeed without chassis motion.
+    # Add room for that residual and a meaningful observed improvement, on
+    # affected axes only. Never change the measured box pose or pickup gate.
+    for axis in 'xy':
+        if 0 < abs(delta[axis]) <= POLICY['max_arrival_distance_m']+1e-12:
+            distance = max(POLICY['min_correction_m'],
+                abs(delta[axis])+POLICY['max_arrival_distance_m']+
+                POLICY['min_improvement_m'])
+            low, high = sps.POSITION_BOUNDS_M[axis]
+            projected = position[axis]-math.copysign(distance, delta[axis])
+            if not low+POLICY['inside_margin_m'] <= projected <= high-POLICY['inside_margin_m']:
+                raise ValueError('BOX_ALIGNMENT_MIN_STEP_OUTSIDE_PICKUP_ENVELOPE')
+            delta[axis] = math.copysign(distance, delta[axis])
     if math.hypot(*delta.values()) > POLICY['max_step_m']+1e-12:
         raise ValueError('BOX_ALIGNMENT_OUTSIDE_ENVELOPE: correction exceeds 50 mm')
     return delta
 
 
 def violation(pending):
+    """Distance to the pickup preparation envelope, including its XY margin."""
     position = pending['selection']['selected_pose']['position']
-    return math.hypot(*(max(low-position[axis], 0., position[axis]-high)
-                        for axis, (low, high) in sps.POSITION_BOUNDS_M.items()))
+    errors = []
+    for axis, (low, high) in sps.POSITION_BOUNDS_M.items():
+        margin = POLICY['inside_margin_m'] if axis in 'xy' else 0.
+        error = max(low+margin-position[axis], 0., position[axis]-(high-margin))
+        errors.append(error if error > 1e-12 else 0.)
+    return math.hypot(*errors)
 
 
 def target(reference, delta):

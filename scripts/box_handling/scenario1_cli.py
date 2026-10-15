@@ -373,8 +373,12 @@ def _main(args):
     if execution_profile == 'optimistic_v1':
         print('Optimista: salud recibida continuamente; sin repetir la adquisición completa entre etapas. '
               'Se conservan errores, reposo, límites de caja, llegada y HOME medido.')
-        print('Recogida: ajuste visual automático de X/Y fuera de rango; hasta 2 ajustes, '
-              '50 mm de corrección solicitada en total, objetivo 20 mm dentro del límite. Ensayo físico pendiente.')
+        margin_mm = format(box_alignment.POLICY['inside_margin_m']*1000, 'g').replace('.', ',')
+        print(f"Recogida: ajuste visual automático de X/Y fuera del margen interior de {margin_mm} mm; "
+              f"hasta {box_alignment.POLICY['max_corrections']} ajustes, "
+              f'50 mm de corrección solicitada en total, objetivo {margin_mm} mm dentro del límite. Ensayo físico pendiente.')
+        minimum_mm = format(box_alignment.POLICY['min_correction_m']*1000, 'g').replace('.', ',')
+        print(f'Ajustes dentro de la tolerancia de llegada: mínimo {minimum_mm} mm, ampliado según error permitido y progreso requerido.')
     correction_status = nav_correction.qualification_report()
     if correction_status['motion_enabled']:
         approach = format(nav_correction.POLICY['max_approach_angular_speed_rad_s'], '.2f').replace('.', ',')

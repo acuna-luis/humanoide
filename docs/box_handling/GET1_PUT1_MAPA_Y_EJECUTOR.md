@@ -1,5 +1,124 @@
 # get1 guardado y ejecutor get1 → put1 → HOME
 
+**07-10-2026 — MAP-FUSION-SAVE-VERIFIED-20261007. VERIFICADO por lectura.**
+Nuevo utars_nav_map guardaLiDAR+VSLAM; save_mapSAVE_MAP_SUCCEED y6/6hashes
+principalescorrectos,90poses/285archivosvisuales. Carga posteriorfusion termina
+LOAD_MAP_FINISHED; último navegadorWAITRELOCATE. Guardado correcto demostrado,
+relocalización/calidad física y próximo arranque pendientes. No acciones/movimiento
+ni cambio remoto delagente.
+[Ficha y evidencia](../incidents/2026-10-05_UTARS_NAV_MAP_LOCALIZATION.md#map-fusion-save-verified-20261007--captura-visual-persistida).
+
+**06-10-2026 — MAP-WEB-EXPLICIT-FUSION-20261006. INSTALADO/HTTP VERIFICADO.**
+Por autorización del usuario, dos bundlesweb de inicio normal añaden explícitamente
+map_type:fusion. Backups/hash originales y receta versionada conservados;
+2tests/sintaxisJS/checkapply/HTTP correctos. Sin reinicios/órdenesROS/mapeo/movimiento.
+Operador debe recargarCtrl+Shift+R; captura/guardado yarranque pendientes para mañana.
+Persiste reinicio, puede perderse al recrear contenedor: reaplicar sólocompatible.
+[Ficha, fuentes y reversión](../incidents/2026-10-05_UTARS_NAV_MAP_LOCALIZATION.md#map-web-explicit-fusion-20261006--inicio-normal-con-tipo-explícito).
+
+**06-10-2026 — MAP-TYPE-INHERITED-USLAM-20261006. OBSERVADO por lectura.**
+Nav tras reinicio selecciona mapa sin visual y registra fallbackuslam/Last use
+map_type:uslam. Inicio web posterior omite tipo; captura sóloLiDAR concuerda con
+herenciauslam. Peticiónfusion debe ser explícita desde inicio, no sólo guardado.
+Datos/receta revisables, sin enviar orden o cambiar UI/robot. Causa original de
+ausencia visual e implementación/prueba física PENDIENTES.
+[Ficha y evidencia](../incidents/2026-10-05_UTARS_NAV_MAP_LOCALIZATION.md#map-type-inherited-uslam-20261006--origen-del-cambio-de-captura).
+
+**06-10-2026 — MAP-RECREATED-CHECK-20261006. OBSERVADO, sólo lectura.**
+Mapa recreado por operador: guardado LiDAR23:39:14 nativo correcto; sin componente
+visual y sin get1/put1 (listas vacías). Navegador termina guardado enWAITSETMAP,
+último nombre activo vacío. Escenario NO listo; selección, destinos y validación
+pendientes. new6 descartado para recuperación por aclaración del operador.
+Sin cambios remotos/carga/movimiento del agente.
+[Ficha y evidencia](../incidents/2026-10-05_UTARS_NAV_MAP_LOCALIZATION.md#map-recreated-check-20261006--guardado-lidar-escenario-pendiente).
+
+**06-10-2026 — MAP-VISUAL-RECOVERY-CANDIDATE-20261006. OBSERVADO por lectura.**
+Encontrado /etc/walker/map/new6/vslam:492 archivos/141 poses; seis archivos
+principales coinciden con SHA256 de manifiestos. Captura visual persistida bajo
+otro nombre; mapa vigente LiDAR carece de vslam. Hay candidata íntegra, pero
+compatibilidad de marcos y recuperación operativa PENDIENTES. No se restauró,
+cargó ni modificó el robot; hipótesis de sólo memoria no confirmada.
+[Ficha, límites y evidencia](../incidents/2026-10-05_UTARS_NAV_MAP_LOCALIZATION.md#map-visual-recovery-candidate-20261006--new6-persistido).
+
+**06-10-2026 — NAV-VSLAM-MAP-DIR-20261006. OBSERVADO, sólo lectura.**
+Mapa vigente tiene LiDAR/get1/put1 pero no componente visual; VSLAM informa
+tracker sin inicializar y save_auto_update_map falla MAP_DIR_ERROR. Directorio
+accesible, disco con espacio. Navegación puede terminar status4 incorporando ese
+fallo auxiliar; escenario aborta. No se determina modo efectivo ni causa del
+cambio de mapa; reparación PENDIENTE. Sin cambios remotos o movimiento.
+[Ficha y evidencia](../incidents/2026-10-05_UTARS_NAV_MAP_LOCALIZATION.md#nav-vslam-map-dir-20261006--mapa-visual-ausente).
+
+**06-10-2026 — NAV-RELOCATE-FAILED-20261006. OBSERVADO, sólo lectura.**
+Intento121855 entra FSM_WAITRELOCATE; relocalización global aborta status6 antes
+de enviar get1. No se alcanza recogida. Logs pasivos posteriores muestran fallos
+USLAM/LiDAR y VSLAM LOST; no se atribuyen por UUID al intento inicial. Destinos
+presentes, causa raíz y recuperación PENDIENTES. Sin órdenes o cambios remotos.
+[Diagnóstico y continuación](../incidents/2026-10-05_UTARS_NAV_MAP_LOCALIZATION.md#nav-relocate-failed-20261006--fallo-previo-a-get1).
+
+## NAV-GET1-20261006 — traslado al destino del mapa nuevo
+
+06-10-2026, Europe/Madrid. **VERIFICADO técnico; precisión física independiente
+PENDIENTE.** Petición expresa de llevar el robot a get1. Operador confirma en
+esta intervención abrazaderas instaladas y vacías, zona/recorrido despejados,
+sin otro mando, persona junto al paro, ruedas habilitadas y modo auto_task.
+Contenedores redescubiertos en Motion192.168.11.2/Vision192.168.11.3.
+Preflight de ejecución: HOME20D medido en dos muestras, ambos paros0,
+cargador0, baterías72,3/75,6%, articulaciones inmóviles y dependencias correctas.
+
+El mapa actual utars_nav_map ya contiene get1/put1; se consultó, sin editarlo.
+Get1: X1,0901194446526767m, Y−0,5238525384086097m,
+yaw0,013934953918623677rad; son coordenadas del mapa nuevo, no las históricas.
+Receta versionada, desde la raíz, tras comprobar de nuevo esas condiciones:
+
+```bash
+./scripts/optimistic_scenario1.sh --check --stop-after get1
+./scripts/optimistic_scenario1.sh --run --stop-after get1
+```
+
+Ambos rc0. La ejecución usada añade `--evidence-dir` con los subdirectorios
+check/run de la evidencia indicada abajo. Supervisor transitorio en Motion,
+cliente nativo /vnav/task/command; objetivo navegación
+9634a2b1-772c-4036-a11c-ab3cc566c4a8, status4,
+`navigation_start SUCCEEDED ,change to FSM_WaitNavigate`. Mapa/FSM posteriores
+confirmados y dos poses nuevas a7,048933/7,049410mm y0,427408/0,424223°,
+dentro del gate20mm/2°. Etapa15,092s, sin corrección adicional; checkpoint
+sólo navigate_get1 completado, sin in_flight ni failure. No etapas de visión,
+agarre, depósito o HOME. Dos muestras posteriores /mc/odom muestran velocidades
+lineales y angulares0; dos consultas articulares acotadas rc124 sin muestra,
+por lo que no se certifica una nueva medición de HOME final.
+
+Persiste el aviso auxiliar VSLAM_LOCATION_LOST: no se declara recuperación
+visual ni precisión física independiente. El contrato existente exige éxito
+nativo, FSM y llegada medida también para ese aviso; no se modificaron gates.
+Mensajes Lease missing/expired y worker stop requested aparecen al cerrar
+check/run, después de ready/stage_complete, con proceso exterior rc0. No son
+motivo para repetir una navegación que ya terminó. Revisión del ruido de cierre
+PENDIENTE; fuentes de software intactas.
+
+**Estado/retorno:** ejecución transitoria terminada, chasis en reposo medido;
+sin instalación, reinicio ni configuración remota persistente cambiada.
+No se programa retorno físico ni HOME automático. Para un nuevo traslado se
+exigen condiciones frescas; no reutilizar esta confirmación como estado actual.
+Reversión documental selectiva desde before/, sin sobrescribir cambios ajenos;
+el respaldo documental no revierte el desplazamiento físico.
+
+**Evidencia:** ../Humanoide-vla-evidence/20261006_GET1_NAVIGATION/:
+baseline.json (HEAD y hashes locales), physical_confirmation.json, inventario/
+consultas pasivas, mapa API completo y resumen, check/run con events.jsonl,
+source-sha256.json/context/checkpoint, reposo y result_summary.json, before/after,
+SHA256SUMS. Fuente entrypoint SHA256: 376433f69d7ad61c363ba5db9ca4af988a2d31f58fd60d1180c2aadd94d9460f.
+Las notas anteriores sobre get1/put1 ausentes quedan históricas; esta consulta
+confirma que el operador ya creó los destinos, sin atribuir esa creación al agente.
+
+**05-10-2026 — MAP-QUALITY-20261005. OBSERVADO, sólo lectura.**
+Última relocalización utars_nav_map falla; VSLAM=LOCATION_LOST y pose visual
+no fiable. Mapa visual presente4443puntos/38poses, pero candidatos no superan
+consistencia de solver (ejemplo17<20). Cobertura/calibración/causa PENDIENTES.
+API y archivos actuales no contienen destinos: get1/put1 ausentes; escenario1
+bloqueado por Require one unique get1. No copiar coordenadas de un marco antiguo.
+Sin relocalización/movimiento, reinicio ni edición del mapa por el agente.
+[Hallazgos, límites, evidencia y continuación](../incidents/2026-10-05_UTARS_NAV_MAP_LOCALIZATION.md).
+
 **28-09-2026 — alternativa mejorada implementada sólo en PC.**
 `force_improved_scenario1.sh` conserva la geometría del ejecutor actual por
 indicación expresa del usuario; añade supervisión y recuperación por etapas.
@@ -767,3 +886,12 @@ en fuente global/índice. Reversión documental selectiva desde before, preserva
 otros cambios. Scripts, SDK, robot y runtime intactos; sin consulta remota.
 Punto de reanudación: acordar alcance de implementación y medir montaje real;
 ninguna propuesta equivale a trayectoria instalada o probada físicamente.
+
+
+### NAV-POSE-TIMEOUT-20261008 — OBSERVADO; diagnóstico sólo lectura
+
+Ensayo `20261008T102504Z_OPTIMISTIC_SCENARIO1_1953293` aborta preflight, antes de etapa1: request2 pose, cero muestras frescas, dos publicadores detectados, TimeoutError. `scenario1_health_worker` admite >=1 publicador de pose porque existen dos vendor en esta unidad: el 2 no provoca el rechazo. controller_received:false/safety_received:[] son campos genéricos que no se requieren en adquisición pose, no demuestran otro fallo de salud. Requiere dos poses nuevas con timestamps válidos/avanzantes.
+
+Consulta pasiva posterior en Vision /nav/robot_pose, best_effort, tipo PoseStamped, timeout5 rc124 sin muestra. Logs VSLAM actuales muestran solve_pose_mode=localization(Reloc) y comparación de características contra mapa; indica búsqueda de relocalización, sin probar por sí solo causa raíz o calidad del mapa. Inferencia: la localización todavía no ofrece pose utilizable. Guardados get_map_name SUCCESS y FSM_WAITNAVIGATE no certifican posición conocida. Ajuste mínimo10mm editado por usuario no intervino; no hubo movimiento solicitado por este ensayo. No se envió acción ROS ni se alteró configuración/remoto. Error lease posterior es cierre.
+
+Fecha08-10-2026 Europe/Madrid. Evidencia local eventos del ensayo y consultas/registro de logs en `../Humanoide-vla-evidence/20261008_POSE_TIMEOUT_READONLY/`, SHA256SUMS, before/after documental. Pendiente comprobar localización recuperada/pose nueva antes de navegación, sin eliminar el requisito de pose.
