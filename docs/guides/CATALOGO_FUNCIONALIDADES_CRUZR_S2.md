@@ -1,5 +1,18 @@
 # Catálogo operativo de funcionalidades del Cruzr S2
 
+**15-10-2026 — BOTELLA-VISION-GRASP-20261015. PLAN; percepción/agarre pendientes.**
+[Plan operativo y ramas de decisión](../plan_botella.md).
+[Resumen del proceso](../plan_botella_resumen.md), también en [PDF](../plan_botella_resumen.pdf). El detector instalado de
+cajas no demuestra reconocimiento de botellas; se propone evaluar primero un
+segmentador preentrenado COCO en PC, después RGB-D y calibración, y finalmente
+integración IK/agarre. Cámara de cintura observada: SHM Image1m, RGB rgb8 y depth
+16UC1, 640×360; CameraInfo requiere QoS compatible reliable/transient_local.
+No están verificadas escala, correspondencia RGB-D ni pose de agarre. Se incluyen
+prototipos de captura e inferencia, con sintaxis revisada y conversión SHM probada
+offline; no se han ejecutado end-to-end ni instalado en el robot. Sin movimiento.
+Evidencia: `../Humanoide-vla-evidence/20261015_BOTTLE_PLAN/` fuera de Git.
+
+
 **05-10-2026 — MAP-HEAD-RELOCALIZE-20261005. OBSERVADO, sólo lectura.**
 Tras nuevo guardado, cabeza movida por vnav_head_processor/navigation durante
 relocation_start fusion. Navegador termina barrido con stop_rotate y centro0/0;

@@ -1,5 +1,98 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**16-10-2026 — PICO-CAMERA-USB-20261016: vídeo en preparación, control en STOP.**
+Operador pide cámara tras abortar --teleoperate por valor no admitido de
+PICO_TELEOP_CAMERA; main es la fuente frontal estéreo izquierda. Check pasivo
+PC7/7 confirma vr_status1/STOP y ruta Motion/Vision por eno1/.11.250. Sin START.
+UI real XRoboToolkit1.1.1: Remote Vision → ZEDMINI → Listen → IP del PC,
+no Camera/Request PC camera data. Confirmado en captura del visor, APK local y
+fuentes oficiales tagv1.1.1/commit9f775b535d781618bd2bb7ef8d6c414c0531387c.
+Tras confirmar el operador, PICO escucha12345. No tiene usb0 actualmente;
+se crea exclusivamente adb forward --no-rebind tcp12345→tcp12345 para vídeoUSB,
+con puertoPC y lista previa libres. ReverseXR63901 conservado.
+La cámara mono requiere duplicar su imagen completa en dos mitades para el
+perfil ZEDMINI2560×720; adaptación PC GStreamer preparada/en validación, sin
+instalar paquetes. No representa profundidad estéreo. FuenteSRS/discovery ROS
+verificados; todavía sin stream ni imagen en este punto.
+Evidencia `../Humanoide-vla-evidence/20261016T084628Z_PICO_CAMERA_USB/`,
+inventario antes/recibo de forward/captura/listeners y copias de fuentes previas.
+Rollback: cerrar sólo vídeo, verificar heartbeat/SRS sin residuos y quitar sólo
+forward12345 creado; conservar reverse63901 y configuración de control.
+
+**16-10-2026 — PICO-XR-USB-20261016: USB y seguimiento VERIFICADOS.**
+Tras migración a v4 y HOME, operador solicita configurar gafas. PICO físico
+PA94Y0MGKB070822G por USB, Awake y XRoboToolkit abierto. Backend STOP confirmado
+pasivamente, sin pico_control; servicio XR escucha63901. Reverse antes vacío;
+se ejecuta `bash scripts/teleoperation/configure_pico_xr_usb.sh --configure` y
+`--check` confirma mapping tcp63901→63901. Antes del cambio existía socket
+192.168.224.184→192.168.224.6:63901 por red compartida USB; no llamarlo Wi-Fi
+ni dar por demostrado que el flujo usa ahora loopback. PC→Motion por
+Ethernet eno1, 192.168.11.250; red del robot conservada. Check v4 cámaraoff pasa
+PC/red/identidad y bloquea por vr_status0. Se pide al operador conectar a
+127.0.0.1 y activar Head+Controllers/Senddata, sin Hands/Y/grips/gatillos.
+Actualización 10:34 Europe/Madrid: operador confirma Connected/Working y Send
+data. Check pasivo PC completo7/7, rc0, identidad correcta, vr_status1 y
+operation_type1 (STOP). Coexisten TCP loopback por ADB y socket previo de
+redUSB .224.184→.224.6; no atribuir el stream exclusivamente a uno.
+Transporte USB disponible y seguimiento demostrado. Comprobación sólo de PC/XR;
+no certifica que la tarea TeleopMode v4 esté cargada. Mantener visor despierto
+y puesto; la suspensión puede parar el seguimiento.
+Sin START, cambio de modo o movimiento enviado. Túnel transitorio; reversión:
+`bash scripts/teleoperation/configure_pico_xr_usb.sh --remove` con backend STOP,
+y restaurar IP de la app sólo si se quiere volver al transporte anterior.
+Evidencia privada `../Humanoide-vla-evidence/20261016T083300Z_PICO_USB_CONFIG/`
+(inventario before/after, receta/hash y copias documentales previas).
+
+**16-10-2026 — SWITCH-EFFECTOR-RESTORE-20261016: restauración CORREGIDA y cambio a v4 VERIFICADO.**
+La sesión `EFFECTOR-20261016T081258Z-1bddf143` instaló SPS y recreó los nueve
+servicios Motion y CC; falló antes de arrancarlos al restaurar historiales sobre
+bind mounts de CC. Respaldos externos e internos íntegros. Lectura fresca:
+contenedores creados/detenidos, principal pulsado, servos liberado, cargador fuera,
+baterías 88,3/89,2%. Sin HOME ni START PICO enviados.
+Corrección local: excluir montajes también en respaldos antiguos y omitir copia
+vacía; reanudar la misma sesión mediante `--resume-from`, sin repetir recreación.
+[Receta y límites](../guides/CAMBIO_EFECTOR_ABRAZADERAS_MANOS_V4.md). Reanudación ejecutada: Motion restaurado verificado, Vision sin copia sobre
+montajes (restauración efectiva vacía), servicios arrancados bajo paro. Tras
+confirmación del operador y liberación manual, HOME20D medido en dos muestras
+avanzantes, velocidad0, sin fallos, delta máximo0,002876rad y estados válidos
+avanzantes de siete ejes por mano. dexterous_hand_controller running.
+Resultado PERFIL_Y_HOME_VERIFICADOS=v4; sesión cerrada en ambos hosts tras
+comprobar archivos. No reinicio físico ni HOME adicional. Siguiente paso:
+entrada controlada a PICO v4 con sus gates actuales; no se inició teleoperación.
+Evidencia privada: sesión original, `recovery/` y
+`EFFECTOR-20261016T082431Z-0cf31f55`. No borrar `active.json`.
+
+**16-10-2026 — PICO-V4-GATE-20261016: bloqueo por tarea clamp, diagnóstico VERIFICADO.**
+Operador confirma reinstalación de manos v4 ante pregunta de montaje con robot
+apagado. Lectura nueva: hw/app/CC siguen HW_TYPE=cruzr_s2_v1 y restart0.
+CC entra TeleopMode y el último arranque de tarea es cruzr_clamp_pico_teleoperation,
+Hand type clamp, waist0/leg0. YAML v4 conserva SHA esperado01a5ca8…; no es
+corrupción del archivo. Faltan topics MC de estados de manos bajo este perfil.
+El mensaje genérico del lanzador es anterior a START; en este caso no encontró
+la tarea v4 requerida. Repetir el mismo --teleoperate no cambia el perfil nativo.
+Muestra20D: reposo0, sinfallos, delta0,003230rad, maxposición1,568783rad,
+MEASURED_HOME0: postura inicial PICO/clamp. No inferir HOME del chequeo de arranque
+anterior. No enviar HOME, reiniciar ni cambiar modos para probar desde ahí.
+Migración SPS y posterior entrada controlada a Teleop v4 pendientes. La guía del
+selector contempla --secured-recovery con brazos asegurados, paros/cargador y
+verificación; no se ejecutó en esta intervención. El selector termina en HOME,
+no activa por sí mismo TeleopMode ni STARTPICO.
+Evidencia privada `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261016T081039Z_PICO_V4_GATE_READONLY`: perfiles/instancias, logs actuales, último bloque de
+tarea, hashYAML, inventario y muestra/clasificación. Solo lectura, cero cambios
+remotos/movimientos; copias documentales before-docs y SHA256SUMS en evidencia.
+
+
+**15-10-2026 — SWITCH-EFFECTOR-20261015. Entrada bidireccional preparada.**
+`bash scripts/hands/cambiar_efector.sh --to clamp|v4 --check|--apply|--verify`.
+Unifica fuentes persistentes, respaldo/recreación conservando personalizaciones,
+espera de paro y verificación de HOME/manos; no inicia PICO ni cambia su conexión.
+Usar después probar_pico.sh para clamp o probar_pico_v4.sh para manos instaladas.
+29 pruebas offline pasan y --check se consulta en ambos sentidos. No se ejecutó
+--apply nuevo; validación física integral pendiente. Lectura de verificación
+observa postura fuera de HOME y no la certifica, sin correcciones del agente.
+[Procedimiento y límites](../guides/CAMBIO_EFECTOR_ABRAZADERAS_MANOS_V4.md).
+
+
 **15-10-2026 — BOOT-CC-SPS-20261015 / selector CC:** HW_TYPE SPS instalado y
 sólo CC recreado con mismaimagen/orden/montajes. Guard de arranque actualizado
 para reconocer identificadorSPS conservando gates yvoz;18tests pasan.

@@ -1,5 +1,105 @@
 # Demostraciones de manos Cruzr S2
 
+**16-10-2026 — SWITCH-EFFECTOR-RESTORE-20261016: restauración CORREGIDA y cambio a v4 VERIFICADO.**
+La sesión `EFFECTOR-20261016T081258Z-1bddf143` instaló SPS y recreó los nueve
+servicios Motion y CC; falló antes de arrancarlos al restaurar historiales sobre
+bind mounts de CC. Respaldos externos e internos íntegros. Lectura fresca:
+contenedores creados/detenidos, principal pulsado, servos liberado, cargador fuera,
+baterías 88,3/89,2%. Sin HOME ni START PICO enviados.
+Corrección local: excluir montajes también en respaldos antiguos y omitir copia
+vacía; reanudar la misma sesión mediante `--resume-from`, sin repetir recreación.
+[Receta y límites](../../docs/guides/CAMBIO_EFECTOR_ABRAZADERAS_MANOS_V4.md). Reanudación ejecutada: Motion restaurado verificado, Vision sin copia sobre
+montajes (restauración efectiva vacía), servicios arrancados bajo paro. Tras
+confirmación del operador y liberación manual, HOME20D medido en dos muestras
+avanzantes, velocidad0, sin fallos, delta máximo0,002876rad y estados válidos
+avanzantes de siete ejes por mano. dexterous_hand_controller running.
+Resultado PERFIL_Y_HOME_VERIFICADOS=v4; sesión cerrada en ambos hosts tras
+comprobar archivos. No reinicio físico ni HOME adicional. Siguiente paso:
+entrada controlada a PICO v4 con sus gates actuales; no se inició teleoperación.
+Evidencia privada: sesión original, `recovery/` y
+`EFFECTOR-20261016T082431Z-0cf31f55`. No borrar `active.json`.
+
+**16-10-2026 — PICO-V4-GATE-20261016: bloqueo por tarea clamp, diagnóstico VERIFICADO.**
+Operador confirma reinstalación de manos v4 ante pregunta de montaje con robot
+apagado. Lectura nueva: hw/app/CC siguen HW_TYPE=cruzr_s2_v1 y restart0.
+CC entra TeleopMode y el último arranque de tarea es cruzr_clamp_pico_teleoperation,
+Hand type clamp, waist0/leg0. YAML v4 conserva SHA esperado01a5ca8…; no es
+corrupción del archivo. Faltan topics MC de estados de manos bajo este perfil.
+El mensaje genérico del lanzador es anterior a START; en este caso no encontró
+la tarea v4 requerida. Repetir el mismo --teleoperate no cambia el perfil nativo.
+Muestra20D: reposo0, sinfallos, delta0,003230rad, maxposición1,568783rad,
+MEASURED_HOME0: postura inicial PICO/clamp. No inferir HOME del chequeo de arranque
+anterior. No enviar HOME, reiniciar ni cambiar modos para probar desde ahí.
+Migración SPS y posterior entrada controlada a Teleop v4 pendientes. La guía del
+selector contempla --secured-recovery con brazos asegurados, paros/cargador y
+verificación; no se ejecutó en esta intervención. El selector termina en HOME,
+no activa por sí mismo TeleopMode ni STARTPICO.
+Evidencia privada `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261016T081039Z_PICO_V4_GATE_READONLY`: perfiles/instancias, logs actuales, último bloque de
+tarea, hashYAML, inventario y muestra/clasificación. Solo lectura, cero cambios
+remotos/movimientos; copias documentales before-docs y SHA256SUMS en evidencia.
+
+
+**16-10-2026 — WUJI-COMPATIBILITY-20261016. Evaluación documental, sin instalación.**
+Publicación identifica WUJI Hand2; manual actual corresponde a2.2 Beta no táctil:
+20ejes, Ethernet100BASE-TX/RJ45, XT30 y11–13V DC nominal12V. Fabricante avisa
+que interfaces cambiarán en revisiones posteriores. SKU/versión ofertada pendientes.
+La unidad S2 observada el15-10 integra manos nativas en cadenaEtherCAT con puente
+EtherCAT-CAN y siete servos publicados por mano; esto NO identifica el pinout de
+la muñeca ni acredita compatibilidad eléctrica/protocolaria con WUJI. Pinout,
+tensión/potencia disponible, brida, carga/TCP e integración de paros pendientes.
+Nuestro selector clamp/v4 sólo contempla perfiles nativos; no habilita WUJI.
+Se requiere integración específica y confirmación de interfaces por proveedores;
+no basta un adaptador pasivo ni disponer de ambosSDK. Sin conexión al robot,
+movimiento, configuración, instalación ni contacto con terceros en esta revisión.
+Fuentes: [manual WUJI2.2 Beta](https://docs.wuji.tech/docs/wuji-hand/latest/product-introduction),
+[SDK oficial](https://github.com/wuji-technology/wuji-sdk),
+[producto](https://wuji.tech/en/hand2).
+Evidencia local previa HANDS-V4-BUS-IDENTITY-20261015; índice de consulta privado
+20261016_WUJI_COMPATIBILITY. Las afirmaciones comerciales no son ensayos en S2.
+
+
+## Cambio coordinado entre abrazaderas y manos v4
+
+Usar la entrada única del PC:
+
+```bash
+bash scripts/hands/cambiar_efector.sh --to v4 --check
+bash scripts/hands/cambiar_efector.sh --to v4 --apply
+# En sentido contrario, después del cambio físico con el robot apagado:
+bash scripts/hands/cambiar_efector.sh --to clamp --apply
+```
+
+`--check` es el modo por defecto; `--apply` es interactivo y puede continuar HOME
+al liberar físicamente el paro. No se cambia el hardware con el robot encendido.
+[Secuencia, recuperación, verificaciones y estado de validación](../../docs/guides/CAMBIO_EFECTOR_ABRAZADERAS_MANOS_V4.md).
+Herramienta nueva: 29 tests offline y --check reales; --apply integral en ambos
+sentidos pendiente. No reutilizar el HOME histórico como postura actual.
+
+
+
+**15-10-2026 — RETURN-CLAMP-20261015: perfil base CARGADO; arranque/HOME VERIFICADOS.**
+Usuario solicita retirar dependencia v4 tras desmontar manos. Compose Motion y
+selector CC/metafile Vision vuelven al perfil de abrazaderas; DB Motion ya base,
+conservada. Lectura confirma que controlador base no carga dexterous_hand_controller.
+Actualización: operador confirma paro pulsado/brazos asegurados; nueve Motion
+y CC recreados con mismas imágenes, Cmd/montajes y resto del entorno. Archivos
+personalizados restaurados/hash verificados; hw/app base running/restart0. Guard
+CC Motion3/3/cámaras2/2, liberación confirmada por operador; SelfCheck y
+StartMotion succ→JoystickMode. HOME20D medido, velocidad0, sin fallos de
+actuadores y delta máximo0,002972rad. Muñecas vacías; no reinicio físico necesario.
+No volver a usar PICO v4 hasta reinstalar manos y recuperar perfil SPS. Recetas nuevas restore_clamp_environment.py y
+activate_clamp_profile.py; respaldos privados en 20261015_RETURN_CLAMP.
+[Aplicación, límites, evidencia y reversión](../../docs/incidents/2026-10-15_ARRANQUE_SIN_MANOS.md).
+
+
+**15-10-2026 — HANDS-REMOVED-BOOT-20261015: manos retiradas, arranque fallido.**
+Operador informa muñecas sin efectores para embalaje. Bus OP/hand cnt=0,
+pero HW y CC conservan SPS y carga de dexterous_hand_controller falla por
+get_version ausente. StartMotion→Fault, app reinicia; no inferir sensor averiado.
+Perfil compatible sin efectores y recuperación pendientes. Solo lectura.
+[Informe](../../docs/incidents/2026-10-15_ARRANQUE_SIN_MANOS.md).
+
+
 **15-10-2026 — BOOT-CC-SPS-20261015 / selector CC:** HW_TYPE SPS instalado y
 sólo CC recreado con mismaimagen/orden/montajes. Guard de arranque actualizado
 para reconocer identificadorSPS conservando gates yvoz;18tests pasan.

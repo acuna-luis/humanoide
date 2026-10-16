@@ -1,5 +1,24 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+**16-10-2026 — BOOT-CURRENT-20261016: arranque y HOME VERIFICADOS por lectura.**
+Nuevo encendido informado por operador. Instancias actuales hw/app/CC running,
+restart0, HW_TYPE base/cruzr_s2_v1. Guard Motion3/3 y seis cámaras2/2 con marcas
+avanzantes; SelfCheck passed/error0, LimbMotion/StartMotion succ→JoystickMode.
+Muestra fresca20D pasa clasificador original: HOME1, maxposición0,003068rad,
+brazos0,001055rad, velocidad0 y delta0,003068rad, sin fallos/inhabilitados.
+Controladores manipulación/fuerza-par running. Paros principal/servo0/0, cargador0;
+baterías98,9/99,4%. Efector físico actual no inferido del perfil; software sigue
+abrazaderas. VLA continúa detenido. No se certifica navegación, agarre ni montaje.
+Avisos observados: consultasSDO18001/18002 y2004:7 durante inicialización, ya
+vistos anteriormente; no bloquearon este arranque. NetdataVision unhealthy por
+conexión rechazada localhost19999: incidencia de monitorización, no fallo de
+HOME demostrado. Causa y corrección del monitor pendientes; no se reinició.
+Evidencia privada `/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261016T070517Z_BOOT_CURRENT_READONLY`: StartedAt/boot_ids, logs acotados al arranque actual,
+paros/baterías, muestra/clasificación, controladores y healthcheck. Logs nativos
+usan +08; no tratarlos como hora local Europe/Madrid. Solo consultas/suscripciones,
+cero movimientos/cambios remotos. Índices anteriores conservados en before-docs.
+
+
 **15-10-2026 — BOOT-CC-SPS-20261015 / selector CC:** HW_TYPE SPS instalado y
 sólo CC recreado con mismaimagen/orden/montajes. Guard de arranque actualizado
 para reconocer identificadorSPS conservando gates yvoz;18tests pasan.

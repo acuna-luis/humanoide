@@ -1200,7 +1200,8 @@ start_pico_camera() {
   cat <<EOF
 
 VÍDEO OBLIGATORIO ANTES DE START
-En el PICO abra Camera y active «Request PC camera data». No cierre
+En el PICO abra Remote Vision y pulse Listen. Con CRUZR_PICO_CAMERA_LAYOUT=mono-sbs-zed,
+seleccione ZEDMINI e introduzca la IP del PC emisor. No cierre
 XRoboToolkit ni desactive Head + Controllers / Send data / Working. El robot
 seguirá desarmado hasta recibir el primer keyframe de la cámara '$teleop_camera'.
 
@@ -1239,7 +1240,7 @@ EOF
       die "La cámara PICO no recibió un keyframe en 75 s; no se enviará START."
     fi
     if ((SECONDS >= next_notice)); then
-      progress "CÁMARA: esperando Request PC camera data / primer keyframe ($((deadline - SECONDS))s)"
+      progress "CÁMARA: esperando Remote Vision / Listen / primer keyframe ($((deadline - SECONDS))s)"
       next_notice=$((SECONDS + 5))
     fi
     sleep 0.25

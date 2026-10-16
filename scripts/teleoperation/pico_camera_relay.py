@@ -207,7 +207,13 @@ def connect_pico(host: str, port: int, wait_seconds: int) -> socket.socket:
     )
 
 
-def open_source(url: str, timeout: int) -> BinaryIO:
+def open_source(url: str, timeout: int, mono_sbs_zed: bool = False) -> BinaryIO:
+    if mono_sbs_zed:
+        if __package__:
+            from .pico_camera_sbs import open_sbs_source
+        else:
+            from pico_camera_sbs import open_sbs_source
+        return open_sbs_source(url, timeout)
     request = urllib.request.Request(
         url,
         headers={"User-Agent": "Humanoide-PICO-camera-relay/1.0"},
@@ -235,7 +241,7 @@ def relay(args: argparse.Namespace) -> int:
     ready_written = False
     last_ready_update = 0.0
     try:
-        source = open_source(args.source, args.source_timeout)
+        source = open_source(args.source, args.source_timeout, args.mono_sbs_zed)
         log(f"fuente SRS conectada: {args.source}")
         demuxer = AvcFlvDemuxer()
         while True:
@@ -311,6 +317,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--port", type=int, default=12345)
     parser.add_argument("--wait-seconds", type=int, default=60)
     parser.add_argument("--source-timeout", type=int, default=10)
+    parser.add_argument("--mono-sbs-zed", action="store_true",
+                        help="Duplicate the complete mono image for both eyes, ZEDMINI layout 2560x720; requires GStreamer")
     parser.add_argument("--ready-file")
     parser.add_argument("--inspect-flv", metavar="FILE")
     args = parser.parse_args()

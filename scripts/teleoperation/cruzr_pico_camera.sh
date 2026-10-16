@@ -13,6 +13,7 @@ camera_width="${PICO_CAMERA_WIDTH:-640}"
 camera_height="${PICO_CAMERA_HEIGHT:-400}"
 camera_fps="${PICO_CAMERA_FPS:-12}"
 camera_wait_seconds="${PICO_CAMERA_WAIT_SECONDS:-60}"
+camera_layout="${CRUZR_PICO_CAMERA_LAYOUT:-passthrough}"
 robot_user="${CRUZR_ROBOT_USER:-walker}"
 ros_container="${CRUZR_VISION_ROS_CONTAINER:-walker-ros.ros2-1}"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -51,7 +52,8 @@ Opciones:
   --topic TOPIC       Fuente ROS explícita; prevalece sobre --camera.
   --pico-ip IP        IP del PICO. Si se omite, se descubre wlan0 por ADB.
   --port PUERTO       Listener H.264 de XRoboToolkit (predeterminado 12345).
-  --wait SEGUNDOS     Espera 1..600 s a «Request PC camera data».
+  --wait SEGUNDOS     Espera 1..600 s al receptor de vídeo del visor.
+  --layout FORMATO    passthrough o mono-sbs-zed (imagen mono completa en ambos ojos).
 
 --run inicia únicamente vídeo: abre el stream SRS de la cámara elegida,
 mantiene su heartbeat propio y reenvía H.264 al visor. No arma ni mueve el
@@ -60,6 +62,7 @@ robot. Ctrl+C cierra el relay, el heartbeat y el stream que abrió.
 Fuentes configurables equivalentes:
   CRUZR_PICO_CAMERA=main|stereo-right|waist|chassis
   CRUZR_PICO_CAMERA_TOPIC=/sensor/camera/.../raw
+  CRUZR_PICO_CAMERA_LAYOUT=mono-sbs-zed   (seleccionar ZEDMINI → Listen en PICO)
 EOF
 }
 
@@ -92,6 +95,11 @@ while (($#)); do
     --wait)
       (($# >= 2)) || die "Falta el valor de --wait."
       camera_wait_seconds="$2"
+      shift 2
+      ;;
+    --layout)
+      (($# >= 2)) || die "Falta el valor de --layout."
+      camera_layout="$2"
       shift 2
       ;;
     -h|--help)
@@ -181,6 +189,10 @@ fi
   die "PICO_CAMERA_HEIGHT debe estar entre 240 y 1080."
 [[ "$camera_fps" =~ ^[0-9]+$ ]] && ((camera_fps >= 5 && camera_fps <= 30)) ||
   die "PICO_CAMERA_FPS debe estar entre 5 y 30."
+case "$camera_layout" in
+  passthrough|mono-sbs-zed) ;;
+  *) die "Layout inválido: $camera_layout" ;;
+esac
 
 ssh_base=(
   ssh
@@ -227,6 +239,9 @@ check_camera_source() {
   command -v curl >/dev/null || die "Falta curl."
   [[ -x "$relay" ]] || die "No se puede ejecutar $relay"
   [[ -x "$askpass" ]] || die "No existe el proveedor SSH local $askpass"
+  if [[ "$camera_layout" == mono-sbs-zed ]]; then
+    python3 "$script_dir/pico_camera_sbs.py" --check || die "Faltan dependencias para vídeo en ambos ojos."
+  fi
 
   progress "comprobando Vision/SRS y fuente $camera_topic"
   check_tcp "$vision_ip" 22 1935 1985 8080
@@ -261,7 +276,7 @@ REMOTE
   [[ "$topic_type" == shm_msgs/msg/Image* || "$topic_type" == sensor_msgs/msg/Image ]] ||
     die "Tipo de cámara inesperado para $camera_topic: $topic_type"
   printf 'CAMERA_SOURCE_OK=%s,%s\n' "$camera_topic" "$topic_type"
-  printf 'CAMERA_PROFILE=%s,%sx%s@%sfps\n' "$camera" "$camera_width" "$camera_height" "$camera_fps"
+  printf 'CAMERA_PROFILE=%s,%sx%s@%sfps,layout=%s\n' "$camera" "$camera_width" "$camera_height" "$camera_fps" "$camera_layout"
 
   local pico_route
   pico_route="$(ip -4 route get "$pico_ip" 2>/dev/null | head -n1)" ||
@@ -451,8 +466,9 @@ case "$mode" in
 
 VISTA DE CÁMARA EN XRoboToolkit
 
-En el PICO abra el panel Camera y active «Request PC camera data». Mantenga
-Head + Controllers y Send data/Working activos. El visor abrirá su listener
+En XRoboToolkit 1.1.1 abra Remote Vision; para mono-sbs-zed seleccione ZEDMINI,
+pulse Listen e introduzca la IP del PC emisor. Mantenga el visor puesto.
+El visor abrirá su listener
 $pico_ip:$pico_port; este proceso esperará ${camera_wait_seconds}s.
 
 Fuente seleccionada: $camera_topic ($camera, ${camera_width}x${camera_height}@${camera_fps}).
@@ -461,11 +477,14 @@ Esto sólo transmite vídeo y no envía START ni órdenes al robot.
 EOF
     start_camera_stream
     start_camera_heartbeat
+    layout_args=()
+    [[ "$camera_layout" == mono-sbs-zed ]] && layout_args+=(--mono-sbs-zed)
     "$relay" \
       --source "$source_url" \
       --pico-ip "$pico_ip" \
       --port "$pico_port" \
       --wait-seconds "$camera_wait_seconds" \
-      --ready-file "$ready_file"
+      --ready-file "$ready_file" \
+      "${layout_args[@]}"
     ;;
 esac

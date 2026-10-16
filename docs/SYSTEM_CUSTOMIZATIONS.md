@@ -1,5 +1,102 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+### PICO-CAMERA-USB-20261016 — vídeo mono del robot en los dos ojos
+
+- **Fecha/zona/estado:** 16-10-2026 Europe/Madrid. Fuente/discovery y configuración USB verificados; adaptación PC en validación, imagen real PENDIENTE. Control en STOP.
+- **Objetivo/destino/fuente:** PC `scripts/teleoperation/{cruzr_pico_camera.sh,pico_camera_relay.py,pico_camera_sbs.py}`, ayuda UI de cruzr_pico_teleop_pc.sh; PICO sólo forward ADB12345 transitorio. No cambio de SDK, firmware, APK o perfil de movimiento. Vision sólo servicios temporales de streaming/heartbeat al ejecutar vídeo.
+- **Cambio/dependencias:** layout opcional mono-sbs-zed duplica mono en ambos ojos a2560×720, usando plugins GStreamer ya instalados (sin h264parse, ausente). Default passthrough conservado. UI real1.1.1 Remote Vision→ZEDMINI→Listen→IPPC; cliente13579 falla de forma independiente al decoder12345, no se inventa servidor13579.
+- **Respaldo/versión/evidencia:** `../Humanoide-vla-evidence/20261016T084628Z_PICO_CAMERA_USB/`, before de fuentes/docs, inventario previo/recibo forward, APK1.1.1 y referencias oficiales tagv1.1.1 commit9f775b535d781618bd2bb7ef8d6c414c0531387c. Hashes después y resultado en esa carpeta. GUI no coincide con instrucciones históricas Request PC camera data, corregidas.
+- **Aplicación/activación prevista:** con listener del visor abierto, `adb -s PA94Y0MGKB070822G forward --no-rebind tcp:12345 tcp:12345`; `bash scripts/teleoperation/cruzr_pico_camera.sh --check --camera main --pico-ip127.0.0.1 --layout mono-sbs-zed` (separar --pico-ip y valor) y --run. Relay sólo vídeo, nunca START. Ver receta completa de teleoperación para conexión con lanzador y propiedad única del stream.
+- **Reversión/límites:** Ctrl+C en dueño del vídeo o --stop de esa fuente, comprobar fin de heartbeat/stream y retirar sólo forward12345; conservar reverseXR63901. Restaurar exclusivamente fuentes PC desde before si se descarta la adaptación. Same mono en ambos ojos no aporta profundidad; latencia/render requieren prueba visual. Heartbeat máximo900s; no prometer duración ilimitada.
+
+### PICO-XR-USB-20261016 — restablecer túnel XR tras encendido
+
+- **Fecha/zona/estado:** 16-10-2026 Europe/Madrid. Mapping INSTALADO/VERIFICADO. Tras confirmación del operador de Connected/Working y Senddata, check pasivo PC7/7 rc0 con identidad correcta, vr_status1 y STOP. Sin ensayo físico ni START.
+- **Objetivo/destino:** PICO PA94Y0MGKB070822G y ADB del PC; únicamente reverse tcp63901→PCtcp63901. Red Motion/Vision por eno1/.11.250 conservada; no servicios robot cambiados.
+- **Fuente/dependencias/aplicación:** `scripts/teleoperation/configure_pico_xr_usb.sh --configure`; requiere USB autorizado, identidad, backend STOP pasivo y listener63901. Hash de receta en evidencia. Headset debe usar127.0.0.1, Head+Controllers y Senddata; no Hands óptico para el control por gatillos.
+- **Antes/verificación:** reverse vacío, visor Awake, app activa y socket de redUSB192.168.224.184→192.168.224.6. Después --check verifica túnel. `PICO_TELEOP_CAMERA=off CRUZR_IFACE=eno1 CRUZR_PC_IP=192.168.11.250 bash scripts/teleoperation/probar_pico_v4.sh --check` bloquea por vr_status0; actualización10:34: `PICO_EFFECTOR=v4` con `cruzr_pico_teleop_pc.sh --check` pasa7/7; coexisten loopbackADB y socket previo redUSB. USB/tracking verificados; teleop v4 cargada no certificada por este check de PC.
+- **Respaldo/evidencia/rollback:** `../Humanoide-vla-evidence/20261016T083300Z_PICO_USB_CONFIG/`, inventario before/after y copias documentales. `--remove` retira sólo63901 bajo STOP; IP anterior de sesión observada .224.6, ajuste visible de app previo PENDIENTE. Reverse transitorio, puede perderse al desconectar; receta versionada permite reaplicar. No firmware, SDK, límites ni autoarranque modificados.
+
+### SWITCH-EFFECTOR-RESTORE-20261016 — restauración de capas sin sobrescribir montajes
+
+- **Fecha/zona/estado:** 16-10-2026 Europe/Madrid. Fallo observado y causa verificada; corrección local y pruebas offline completadas. Reanudación ejecutada: Motion verificado, Vision restauración efectiva vacía, ambos arrancados bajo paro y WaitEStopRelease confirmado. Operador confirma retirada de soportes y liberación; HOME nativo completado y VERIFICADO (dos muestras avanzantes, velocidad0, sin fallos, delta máximo0,002876rad), controlador dexterous_hand_controller running y siete ejes con marcas avanzantes por mano. Resultado PERFIL_Y_HOME_VERIFICADOS=v4 y complete=true en ambos hosts; marcadores cerrados por validación. Sin reinicio físico ni HOME adicional.
+- **Destino/fuente:** PC `scripts/hands/{switch_effector,effector_profile_remote}.py`; backend inyectado por SSH en Motion/Vision, sin instalar servicios nuevos. [Receta versionada](guides/CAMBIO_EFECTOR_ABRAZADERAS_MANOS_V4.md). Pruebas `test_effector_mount_restore.py` y `test_effector_resume.py`; 42 pruebas offline pasan, más sintaxis Python/Bash y git diff --check. También se corrigió que una transición a Fault prevalezca sobre un mensaje anterior WaitEStopRelease.
+- **Cambio:** filtro por destinos de todos los Mounts en backup/restore/verify, tar validado contra manifest y reempaquetado sin overrides PAX de ruta; copia vacía omitida. `--resume-from` reutiliza la sesión original y verifica backups externos, fuentes, IDs/contrato y estado detenido; conserva Motion restaurado y termina Vision antes de arrancar bajo paro.
+- **Dependencias/activación:** mismas imágenes/perfil/guard revisados, ROS de ambos hosts disponible, brazos asegurados, principal pulsado/servos liberado/cargador desconectado; liberación manual para HOME. No se omiten gates físicos.
+- **Respaldo/evidencia:** `../Humanoide-vla-evidence/EFFECTOR-20261016T081258Z-1bddf143/` y `recovery/before/`; originales externos SHA256 Motion `f2ca31bb4b1f410343225e78a7a27a48a638a955eacf947728297d7f504f080c`, Vision `e0402c12262ab176f4d89b3b11bf0da3fec0ef435f5a4348b5e6740062a6c8ea`. Reanudación `EFFECTOR-20261016T082431Z-0cf31f55` enlaza la anterior. Hashes de fuentes y resultado final se guardan en evidencia de recuperación.
+- **Reversión:** conservar originales y marcador; volver selectivamente a fuentes previas sólo tras revisar fase, bajo paro y con las mismas imágenes. No restaurar historiales sobre mounts, repetir recreación, borrar `active.json` ni ejecutar HOME para probar. Revertir sólo el código PC no revierte el perfil ya instalado en el robot.
+
+### SWITCH-EFFECTOR-20261015 — cambio coordinado de efector
+
+- **Fecha/estado:** 15-10-2026 Europe/Madrid. Herramienta PC PREPARADA; no instalada como servicio y no aplicada físicamente. Perfil actual del robot no cambiado por esta entrega.
+- **Motivo/fuente:** eliminar pasos manuales repetidos entre perfiles clamp/base y manos v4/SPS. [Receta y recuperación](guides/CAMBIO_EFECTOR_ABRAZADERAS_MANOS_V4.md).
+- **Destino:** entrada PC `scripts/hands/cambiar_efector.sh`; orquestador switch_effector.py, planes effector_profile_config.py y backend effector_profile_remote.py en scripts/hands. Tests en test_switch_effector.py.
+- **Dependencias:** SSH del proyecto y known_hosts existentes, Python/PyYAML PC y hosts, Docker/Compose y ROS2/ROSA instalados. Reutiliza la corrección ENI v4 revisada y el clasificador HOME original. No instala paquetes, imágenes ni firmware.
+- **Aplicación:** --check consulta; --apply requiere terminal y confirmaciones, HOME previo o recuperación con brazos asegurados, paros/cargador/baterías medidos. Cambia HW_TYPE en compose/DB Motion y compose/metafile CC Vision, sin cambiar otros servicios Vision. Conserva imágenes/montajes/configuración y respalda capas modificadas antes de recrear; no habilita VLA/debug.
+- **Activación/verificación:** mantiene principal pulsado hasta WaitEStopRelease. Liberación manual puede iniciar HOME nativo. Éxito solo tras fuentes y procesos coherentes, dos muestras HOME20D avanzantes/reposo/sin fallos, controladores activos y estados v4 cuando corresponde. Guard/ENI desconocidos se rechazan. No hay ensayo de --apply del script nuevo en esta entrega.
+- **Pruebas:** 29 casos offline, sintaxis Python/Bash y --check reales para ambos destinos. --verify pasivo rechaza movimiento/postura fuera de HOME; no se interpreta como fallo causado por la herramienta. Sin cambios remotos durante estas pruebas.
+- **Respaldo/reversión:** índices previos, fuentes y hashes en `../Humanoide-vla-evidence/20261015_SWITCH_EFFECTOR_TOOL/`. Futuras aplicaciones crean respaldos privados por sesión en PC y `/home/walker/.local/share/cruzr-effector-switch/ID/` de cada host. Marcador active.json bloquea reaplicar una sesión incompleta. Reversión selectiva requiere revisión de fase; nunca restauración/control automáticos ante fallo.
+- **Continuación:** ensayo supervisado con hardware correcto en ambos sentidos. Un fallo intermedio conserva evidencia; --verify --finish-session solo cierra sesión/destino coincidentes tras validar estado y archivos. Configuración documentada en la guía, sin depender del chat.
+
+
+
+**15-10-2026 — RETURN-CLAMP-20261015: perfil base CARGADO; arranque/HOME VERIFICADOS.**
+Usuario solicita retirar dependencia v4 tras desmontar manos. Compose Motion y
+selector CC/metafile Vision vuelven al perfil de abrazaderas; DB Motion ya base,
+conservada. Lectura confirma que controlador base no carga dexterous_hand_controller.
+Actualización: operador confirma paro pulsado/brazos asegurados; nueve Motion
+y CC recreados con mismas imágenes, Cmd/montajes y resto del entorno. Archivos
+personalizados restaurados/hash verificados; hw/app base running/restart0. Guard
+CC Motion3/3/cámaras2/2, liberación confirmada por operador; SelfCheck y
+StartMotion succ→JoystickMode. HOME20D medido, velocidad0, sin fallos de
+actuadores y delta máximo0,002972rad. Muñecas vacías; no reinicio físico necesario.
+No volver a usar PICO v4 hasta reinstalar manos y recuperar perfil SPS. Recetas nuevas restore_clamp_environment.py y
+activate_clamp_profile.py; respaldos privados en 20261015_RETURN_CLAMP.
+[Aplicación, límites, evidencia y reversión](incidents/2026-10-15_ARRANQUE_SIN_MANOS.md).
+
+
+### HANDS-REMOVED-BOOT-20261015 — diagnóstico sin efectores
+
+15-10-2026 Europe/Madrid, OBSERVADO/VERIFICADO solo lectura. Muñecas vacías;
+HW/CC siguen SPS y falla carga dexterous_hand_controller, StartMotion→Fault.
+No se instaló ni revirtió perfil alguno. Selección automática last_eni observada
+ahora noimu, frente al unified_noimu de manos; no restaurar a ciegas.
+[Informe](incidents/2026-10-15_ARRANQUE_SIN_MANOS.md), evidencia privada
+20261015_HANDS_REMOVED_BOOT. Cambios solo documentales, copia anterior
+before-docs; reversión selectiva de informe/enlaces. Recuperación y traslado
+pendientes; no se certifica perfil operativo sin efectores.
+
+
+### BOTELLA-VISION-GRASP-20261015 — plan de botella; sin adaptación instalada
+
+**Resumen 15-10-2026:** [proceso de trabajo](plan_botella_resumen.md) y
+[PDF](plan_botella_resumen.pdf), 4 páginas con portada e índice. Resume fases,
+criterios y alternativas; mantiene los estados pendientes del plan completo.
+Generación: `bash scripts/docs/build_botella_pdf.sh docs/plan_botella_resumen.md docs/plan_botella_resumen.pdf`.
+La receta admite origen/destino opcionales y conserva los predeterminados del
+plan completo. Sintaxis Bash, enlaces locales y extracción del texto final
+verificados. Solo archivos locales; respaldo/hash en la subcarpeta privada
+`20261015_BOTTLE_PLAN/resumen/`. Reversión: retirar resumen/PDF/enlaces y
+restaurar la receta desde su copia anterior, preservando otros cambios.
+
+
+**Ampliación documental 15-10-2026:** exportación [PDF](plan_botella.pdf), 29 páginas A4.
+Receta versionada: `scripts/docs/build_botella_pdf.sh`, reutiliza el renderer existente
+y Chrome headless; requiere `markdown_it`. Solo genera archivos locales; sin cambios
+en el robot. Verificados sintaxis Bash, metadatos PDF y extracción de texto hasta
+referencias/límite final. Reversión: retirar PDF/receta y esta entrada; Markdown intacto.
+Hashes y copia de índices anteriores: `../Humanoide-vla-evidence/20261015_BOTTLE_PLAN/pdf/`.
+
+- **Fecha/zona y estado:** 15-10-2026, Europe/Madrid. Documento creado; integración PENDIENTE.
+- **Motivo:** definir un procedimiento reproducible para detectar una botella y adaptar un agarre con manos v4.
+- **Destino/fuente:** repositorio PC, [docs/plan_botella.md](plan_botella.md); enlaces de seguimiento en PROJECT_SOURCE_OF_TRUTH y catálogo funcional. Ningún cambio de configuración en Motion/Vision/PICO.
+- **Dependencias propuestas:** cámaras SHM/CameraInfo, PC con Docker, segmentador COCO, calibración RGB-D/base/TCP e integración nativa de planificación/prensión todavía pendientes. No conecta VLA físico.
+- **Aplicación/activación:** documento disponible; las recetas son instrucciones futuras, no despliegue. Reanudar por fase 0 y primera captura estática. No ejecutar bloques físicos junto con bloques de lectura.
+- **Verificación:** 40 comprobaciones de sintaxis Bash/Python, 10 enlaces locales y 6 casos aislados de conversión SHM pasan. Docker/YOLO/capturador ROS completo y agarre adaptativo no ensayados. Consultas remotas de tipos, codificación y QoS solo lectura.
+- **Respaldo/reversión:** anteriores índices en `../Humanoide-vla-evidence/20261015_BOTTLE_PLAN/before-doc-index/`; revertir exclusivamente la entrada documental y retirar el plan si se descarta. No hay servicio/modelo instalado que revertir.
+- **Versión/hash/evidencia:** SHA256 del plan en `../Humanoide-vla-evidence/20261015_BOTTLE_PLAN/validation.json`; esquemas/QoS/inventario en esa carpeta privada. Se conserva la distinción entre datos observados y recetas propuestas.
+
+
 **15-10-2026 — BOOT-CC-SPS-20261015 / selector CC:** HW_TYPE SPS instalado y
 sólo CC recreado con mismaimagen/orden/montajes. Guard de arranque actualizado
 para reconocer identificadorSPS conservando gates yvoz;18tests pasan.
