@@ -1,5 +1,17 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**19-10-2026 — APP2-FIRST-CONTOUR-20261019: primera anotación real guardada y revisada.**
+Consulta de CVAT tarea5/job5 tras aviso del operador: un polígono manual ID10,
+frame1 head_rgb.png, itr_candidate,26vértices dentro de960×576. Comparación
+visual del contorno con original: incluye una pieza aislada, barra y extremo
+metálico; primera pasada útil, sin aceptar aún imagen/dataset completo.
+identity_status provisional correcto; visibility sigue indeterminate: recomendar
+partial por extremo inferior parcialmente oculto por cartón. Sólo lectura de
+tarea/metadatos/etiquetas/anotaciones; sin escrituras de anotación o robot.
+Evidencia privada 20261019T122333Z_APP2_FIRST_CONTOUR_REVIEW con snapshot JSON
+y gráfico diagnóstico separado del original. [Siguiente paso](app2/PILOTO_PIEZAS_REALES.md#3-etiquetar-la-primera-imagen-paso-a-paso):
+ajustar visibilidad y anotar las demás piezas del frame1. Sin entrenamiento.
+
 **19-10-2026 — APP2-GIT-PUBLISH-20261019: fuentes y relevo en la rama vision-reconoce.**
 El usuario autoriza commits y push de los cambios de esta carpeta. Se agrupan
 las recetas de servidor/CVAT/entrenamiento (`1e2f520`), el flujo local de datos,

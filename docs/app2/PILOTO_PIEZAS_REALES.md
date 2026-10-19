@@ -113,6 +113,20 @@ en primer plano del ejemplo se cierra con Ctrl+C en su propia terminal.
    anotarla, dibujar sus polígonos desde esa propia vista. Guardar y revisar
    también ese frame.
 
+**Primera revisión parcial — 19-10-2026:** tras indicar el operador que guardó
+la primera pieza, la consulta de tarea5/job5 confirma un polígono manual ID10,
+frame1, etiqueta `itr_candidate`, 26 vértices dentro de la imagen. La revisión
+visual del gráfico comparativo muestra que sigue la pieza aislada derecha e
+incluye barra y extremo metálico, sin invadir claramente otra pieza o el cartón.
+No se exige rehacer esta primera pasada. `identity_status=provisional` está
+conservado; `visibility=indeterminate` sigue sin clasificar. Se recomienda al
+operador **`partial`**, porque el extremo inferior queda parcialmente oculto por
+el borde delantero de cartón. Después, continuar las demás piezas del frame1 y
+guardar. Esta consulta no cambia atributos ni máscaras y no acepta el conjunto
+completo. Snapshot y gráfico diagnóstico privado en
+`../Humanoide-vla-evidence/20261019T122333Z_APP2_FIRST_CONTOUR_REVIEW/`;
+original PNG intacto, sin entrenamiento ni conexión al robot.
+
 La anotación necesita una revisión humana antes de declararse aceptada. No
 marcar el lote completo como revisado únicamente por haber pulsado Save. Dejar
 registro del revisor, fecha, frames revisados, dudas y cambios de criterio.
