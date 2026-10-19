@@ -85,6 +85,7 @@ usage() {
   cat <<'EOF'
 Uso:
   ./scripts/cruzr_blue_workbin_cycle.sh --check
+  ./scripts/cruzr_blue_workbin_cycle.sh --check-head
   ./scripts/cruzr_blue_workbin_cycle.sh --install
   ./scripts/cruzr_blue_workbin_cycle.sh --run [--hold SEGUNDOS] [--yes] [--fast]
   ./scripts/cruzr_blue_workbin_cycle.sh --grasp [--yes]
@@ -101,6 +102,9 @@ Uso:
 Modos:
   --check    Comprueba PC, robot, versión, acciones, paros y batería. No mueve
              ni instala nada.
+  --check-head
+             Mismo diagnóstico para cabeza con abrazaderas o manos v4;
+             no instala ni mueve. Nunca admite --fast.
   --install  Valida e instala las tres tareas auxiliares. No mueve el robot.
   --run      Ejecuta sin pausas intermedias: cabeza abajo, brazos preparados,
              dos detecciones, agarre/elevación, espera, depósito por contacto
@@ -127,8 +131,9 @@ Modos:
              Ahora delega siempre en cruzr_recover_to_home.sh, que exige una
              postura fresca y bloquea estados PICO/indeterminados.
   --prepare-vision
-             Baja únicamente la cabeza para observar la caja; no mueve brazos
-             ni chasis.
+             Baja únicamente la cabeza (yaw 0, pitch -0,43 rad, 2 s) para
+             observar la zona de trabajo; admite abrazaderas o manos v4.
+             No mueve brazos ni chasis. Nunca admite --fast.
   --measure-box
              Obtiene tres poses estables de la caja; no mueve el robot.
   --measure-box-fast
@@ -173,7 +178,7 @@ warn() {
 
 while (($#)); do
   case "$1" in
-    --check|--install|--run|--grasp|--verify-grasp|--deposit-held|--check-open-only|--open-only|--home|--home-workbin-internal|--prepare-vision|--measure-box|--measure-box-fast|--grasp-after-approach)
+    --check|--check-head|--install|--run|--grasp|--verify-grasp|--deposit-held|--check-open-only|--open-only|--home|--home-workbin-internal|--prepare-vision|--measure-box|--measure-box-fast|--grasp-after-approach)
       MODE="${1#--}"
       ;;
     --hold)
@@ -199,6 +204,9 @@ while (($#)); do
 done
 
 [[ "$HOLD_SECONDS" =~ ^[0-9]+$ ]] || die "--hold debe ser un entero."
+if [[ "$MODE" == "check-head" || "$MODE" == "prepare-vision" ]]; then
+  ((FAST == 0)) || die "Los modos de cabeza no admiten --fast."
+fi
 if [[ "$MODE" == "open-only" || "$MODE" == "check-open-only" ]]; then
   ((YES == 0 && FAST == 0)) || die "La apertura aislada no admite --yes ni --fast."
   [[ "$MODE" != "open-only" || -t 0 ]] || die "La apertura exige un operador en terminal interactiva."
@@ -314,7 +322,7 @@ remote_preflight() {
     "$EXPECTED_IMAGE_FRAGMENT" "$HEAD_LOWER_SHA" "$ARMS_READY_SHA" \
     "$HOME_SHA" "$DIRECT_HOME_SHA" "$CLAMP_META_SHA" "$DEPOSIT_META_SHA" "$OPEN_META_SHA" \
     "$MIN_BATTERY_SOC" "$posture_gate_b64" "$OPEN_HOME_SHA" "$OPEN_HOME_META_SHA" "$BODY_FIRST_HOME_SHA" \
-    "$BODY_FIRST_V5_HOME_SHA" "$BODY_FIRST_V7_HOME_SHA" "$EARLY_ROLL_V8_HOME_SHA" <<'REMOTE'
+    "$BODY_FIRST_V5_HOME_SHA" "$BODY_FIRST_V7_HOME_SHA" "$EARLY_ROLL_V8_HOME_SHA" "$MODE" <<'REMOTE'
 set -Eeuo pipefail
 motion_container="$1"
 ros_container="$2"
@@ -335,6 +343,7 @@ body_first_home_sha="${16}"
 body_first_v5_home_sha="${17}"
 body_first_v7_home_sha="${18}"
 early_roll_v8_home_sha="${19}"
+preflight_mode="${20}"
 
 [[ "$(hostname)" == "motion" ]] || {
   echo "HOST_ERROR=$(hostname)"
@@ -356,7 +365,13 @@ image="$(docker inspect --format '{{.Config.Image}}' "$motion_container")"
 
 environment="$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$motion_container")"
 hw_type="$(awk -F= '$1=="HW_TYPE" {print substr($0,index($0,"=")+1)}' <<<"$environment")"
-[[ "$hw_type" == "$expected_hw" ]] || {
+hardware_compatible() {
+  local operation="$1" actual="$2" expected="$3"
+  [[ "$actual" == "$expected" ]] && return 0
+  [[ "$actual" == "cruzr_s2_v1_sps" &&
+      ( "$operation" == "check-head" || "$operation" == "prepare-vision" ) ]]
+}
+hardware_compatible "$preflight_mode" "$hw_type" "$expected_hw" || {
   echo "HW_TYPE_ERROR=$hw_type"
   exit 23
 }
@@ -410,8 +425,8 @@ check_hash "$clamp_meta_sha" "$meta_root/meta_clamp/clamp_cruzr_byd_large.yaml"
 check_hash "$deposit_meta_sha" "$meta_root/meta_clamp/put_collision_cruzr.yaml"
 check_hash "$open_meta_sha" "$meta_root/meta_clamp/byd/open_arm_cruzr.yaml"
 
-motion_info="$(docker exec "$motion_container" bash -lc 'source /opt/walker/setup.bash; rosa action info /mc/manipulation/action')"
-vision_info="$(docker exec "$motion_container" bash -lc 'source /opt/walker/setup.bash; rosa action info /cv/task/transport_action')"
+motion_info="$(docker exec "$motion_container" bash -lc 'source /opt/walker/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; rosa action info /mc/manipulation/action')"
+vision_info="$(docker exec "$motion_container" bash -lc 'source /opt/walker/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; rosa action info /cv/task/transport_action')"
 grep -q 'Action server count: 1' <<<"$motion_info" || exit 25
 grep -q 'Action server count: 1' <<<"$vision_info" || exit 26
 
@@ -424,6 +439,7 @@ grep -q 'Action server count: 1' <<<"$vision_info" || exit 26
 # 0,01 rad de su posición inmóvil.
 actuator_state="$(docker exec "$motion_container" bash -lc '
   source /opt/walker/setup.bash
+  export ROS2CLI_DISABLE_DAEMON=1
   ROSA_LOG_LEVEL=ERROR timeout 8 rosa topic echo --once --no-daemon \
     --qos-reliability best_effort --qos-durability volatile \
     /mc/actuator_state mc_state_msgs/msg/ActuatorState
@@ -565,6 +581,7 @@ set -Eeo pipefail
 set +u
 source /opt/walker/setup.bash
 set -u
+export ROS2CLI_DISABLE_DAEMON=1
 task="$1"
 limit="$2"
 timeout "$limit" rosa action send_goal /mc/manipulation/action \
@@ -957,6 +974,26 @@ EOF
   [[ "$answer" == "EJECUTAR CICLO" ]] || die "Ciclo cancelado."
 }
 
+confirm_head_only() {
+  ((YES == 1)) && return 0
+  cat <<'EOF'
+
+BAJADA ÚNICA DE CABEZA
+Objetivo: yaw 0, pitch -0,43 rad (unos 24,6 grados hacia abajo), en 2 s.
+Confirma las condiciones actuales:
+  - efector instalado identificado: abrazaderas o manos v4, vacías;
+  - cabeza, cuello y recorrido completos libres de personas, objetos y cables;
+  - robot estable e inmóvil, ruedas bloqueadas y cargador desconectado;
+  - ambos paros liberados y una persona junto al paro;
+  - teleoperación PICO, web y demás mandos de movimiento detenidos.
+
+Escribe BAJAR CABEZA para continuar:
+EOF
+  local answer
+  read -r answer
+  [[ "$answer" == "BAJAR CABEZA" ]] || die "Bajada de cabeza cancelada."
+}
+
 grasp_box() {
   info "[1/4] Bajando la cabeza..."
   run_motion_task "$HEAD_LOWER_TASK" 15
@@ -1175,7 +1212,7 @@ main() {
     exit 0
   fi
 
-  if ((FAST == 0)) || [[ "$MODE" == check || "$MODE" == run ||
+  if ((FAST == 0)) || [[ "$MODE" == check || "$MODE" == check-head || "$MODE" == run ||
       "$MODE" == grasp || "$MODE" == grasp-after-approach ||
       "$MODE" == prepare-vision || "$MODE" == deposit-held || "$MODE" == verify-grasp ||
       "$MODE" == home-workbin-internal ]]; then
@@ -1189,6 +1226,9 @@ main() {
   case "$MODE" in
     check)
       info "CHECK_OK: no se instaló ni movió nada."
+      ;;
+    check-head)
+      info "HEAD_CHECK_OK: compatibilidad y diagnóstico completos; no se instaló ni movió nada. Falta confirmar el entorno físico."
       ;;
     install)
       install_templates
@@ -1220,7 +1260,7 @@ main() {
       run_home_workbin_internal
       ;;
     prepare-vision)
-      confirm_once
+      confirm_head_only
       run_motion_task "$HEAD_LOWER_TASK" 15
       info "VISION_READY: cabeza preparada; brazos y chasis no se movieron."
       ;;

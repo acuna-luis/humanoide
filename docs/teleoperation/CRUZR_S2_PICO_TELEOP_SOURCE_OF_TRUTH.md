@@ -1,5 +1,45 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**19-10-2026 — HEAD-ACTION-BUSY-20261019: tarea nativa identificada; sólo lectura.**
+El bloqueo de --prepare-vision corresponde al UUID27318de6-c1a6-4d86-a9c5-
+6f8b127df3da: teleoperation/cruzr_v4_pico_teleoperation, iniciada09:22 CEST
+(07:22Z,15:22 nativoMotion+08). Log actual confirma Head tracking1 y
+Head tele mode1, Hand typev4 y waist0/leg0. La tarea nativa mantiene el servidor
+ocupado aunque el backend PC esté STOP; consulta PC actual operation_type1,
+vr_status0. Repetir --stop del PC no es un procedimiento demostrado para
+terminar esta tarea ni autoriza otro goal simultáneo. No se modifica el gate.
+
+Para observar conservando PICO, el perfil admite seguimiento de cabeza del
+visor dentro de una sesión preparada con el lanzador y sus comprobaciones
+físicas/técnicas normales; grips y gatillos libres durante el encuadre. Es una
+sesión de teleoperación, no un modo nuevo sólo de cabeza. La bandera del log
+no demuestra seguimiento activo ahora: vr_status0 requiere visor despierto/
+Working antes de la comprobación. El agente no envía START/Y ni mueve el visor.
+Para el script independiente hace falta terminar la tarea nativa de forma
+controlada y medir estado posterior; no cambiar a auto_task/HOME como atajo
+desde postura no comprobada. No se encontró receta versionada de cancelación
+por UUID de una tarea externa; no se improvisa en este diagnóstico.
+Evidencia: ../Humanoide-vla-evidence/20261019T083626Z_HEAD_ACTION_BUSY_READONLY/.
+
+**19-10-2026 — HEAD-OBSERVE-20261019: observación con tarea de cabeza independiente.**
+Con PICO/web/otros mandos detenidos, --check-head de cruzr_blue_workbin_cycle.sh
+comprueba sin movimiento los perfiles clamp/SPS para una tarea sólo de cabeza.
+--prepare-vision exige confirmación BAJAR CABEZA y envía únicamente la tarea
+nativa cruzr/move_head_lower (yaw0,pitch−0,43rad,2s; hash f3a73626…ea46c1).
+No cancela PICO, cambia modo, hace HOME ni amplía compatibilidad de los modos
+de brazos/caja. ACTION_BUSY/health/cargador/paros bloquean antes del envío;
+no salir a auto_task/HOME como atajo desde una postura indeterminada.
+Se mantiene preflight completo; --fast rechazado. Bash-n y36tests offline pasan.
+Check real admite SPS y salud20D (velocidad0, delta máximo0,003039rad), pero
+bloquea por goal activo: rc27/ACTION_BUSY. No se alcanzan lecturas de paros,
+batería/cargador; no afirmar preparación física completa. No se cancela la
+acción ni se cambia modo desde esta adaptación; movimiento físico no ensayado.
+Backend PC posterior STOP/vr_status0, pese al goal Motion activo. STOP del PC
+no equivale a terminar la tarea de Motion; no cambiar a auto_task/HOME como
+atajo para esta bajada desde una postura no comprobada.
+[Receta y condiciones](../guides/CATALOGO_FUNCIONALIDADES_CRUZR_S2.md#63-preparar-únicamente-la-visión).
+Evidencia: ../Humanoide-vla-evidence/20261019T082535Z_HEAD_ONLY_SCRIPT/.
+
 **19-10-2026 — PICO-USB-CONNECT-20261019: túnel XR ausente.**
 PICO físico PA94Y0MGKB070822G por USB1-2, Awake; servicio PC63901 escucha,
 sin flujo TCP establecido. Reverse ADB vacío. Configurador --check confirma
