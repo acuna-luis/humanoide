@@ -1,23 +1,343 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
-**16-10-2026 — PICO-CAMERA-USB-20261016: vídeo en preparación, control en STOP.**
-Operador pide cámara tras abortar --teleoperate por valor no admitido de
-PICO_TELEOP_CAMERA; main es la fuente frontal estéreo izquierda. Check pasivo
-PC7/7 confirma vr_status1/STOP y ruta Motion/Vision por eno1/.11.250. Sin START.
-UI real XRoboToolkit1.1.1: Remote Vision → ZEDMINI → Listen → IP del PC,
-no Camera/Request PC camera data. Confirmado en captura del visor, APK local y
-fuentes oficiales tagv1.1.1/commit9f775b535d781618bd2bb7ef8d6c414c0531387c.
-Tras confirmar el operador, PICO escucha12345. No tiene usb0 actualmente;
-se crea exclusivamente adb forward --no-rebind tcp12345→tcp12345 para vídeoUSB,
-con puertoPC y lista previa libres. ReverseXR63901 conservado.
-La cámara mono requiere duplicar su imagen completa en dos mitades para el
-perfil ZEDMINI2560×720; adaptación PC GStreamer preparada/en validación, sin
-instalar paquetes. No representa profundidad estéreo. FuenteSRS/discovery ROS
-verificados; todavía sin stream ni imagen en este punto.
-Evidencia `../Humanoide-vla-evidence/20261016T084628Z_PICO_CAMERA_USB/`,
-inventario antes/recibo de forward/captura/listeners y copias de fuentes previas.
-Rollback: cerrar sólo vídeo, verificar heartbeat/SRS sin residuos y quitar sólo
-forward12345 creado; conservar reverse63901 y configuración de control.
+**16-10-2026 — HOME-FAILED-20261016: HOME posterior a PICO abortado.**
+force_home del operador termina MoveToGoalFailed/7104050/status6. Antes del
+goal ya hay saltos de consigna >0,087rad y error4099 en ambos ejes de cabeza.
+HOME v8 SHAd9e946… falla en sus primeros ajustes de1s por brazo; diferencias
+máximas12,26° izquierda/28,64° derecha, sin llegar a bajar/cerrar brazos.
+Origen de discontinuidad/fallo de cabeza PENDIENTE; no atribuirlo sólo al plazo
+de1s ni ampliar protecciones. Captura posterior no cualificada por aviso ROSA
+no JSON; cinco muestras válidas conservan fallos de cabeza y deltas de consigna.
+Sin movimiento, STOP, HOME, modo, rearme o reinicio del agente.
+[Informe y límites](../incidents/2026-10-16_HOME_MOVE_TO_GOAL_FAILED.md).
+
+**16-10-2026 — PICO-RIGHT-DIRECTION-20261016: respuesta derecha inesperada; diagnóstico sólo lectura.**
+Operador comunica que al mover hacia dentro el brazo derecho iba hacia fuera.
+Pendiente distinguir mano completa en sentido contrario de apertura del codo.
+Backend STOP/vr_status1 y ruta USB/Ethernet comprobados. Perfil v4 mantiene
+SHA01a5ca8… y EndMapTele/limb_mode2, sin cambios de parámetros. Fragmento del
+último log Motion contiene 297 fallos IK derecha entre18:41:25–18:41:31
+(hora nativa), cero del mismo patrón izquierda en ese fragmento. Objetivos IK
+fallidos no son posiciones medidas. La causa de la dirección comunicada sigue
+PENDIENTE; no atribuirla automáticamente al cable, a inversión de eje o a IK.
+No START/HOME/modo/reinicio/recalibración ni escrituras remotas.
+[Informe y evidencia](../incidents/2026-10-16_PICO_BRAZO_DERECHO_DIRECCION.md).
+
+**16-10-2026 — PICO-USB-RETURN-20261016: túnel USB restablecido; cámara off.**
+Resultado final VERIFICADO: operador confirma Working por USB y reconecta
+Ethernet. eno1 carrier1, ruta directa .11.250→Motion; socket XR loopback
+127.0.0.1→127.0.0.1:63901, vr_status1 y STOP. Check v4 completo termina rc0:
+paros0/0, baterías69,7/73,1%, cargador fuera, reposo, SPS y tarea v4, estados
+de ambas manos avanzantes y perfil sólo brazos 01a5ca8…/waist0/leg0.
+MOTION_READY_CHECK_OK=1; ningún START o movimiento enviado. Cámara sigue off.
+El fallo inicial de Ethernet descrito debajo quedó resuelto al reconectar
+físicamente el cable; el agente no cambió perfiles ni rutas del PC.
+
+El operador solicita volver al cable tras elegir prueba sin cámara. PICO físico
+PA94Y0MGKB070822G detectado por USB, transport7; backend STOP/vr_status0.
+Reverse inicial vacío. Receta configure_pico_xr_usb.sh --check detecta ausencia
+de mapping; --configure instala sólo tcp63901→63901 y --check posterior pasa.
+Se solicita PC service IP127.0.0.1 y Head+Controllers/Send con visor puesto.
+Túnel y seguimiento USB VERIFICADOS por el check final indicado arriba.
+
+Hallazgo nuevo: eno1 carrier0, sin IPv4, NetworkManager unavailable. La ruta
+actual PC→Motion usa Wi-Fi wlx80afcad40bd6, fuente192.168.42.215 vía .42.2.
+No afirmar que Ethernet sigue activo. Se pregunta si reconectarán Ethernet o
+mantendrán Wi-Fi al robot; no se cambia NetworkManager ni la ruta. No START,
+HOME, cambio de modo, vídeo ni órdenes de movimiento enviados. Backup y evidencia:
+`../Humanoide-vla-evidence/20261016T102402Z_PICO_USB_RETURN/`.
+Reversión: configure_pico_xr_usb.sh --remove bajo STOP retira sólo el reverse
+creado; volver a la IP Wi-Fi real en la aplicación si se desea ese transporte.
+
+**16-10-2026 — continuación PICO-WIFI-MIGRATION: el operador elige sin cámara.**
+Confirma sesión previa cerrada con STOP y selecciona «Queremos probar sin
+cámara por ahora». Para esa variante no hacen falta USB temporal ni ADB.
+Check v4 posterior conserva peer Wi-Fi .42.211→.42.215 y Ethernet eno1 al robot,
+pero rechaza correctamente tracking vr_status=0. Se solicita ponerse el visor
+y reactivar Head+Controllers/Send. No START, cambio de modo o movimiento enviados.
+Comando exacto con PICO_TELEOP_CAMERA=off y comprobación previa en
+[PICO_WIFI_SIN_USB.md](PICO_WIFI_SIN_USB.md). ADB/vídeo quedan
+como opción posterior, no como requisito pendiente para la prueba elegida.
+
+**16-10-2026 — PICO-WIFI-MIGRATION-20261016: seguimiento inalámbrico verificado; configuración de vídeo pendiente.**
+
+Operador solicita probar sin USB y confirma XRoboToolkit Connected/Working
+en Cruzr S2-0669 con PC service IP 192.168.42.215. Lectura real: PICO
+192.168.42.211 → PC 192.168.42.215:63901 por Wi-Fi; PC → Motion/Vision sigue
+Ethernet eno1 / 192.168.11.250. Check pasivo 7/7 a 12:04 Europe/Madrid,
+identidad del backend conservada, vr_status=1 y STOP. ADB ausente, puerto5555
+cerrado; cámara integrada mantiene ADB obligatorio. No se envía START ni
+movimiento. Receta: [PICO_WIFI_SIN_USB.md](PICO_WIFI_SIN_USB.md).
+
+Corrección local de discover_pico_stream en cruzr_pico_teleop_pc.sh: ignora
+sockets ESTAB cuya IP local ya no está asignada y respeta hints al revisar
+todos los peers. El socket USB 192.168.224.6 → .224.184 seguía en kernel pese
+a no existir la interfaz. No se cierran sockets ajenos ni se omiten identidad,
+tracking o ADB para cámara. Doce pruebas offline y bash -n pasan.
+
+Cambio posterior observado: segundo check a 12:05 falla por operation_type=2;
+hay procesos --teleoperate/pico_control iniciados fuera de esta intervención.
+Se solicita STOP al operador y se detiene cualquier configuración dependiente
+de transporte hasta verificarlo. No se cambió ADB, interfaces, rutas, servicios
+o perfil robot. Pendiente: STOP, USB temporal para habilitar ADB Wi-Fi si se
+mantiene vídeo, y verificar persistencia tras retirar cable. Evidencia:
+`../Humanoide-vla-evidence/20261016T100303Z_PICO_WIFI_MIGRATION/`.
+
+Actualización posterior de sólo lectura: backend vuelve a STOP (operation_type=1),
+pero tracking ahora inactivo (vr_status=0); ADB sigue sin dispositivos. Ya no
+hace falta solicitar otro STOP para ese estado. Falta USB temporal y reactivar
+Working con el visor puesto para terminar ADB/cámara inalámbricos.
+
+**16-10-2026 — PICO-VIDEO-LOW-LATENCY-20261016: ajuste instalado y SRS recargado.**
+
+El operador autoriza reducir la latencia al máximo. Benchmark local con fuente
+HTTP-FLV sintética en tiempo real, 640×400 a 12 fps: mediana de edad de salida
+en la conversión PC de 1,273 s antes a 0,027 s después; primer frame de 1,297 s
+a 0,043 s. Esto mide la etapa PC y no cámara → pantalla del visor. El retraso
+total de unos 3 s comunicado por el operador aún requiere una nueva medición.
+
+Fuentes PC modificadas: pico_camera_sbs.py (decoder sin frame threading,
+cola de última imagen, ramas de un buffer, recodificación sin lookahead/B-frames),
+pico_camera_relay.py (TCP_NODELAY, envío acotado) y cruzr_pico_camera.sh (GOP de
+medio segundo por defecto). Se mantienen resolución/layout de ambos ojos.
+24 pruebas offline pasan, incluida fuente en tiempo real e imagen completa.
+Sintaxis Python/Bash y diff check correctos.
+
+Vision SRS 5.0.213: configurado y CARGADO el perfil de baja latencia mediante
+`scripts/teleoperation/configure_pico_srs_latency.py --apply`, con servidor sin
+streams, respaldo externo previo, validación nativa y HUP. Log confirma recarga
+tcp_nodelay/min_latency/play/publish y GOP cache off; misma instancia, sin
+recrear contenedor. Archivo /usr/local/srs/conf/rtmp2rtc.conf en
+walker-backend.srs-1; capa del contenedor, se pierde al recrearlo. No se cambian
+Compose, APK, SDK, firmware, red, protecciones ni control de movimiento.
+
+Receta de activación, prueba sólo vídeo, comparación y reversión:
+[PICO_VIDEO_BAJA_LATENCIA.md](PICO_VIDEO_BAJA_LATENCIA.md).
+Fuentes/documentos anteriores, benchmark, configuración, recibo y hashes en
+`../Humanoide-vla-evidence/20261016T093737Z_PICO_VIDEO_LOW_LATENCY/`.
+Prueba real sólo vídeo: 437 frames y 74 keyframes, ~12,4 fps. El operador
+confirma «Se ve y el retraso es mucho menor» (OBSERVADO; milisegundos finales
+no medidos). Sin START/Y/HOME ni cambio de modo. La fuente terminó por timeout
+de su heartbeat: el lanzador usaba std_msgs/Empty y CameraPusher espera
+std_msgs/String. Se corrige a String; símbolos del binario, callback y grafo
+ROS confirman el contrato. Prueba sin visor completada: 113 publicaciones,
+más de 55 s, sin nuevo timeout y stop explícito code=0. Verificación posterior:
+sin streams SRS ni publicador de heartbeat de esta prueba. El próximo lanzador
+habitual usará los cambios; no queda un relay independiente que compita con él.
+
+**16-10-2026 — PICO-CAMERA-LATENCY-20261016: retraso visual de unos 3 s comunicado por el operador.**
+
+Estado OBSERVADO, sin medición instrumental. La imagen integrada funciona,
+pero esto no valida su latencia para guiar movimientos. Se recomienda pausar
+el movimiento y soltar grips/gatillos mientras se investiga. La inspección
+posterior encuentra la sesión de vídeo terminada: sin relay PC, sin conexión
+de vídeo a localhost:12345 y sin streams SRS. No se recrea la transmisión ni
+se envía START, STOP, HOME o cambio de modo.
+
+VERIFICADO por lectura: PC → Vision usa Ethernet eno1 / 192.168.11.250; PICO
+conectado por USB, app PID 13513. El flujo SBS decodifica y recodifica a
+2560×720 con x264 zerolatency; las dos colas paralelas usan valores por defecto
+(límite temporal 1 s, no retraso medido ni dos segundos sumables). El registro
+MediaDecoder muestra `No input buffer available: -1` antes de EOF. Estos
+hallazgos justifican investigar procesamiento y colas, pero no demuestran qué
+etapa causó los 3 s. SRS v5.0.213 usa conf/rtmp2rtc.conf; sin cambios aplicados.
+
+PENDIENTE: medir el desfase extremo a extremo con un evento visual y el robot
+inmóvil; aislar cámara/SRS, conversión PC y decodificador PICO antes de ajustar.
+No se modifica código de vídeo, perfiles, red ni protecciones. Evidencia y
+copias documentales anteriores:
+`../Humanoide-vla-evidence/20261016T093449Z_PICO_CAMERA_LATENCY_READONLY/`.
+
+**16-10-2026 — PICO-CAMERA-STALE-ACCEPT-20261016: vídeo integrado verificado por el operador.**
+
+Resultado final: el operador confirma «Ya aparece la imagen» al ejecutar el
+lanzador de teleoperación con `PICO_TELEOP_CAMERA=main` y
+`CRUZR_PICO_CAMERA_LAYOUT=mono-sbs-zed`. El PID 13513 registra una activación
+Listen limpia y acepta la conexión del relay; el PC confirma una conexión
+establecida a `127.0.0.1:12345`. La ventana permanece abierta y no debe volver
+a alternarse Listen durante la sesión. El agente no envió START, Y, HOME ni
+cambios de modo; la sesión queda bajo el mando del operador. Esta verificación
+confirma vídeo, sin certificar movimientos físicos ni latencia.
+
+Evidencia final: `operator-integrated-video-success.json`,
+`success-video-sockets.json` y `receiver-actual-command-live.log` en
+`../Humanoide-vla-evidence/20261016T090843Z_PICO_CAMERA_REPEATED_CLOSE/`.
+
+Historia del fallo y recuperación:
+
+Segundo intento integrado vuelve aBrokenPipe antes del primerkeyframe/START.
+Log nativo ahora conserva causa concreta: stopTCPServer no termina hilo,
+nuevo startTCPServer falla EADDRINUSE; el hilo anterior acepta conexión y acaba
+sin leer vídeo. Un puertoLISTEN por sí solo no demuestra receptor funcional.
+La revisión anterior de puerto no bastaba. No se altera gate de primerkeyframe
+ni control: el propio script aborta y confirma STOP.
+
+Actualización del ensayo: captura continua demuestra que el drenaje funcionó:
+primeraListen posterior limpia, luego OnDisable mientras esperaba datos y nueva
+Listen→EADDRINUSE. Se eliminan instrucciones duplicadas del lanzador/hijo que
+pedían pulsarListen aun con ventana abierta. Flujo corregido: dejarListenOFF,
+ejecutar comando, activar una solaListen al avisoPICO_CAMERA_RECEIVER_WAIT y no
+volver a tocarla. Segundo release no aplicado: USB se reenumeró (transport5→6)
+y perdió mappings, después faltaba cierre reciente en ringbuffer. Ambos gates
+rechazaron antes de conexión; mappings restaurados. Segundo reinicio exclusivo
+de app bajoSTOP, verificando puerto12345 ausente con paquete detenido y tras
+reabrir; PID13513. El intento posterior muestra vídeo, confirmado por el operador.
+No se atribuye a doble arranque automático de initialize ni a necesidad de
+reiniciar el robot. Esta revisión sólo cambia instruccionesPC y checks de vídeo.
+
+Se reinicia sólo XRoboToolkit con STOP pasivo confirmado (amforce-stop/amstart,
+PID6257→6887); se conservan mappingsUSB12345 y63901. Operador reactivaWorking y
+Listen. Nuevo fragmentoPID6887 muestra el mismo atasco; el log no abarca todo
+el arranque, no afirmar que fuera primerListen de toda la vida del proceso.
+Constructor/initialize del APK no inician el servidor. PICOclockmayo2026 no
+sirve para correlaciónPC: se usa PID y orden de eventos.
+
+Recuperación aplicada: operador cierra ventana/ListenOFF; se verifica OnDisable
+reciente posterior aStartListen/startTCPServer, mismoPID, identidad yforward,
+sinESTABvideo/relays/pico_control, backendSTOP pasivo. Sólo para ese estado roto
+probado, una conexión vacía/EOF de vídeo libera el accept antiguo y se verifica
+que desaparece LISTEN12345. No es una sonda de salud ni se aplica a un receptor
+sano. Recibo release-applied.json confirma remote_eof_received/listener_closed,
+control_commands_sent=false. No reinicio de robot, HOME, modo ni START enviados.
+
+Fuente reproducible: scripts/teleoperation/release_pico_camera_stale.py;
+--check por defecto, --apply explícito, --expected-pid y--failed-logJSON del
+mismo proceso, recibo privado nuevo. Rechaza un ciclo nuevo/sano o ventana aún
+abierta; registra intento antes de conectar y resultado/error incluso en fallo.
+Ejemplo EXACTO de esta recuperación (no reutilizar PID/evidencia en otro ciclo):
+
+```bash
+python3 scripts/teleoperation/release_pico_camera_stale.py \
+  --serial PA94Y0MGKB070822G --expected-pid 6887 \
+  --failed-log /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261016T090843Z_PICO_CAMERA_REPEATED_CLOSE/logcat-after-restart.json \
+  --evidence /RUTA/PRIVADA/RECIBO_NUEVO.json --apply
+```
+
+Previo --check ejecutado correctamente en el estado roto; --apply sólo después
+de confirmar cierre del operador y revalidar. La reparación consume
+intencionalmente el receptor descartado y exige activar Listen NUEVO una vez.
+Si no constan cierre reciente/fallo/PID/mapping/STOP, no se aplica. No se borra
+logcat ni se conecta de prueba a un receptor sano. Para volver a estado normal,
+seguir apertura ZEDMINI/Listen tras verificar puerto libre; sin cambio persistente
+APK. Para revertir el códigoPC, restaurar selectivamente before y retirar helper;
+no reinstalar adaptación antigua a ciegas ni reanimar receptor descartado.
+
+También extendido pico_camera_receiver.py: logcat del PID actual, última activación
+Listen y rechazo de timeout/EADDRINUSE/servererror incluso conLISTEN. Si el
+ringbuffer perdió marcadores se advierte lifecycleunavailable (sólo puerto);
+primerkeyframe sigue siendo obligatorio paraSTART. PID cambiado invalida consulta.
+19 pruebas offline pasan (15receiver+4SBS), sintaxis/diffcheck pasan; reparación
+real de vídeo aplicada con recibo y puerto cerrado. Intento integrado posterior
+VERIFICADO por el operador después de una sola activación de Listen.
+
+Evidencia `../Humanoide-vla-evidence/20261016T090843Z_PICO_CAMERA_REPEATED_CLOSE/`,
+app-logcat/listeners/mappings, before, amstop/start, logcatPID6887,
+release-check/release-applied, capturas continuas porPID y after/hashes.
+
+**16-10-2026 — PICO-CAMERA-RECEIVER-20261016: BrokenPipe antes de START.**
+Comando del operador ya usa main/mono-sbs-zed/USB correctos. CheckPC7/7 y tarea
+v4 sólo brazos pasan. SRS acepta start/code0 y forwardPC aceptaTCP; PICO cierra
+antes del primer keyframe (BrokenPipe). El lanzador aborta antes de START y
+confirma STOP. Lectura posterior: sin relay/controlPC, sin streamsSRS, mapping
+USB12345 conservado y receptorPICO12345 nuevamente LISTEN.
+
+VERIFICADO en biblioteca oficialv1.1.1: MediaDecoder acepta una conexión por
+Listen y cierra listener tras EOF/error; el forwardADB local permanece. Por
+eso connect local no demuestra que el receptor remoto esté abierto. Falta el
+log nativo exacto del instante del fallo: reutilización/rearme o cierre de ventana
+son INFERENCIA, no causa única demostrada. Sí se observa release/reinitialize y
+StartListen posteriores. Logcat PICO fecha1mayo2026: no comparar sus marcas con
+el relojPC ni interpretar hora localAndroid como hora de esta prueba.
+
+Corrección PC instalada en fuentes: pico_camera_receiver.py valida identidad/mapping y
+espera LISTEN del puerto remoto con adb shell ss -ltn, sin conectar y sin
+consumir sesión; --check una lectura, --run espera acotada antes de abrirSRS;
+--stop no depende del receptor. MensajeBrokenPipe indica volver a cerrar/abrir
+ZEDMINI→Listen→confirmarIP. No reintenta vídeo automáticamente ni START.
+VALIDACIÓN:13 pruebas offline pasan (9 receptor+4SBS), sintaxis/diffcheck pasan.
+Check real USB posterior rechaza correctamente cámara: forward presente pero
+PICO sin LISTEN12345. No abreSRS ni consume conexión. Esa lectura es posterior
+a la que observó listener abierto: el estado puede cambiar al cerrar ventana
+o suspenderse el visor; evento exacto no determinado. Mantener visor puesto.
+Nuevo intento de vídeo integrado/control por operador todavía PENDIENTE.
+
+Reanudación: conservar visor puesto, Head+Controllers/Send, ventanaRemoteVision
+abierta y una sola sesión. VolverListen si se cerró y ejecutar el mismo comando
+main/mono-sbs-zed/PICO_CAMERA_PICO_IP127.0.0.1 documentado debajo. La comprobación
+nueva debe confirmar receptor remoto antes de arrancarSRS. No se repite cambio
+de efector, HOME, modo ni reinicio. Sin movimiento iniciado por esta revisión.
+Evidencia `../Humanoide-vla-evidence/20261016T090215Z_PICO_CAMERA_BROKEN_PIPE/`
+(logoperador/logcat/ss/mappings/procesos/SRS y before de fuentes/docs).
+
+**16-10-2026 — PICO-CAMERA-USB-20261016: imagen real VERIFICADA; vista independiente cerrada.**
+Cámara frontal del robot visible en XRoboToolkit: operador confirma «Sí, se ve
+completa y estable» en ambos ojos. Fuente main=/sensor/camera/stereo_left/image/raw,
+SRS640×400@12; adaptación PC mono-sbs-zed duplica la imagen completa con bordes,
+sin deformar, a2560×720 para ZEDMINI. Mismo punto de vista en ambos ojos: no
+aporta profundidad estéreo. Primer keyframe y contadores crecientes observados
+(hasta375frames/16keyframes,11,9fps en el corte); latencia extremo a extremo
+no medida. Check pasivo posterior7/7, vr_status1 y STOP. Sin START ni movimiento.
+
+Vídeo por ADB forward12345→12345/USB; XR por reverse63901 y robot por Ethernet
+eno1/.11.250. Forward creado con puerto/libro de mappings previamente libres.
+No usb0 en este momento, por eso se usa destino127.0.0.1 con forward. No cambia
+firmware, APK, SDK ni perfil de movimiento. GStreamer existente, sin paquetes
+instalados. Cuatro pruebas offline pasan, incluido flujo real sintético y
+comparación de ambos ojos, más sintaxis Python/Bash y diffcheck.
+
+Interfaz correcta1.1.1: **Remote Vision → ZEDMINI → Listen → IP del PC emisor
+192.168.11.250 → confirmar**. Listen abre decoder12345 antes del intento de
+conexión13579. Nuestro relay envía directamente vídeo al decoder; no instala
+servidor13579. Un aviso de ese canal por sí solo no demuestra fallo de vídeo.
+La indicación histórica Camera/Request PC camera data no corresponde a esta UI.
+Confirmado por captura, APK y [código oficial v1.1.1](https://github.com/XR-Robotics/XRoboToolkit-Unity-Client/blob/v1.1.1/Assets/Scripts/UI/UICameraCtrl.cs)
+y [perfiles oficiales](https://github.com/XR-Robotics/XRoboToolkit-Unity-Client/blob/v1.1.1/Assets/StreamingAssets/video_source.yml).
+
+Receta desde repoPC; comprobar `adb -s PA94Y0MGKB070822G forward --list` y añadir
+mapping sólo si falta (no sustituir uno de otra sesión):
+
+```bash
+adb -s PA94Y0MGKB070822G forward --no-rebind tcp:12345 tcp:12345
+bash scripts/teleoperation/cruzr_pico_camera.sh --check --camera main --pico-ip 127.0.0.1 --layout mono-sbs-zed
+bash scripts/teleoperation/cruzr_pico_camera.sh --run --camera main --pico-ip 127.0.0.1 --layout mono-sbs-zed
+```
+
+La sesión independiente terminó por EOF después de la prueba visual. Para cerrar
+sólo esa vista desde otra terminal (o Ctrl+C en su terminal):
+
+```bash
+bash scripts/teleoperation/cruzr_pico_camera.sh --stop --camera main --pico-ip 127.0.0.1
+```
+
+Antes de usar cámara dentro de teleoperación: terminar la vista independiente,
+comprobar su cierre y volver a abrir Listen en el visor; el decoder admite una
+conexión. Con tarea v4 cargada y gates físicos actuales, ejecutar:
+
+```bash
+PICO_TELEOP_CAMERA=main CRUZR_PICO_CAMERA_LAYOUT=mono-sbs-zed \
+PICO_CAMERA_PICO_IP=127.0.0.1 CRUZR_IFACE=eno1 CRUZR_PC_IP=192.168.11.250 \
+bash scripts/teleoperation/probar_pico_v4.sh --teleoperate
+```
+
+El lanzador conserva confirmaciones físicas y exige primer keyframe antes de
+START. Este comando de control NO se ejecutó en esta intervención. `main` es
+valor válido de PICO_TELEOP_CAMERA; on/usb no lo son. El layout no convierte
+la cámara del robot en una cámara ZED: adapta la presentación al perfil del APK.
+Heartbeat de vídeo acotado900s. Limpieza posterior observada: no hay relayPC ni
+streamsSRS; no queda una vista independiente que compita con teleoperación.
+Al terminar usoUSB, retirar sólo el forward creado, conservando reverseXR:
+
+```bash
+adb -s PA94Y0MGKB070822G forward --remove tcp:12345
+```
+
+Evidencia `../Humanoide-vla-evidence/20261016T084628Z_PICO_CAMERA_USB/`: before,
+forward/listeners, capturas, video-live.log, confirmación del operador,
+passive-check-video-live y after/hashes. Fuentes PC: cruzr_pico_camera.sh,
+pico_camera_relay.py, nuevo pico_camera_sbs.py y test_pico_camera_sbs.py;
+corregida ayuda UI del lanzador. Rollback: cerrar exclusivamente vídeo,
+comprobar fin de heartbeat/SRS, retirar forward12345 y restaurar selectivamente
+fuentes PC desde before si se descarta. Preservar reverse63901 y control.
 
 **16-10-2026 — PICO-XR-USB-20261016: USB y seguimiento VERIFICADOS.**
 Tras migración a v4 y HOME, operador solicita configurar gafas. PICO físico

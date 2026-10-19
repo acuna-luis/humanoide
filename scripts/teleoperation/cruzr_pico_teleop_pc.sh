@@ -800,24 +800,27 @@ endpoint_ip() {
 
 discover_pico_stream() {
   local endpoints local_endpoint peer_endpoint detected_pc_ip detected_pico_ip
+  local local_addresses
   endpoints="$(ss -Htn | awk '
-    $1 == "ESTAB" && $4 ~ /:63901$/ {print $4, $5; exit}
+    $1 == "ESTAB" && $4 ~ /:63901$/ {print $4, $5}
   ')"
   [[ -n "$endpoints" ]] || return 1
-  read -r local_endpoint peer_endpoint <<<"$endpoints"
-  detected_pc_ip="$(endpoint_ip "$local_endpoint")"
-  detected_pico_ip="$(endpoint_ip "$peer_endpoint")"
-  [[ "$detected_pc_ip" =~ ^[0-9]+(\.[0-9]+){3}$ ]] || return 1
-  [[ "$detected_pico_ip" =~ ^[0-9]+(\.[0-9]+){3}$ ]] || return 1
-
-  if [[ -n "$pc_pico_ip" && "$pc_pico_ip" != "$detected_pc_ip" ]]; then
-    die "PICO_PC_IP=$pc_pico_ip no coincide con el stream activo $detected_pc_ip."
-  fi
-  if [[ -n "$pico_ip" && "$pico_ip" != "$detected_pico_ip" ]]; then
-    die "PICO_IP=$pico_ip no coincide con el stream activo $detected_pico_ip."
-  fi
-  pc_pico_ip="$detected_pc_ip"
-  pico_ip="$detected_pico_ip"
+  local_addresses="$(ip -4 -o addr show | awk '{split($4,a,"/"); print a[1]}')" || return 1
+  # A disconnected USB interface can leave an ESTAB socket behind. Accept only
+  # endpoints still assigned locally, and search all peers for explicit hints.
+  while read -r local_endpoint peer_endpoint; do
+    detected_pc_ip="$(endpoint_ip "$local_endpoint")"
+    detected_pico_ip="$(endpoint_ip "$peer_endpoint")"
+    [[ "$detected_pc_ip" =~ ^[0-9]+(\.[0-9]+){3}$ ]] || continue
+    [[ "$detected_pico_ip" =~ ^[0-9]+(\.[0-9]+){3}$ ]] || continue
+    grep -Fxq -- "$detected_pc_ip" <<<"$local_addresses" || continue
+    [[ -z "$pc_pico_ip" || "$pc_pico_ip" == "$detected_pc_ip" ]] || continue
+    [[ -z "$pico_ip" || "$pico_ip" == "$detected_pico_ip" ]] || continue
+    pc_pico_ip="$detected_pc_ip"
+    pico_ip="$detected_pico_ip"
+    return 0
+  done <<<"$endpoints"
+  return 1
 }
 
 has_established_pico_stream() {
@@ -1200,8 +1203,9 @@ start_pico_camera() {
   cat <<EOF
 
 VÍDEO OBLIGATORIO ANTES DE START
-En el PICO abra Remote Vision y pulse Listen. Con CRUZR_PICO_CAMERA_LAYOUT=mono-sbs-zed,
-seleccione ZEDMINI e introduzca la IP del PC emisor. No cierre
+Si la ventana de vídeo ya está abierta, no pulse Listen ni la cierre.
+Si está cerrada, espere el aviso PICO_CAMERA_RECEIVER_WAIT y active UNA SOLA VEZ
+Remote Vision → ZEDMINI → Listen; confirme la IP del PC emisor. No cierre
 XRoboToolkit ni desactive Head + Controllers / Send data / Working. El robot
 seguirá desarmado hasta recibir el primer keyframe de la cámara '$teleop_camera'.
 

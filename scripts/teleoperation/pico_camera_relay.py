@@ -188,7 +188,9 @@ def connect_pico(host: str, port: int, wait_seconds: int) -> socket.socket:
         try:
             sock = socket.create_connection((host, port), timeout=2)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-            sock.settimeout(5)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)
+            sock.settimeout(1)
             return sock
         except OSError as exc:
             last_error = exc
@@ -249,8 +251,8 @@ def relay(args: argparse.Namespace) -> int:
             if item is None:
                 continue
             access_unit, keyframe = item
-            pico.sendall(struct.pack(">I", len(access_unit)))
-            pico.sendall(access_unit)
+            # One framed write avoids a tiny length packet waiting separately.
+            pico.sendall(struct.pack(">I", len(access_unit)) + access_unit)
             frames += 1
             keyframes += int(keyframe)
             if not ready_written and keyframe:
@@ -275,7 +277,11 @@ def relay(args: argparse.Namespace) -> int:
                 )
                 last_report = now
     except (BrokenPipeError, ConnectionResetError) as exc:
-        raise RelayError(f"el PICO cerró la cámara: {exc}") from exc
+        raise RelayError(
+            f"el PICO cerró la cámara: {exc}. Cierre la ventana remota y vuelva a "
+            "ZEDMINI → Listen → confirmar IP antes de otra sesión; no cierre "
+            "la ventana durante la transmisión"
+        ) from exc
     finally:
         if source is not None:
             source.close()

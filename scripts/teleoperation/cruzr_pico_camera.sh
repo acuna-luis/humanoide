@@ -12,6 +12,7 @@ camera_topic="${CRUZR_PICO_CAMERA_TOPIC:-}"
 camera_width="${PICO_CAMERA_WIDTH:-640}"
 camera_height="${PICO_CAMERA_HEIGHT:-400}"
 camera_fps="${PICO_CAMERA_FPS:-12}"
+camera_gop_frames="${PICO_CAMERA_GOP_FRAMES:-}"
 camera_wait_seconds="${PICO_CAMERA_WAIT_SECONDS:-60}"
 camera_layout="${CRUZR_PICO_CAMERA_LAYOUT:-passthrough}"
 robot_user="${CRUZR_ROBOT_USER:-walker}"
@@ -63,6 +64,7 @@ Fuentes configurables equivalentes:
   CRUZR_PICO_CAMERA=main|stereo-right|waist|chassis
   CRUZR_PICO_CAMERA_TOPIC=/sensor/camera/.../raw
   CRUZR_PICO_CAMERA_LAYOUT=mono-sbs-zed   (seleccionar ZEDMINI → Listen en PICO)
+  PICO_CAMERA_GOP_FRAMES=6              (por defecto medio segundo de vídeo)
 EOF
 }
 
@@ -189,6 +191,10 @@ fi
   die "PICO_CAMERA_HEIGHT debe estar entre 240 y 1080."
 [[ "$camera_fps" =~ ^[0-9]+$ ]] && ((camera_fps >= 5 && camera_fps <= 30)) ||
   die "PICO_CAMERA_FPS debe estar entre 5 y 30."
+[[ -n "$camera_gop_frames" ]] || camera_gop_frames="$((camera_fps / 2))"
+[[ "$camera_gop_frames" =~ ^[0-9]+$ ]] &&
+  ((camera_gop_frames >= 1 && camera_gop_frames <= 60)) ||
+  die "PICO_CAMERA_GOP_FRAMES debe estar entre 1 y 60."
 case "$camera_layout" in
   passthrough|mono-sbs-zed) ;;
   *) die "Layout inválido: $camera_layout" ;;
@@ -276,7 +282,7 @@ REMOTE
   [[ "$topic_type" == shm_msgs/msg/Image* || "$topic_type" == sensor_msgs/msg/Image ]] ||
     die "Tipo de cámara inesperado para $camera_topic: $topic_type"
   printf 'CAMERA_SOURCE_OK=%s,%s\n' "$camera_topic" "$topic_type"
-  printf 'CAMERA_PROFILE=%s,%sx%s@%sfps,layout=%s\n' "$camera" "$camera_width" "$camera_height" "$camera_fps" "$camera_layout"
+  printf 'CAMERA_PROFILE=%s,%sx%s@%sfps,layout=%s,gop=%s\n' "$camera" "$camera_width" "$camera_height" "$camera_fps" "$camera_layout" "$camera_gop_frames"
 
   local pico_route
   pico_route="$(ip -4 route get "$pico_ip" 2>/dev/null | head -n1)" ||
@@ -294,7 +300,7 @@ start_camera_stream() {
   response="$({
     run_vision_ssh bash -s -- \
       "$ros_container" "$vision_ip" "$camera_topic" \
-      "$camera_width" "$camera_height" "$camera_fps" <<'REMOTE'
+      "$camera_width" "$camera_height" "$camera_fps" "$camera_gop_frames" <<'REMOTE'
 set -Eeuo pipefail
 container="$1"
 vision_ip="$2"
@@ -302,18 +308,20 @@ topic="$3"
 width="$4"
 height="$5"
 fps="$6"
+gop="$7"
 docker exec -i "$container" bash -s -- \
-  "$vision_ip" "$topic" "$width" "$height" "$fps" <<'INNER'
+  "$vision_ip" "$topic" "$width" "$height" "$fps" "$gop" <<'INNER'
 set -Eeo pipefail
 vision_ip="$1"
 topic="$2"
 width="$3"
 height="$4"
 fps="$5"
+gop="$6"
 source /opt/ros/humble/setup.bash
 export ROS2CLI_DISABLE_DAEMON=1
 timeout 12 ros2 service call /streaming/start rosa_msgs/srv/VideoStream \
-  "{srs_url: '$vision_ip:1935', topic_name: '$topic', topic_type: 'sensor_msgs::msg::Image', encode_width: $width, encode_height: $height, capture_fps: $fps, encode_fps: $fps, gop_size: $((fps * 2)), codec_name: 'h264_nvmpi'}"
+  "{srs_url: '$vision_ip:1935', topic_name: '$topic', topic_type: 'sensor_msgs::msg::Image', encode_width: $width, encode_height: $height, capture_fps: $fps, encode_fps: $fps, gop_size: $gop, codec_name: 'h264_nvmpi'}"
 INNER
 REMOTE
   } 2>&1)" || {
@@ -350,7 +358,9 @@ set -Eeo pipefail
 heartbeat="$1"
 source /opt/ros/humble/setup.bash
 export ROS2CLI_DISABLE_DAEMON=1
-exec timeout 900 ros2 topic pub --rate 2 "$heartbeat" std_msgs/msg/Empty '{}'
+# CameraPusher subscribes to std_msgs/String. Empty is a different DDS type:
+# its publisher can stay alive while the robot receives no video heartbeat.
+exec timeout 900 ros2 topic pub --rate 2 "$heartbeat" std_msgs/msg/String '{data: heartbeat}'
 INNER
 REMOTE
   heartbeat_pid=$!
@@ -419,6 +429,17 @@ REMOTE
   printf 'ROBOT_CAMERA_STREAM_STOPPED=%s\n' "$camera_topic"
 }
 
+check_usb_video_receiver() {
+  local wait_seconds="$1"
+  if [[ "$pico_ip" == 127.0.0.1 ]]; then
+    # ADB's local forward accepts TCP even when the one-session remote decoder
+    # has already closed. Inspect PICO's listener without consuming a session.
+    python3 "$script_dir/pico_camera_receiver.py" \
+      --serial "$pico_serial" --target "${pico_adb_target:-$pico_serial}" \
+      --port "$pico_port" --wait "$wait_seconds"
+  fi
+}
+
 cleanup() {
   local status="${1:-0}"
   ((cleanup_done == 0)) || return "$status"
@@ -444,6 +465,7 @@ cleanup() {
 case "$mode" in
   --check)
     check_camera_source
+    check_usb_video_receiver 0
     printf 'PICO_CAMERA_CHECK_OK=1; no se abrió stream ni se movió el robot.\n'
     ;;
   --stop)
@@ -454,6 +476,15 @@ case "$mode" in
     ;;
   --run)
     check_camera_source
+    cat <<'EOF'
+
+PICO: si la ventana de vídeo ya está abierta, déjela como está: no pulse Listen.
+Si está cerrada, seleccione ZEDMINI y active Listen UNA SOLA VEZ al ver la espera
+del receptor. Confirme la IP del PC y mantenga la ventana abierta.
+No vuelva a alternar Listen durante el arranque o la transmisión.
+
+EOF
+    check_usb_video_receiver "$camera_wait_seconds"
     if [[ -z "$ready_file" ]]; then
       local_ready_file="$(mktemp --tmpdir humanoide-pico-camera-ready.XXXXXX)"
       ready_file="$local_ready_file"
@@ -466,10 +497,8 @@ case "$mode" in
 
 VISTA DE CÁMARA EN XRoboToolkit
 
-En XRoboToolkit 1.1.1 abra Remote Vision; para mono-sbs-zed seleccione ZEDMINI,
-pulse Listen e introduzca la IP del PC emisor. Mantenga el visor puesto.
-El visor abrirá su listener
-$pico_ip:$pico_port; este proceso esperará ${camera_wait_seconds}s.
+Mantenga el visor puesto y la ventana de vídeo abierta, sin volver a pulsar Listen.
+Destino de vídeo: $pico_ip:$pico_port.
 
 Fuente seleccionada: $camera_topic ($camera, ${camera_width}x${camera_height}@${camera_fps}).
 Esto sólo transmite vídeo y no envía START ni órdenes al robot.

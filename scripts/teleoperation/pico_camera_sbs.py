@@ -43,18 +43,28 @@ def check_dependencies() -> None:
 
 def _pipeline(source: list[str]) -> list[str]:
     # AVC caps let x264enc link directly to flvmux; h264parse is not required.
+    # Drop only decoded images. Dropping arbitrary H.264 access units breaks
+    # inter-frame references. Keep the eye branches paired, with one slot each.
     return ['gst-launch-1.0', '-q', *source,
+            '!', 'queue', 'name=latest_image', 'max-size-buffers=1',
+            'max-size-bytes=0', 'max-size-time=0', 'leaky=downstream',
             '!', 'videoconvert', '!', 'videoscale', 'add-borders=true',
             '!', 'video/x-raw,format=I420,width=1280,height=720,pixel-aspect-ratio=1/1',
             '!', 'tee', 'name=t',
-            'compositor', 'name=c', 'sink_0::xpos=0', 'sink_1::xpos=1280',
+            'compositor', 'name=c', 'latency=0',
+            'sink_0::xpos=0', 'sink_1::xpos=1280',
             '!', 'video/x-raw,format=I420,width=2560,height=720,pixel-aspect-ratio=1/1',
             '!', 'x264enc', 'tune=zerolatency', 'speed-preset=ultrafast',
-            'bitrate=4000', 'key-int-max=24', 'byte-stream=false',
-            '!', 'video/x-h264,stream-format=avc,alignment=au',
-            '!', 'flvmux', 'streamable=true', '!', 'fdsink', 'fd=1',
-            't.', '!', 'queue', '!', 'c.sink_0',
-            't.', '!', 'queue', '!', 'c.sink_1']
+            'bitrate=4000', 'key-int-max=6', 'byte-stream=false',
+            'bframes=0', 'rc-lookahead=0', 'sync-lookahead=0',
+            'threads=2', 'sliced-threads=true', 'vbv-buf-capacity=100',
+            '!', 'video/x-h264,stream-format=avc,alignment=au,profile=constrained-baseline',
+            '!', 'flvmux', 'streamable=true', 'latency=0',
+            '!', 'fdsink', 'fd=1', 'sync=false',
+            't.', '!', 'queue', 'max-size-buffers=1',
+            'max-size-bytes=0', 'max-size-time=0', '!', 'c.sink_0',
+            't.', '!', 'queue', 'max-size-buffers=1',
+            'max-size-bytes=0', 'max-size-time=0', '!', 'c.sink_1']
 
 
 class _PipelineStream(io.RawIOBase):
@@ -125,9 +135,13 @@ def open_sbs_source(url: str, timeout: float) -> BinaryIO:
         raise ValueError('SBS source timeout must be finite and positive')
     check_dependencies()
     source = ['souphttpsrc', 'location=' + url, 'timeout=' + str(math.ceil(timeout)),
+              'is-live=true',
               '!', 'flvdemux', '!', 'video/x-h264,stream-format=avc,alignment=au',
-              '!', 'avdec_h264']
-    print('SBS_VIDEO_LAYOUT=mono-duplicated,2560x720; encoder=x264; bitrate=4000kbps',
+              # Auto frame threading holds multiple frames before output. At
+              # 12 fps it added ~1.27 s in the local live-source benchmark.
+              '!', 'avdec_h264', 'max-threads=1', 'thread-type=slice']
+    print('SBS_VIDEO_LAYOUT=mono-duplicated,2560x720; encoder=x264; bitrate=4000kbps; '
+          'latency=low; decoder-threads=1; latest-raw-frame=1; gop=6',
           file=sys.stderr, flush=True)
     return _PipelineStream(_pipeline(source), timeout)
 

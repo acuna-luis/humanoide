@@ -1,5 +1,13 @@
 # HOME v8 candidata: apertura inicial repartida
 
+**16-10-2026 — HOME-FAILED-20261016: intento posterior a PICO abortado.**
+Lectura actual confirma home.xml con el mismo SHAd9e946… descrito debajo.
+Fallan los primeros ajustes de1s de ambos brazos y aborta el paralelo corporal;
+no se llega a bajada/cierre. Ya antes del goal hay avisos HW de salto >0,087rad
+y error4099 en ambos motores de cabeza. El origen sigue PENDIENTE; no demuestra
+que falte duración ni valida ampliar límites. No hubo modificaciones de XML,
+control o movimiento del agente. [Diagnóstico y evidencia](../incidents/2026-10-16_HOME_MOVE_TO_GOAL_FAILED.md).
+
 **28-09-2026 — lectura tras incidente de caja: HOME v8 conserva movimiento paralelo.**
 Nuevo boot Motion `cd0b8a7b-94d6-4fa2-a56b-561d13a603f2`; `home.xml` leído
 directamente conserva SHA d9e9462792b41300d352604b53ea2a4890a9382e942321990708f6ded2e26ccb.
