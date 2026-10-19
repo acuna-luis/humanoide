@@ -1,5 +1,12 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+### PICO-USB-CONNECT-20261019 — diagnóstico de conexión USB sin reverse
+
+- **Fecha/zona/estado:** 19-10-2026 Europe/Madrid. VERIFICADO: visor PA94Y0MGKB070822G USB1-2/transport1, Awake; XR PC escucha63901 pero no hay flujo TCP ni reverse ADB. Configurador --check confirma STOP y termina1 por mapping ausente. Ruta robot eno1/.11.250.
+- **Efecto auxiliar/destino:** la primera consulta `adb devices -l` inicia automáticamente el daemon ADB del PC en5037, antes detenido. No se instala configuración, túnel, paquete o servicio persistente; sin START/STOP/HOME/modo/reinicio robot/PICO. Se deja el daemon disponible para el siguiente paso, sin matar sesiones ajenas.
+- **Fuente y aplicación pendiente:** scripts/teleoperation/configure_pico_xr_usb.sh --configure instala sólo reverse63901 bajo STOP y valida identidad/listener; después --check y PC service IP127.0.0.1/Connect en XRoboToolkit. No ejecutado durante esta revisión. Tracking, control y recuperación del HOME previo no comprobados.
+- **Reversión/evidencia:** si el operador instala el túnel, --remove bajo STOP retira sólo63901. Evidencia externa ../Humanoide-vla-evidence/20261019T074152Z_PICO_USB_CONNECT_READONLY/, consultas JSON, findings, hashes y before/after documental. No se restaura ni se cambia automáticamente otro transporte.
+
 ### HOME-FAILED-20261016 — diagnóstico sin cambios de control
 
 - **Fecha/zona/estado:** 16-10-2026 Europe/Madrid. HOME del operador abortado, OBSERVADO. Origen de discontinuidad y fallo de cabeza PENDIENTE; no recuperación ejecutada.

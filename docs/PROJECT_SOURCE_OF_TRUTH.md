@@ -1,5 +1,16 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**19-10-2026 — PICO-USB-CONNECT-20261019: falta el reverse XR; diagnóstico verificado.**
+Visor PA94Y0MGKB070822G conectado por USB1-2/transport1 y despierto. Servicio
+XR63901 escuchando, sin conexiones XR; `adb reverse --list` vacío. --check del
+configurador confirma STOP pero termina rc1 por mapping ausente. Ruta al robot
+eno1/.11.250. No se ha instalado el túnel ni iniciado control: revisión solicitada.
+ADB devices inicia automáticamente el daemon local5037 antes detenido; único
+efecto auxiliar observado, sin cambio persistente. Receta bajo STOP:
+`bash scripts/teleoperation/configure_pico_xr_usb.sh --configure`, después
+--check e IP127.0.0.1/Connect en el visor. Aplicación y conexión PENDIENTES.
+Evidencia: ../Humanoide-vla-evidence/20261019T074152Z_PICO_USB_CONNECT_READONLY/.
+
 **16-10-2026 — HOME-FAILED-20261016: abortado con discontinuidad de consignas y fallos de cabeza previos.**
 Operador ejecuta force_home; goal59860eee… devuelve MoveToGoalFailed/7104050/status6.
 Lectura robot: antes del goal ya había advertencias de salto >0,087rad y

@@ -1,5 +1,26 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**19-10-2026 — PICO-USB-CONNECT-20261019: túnel XR ausente.**
+PICO físico PA94Y0MGKB070822G por USB1-2, Awake; servicio PC63901 escucha,
+sin flujo TCP establecido. Reverse ADB vacío. Configurador --check confirma
+STOP y devuelve1 por mapping ausente. Ethernet al robot sigue eno1/.11.250.
+Sólo diagnóstico; no se ejecuta --configure ni movimiento. La primera consulta
+ADB inicia automáticamente el daemon local5037, sin crear túneles ni autostart.
+
+Receta para el operador, desde raíz del repositorio y con backend STOP:
+
+```bash
+bash scripts/teleoperation/configure_pico_xr_usb.sh --configure
+bash scripts/teleoperation/configure_pico_xr_usb.sh --check
+```
+
+Después, en XRoboToolkit usar PC service IP127.0.0.1, Connect,
+Head+Controllers y Send data con el visor puesto. No pulsar Y para comprobar
+conexión. El check del túnel no demuestra tracking ni salud Motion: verificar
+éstos antes de teleoperar. Reparación/conexión actuales PENDIENTES.
+Reversión del túnel si se instala: mismo configurador --remove bajo STOP.
+Evidencia: ../Humanoide-vla-evidence/20261019T074152Z_PICO_USB_CONNECT_READONLY/.
+
 **16-10-2026 — HOME-FAILED-20261016: HOME posterior a PICO abortado.**
 force_home del operador termina MoveToGoalFailed/7104050/status6. Antes del
 goal ya hay saltos de consigna >0,087rad y error4099 en ambos ejes de cabeza.
