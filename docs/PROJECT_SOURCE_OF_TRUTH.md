@@ -1,5 +1,105 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**19-10-2026 — APP2-VISION-RUNTIME-20261019: comprobado en Vision real, sólo lectura.**
+[Informe, decisión y límites](app2/VERIFICACION_ROBOT_Y_ELECCION_VISION.md).
+Jetson AGX Orin/aarch64, RAM61,37GiB, L4T36.3, CUDA12.2 y TensorRT8.6.2.3;
+import TensorRT8.6.2 correcto en imagen vendor. MemAvailable~11,4GiB, GR3D0–99%
+en ventana corta: recursos compartidos, no benchmark. ROS2/rclpy/shm_msgs en
+contenedor ROS separado; cuatro canales RGB/profundidad recibidos con dos
+timestamps distintos y tipos SHM. Las primeras consultas con entorno incorrecto
+fallaron, corregidas por descubrimiento; no fallo de cámara.
+Ruta propuesta: Roboflow para datos/entreno, ONNX y motor propio TRT8.6 en Vision;
+primer candidato pequeño YOLO11n-seg, con licencia/exportación/paridad/rendimiento
+pendientes. RF-DETR-seg sigue como alternativa. Imagen actual Roboflow Jetson6.2
+consultada usa CUDA>=12.6/TRT10.7, no se presume compatible ni se instala.
+No Motion, movimientos, servicios de mando, instalaciones o reinicios. Evidencia:
+../Humanoide-vla-evidence/20261019T094304Z_APP2_VISION_RUNTIME_READONLY/.
+
+**19-10-2026 — APP2-CLOUD-ONBOARD-20261019: destino aclarado, inferencia en el robot.**
+El usuario quiere entrenar/preparar en nube y ejecutar dentro de Vision, no
+depender del PC como destino final. [Comparativa y ruta propuesta](app2/PLAN_Y_PREGUNTAS.md#7-velocidad-y-evaluación).
+Roboflow es primera candidata por facilidad; Ultralytics Platform alternativa
+para YOLO y TAO alternativa técnica. Exportación y compatibilidad a bordo siguen
+PENDIENTES: probar modelos pequeños y verificar runtime Jetson real antes de
+seleccionar engine. No hay benchmark, instalación, subida de fotos ni acceso al
+robot en esta investigación; inventario Orin/CUDA/TensorRT citado es histórico.
+
+**19-10-2026 — APP2-PLAN-20261019: plan y fotografía exacta de fábrica conservados.**
+Nombre acordado: app2. [Plan, hitos y preguntas](app2/PLAN_Y_PREGUNTAS.md),
+[requisitos del cliente](app2/REQUISITOS_CLIENTE.md) e
+[índice de imágenes](app2/FOTOS_Y_FUENTES.md). VERIFICADO: se conserva la lámina
+exacta aportada, PNG2189×630/SHA256e5b22e09…764e, junto a cinco PNG de cámaras,
+sin modificar píxeles. Archivo privado estable y paquete de traslado en
+../Humanoide-vla-evidence/app2/reference/; manifiesto versionado con hashes.
+La terminología ITR/OTR se ha contrastado; la referencia concreta sigue pendiente.
+El título OTR puede iniciar el apartado siguiente: no se considera una discrepancia
+confirmada. Esta aclaración actualiza la interpretación inicial registrada debajo.
+Siguiente hito: detectar instancias visibles y preparar datos variados offline;
+identificación exacta, pose y manipulación son fases posteriores. No hay detector
+app2 entrenado/instalado ni movimiento en esta intervención documental.
+Respaldo, recibo y verificación:
+../Humanoide-vla-evidence/20261019T090733Z_APP2_DOCUMENTATION/.
+
+**19-10-2026 — ITR-IDENTITY-REQ-20261019: requisito aportado de identificación y alimentación.**
+Captura del usuario titulada ITR Material Feed and Empty Container Handling:
+comparar material ID esperado/real antes de cargar transportador/presentación;
+registrar resultado, no-read/misread, reintentos y excepción en interfaz sección7
+(contrato no aportado). No equivale a capacidad ya instalada ni define OCR/QR.
+Pie de imágenes dice OTR: discrepancia y códigos exactos PENDIENTES de aclarar.
+Propuesta visual debe distinguir referencia concreta y admitir resultado
+desconocido, sin deducir identidad exacta sólo del soporte o de una etiqueta
+de caja. Sin inspecciones físicas, cambios de control o implementación nueva.
+[Requisito y límites](guides/CATALOGO_FUNCIONALIDADES_CRUZR_S2.md#car-part-vision-20261019--propuesta-de-detector-de-referencia-de-pieza).
+Evidencia: ../Humanoide-vla-evidence/20261019T085657Z_ITR_REQUIREMENTS_SCREENSHOT/.
+
+**19-10-2026 — CAR-PART-VISIBLE-20261019: encuadre de cabeza ahora útil; referencia pendiente.**
+Tras aviso del operador se capturan imágenes nuevas, sin movimiento del agente.
+Cabeza rectificada960×576 y raw1920×1536 muestran bandeja completa de cartón
+sobre contenedor azul con varias piezas metálicas alargadas; cintura640×360
+continúa cortando la bandeja. Puede iniciarse estudio de detección en ese
+encuadre; identidad/código objetivo y diferencias frente a referencias parecidas
+PENDIENTES, solicitadas al operador. No hay detector nuevo, entrenamiento,
+pose métrica ni agarre validado. Capturas y fuentes privadas:
+../Humanoide-vla-evidence/20261019T084059Z_CAR_PART_VISIBLE_READONLY/.
+
+**19-10-2026 — HEAD-ACTION-BUSY-20261019: bloqueo identificado como tarea PICO v4 activa.**
+UUID27318de6-c1a6-4d86-a9c5-6f8b127df3da corresponde a
+teleoperation/cruzr_v4_pico_teleoperation, iniciada09:22 Europe/Madrid
+(15:22 nativo+08). Registro carga Hand typev4, Head tracking1, Head tele mode1,
+waist0/leg0. Backend PC actual STOP/vr_status0 no termina esa tarea de Motion.
+El script de cabeza no envió un goal: bloqueo de exclusión correcto. Dentro de
+una sesión PICO preparada existe seguimiento de cabeza por visor; no habilitado
+desde esta revisión. No cancelaciones, cambios a auto_task/HOME ni movimientos.
+Evidencia: ../Humanoide-vla-evidence/20261019T083626Z_HEAD_ACTION_BUSY_READONLY/.
+
+**19-10-2026 — HEAD-OBSERVE-20261019: comando de cabeza compatible con manos; sin movimiento del agente.**
+cruzr_blue_workbin_cycle.sh añade --check-head y admite SPS exclusivamente para
+ese modo y --prepare-vision. Modos de caja/brazos conservan HW_TYPE de abrazaderas.
+Objetivo nativo yaw0/pitch−0,43rad/2s, XML actual f3a73626…ea46c1 contrastado
+en Motion SPS. Se conserva preflight completo y se rechaza --fast en cabeza;
+confirmación específica BAJAR CABEZA. No cambia modo, perfil ni instala tareas.
+Sintaxis y36pruebas offline pasan. --check-head real admite SPS y valida salud20D
+(velocidad0, delta máximo0,003039rad), pero termina27/ACTION_BUSY por goal activo;
+no alcanza lecturas de paros/batería/cargador. No se cancela la acción ni se cambia
+modo. Movimiento y encuadre físico NO ensayados.
+Lectura pasiva posterior: PC ya STOP/vr_status0; eso no elimina el goal activo
+de Motion ni autoriza cambiar a auto_task/HOME desde la postura actual.
+[Receta](guides/CATALOGO_FUNCIONALIDADES_CRUZR_S2.md#63-preparar-únicamente-la-visión).
+Evidencia: ../Humanoide-vla-evidence/20261019T082535Z_HEAD_ONLY_SCRIPT/.
+
+**19-10-2026 — CAR-PART-VISION-20261019: inspección pasiva y estrategia; detector pendiente.**
+Operador solicita reconocer una pieza de coche sobre espuma blanca y confirma
+que debe distinguirla de piezas parecidas. Cuatro imágenes actuales leídas de
+Vision: cabeza rectificada960×576, izquierda raw1920×1536 y cintura/chasis640×360.
+La espuma queda cortada en borde inferior de cabeza y superior de cintura;
+no se puede identificar la pieza objetivo completa. Ninguna cámara se movió.
+PC RTX4070 Laptop/8188MiB verificada; ruta Vision eno1. Propuesta: encuadre útil,
+segmentador pequeño entrenado con referencia objetivo y confundibles, recorte
+de zona de trabajo, inferencia GPU con cola de última imagen y validación por
+referencia; TensorRT sólo después de medir. Sin entrenamiento/instalación/control.
+[Detalle y fuentes](guides/CATALOGO_FUNCIONALIDADES_CRUZR_S2.md#car-part-vision-20261019--propuesta-de-detector-de-referencia-de-pieza).
+Evidencia: ../Humanoide-vla-evidence/20261019T080612Z_CAR_PART_VISION_READONLY/.
+
 **19-10-2026 — PICO-USB-CONNECT-20261019: falta el reverse XR; diagnóstico verificado.**
 Visor PA94Y0MGKB070822G conectado por USB1-2/transport1 y despierto. Servicio
 XR63901 escuchando, sin conexiones XR; `adb reverse --list` vacío. --check del

@@ -1,5 +1,135 @@
 # Catálogo operativo de funcionalidades del Cruzr S2
 
+## CAR-PART-VISION-20261019 — propuesta de detector de referencia de pieza
+
+**APP2-VISION-RUNTIME-20261019 — unidad real comprobada.**
+[Hardware, runtime, cámaras y decisión de despliegue](../app2/VERIFICACION_ROBOT_Y_ELECCION_VISION.md).
+Vision AGX Orin64GB/aarch64 con L4T36.3/CUDA12.2/TRT8.6.2.3 y mensajes de
+cámara SHM; cuatro canales con recepción pasiva verificada. La propuesta usa
+entrenamiento en nube y ONNX/motor propio compatible en Vision. No instala el
+contenedor actual Roboflow Jetson6.2 suponiendo compatibilidad ni modifica el
+detector de cajas vendor. Modelo app2, identificación y benchmark pendientes.
+
+**APP2-PLAN-20261019 — documentación canónica de esta aplicación.**
+El usuario la denomina **app2**. [Plan, hitos y preguntas pendientes](../app2/PLAN_Y_PREGUNTAS.md),
+[requisitos](../app2/REQUISITOS_CLIENTE.md) e [imágenes originales](../app2/FOTOS_Y_FUENTES.md).
+Se conserva la lámina exacta de fábrica2189×630 y cinco capturas del robot,
+con hashes y paquete privado. Primer hito: detectar/separar instancias visibles;
+identificar material ID y manipular requieren validaciones posteriores.
+No se ha entrenado ni instalado un detector app2. La aclaración ITR/OTR
+siguiente actualiza la interpretación inicial del título como discrepancia.
+
+**Requisito aportado — ITR-IDENTITY-REQ-20261019.** La captura del documento
+del usuario se titula *ITR Material Feed and Empty Container Handling*. Exige
+confirmar el **material ID esperado frente al real antes de cargar** el
+transportador o dispositivo de presentación, y registrar resultado de lectura,
+no-read/misread, número de reintentos y estado de excepción en la interfaz de
+desarrollo de la sección7. Esa sección, protocolo, documento original y versión
+no se han aportado. El usuario aclara ITR como Inner Tie Rod y OTR como Outer
+Tie Rod, terminología contrastada en la fuente primaria enlazada en app2.
+El título OTR puede iniciar el apartado siguiente; su posición no demuestra
+que las fotos sean OTR ni que exista una discrepancia. La identidad de las
+piezas concretas sigue siendo una inferencia pendiente de cliente. ITR no es,
+por sí solo, un código de referencia suficiente para etiquetar el detector.
+
+También se describe comprobar material correcto y destino preparado, retirar
+una pieza o cantidad aprobada, conservar orientación y superficies funcionales,
+colocar con orientación/espaciado requeridos, comprobar bloqueo/llenado/
+desalineación, gestionar cartón vacío y registrar ciclo/anomalías. El apoyo
+manual sólo se permite en evaluación de desarrollo si se documenta como
+condición de apoyo o excepción. Son **requisitos aportados, no prestaciones
+verificadas en el robot**.
+
+Implicación propuesta para percepción: recibir ID esperado de una fuente
+definida de estación/orden, localizar cada pieza, identificar referencia y
+compararla antes de entregar una selección válida al ejecutor. Si hay marcado
+legible, evaluar lectura de código/texto; la lámina no exige una tecnología
+concreta. Geometría, detalles de pieza y etiqueta de caja pueden aportar
+comprobaciones cruzadas, pero el ID de la caja no demuestra por sí solo que
+cada pieza interior sea correcta. Una referencia no distinguible visualmente
+desde la vista disponible necesita otra vista/marcado/trazabilidad validada;
+no se convierte una confianza del detector en identificación cierta. Debe
+existir resultado desconocido/no leído/no coincidente y registro, con límites
+de reintento acordados; esquema/API de sección7 PENDIENTE, sin inventar endpoints.
+Faltan códigos de las referencias objetivo/confundibles y disponibilidad de
+marcajes. No se ha entrenado, instalado ni conectado a movimiento este flujo.
+Fuente registrada en evidencia privada:
+`../Humanoide-vla-evidence/20261019T085657Z_ITR_REQUIREMENTS_SCREENSHOT/`.
+
+**Actualización CAR-PART-VISIBLE-20261019:** nuevas capturas tras aviso del
+operador muestran las piezas completas en la cámara de cabeza: bandeja de
+cartón sobre contenedor azul, varias piezas metálicas alargadas próximas entre
+sí y manos fuera del interior. Rectificada960×576, región aproximada de trabajo
+x380–640/y320–505 en esa imagen concreta; no son coordenadas métricas ni un
+recorte que deba copiarse a otro encuadre. También se conserva raw1920×1536,
+con más detalle para estudiar rasgos distintivos; tiene distorsión óptica y
+no se intercambian sus píxeles con profundidad/imagen rectificada. Cintura
+640×360 sigue cortando la bandeja. No se identifica nombre, código, referencia
+o punto de agarre a partir de la apariencia; se solicita al operador código
+objetivo y posición dentro de la bandeja. Distinguir referencias parecidas
+requiere sus etiquetas/ejemplos, no sólo un contorno de objeto alargado.
+Sin detector, inferencia, entrenamiento ni movimiento del agente. Evidencia:
+`../Humanoide-vla-evidence/20261019T084059Z_CAR_PART_VISIBLE_READONLY/`.
+La observación anterior de espuma parcialmente visible se conserva debajo como
+historia de la primera captura, no como encuadre vigente.
+
+19-10-2026 Europe/Madrid. **OBSERVACIÓN DE CÁMARAS; DETECTOR PROPUESTO,
+NO IMPLEMENTADO.** El operador necesita distinguir la pieza objetivo de otras
+piezas de coche parecidas, no sólo detectar un objeto sobre la espuma.
+
+Captura pasiva en Vision192.168.11.3, contenedor redescubierto
+walker-ros.ros2-1: cabeza RGB rectificada960×576/bgr8, cintura y chasis640×360/rgb8;
+dos timestamps crecientes por cada canal. Cabeza izquierda raw1920×1536/yuv422
+decodificada UYVY en una segunda consulta. Espuma sobre caja azul parcialmente
+visible en bordes de cabeza/cintura, sin pieza objetivo completa identificable.
+No se conoce todavía referencia, dimensiones, material, CAD ni rasgos distintivos.
+No inferir identidad a partir de la descripción del operador o del soporte.
+Los campos age_ms del capturador incluyen procesamiento secuencial; no son una
+medición de latencia completa ni de precisión del sensor.
+
+PC: RTX4070 Laptop,8188MiB, driver580.178.04; acceso a Vision por eno1/.11.250.
+No se ha medido inferencia ni capacidad disponible bajo carga de teleoperación.
+
+Estrategia propuesta, pendiente de comprobar con imágenes útiles:
+
+1. Obtener encuadre completo y detalle suficiente para distinguir referencias;
+   elegir cámara por cobertura y calidad, antes de elegir resolución/modelo.
+2. Entrenar un segmentador pequeño, comparando variantes n/s de YOLO26-seg
+   como candidatos actuales; COCO genérico no identifica por sí solo esta
+   referencia industrial. Incluir piezas confundibles, espuma vacía y distractores;
+   etiquetar referencias separadas y contornos. Contraste/forma de espuma sólo
+   ayudan a localizar la zona de trabajo, no certifican identidad de la pieza.
+3. Empezar con unos cientos de imágenes diversas para un prototipo, ampliar
+   según errores. Reservar sesiones/unidades para prueba; no dividir imágenes
+   consecutivas casi idénticas entre entrenamiento y prueba. Evaluar confusión
+   entre referencias y falsa aceptación, además de máscara/localización.
+4. Si las referencias casi idénticas se confunden, probar verificación con
+   clasificador ligero sobre el recorte o puntos distintivos. Si el detalle no
+   es visible, cambiar vista/resolución o identificación física; más entrenamiento
+   no recupera información ausente.
+5. Probar primero en PC aislado; recortar zona de trabajo conservando detalle,
+   batch1, cola de última imagen, sin acumular vídeo ni procesar frames antiguos.
+   Tras validar precisión, comparar TensorRT con menor precisión numérica y
+   conservar sólo optimizaciones que mantengan la calidad. Medir latencia p50/p95
+   imagen→resultado, falsa aceptación/rechazo y consumo bajo carga. No extrapolar
+   benchmarks de GPU T4 a este PC ni garantizar FPS antes de medir.
+6. Para agarrarla, añadir pose métrica/orientación con profundidad registrada,
+   intrínsecos/TF y, si hace falta, CAD o puntos clave. Máscara 2D no equivale a
+   pose de agarre. En piezas brillantes, verificar profundidad antes de usarla.
+
+Fuentes primarias consultadas:
+[segmentación Ultralytics](https://docs.ultralytics.com/tasks/segment/),
+[exportación TensorRT](https://docs.ultralytics.com/integrations/tensorrt/).
+El motor TensorRT se construye para el hardware/runtime de destino; no se
+traslada sin validación un engine del PC a Vision. No se ha instalado ningún
+modelo ni modificado el detector workbin del proveedor, sus límites o endpoints.
+
+Evidencia privada externa:
+`../Humanoide-vla-evidence/20261019T080612Z_CAR_PART_VISION_READONLY/`.
+Capturadores exactos ejecutados vía stdin, PNG sin anotación, timestamps/tipos,
+hashes, hallazgos y respaldo documental. Sólo suscripciones de imagen; cero
+servicios, publicadores de mando, movimientos, reinicios o instalaciones.
+
 **15-10-2026 — BOTELLA-VISION-GRASP-20261015. PLAN; percepción/agarre pendientes.**
 [Plan operativo y ramas de decisión](../plan_botella.md).
 [Resumen del proceso](../plan_botella_resumen.md), también en [PDF](../plan_botella_resumen.pdf). El detector instalado de
@@ -340,13 +470,51 @@ Un resultado válido debe terminar con `status=4`, `ok: True`,
 
 ### 6.3 Preparar únicamente la visión
 
-**MOVIMIENTO DE CABEZA**:
+**19-10-2026 — HEAD-OBSERVE-20261019.** El wrapper admite ahora los perfiles
+`cruzr_s2_v1` y `cruzr_s2_v1_sps` exclusivamente en sus modos de cabeza.
+Los modos de cajas/brazos conservan su requisito de abrazaderas. No cambia el
+perfil del robot ni la tarea instalada; XML actual contrastado con SHA256
+`f3a73626f97b471d4a0a03c98c24de32243651116c497328e69b5ddc57ea46c1`.
+
+Primero, diagnóstico **sin movimiento**:
+
+```bash
+./scripts/cruzr_blue_workbin_cycle.sh --check-head
+```
+
+Si termina con `HEAD_CHECK_OK`, con control exclusivo y condiciones físicas
+actuales comprobadas, **MOVIMIENTO DE CABEZA**:
 
 ```bash
 ./scripts/cruzr_blue_workbin_cycle.sh --prepare-vision
 ```
 
-Esta orden baja la cabeza; no mueve brazos ni chasis.
+Pide escribir `BAJAR CABEZA`. Centra yaw0 e inclina pitch−0,43rad (unos24,6°)
+en2s. No mueve brazos ni chasis ni inicia agarre, inferencia o cambio de modo.
+Ambos modos rechazan --fast y conservan hashes, salud20D, paros, batería,
+cargador y exclusión de acción activa. El diagnóstico técnico no certifica
+el entorno físico ni el encuadre resultante. PICO/web/otros mandos deben estar
+detenidos. Si hay ACTION_BUSY, fault o consignas latentes, no repetir con --yes
+ni cambiar a auto_task/HOME como atajo; resolver el estado según la guía de
+recuperación. Esta adaptación no es una recuperación del incidente de HOME.
+
+Verificación: bash-n y36tests offline pasan. Check real --check-head acepta SPS,
+valida salud20D (velocidad0, delta consigna máximo0,003039rad), pero termina27
+por ACTION_BUSY=motion_goal_active. No alcanza las lecturas de paros/batería/
+cargador. No se cancela la acción ni se cambia modo para superar el gate.
+Movimiento y encuadre físico NO ejecutados por el agente. Evidencia externa:
+`../Humanoide-vla-evidence/20261019T082535Z_HEAD_ONLY_SCRIPT/`.
+
+**Identificación posterior — HEAD-ACTION-BUSY-20261019:** el UUID activo es
+27318de6-c1a6-4d86-a9c5-6f8b127df3da y pertenece a la tarea nativa PICO v4,
+iniciada09:22 CEST. Permanece en ejecución aunque el PC esté STOP. Log actual
+confirma Head tracking1: para encuadrar dentro de una sesión PICO preparada,
+la cabeza puede seguir la inclinación del visor, con grips/gatillos libres.
+No equivale a autorizar una sesión nueva sin sus comprobaciones; consulta
+actual PC tracking0. El script independiente requiere la tarea Motion libre;
+no se cancela ni se cambia a auto_task/HOME automáticamente para conseguirlo.
+[Detalle de seguimiento y límites](../teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md).
+Evidencia: ../Humanoide-vla-evidence/20261019T083626Z_HEAD_ACTION_BUSY_READONLY/.
 
 ### 6.4 Otros perfiles especializados instalados
 

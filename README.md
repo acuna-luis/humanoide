@@ -20,12 +20,17 @@ identifica qué conservar, sus fuentes, respaldos y comprobaciones. La
 ordena el respaldo y la reaplicación selectiva. Mantener ambos forma parte de
 la política obligatoria de `AGENTS.md`.
 
+La aplicación **[app2](docs/app2/README.md)** reúne el plan de reconocimiento
+de piezas de dirección, las preguntas pendientes y el índice de las fotografías
+de fábrica y del robot. La fase actual es percepción; no hay agarre app2 validado.
+
 ## Estructura
 
 ```text
 .
 ├── docs/
 │   ├── PROJECT_SOURCE_OF_TRUTH.md # Relevo técnico global
+│   ├── app2/         # Piezas de dirección: plan, requisitos y fotos de referencia
 │   ├── guides/       # Guías de operación y documentos generados
 │   ├── reports/      # Revisión técnica, inventario y matriz de capacidades
 │   ├── support/      # Preguntas y seguimiento con UBTECH
