@@ -2,9 +2,13 @@
 
 **Fuente:** lámina gráfica adjuntada por el usuario el 19-10-2026.
 Se conserva el PNG original de 2189×630, sin reencodificar, en el
-[archivo de fotografías](FOTOS_Y_FUENTES.md). Documento original, revisión y
-sección 7 completa: pendientes de recibir. Lo siguiente es una transcripción
-resumida en español, no un reemplazo del documento contractual completo.
+[archivo de fotografías](FOTOS_Y_FUENTES.md).
+**Actualización 19-10-2026:** recibido el DOCX completo T-Spec HR-001, revisión
+001. [Matriz contrastada, fuente y hash](ESPECIFICACION_REV001.md). Incluye tres
+operaciones; APP2 es nuestro nombre interno para la segunda, ITR. La sección 7
+ya está disponible: define campos mínimos, pero no un endpoint/esquema de planta.
+Lo siguiente conserva el resumen de la lámina, complementado por esa matriz;
+no sustituye la copia controlada del cliente.
 
 ## Requisito visible: ITR Material Feed and Empty Container Handling
 
@@ -35,9 +39,11 @@ esperado con el observado. Registrar en la interfaz de desarrollo de la sección
 - número de reintentos;
 - estado de excepción.
 
-No se especifican en el fragmento OCR, QR, DataMatrix, modelo de visión,
-protocolo de la interfaz ni objetivos cuantitativos de precisión/latencia.
-Estas decisiones siguen abiertas y no se atribuyen al cliente.
+El Word completo exige en §5–§6 lectura de barcode/etiqueta e identificación
+mediante visión integrada del humanoide. Un lector externo separado requiere
+justificación y aprobación escrita. Siguen sin definirse simbología concreta
+(QR, DataMatrix u otra), formato del contenido, distancias, protocolo final o
+umbrales de precisión/latencia. La segmentación sola no cubre el requisito.
 
 ## Fotografías de la fábrica real
 
@@ -54,8 +60,9 @@ capturas de nuestro robot:
 
 El documento gráfico también muestra el título
 *OTR Line-Side Replacement Station Replenishment* debajo del bloque de fotos.
-Sólo se ve ese título, no su secuencia detallada. Puede comenzar un apartado
-siguiente; no se considera que las fotos sean OTR sólo por su posición.
+La lámina sólo mostraba ese título. El DOCX completo confirma que inicia el
+apartado siguiente, después del bloque gráfico ITR. Queda resuelta la duda de
+la posición del título; la referencia exacta de cada pieza sigue pendiente.
 
 ## Aclaración de nomenclatura aportada por el usuario
 
@@ -70,3 +77,12 @@ La correspondencia de las piezas concretas fotografiadas con ITR es una
 interpretación compatible con su forma y contexto, no una identificación de
 material ID ni una confirmación de cliente. Tampoco se conocen lote/serie,
 dimensiones, masa o superficies de agarre de estas unidades.
+
+## Aclaración del operador: identificación en la caja
+
+El 19-10-2026 el operador indica que el ID vendrá en la caja. Se plantea leer
+su etiqueta con las cámaras integradas, interpretar su contenido y comparar
+con el material esperado. Qué campos aporta (referencia/lote/otros), cómo se
+verifica el contenido y cómo se conserva/invalida la asociación con cada
+pieza extraída sigue pendiente. Una caja identificada no demuestra por sí
+sola que no contenga mezclas. No se presume un código individual en cada pieza.

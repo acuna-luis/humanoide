@@ -2,11 +2,26 @@
 
 ## CAR-PART-VISION-20261019 — propuesta de detector de referencia de pieza
 
+**APP2-SERVER-INSTALL-20261019 — flujo local instalado y comprobado.**
+[Acceso, versiones y verificaciones](../app2/SERVIDOR_LOCAL_INSTALACION.md).
+CVAT2.79.0 y RF-DETR1.11.2 en servidor RTX6000 Ada; anotación/exportación COCO,
+inferencia GPU,1 paso de entrenamiento sintético y ONNX/ORTCPU pasan. Entrenador
+sin red, datos en volúmenes propios; servicios Ollama previos conservados.
+No dataset/modelo app2 real entrenado ni despliegue/cambio del robot.
+
+**APP2-LOCAL-20261019 — decisión vigente:** CVAT Community y entrenamiento
+RF-DETR Seg Nano en servidor propio, inferencia final en Vision. Servidor
+ofrecido comprobado por SSH: RTX6000 Ada48GB,503,51GiB RAM,32 núcleos;
+SSD Docker con1,65TiB libres. [Plan local, recursos y tiempos](../app2/PLAN_LOCAL_RECURSOS_Y_TIEMPOS.md).
+El estado posterior instalado se indica arriba; compatibilidad ONNX/TRT8.6 y
+rendimiento del modelo final pendientes. La propuesta cloud queda histórica.
+
 **APP2-VISION-RUNTIME-20261019 — unidad real comprobada.**
 [Hardware, runtime, cámaras y decisión de despliegue](../app2/VERIFICACION_ROBOT_Y_ELECCION_VISION.md).
 Vision AGX Orin64GB/aarch64 con L4T36.3/CUDA12.2/TRT8.6.2.3 y mensajes de
-cámara SHM; cuatro canales con recepción pasiva verificada. La propuesta usa
-entrenamiento en nube y ONNX/motor propio compatible en Vision. No instala el
+cámara SHM; cuatro canales con recepción pasiva verificada. La propuesta inicial
+usaba entrenamiento en nube; el plan local posterior conserva ONNX/motor propio
+compatible en Vision. No instala el
 contenedor actual Roboflow Jetson6.2 suponiendo compatibilidad ni modifica el
 detector de cajas vendor. Modelo app2, identificación y benchmark pendientes.
 
@@ -498,20 +513,32 @@ detenidos. Si hay ACTION_BUSY, fault o consignas latentes, no repetir con --yes
 ni cambiar a auto_task/HOME como atajo; resolver el estado según la guía de
 recuperación. Esta adaptación no es una recuperación del incidente de HOME.
 
-Verificación: bash-n y36tests offline pasan. Check real --check-head acepta SPS,
+Verificación inicial: bash-n y36tests offline pasan. Check real --check-head acepta SPS,
 valida salud20D (velocidad0, delta consigna máximo0,003039rad), pero termina27
 por ACTION_BUSY=motion_goal_active. No alcanza las lecturas de paros/batería/
 cargador. No se cancela la acción ni se cambia modo para superar el gate.
-Movimiento y encuadre físico NO ejecutados por el agente. Evidencia externa:
+En esa comprobación inicial no se ejecutó movimiento. Evidencia externa:
 `../Humanoide-vla-evidence/20261019T082535Z_HEAD_ONLY_SCRIPT/`.
 
-**Identificación posterior — HEAD-ACTION-BUSY-20261019:** el UUID activo es
-27318de6-c1a6-4d86-a9c5-6f8b127df3da y pertenece a la tarea nativa PICO v4,
-iniciada09:22 CEST. Permanece en ejecución aunque el PC esté STOP. Log actual
-confirma Head tracking1: para encuadrar dentro de una sesión PICO preparada,
+**Prueba posterior — APP2-REAL-PIECES-PILOT-20261019:** tras confirmar las
+condiciones físicas y desconectar el cargador, el preflight completo pasó con
+paros `0/0`, cargador desconectado y baterías `94,6/95,0 %`.
+`--prepare-vision --yes` ejecutó únicamente `cruzr/move_head_lower`: goal
+`b34d2b9e-7a03-435d-9118-93ed2f0c3546`, `status=4`, `SUCCEED`, estado nativo
+`1101001`. Las capturas posteriores muestran la bandeja completa y contornos
+distinguibles; identidad de las piezas aún provisional. Sin cambios de modo,
+HOME, configuración o modelo. El resultado es una prueba fechada, no una
+comprobación de seguridad válida para una sesión futura. [Resultado y punto de
+reanudación](../app2/PILOTO_PIEZAS_REALES.md), [fotografías](../app2/FOTOS_Y_FUENTES.md#4-capturas-posteriores-al-encuadre-de-cabeza).
+Evidencia: `../Humanoide-vla-evidence/20261019T114329Z_APP2_REAL_PIECES_PILOT/`.
+
+**Historia del bloqueo inicial — HEAD-ACTION-BUSY-20261019:** el UUID observado
+27318de6-c1a6-4d86-a9c5-6f8b127df3da pertenecía a la tarea nativa PICO v4,
+iniciada09:22 CEST. Seguía en ejecución aunque el PC estuviera STOP. El log
+consultado confirmaba Head tracking1: para encuadrar dentro de una sesión PICO preparada,
 la cabeza puede seguir la inclinación del visor, con grips/gatillos libres.
-No equivale a autorizar una sesión nueva sin sus comprobaciones; consulta
-actual PC tracking0. El script independiente requiere la tarea Motion libre;
+No equivale a autorizar una sesión nueva sin sus comprobaciones; aquella consulta
+del PC mostraba tracking0. El script independiente requiere la tarea Motion libre;
 no se cancela ni se cambia a auto_task/HOME automáticamente para conseguirlo.
 [Detalle de seguimiento y límites](../teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md).
 Evidencia: ../Humanoide-vla-evidence/20261019T083626Z_HEAD_ACTION_BUSY_READONLY/.

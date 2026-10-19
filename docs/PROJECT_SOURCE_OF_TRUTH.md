@@ -1,5 +1,115 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**19-10-2026 — APP2-GIT-PUBLISH-20261019: fuentes y relevo en la rama vision-reconoce.**
+El usuario autoriza commits y push de los cambios de esta carpeta. Se agrupan
+las recetas de servidor/CVAT/entrenamiento (`1e2f520`), el flujo local de datos,
+percepción y trazabilidad (`825ec10`) y las guías/requisitos/piloto real.
+[Retomar mediante Git y archivos privados](app2/RETOMAR_APP2.md). Los paquetes
+anteriores se conservan como instantáneas fechadas; fotos, Word, modelos,
+credenciales y base CVAT permanecen fuera de Git. Dos locks locales intactos.
+Validación de publicación: 33 tests locales correctos y5 omitidos por falta de
+pycocotools en PC; ejecución completa previa del servidor documentada. Sintaxis
+19Python/4Bash/4YAML/1JSON y revisión de artefactos/credenciales correctas.
+Sin consultas, movimiento o cambios de ejecución del robot/servidor durante
+esta publicación. Evidencia privada 20261019T120019Z_APP2_GIT_PUBLISH conserva
+respaldo previo, validación, commits y comparación del SHA remoto con HEAD.
+
+**19-10-2026 — APP2-REAL-PIECES-PILOT-20261019: primer lote real listo para anotar.**
+[Guía y acceso al trabajo](app2/PILOTO_PIEZAS_REALES.md). CVAT proyecto1,
+tarea4/job4; dos originales rectificada960×576/raw1920×1536, hashes contrastados,
+una escena/grupo robot_scene_20261019_084059, cero anotaciones al importar.
+itr_candidate provisional/materialnull, sin split ni entrenamiento. No usar
+estas dos vistas como train/valid independientes. A2-09 pasa En curso; faltan
+contornos revisados y más escenas. Helper host import_real_images.py verifica
+PNG/SHA/propietario/esquema y preserva tareas previas; no nueva imagen Docker.
+Túnel PC localhost18080 abierto para anotar; socket privado app2/cvat-pilot.sock.
+Operador indica piezas presentes pero hace falta bajar cabeza; check-only inicial
+bloqueó goalactivo3f72daca…eec0. Tras indicar que quitó control, dos checks ya
+sin busy bloquean CHARGER_CONNECTED=1. Operador desconecta físicamente; check
+y preflight nuevos confirman cargador fuera, paros0/0 y reposo. Con condiciones
+actuales manosv4 vacías/recorrido/ruedas/persona al paro confirmadas, una tarea
+cruzr/move_head_lower termina SUCCEED/status4, goalb34d2b9e…3546. Postflight
+HEAD_CHECK_OK, velocidad0/delta0,003230rad. Cuatro PNG nuevos conservados en
+app2/reference/head_pieces_20261019T115423Z; dos vistas cabeza muestran bandeja
+completa y se importan en NUEVA tarea5/job5, frame0raw/frame1rectificada,0anotaciones.
+Tarea4 intacta. Grupo compartido conservador; no nuevas escenas independientes.
+Cabeza queda en observación, sin HOME/START/modo/entrenamiento ni control del detector.
+Evidencia ../Humanoide-vla-evidence/20261019T114329Z_APP2_REAL_PIECES_PILOT/;
+originales y lote privados en ../Humanoide-vla-evidence/app2/datasets/.
+Sin commit/push; guías/índices actualizados para retomar.
+
+**19-10-2026 — APP2-REV001-WORKFLOW-20261019: Word completo y recorrido local verificado.**
+[Matriz rev001](app2/ESPECIFICACION_REV001.md), [validación/comandos](app2/VALIDACION_FLUJO_LOCAL.md),
+[lista única de trabajo](app2/PLAN_Y_PREGUNTAS.md#4-lista-principal-de-trabajo).
+DOCX SHA261f5e37…605f5 archivado privado con cinco imágenes ITR originales:
+contiene tres operaciones; APP2 interno=segunda, ITR; las fotos preceden OTR.
+§5/6 exige barcode/material ID por visión integrada; §7 campos de trazabilidad.
+Operador confirma ID en caja, contenido aún desconocido: no serial por pieza
+supuesto ni código/GS1/relación lote inventados. MQ1 13-11/MQ2 18-12-2026,
+vigencia/criterios pendientes. Sin umbrales numéricos de aceptación aportados.
+Servidor RTX6000 Ada48GB reconfirmado; extensión app2-workflow sobre imagen
+RF-DETR conservada, ZXing3.1.1/TensorBoard2.20/SDK2.79 aislado. Proyectos CVAT
+1/2 y tareas sintéticas2/3 persistentes; export/reimport de cuatro máscaras
+exactas, conversor COCO/grupos y38tests pasan. Un paso GPU/BF16, delta real,
+checkpoint77f128…f737 guardado/recargado con todos los tensores iguales;
+inferencia finita y demo3PNG/JSONL pasan sin red ni controles físicos.
+100predicciones background/0foreground en esa prueba: no precisión ITR.
+Descubierto y tratado explícitamente el canal background en cabeza ajustada,
+sin alterar vendor. SDK/lecturaQR/eventos TensorBoard comprobados; sin entrenadores
+permanentes, driver/imagenbase/CVAT/Ollama previos conservados. Robot no conectado,
+modificado o movido; no PLC. Datos reales/evaluación/TRT8.6/geometría pendientes.
+Evidencia ../Humanoide-vla-evidence/20261019T112209Z_APP2_REV001_LOCAL_WORKFLOW/;
+fuentes y recetas en scripts/app2/workflow/. Sin commit/push.
+
+**19-10-2026 — APP2-HANDOFF-20261019: guía operativa y relevo portable.**
+[Empezar/retomar desde otro PC o agente](app2/RETOMAR_APP2.md),
+[datos y entrenamiento](app2/DATOS_Y_ENTRENAMIENTO.md),
+[copias y migración](app2/BACKUP_Y_MIGRACION.md). Documentados acceso SSH/túnel,
+huellas públicas, ubicaciones, versiones, volúmenes, incidencias, límites y
+siguiente hito. CVAT/entrenador existentes; no reinstalar para retomar.
+Paquete privado app2_relevo_20261019T105234Z.tar.gz bajo
+../Humanoide-vla-evidence/app2/handoff/ conserva base Git, cambios sin commit,
+archivos nuevos, seis fotos y evidencia. No incluye contraseñas, claves privadas,
+DB, imagen Docker o pesos; backup completo de servidor pendiente.
+Recuperación documental en carpeta nueva VERIFICADA: bundle/parche/archivos
+nuevos,31 hashes de fuentes y manifiesto de fotografías correctos.
+Conversor CVAT→splits, evaluación/exportación de checkpoint propio y TRT8.6
+siguen pendientes. Corregidas notas CVAT obsoletas de «instalación pendiente».
+Sólo documentos/archivo privado y lectura de huellas públicas del servidor;
+sin servicios, instalaciones, entrenamiento o robot modificados. Sin commit/push.
+Evidencia: ../Humanoide-vla-evidence/20261019T105234Z_APP2_HANDOFF_DOCS/.
+
+**19-10-2026 — APP2-SERVER-INSTALL-20261019: servidor instalado y verificado.**
+[Estado, acceso y reproducción](app2/SERVIDOR_LOCAL_INSTALACION.md).
+Destino SSH2649 luisacuna@192.168.1.43, ~/app2; datos en SSD Docker separado.
+CVAT2.79.0 arrancado, cuenta local privada y prueba sintética API/polígono/COCO
+completada: una máscara3072px correcta, tarea de prueba eliminada. Corregidos
+permisos de bind mounts públicos, negociación API y ALLOWED_HOSTS interno OPA;
+recetas versionadas. Entorno RF-DETR1.11.2/PyTorch2.10/CUDA12.8 construido:
+inferencia GPU, NMS y1 paso RF-DETR sintético/BF16 con gradientes finitos pasan
+sin red. Exportación ONNXopset17/IR8 y ejecución ORT CPU pasan; paridad/TRT8.6
+en Orin pendientes. Imagen propia af168d95…928ba0/~9,06GiB; volúmenes propios
+en SSD Docker,~14,14GiB de variación observada. Versiones resueltas y locks
+conservados. Final18 servicios app2 running, UI/API/OPA200; dos Ollama con IDs
+y arranques previos conservados, GPU5500MiB/0%. Sin fotos reales transferidas,
+entrenamiento de piezas, cambios del robot o driverhost. Siguiente: dataset piloto.
+Evidencia: ../Humanoide-vla-evidence/20261019T101640Z_APP2_SERVER_INSTALL/.
+
+**19-10-2026 — APP2-LOCAL-20261019: flujo local y servidor verificado por lectura.**
+Decisión posterior a la comparativa cloud: CVAT Community + RF-DETR Seg Nano
+en servidor, inferencia final en Vision. [Plan, recursos y tiempos](app2/PLAN_LOCAL_RECURSOS_Y_TIEMPOS.md).
+SSH2649 luisacuna@192.168.1.43 accesible: Threadripper PRO5975WX32 núcleos,
+RAM503,51GiB utilizables/~496,76GiB disponibles; RTX6000 Ada49140MiB,
+5500MiB usados al consultar. Ubuntu24.04.5/driver580.178.04/Docker29.8.1.
+/home comparte raíz con77,71GiB libres; DockerRootDir está en otro NVMe
+con1,65TiB libres. Propuestos200GiB de volúmenes app2 en ese disco, no creados.
+PC32GB/RTX4070 Laptop8GB y raíz46GiB libres: alternativa con menos margen.
+Presupuestos RAM/disco/horas son estimaciones, no benchmarks; medir2–5 épocas.
+No instalaciones, datasets transferidos, entrenamientos, limpieza, cambios
+de servicios o movimiento. Compatibilidad RF-DETR ONNX/TRT8.6 sigue pendiente.
+Fuentes y resultado de consultas, respaldo documental y hashes:
+../Humanoide-vla-evidence/20261019T100559Z_APP2_LOCAL_PLAN/.
+
 **19-10-2026 — APP2-VISION-RUNTIME-20261019: comprobado en Vision real, sólo lectura.**
 [Informe, decisión y límites](app2/VERIFICACION_ROBOT_Y_ELECCION_VISION.md).
 Jetson AGX Orin/aarch64, RAM61,37GiB, L4T36.3, CUDA12.2 y TensorRT8.6.2.3;
@@ -81,7 +191,8 @@ confirmación específica BAJAR CABEZA. No cambia modo, perfil ni instala tareas
 Sintaxis y36pruebas offline pasan. --check-head real admite SPS y valida salud20D
 (velocidad0, delta máximo0,003039rad), pero termina27/ACTION_BUSY por goal activo;
 no alcanza lecturas de paros/batería/cargador. No se cancela la acción ni se cambia
-modo. Movimiento y encuadre físico NO ensayados.
+modo. Movimiento y encuadre físico no ensayados en ese primer intento.
+Prueba posterior SUCCEED y bandeja visible: APP2-REAL-PIECES-PILOT-20261019, arriba.
 Lectura pasiva posterior: PC ya STOP/vr_status0; eso no elimina el goal activo
 de Motion ni autoriza cambiar a auto_task/HOME desde la postura actual.
 [Receta](guides/CATALOGO_FUNCIONALIDADES_CRUZR_S2.md#63-preparar-únicamente-la-visión).

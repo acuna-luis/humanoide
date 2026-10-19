@@ -13,6 +13,13 @@ Carpeta estable desde la raíz del repositorio:
 
 ## 1. Lámina del cliente: fábrica real
 
+**Ampliación posterior:** el Word completo rev001 y las cinco imágenes ITR
+incrustadas se conservan, sin reencodificar, en
+`../Humanoide-vla-evidence/app2/specifications/2026-10-19/` y su subcarpeta
+`itr_embedded_images/`. El manifiesto enlaza cada imagen con rId/XML y SHA256.
+[Análisis del documento y alcance](ESPECIFICACION_REV001.md). Los originales
+gráficos siguientes se mantienen intactos; la lámina no se sustituye por recortes.
+
 [Abrir lámina original](../../../Humanoide-vla-evidence/app2/reference/2026-10-19/lamina_fabrica_real_ITR_OTR.png).
 
 - Archivo: `lamina_fabrica_real_ITR_OTR.png`, **2189×630**, 827330 bytes.
@@ -79,3 +86,32 @@ localmente si la carpeta hermana conserva la misma estructura.
 El [manifiesto](manifest_fotos.json) permite verificar una copia aunque cambie
 su ubicación. Las siguientes sesiones deben añadir nuevas capturas con fecha
 distinta, sin sobrescribir estas referencias.
+
+## 4. Capturas posteriores al encuadre de cabeza
+
+**19-10-2026, captura `20261019T115423Z` (UTC).** Tras la bajada de cabeza
+autorizada y completada con `SUCCEED`, se guardaron cuatro imágenes nuevas en:
+
+```text
+../Humanoide-vla-evidence/app2/reference/head_pieces_20261019T115423Z/
+```
+
+| Archivo | Resolución | Observación |
+|---|---|---|
+| [head_rgb.png](../../../Humanoide-vla-evidence/app2/reference/head_pieces_20261019T115423Z/head_rgb.png) | 960×576 | Cabeza rectificada; bandeja completa y contornos distinguibles |
+| [head_raw.png](../../../Humanoide-vla-evidence/app2/reference/head_pieces_20261019T115423Z/head_raw.png) | 1920×1536 | Cabeza sin rectificar; conversión YUV422/UYVY a PNG para inspección |
+| [waist_rgb.png](../../../Humanoide-vla-evidence/app2/reference/head_pieces_20261019T115423Z/waist_rgb.png) | 640×360 | Referencia de cintura |
+| [chassis_rgb.png](../../../Humanoide-vla-evidence/app2/reference/head_pieces_20261019T115423Z/chassis_rgb.png) | 640×360 | Referencia de chasis |
+
+`manifest.json` conserva canales, tipos, timestamps de origen, conversiones y
+hashes; `SHA256SUMS` permite comprobar los cuatro archivos. Hash de `head_rgb.png`:
+`3764c2ca78af1e51da2e273a3d00344c9d8baa48459113efc79cc7e149e798cc`;
+de `head_raw.png`:
+`8c3c3106f46e86d508eb8c7655e3bf7c29f1dbf78313096e91f722213ab7f864`.
+Las seis referencias iniciales y su manifiesto permanecen intactos. El paquete
+de traslado de la sección 3 no incluye estas capturas posteriores.
+
+La inspección visual confirma un encuadre útil; la identidad industrial de las
+piezas sigue siendo provisional. Las capturas de esta misma escena no constituyen
+por sí solas grupos independientes para entrenamiento y validación. Consultar
+[el piloto de piezas](PILOTO_PIEZAS_REALES.md) para el lote de anotación vigente.

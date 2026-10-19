@@ -4,7 +4,13 @@
 **Estado:** hardware, runtime y recepción de imágenes VERIFICADOS por lectura.
 Modelo app2, inferencia, rendimiento e identificación de referencia PENDIENTES.
 
-## Decisión propuesta
+**Decisión posterior vigente:** el usuario elige preparación y entrenamiento
+completamente locales. Véase el [plan de recursos y tiempos](PLAN_LOCAL_RECURSOS_Y_TIEMPOS.md):
+CVAT Community + RF-DETR Seg Nano en servidor, ONNX y ejecutor compatible
+con TRT8.6 en Vision. El inventario real de este informe se mantiene; la
+propuesta de plataforma cloud que sigue es histórica. No hay modelo validado.
+
+## Propuesta inicial de nube — histórica
 
 Para el equipo actual, mantener **Roboflow como primera candidata de preparación
 de datos y entrenamiento en nube**, descargar un modelo de segmentación y
