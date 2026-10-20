@@ -1,5 +1,24 @@
 # app2 — instalación del servidor local
 
+**20-10-2026 — acceso a CVAT todavía bloqueado:** tras el ciclo de apagado
+completo y encendido del servidor, el SSD de Docker ha reaparecido `live`, con
+capacidad de 2 TB, serie `S7DRNJ0X107187F` y UUID
+`b819b286-2006-4474-b2d5-13982b0f1536`. Boot verificado:
+`cebc2464-2073-4f1e-82fc-17ee30941a22`; sistema `running`, cero unidades fallidas
+y GPU accesible. El disco sigue **sin montar**, Docker está detenido y las cinco
+unidades de protección siguen enmascaradas. La lectura SMART privilegiada aportada
+por el operador indica `critical_warning=0`, 33,85 °C, cero errores de medio y
+cero entradas de error; el extracto nuevo del kernel no muestra EIO ni resets
+fallidos. No valida la integridad de EXT4/CVAT ni la estabilidad del disco.
+La copia y verificación de los datos siguen **PENDIENTES**: al no disponer de
+otro almacenamiento, se prevé copiar los esenciales al disco sano del sistema
+(82,68 GB libres observados), previa estimación del tamaño. No se ha montado
+el SSD ni iniciado Docker para hacerlo.
+[Incidente, copias conservadas y recuperación pendiente](../incidents/2026-10-20_APP2_SSD_DOCKER_NO_RESPONDE.md).
+Las comprobaciones de instalación/anotación descritas abajo son del día anterior;
+no reinstalar ni repetir la importación para resolver este fallo de almacenamiento.
+
+
 **ID:** APP2-SERVER-INSTALL-20261019.
 **Fecha/zona:**19-10-2026, Europe/Madrid.
 **Estado:** INSTALADO Y VERIFICADO en servidor. CVAT, inferencia GPU, un paso

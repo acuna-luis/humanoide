@@ -1,8 +1,10 @@
 # Instalación local de app2 en el servidor
 
 Destino: `ssh -p 2649 luisacuna@192.168.1.43`, x86_64/RTX6000 Ada.
-Esta receta no se ejecuta en Motion/Vision. No instala drivers o paquetes del
-host, no altera Ollama y no contiene imágenes o contraseñas privadas.
+Las recetas de instalación no se ejecutan en Motion/Vision, no instalan drivers
+o paquetes del host, no alteran Ollama y no contienen imágenes o contraseñas
+privadas. El mantenimiento de almacenamiento descrito al final tiene su alcance
+y autorización registrados por separado.
 
 **Para trabajar con la instalación existente**, seguir la
 [guía de relevo](../../../docs/app2/RETOMAR_APP2.md) y consultar `--status`.
@@ -93,3 +95,37 @@ No usar `docker system prune`, `volume prune`, `down -v` o comandos sobre los
 contenedores Ollama. Conservar volúmenes, credenciales privadas, lock de imágenes
 y respaldos de CVAT antes de cualquier retirada definitiva. Las copias en el
 mismo SSD no sustituyen un respaldo en otro almacenamiento propio.
+
+## Mantenimiento del SSD de Docker — incidencia del 20-10-2026
+
+Receta específica de `aisrv`/UUID comprobado, no un instalador genérico:
+[storage_maintenance.py](storage_maintenance.py). [Incidente, autorización,
+comandos, backup y reversión](../../../docs/incidents/2026-10-20_APP2_SSD_DOCKER_NO_RESPONDE.md).
+`--check` es lectura; `--prepare` root conserva fstab/unidades y prepara un arranque
+sin Docker ni automontaje del SSD. No apaga, repara, desmonta ni inicia servicios.
+El apagado se solicita por separado tras éxito; `--restore-config BACKUP` exige
+hashes y conserva cambios ajenos, sin arrancar Docker. No usar la restauración
+antes de valorar el rescate. [Tests offline](tests/test_storage_maintenance.py).
+
+## Rescate selectivo y firmware — fase autorizada, aún sin ejecución
+
+El20-10 el operador autoriza las actualizaciones necesarias con cautela. La
+secuencia es preservar datos esenciales y comprobar su recuperación, preparar
+firmware oficial compatible para el SSD de datos187F y mantener separado el
+SSD del SO095A si conserva la única copia. No actualizar ambos SSD a la vez.
+
+Preestado `authorized-maintenance-before.json`: mismo bootcebc…, SSD presente,
+cinco unidades inactive/masked, fstab protegido y origen sin montar. Helper de
+rescate `storage_rescue.py` y receta de firmware en preparación; aún no constan
+como desplegados o probados. Sus enlaces/comandos se añadirán tras revisar los
+archivos disponibles. No hay montaje temporal, copia, USB ni firmware aplicado
+a este registro. El [incidente](../../../docs/incidents/2026-10-20_APP2_SSD_DOCKER_NO_RESPONDE.md)
+conservará los resultados reales y el estado de limpieza de cualquier montaje.
+
+La restricción actual es **sólo SSH**, sin monitor/teclado/USB disponibles. La
+preparación de ISO y el rescate selectivo siguen autorizados. Aplicar firmware
+espera consola y método oficial compatible; no se sustituye por enviar un
+binario extraído mediante SSH. La lectura rescue-tools-readonly.json detecta /dev/ipmi0/sysfsipmi0 y drivers
+IPMI; ipmitool ausente. La interfaz local existe, pero configuración/acceso,
+credenciales y disponibilidad de consolaBMC siguen pendientes, sin cambios.
+GNUtar1.35,rsync,dumpe2fs ydebugfs ya están presentes; no se instalaron aquí.

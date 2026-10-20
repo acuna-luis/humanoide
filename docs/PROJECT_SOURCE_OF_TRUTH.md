@@ -1,5 +1,70 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**20-10-2026 — APP2-STORAGE-20261020: el SSD vuelve a detectarse tras retirar AC; datos aún sin validar.**
+[Incidente, cronología y siguiente paso](incidents/2026-10-20_APP2_SSD_DOCKER_NO_RESPONDE.md).
+VERIFICADO por lectura tras el arranque nuevo `cebc2464-2073-4f1e-82fc-17ee30941a22`:
+SSH operativo; systemd running, cero unidades fallidas y ningún job pendiente.
+Las consultas07:25:35/07:26:14UTC (09:25:35/09:26:14Madrid; uptimes40,92/78,62s)
+detectan **dos NVMe live**, incluido el SSD Docker de2.000.398.934.016bytes,
+serialS7DRNJ0X107187F, UUIDb819b286-2006-4474-b2d5-13982b0f1536, ahora nvme0n1p1.
+El SSD del SO, serialS7DRNJ0X107095A, es ahora nvme1n1; no identificar por nombres
+históricos. Cinco unidades inactive/masked, fstab noauto,ro,noload0,0 y volumen
+Docker sin montar VERIFICADOS de nuevo. Docker/CVAT y demás cargas siguen detenidos.
+RAM~503GiB, GPU RTX6000Ada49140MiB a32°C/0% y raíz82.683.002.880bytes libres:
+observaciones del SO en reposo, no prueba de integridad del SSD o de CVAT.
+Kernel observado tras arrancar6.8.0-147-generic (antes6.8.0-142), sin instalación
+o cambio de kernel ejecutado en esta intervención.
+Lectura adicional a184,11s/mismo boot: ambos live/UUID correcto/sin montar;
+composite Docker33,85°C/SO36,85°C, alarmas0, enlacesPCIe16GT/s x4. No es SMART.
+
+SMART/error-log/kernel recibidos como salida sudo pegada por el operador,
+no lectura independiente del agente (recibo07:30:29UTC/09:30:29Madrid):
+critical_warning0,307K/33,85°C, spare100%, percent_used0, media_errors0,
+num_err_log_entries0 y8entradas vacías. unsafe_shutdowns35/power_cycles36/
+power_on_hours48 son contadores históricos; no atribuir35al último apagado o a
+dañoEXT4. Extracto kernel enumera ambos NVMe sin resetfallido/EIO visible;
+_OSC[AER LTR DPC] es aviso de capacidades, no prueba de error PCIe.
+Ambos SSD firmware4B2QJXD7; notas posteriores de Samsung son pista, no causa
+probada. No actualizar antes del rescate. Integridad EXT4/DB y backup pendientes.
+El operador confirma que no dispone de otro almacenamiento: no hay destino
+para imagen completa de2TB. Se valora copia selectiva de datos CVAT al SO sano,
+sujeta a comprobar tamaño/capacidad y permisos; sólo PLAN, todavía sin montaje
+ni copia. No se descarta toda forma de backup por faltar otro disco. No se han
+copiado datos, validado EXT4/DB ni recuperado CVAT. Mantener protecciones y backup
+`/root/app2-storage-maintenance/aisrv-7epmpnej`; sin nuevos resets o reinicios.
+
+**Autorización nueva del operador:** «me han dado autorización para actualizar
+lo que sea necesario, pero por favor se cauteloso». Se activa la secuencia de
+rescate selectivo y preparación de la corrección, primero SSDdatos187F tras
+respaldo/comprobación. La lectura authorized-maintenance-before.json
+(07:43:52UTC/09:43:52Madrid,uptime1136,79s,mismo bootcebc…) confirma SSD presente,
+cinco máscaras/unidadesinactive,fstab protegido y ningún montaje. En este punto
+no hay helper de rescate desplegado/verificado, montaje temporal, copia, USB o
+firmware aplicado. Ahora sólo hay SSH: sin monitor/teclado/USB. ISO y rescate por
+SSH siguen autorizados; aplicar firmware espera consola/método oficial, sin
+sustituirlo por un binario extraído y enviado por SSH. rescue-tools-readonly.json detecta /dev/ipmi0/sysfsipmi0 y drivers cargados;
+ipmitool ausente. Interfaz local existe; acceso/config/credenciales/consolaBMC
+siguen PENDIENTES, sin cambios ni instalación. GNUtar1.35/rsync/dumpe2fs/debugfs
+ya presentes; raíz82.682.929.152bytes libres en esa lectura. Registrar cada resultado real al llegar; conservar SO095A si
+es el único destino del backup y no actualizar ambos SSD juntos.
+
+Hoja de ruta correctiva AUTORIZADA, ejecución técnica PENDIENTE en el incidente: preservar esenciales y probar
+restauración; verificar firmware oficial compatible8B para el SSD de datos187F
+antes de una eventual actualización ISO/USB; integridadoffline y observación
+orientativa24–48h; si recae, aislar energía/PCIe y hardware/RMA con un cambio cada
+vez. No garantía ni causa demostrada. No actualizar ambos SSD o el SO si contiene
+la única copia. Sin cambios aplicados por este plan; USB/arranque ASUS pendientes.
+
+Historia en el incidente: EIO/dead0B, un reboot sin recuperar SSD, presencia física,
+apagado solicitado y ventiladores tardíos, AC retirada1min/reconectada según
+operador y arranque actual con SSD presente. No se confirmó que el apagado
+ordenado previo terminara antes de retirar AC. Causa y pérdida de datos siguen
+sin confirmar. Fotos y snapshot19-10 tarea5/job5 conservados; backup privado del
+app2 del SO sano11.903.996bytes no incluye DB/volúmenes del SSD. Alternativa PC
+aplazada. Sin conexión ni movimiento del robot. Evidencia
+20261020T061422Z_APP2_RESUME_READONLY, booting-review-initial.json y
+cold-boot-system-review.json.
+
 **19-10-2026 — APP2-FIRST-CONTOUR-20261019: primera anotación real guardada y revisada.**
 Consulta de CVAT tarea5/job5 tras aviso del operador: un polígono manual ID10,
 frame1 head_rgb.png, itr_candidate,26vértices dentro de960×576. Comparación
