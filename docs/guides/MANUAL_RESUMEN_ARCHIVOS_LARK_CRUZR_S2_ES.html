@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Manual resumido de archivos — Cruzr S2</title>
+<style>
+@page { size: A4; margin: 16mm 17mm; }
+body { font-family: "Liberation Sans", "Noto Sans CJK SC", sans-serif; font-size: 10.2pt; line-height: 1.15; color: #243447; }
+h1 { font-size: 24pt; color: #123b56; margin: 0 0 9pt; }
+h2 { font-size: 17pt; color: #123b56; margin: 0 0 10pt; }
+h3 { font-size: 11.6pt; color: #176978; margin: 12pt 0 5pt; }
+p { margin: 5pt 0 7pt; }
+.subtitle { font-size: 12pt; color: #49677b; }
+.meta { font-size: 9pt; color: #536778; }
+.page { page-break-before: always; }
+.note { background: #eef4f7; padding: 8pt; border-left: 3pt solid #176978; }
+.small { font-size: 9pt; }
+table { width: 100%; border-collapse: collapse; margin: 7pt 0 9pt; }
+th { background: #123b56; color: white; font-weight: bold; text-align: left; }
+th, td { border: 0.5pt solid #c9d6df; padding: 5pt 6pt; vertical-align: top; }
+td { font-size: 9.3pt; }
+tr { page-break-inside: avoid; }
+code, pre { font-family: "Liberation Mono", "Noto Sans CJK SC", monospace; font-size: 8.5pt; }
+pre { background: #f2f5f8; padding: 8pt; line-height: 1.18; white-space: pre-wrap; }
+li { margin-bottom: 4pt; }
+ul, ol { margin-top: 5pt; padding-left: 19pt; }
+.tag { color: #176978; font-weight: bold; font-size: 9pt; }
+</style>
+</head>
+<body>
+<p class="tag">GUÍA DE CONSULTA · ARCHIVOS Y MODELOS</p>
+<h1>Manual resumido<br>Cruzr S2</h1>
+<p class="subtitle">Qué contiene la carpeta, qué descomprimir y para qué sirve cada archivo</p>
+<p class="meta">Edición: 21 de octubre de 2026 · Idioma: español<br>
+Carpeta de referencia: <strong>Lark20261021-084746</strong></p>
+
+<h2>Qué incluye y qué no incluye</h2>
+<p><strong>Para quien solicita vistas o un modelo 3D:</strong> este material permite conocer el aspecto y la geometría de referencia del robot. El alcance de la entrega es el siguiente.</p>
+<h3>Sí encontrarás</h3>
+<ul>
+<li><strong>Modelos 3D del robot completo</strong> en URDF con mallas STL: variantes de abrazaderas y pinzas PGC.</li>
+<li><strong>Modelos separados de manos v3, v4 y v3 lite</strong>; también escenas USD de las manos v3, una pinza Dahuan y una brida.</li>
+<li><strong>Vistas frontal, trasera y en perspectiva</strong> dentro del manual de producto, junto con especificaciones generales.</li>
+<li><strong>Manuales y procedimientos del proveedor</strong>, además de instaladores de teleoperación para PC y visores.</li>
+</ul>
+<h3>No debes esperar encontrar</h3>
+<ul>
+<li><strong>Un CAD paramétrico editable del robot completo en STEP o SolidWorks, ni planos de fabricación acotados.</strong> El único STEP identificado corresponde a la brida del sensor de fuerza/par.</li>
+<li><strong>Un único ensamblaje completo con las manos v4 ya integradas.</strong> Los modelos del cuerpo y de las manos se entregan por separado; no acreditan el montaje exacto de la unidad física actual.</li>
+<li><strong>Una colección completa de vistas técnicas o de renders fotorrealistas desde todos los ángulos.</strong> Las vistas disponibles son las que aparecen en el manual.</li>
+<li><strong>Una aplicación o simulador listo para funcionar con un clic, ni todo el firmware necesario.</strong> Los instaladores requieren comprobar compatibilidad; el firmware DAC citado en el SOP no está incluido.</li>
+<li><strong>Medidas del montaje actual o trayectorias de movimiento ya validadas.</strong> Hay datos y especificaciones de referencia, pero los modelos no sustituyen la comprobación física.</li>
+</ul>
+<p class="note"><strong>Qué enviar según la petición:</strong> para vistas y visualización 3D, el material es útil. Si solicitan CAD editable o información para fabricar adaptaciones, habrá que pedir documentación adicional al proveedor.</p>
+<p class="small"><strong>Copia externa:</strong> <code>preparado/</code>, el STL ensamblado y el ZIP de entrega son derivados opcionales creados en el PC. No se presupone que estén en el disco externo junto a los originales.</p>
+
+<div class="page"></div>
+<h3>1. Resumen general</h3>
+<p>La carpeta reúne <strong>documentación del robot, modelos 3D, modelos de los efectores y software de teleoperación</strong>. No es una única aplicación ni hace falta instalar o descomprimir todo para consultarla.</p>
+<p>Esta guía utiliza nombres y rutas relativos a la carpeta principal. Por tanto, sirve también después de copiarla a un disco externo o a otro ordenador, sin depender de la ruta del PC original.</p>
+
+<h3>Estructura original que debes conservar</h3>
+<pre>Lark20261021-084746/
+  2-Cruzr_S2_Product_Manual.pdf
+  Cruzr S2 搬箱子操作流程.docx
+  cruzr_s2_description.zip
+  cruzr_s2_description_splint.zip
+  utats 遥操.zip
+  末端 urdf/</pre>
+<p>La carpeta <strong>末端 urdf</strong> agrupa material de los <strong>efectores de las muñecas</strong>: manos, pinza, brida y procedimientos de sustitución. Sus archivos se explican en la sección 3.</p>
+
+<h3>Por dónde empezar</h3>
+<ul>
+<li><strong>Conocer el robot o buscar vistas:</strong> abrir el PDF de producto. No se descomprime.</li>
+<li><strong>Ver el robot completo con abrazaderas:</strong> descomprimir <code>cruzr_s2_description_splint.zip</code>.</li>
+<li><strong>Estudiar las manos v4:</strong> abrir el ZIP <strong>四代手-URDF.zip</strong>, dentro de <strong>末端 urdf/</strong>.</li>
+<li><strong>Consultar teleoperación:</strong> extraer <strong>utats 遥操.zip</strong> y leer primero su SOP en PDF. Los instaladores son un paso distinto.</li>
+</ul>
+<p class="note"><strong>Originales y derivados:</strong> <code>preparado/</code> y <code>Cruzr_S2_vistas_y_modelo_3D_abrazaderas.zip</code> son añadidos preparados posteriormente en el PC. No se supone que estén ya en el disco externo. La sección 5 explica cuándo copiarlos también.</p>
+
+<div class="page"></div>
+<h2>2. Modelos del robot completo</h2>
+<table>
+<tr><th style="width:43%">Archivo original</th><th>Qué representa</th></tr>
+<tr><td><code>cruzr_s2_description_splint.zip</code></td><td>Robot completo en la variante denominada <strong>splint / abrazaderas</strong>. Incluye chasis, ruedas, elevador, torso, cabeza y ambos brazos. URDF de 48 enlaces y 47 articulaciones.</td></tr>
+<tr><td><code>cruzr_s2_description.zip</code></td><td>Variante del robot con <strong>pinzas PGC de dos dedos</strong>. URDF de 52 enlaces y 51 articulaciones. No es el modelo de manos v4 articuladas.</td></tr>
+</table>
+<p>Ambos incluyen el ensamblaje <strong>URDF</strong>, las superficies <strong>STL</strong> y archivos auxiliares de visualización ROS/RViz. Las geometrías comunes coinciden; cambia la representación de los efectores.</p>
+
+<h3>Qué descomprimir y dónde</h3>
+<ol>
+<li>Elige la variante necesaria. Para la entrega de vistas con abrazaderas se ha seleccionado <strong>splint</strong>.</li>
+<li>Crea una carpeta de destino distinta para cada ZIP.</li>
+<li>Usa «Extraer todo» o «Extraer en…», conservando las subcarpetas.</li>
+<li>Mantén juntos <code>urdf/</code>, <code>meshes/</code> y el resto del paquete.</li>
+</ol>
+<pre>modelos_extraidos/
+  abrazaderas/cruzr_s2_description/...
+  pinzas_PGC/cruzr_s2_description/...</pre>
+<p class="note"><strong>No extraer los dos ZIP encima uno del otro.</strong> Ambos contienen una carpeta interna llamada <code>cruzr_s2_description</code> y un URDF con el mismo nombre. Mezclarlos puede sustituir una variante por la otra.</p>
+
+<h3>Ejemplo opcional en Linux</h3>
+<p class="small">Desde una terminal situada en la carpeta principal, con destinos separados y sin sobrescribir archivos existentes:</p>
+<pre>mkdir -p modelos_extraidos/abrazaderas modelos_extraidos/pinzas_PGC
+unzip -n cruzr_s2_description_splint.zip -d modelos_extraidos/abrazaderas
+unzip -n cruzr_s2_description.zip -d modelos_extraidos/pinzas_PGC</pre>
+<p>El URDF principal queda dentro de <code>urdf/cruzr_s2_v1/cruzr_s2_v1.urdf</code>. Un visor compatible debe poder resolver el paquete <code>cruzr_s2_description</code>. Enviar sólo ese archivo URDF, sin las mallas, deja incompleto el modelo.</p>
+<p><strong>Alcance:</strong> son modelos de referencia para visualización. No demuestran que la geometría, la orientación de las abrazaderas o las cotas coincidan exactamente con el montaje físico actual. No son un CAD paramétrico completo en STEP.</p>
+
+<div class="page"></div>
+<h2>3. Manos, pinza y piezas de muñeca</h2>
+<p>Todos los archivos siguientes están en <strong>末端 urdf/</strong>. Descomprime sólo el modelo o el procedimiento que necesites, en una carpeta separada por ZIP.</p>
+<table>
+<tr><th style="width:40%">Nombre original</th><th>Parte y contenido</th></tr>
+<tr><td><strong>三代手-URDF.zip</strong></td><td><strong>Manos de tercera generación (v3).</strong> Dos paquetes: mano izquierda y mano derecha. Incluye URDF, STL y auxiliares de visualización.</td></tr>
+<tr><td><strong>四代手-URDF.zip</strong></td><td><strong>Manos de cuarta generación (v4, variante EVT3 en los nombres internos).</strong> Dos paquetes separados, izquierdo y derecho, con URDF y mallas STL.</td></tr>
+<tr><td><code>ubt_hand_v3_lite.zip</code></td><td><strong>Variante v3 lite</strong>, también con modelos izquierdo y derecho. No debe confundirse con el paquete v3 estándar ni con el v4.</td></tr>
+<tr><td><code>Collected_hand_v3_usd.zip</code></td><td><strong>Manos v3 en formato USD.</strong> Escenas izquierda/derecha para herramientas compatibles con USD. Conservar los archivos principales, <code>SubUSDs/</code> y <code>.collect.mapping.json</code>.</td></tr>
+<tr><td><strong>大寰-URDF-dahuan_description.zip</strong></td><td><strong>Una pinza Dahuan de dos dedos.</strong> Un URDF y sus mallas. Los enlaces <code>L_gripper</code> y <code>R_gripper</code> son los dos dedos de esa pinza, no dos manos diferentes.</td></tr>
+<tr><td><strong>六维力安装法兰.STEP</strong></td><td><strong>Brida de montaje del sensor de fuerza/par de seis ejes.</strong> Es una pieza CAD independiente. Se abre directamente en un CAD compatible con STEP; no hay que descomprimirla.</td></tr>
+<tr><td><strong>末端执行器更换SOP.zip</strong></td><td><strong>Procedimientos de sustitución de efectores.</strong> Contiene un Excel de montaje de pinza de dos dedos y dos vídeos MP4. No contiene un modelo 3D del robot.</td></tr>
+</table>
+
+<h3>Cómo reconocer los lados y abrir los modelos</h3>
+<p><strong>left / L</strong> identifica el lado izquierdo del modelo; <strong>right / R</strong>, el derecho. Los paquetes v4 se llaman <code>ubt_left_hand_v4_evt3_description</code> y <code>ubt_right_hand_v4_evt3_description</code>. Sus URDF están en <code>urdf/hand4_evt3/</code>. Mantén también las carpetas normales y <code>complex</code> que incluya cada variante.</p>
+<p>Estos paquetes describen los efectores por separado. Su presencia en la carpeta <strong>no significa que las manos estén integradas automáticamente en el modelo del cuerpo</strong> ni que instalar ese software cambie por sí solo el perfil del robot.</p>
+<h3>Nombres extraños y archivos auxiliares</h3>
+<p>Algunos ZIP antiguos pueden mostrar nombres chinos ilegibles. Si el extractor permite elegir codificación, probar <strong>GBK / CP936</strong> para los nombres. No hace falta editar el contenido de los URDF por ese motivo.</p>
+<p>Los archivos cuyo nombre empieza por <strong>._</strong> son metadatos de macOS: pueden ignorarse y no deben abrirse como si fueran ZIP. En cambio, <code>.collect.mapping.json</code> pertenece al paquete USD y debe conservarse.</p>
+
+<div class="page"></div>
+<h2>4. Documentos y teleoperación</h2>
+<h3>Documentación de la carpeta principal</h3>
+<table>
+<tr><th style="width:43%">Archivo</th><th>Qué consultar</th></tr>
+<tr><td><code>2-Cruzr_S2_Product_Manual.pdf</code></td><td>Manual de producto: componentes, características y uso. Página 1: perspectiva; página 7: vistas frontal/trasera; página 8: especificaciones. Se abre directamente.</td></tr>
+<tr><td><strong>Cruzr S2 搬箱子操作流程.docx</strong></td><td>Procedimiento de manipulación de cajas del proveedor: creación de mapa/puntos y escenarios con estanterías. Usa cajas y montajes concretos; no sustituye la configuración validada para cada demo. Se abre en Word o LibreOffice.</td></tr>
+</table>
+
+<h3>Contenido de utats 遥操.zip</h3>
+<p>Es un paquete de <strong>teleoperación para el PC y los visores</strong>, no un modelo 3D. Descomprimirlo sólo si se va a revisar esa documentación o preparar su software.</p>
+<table>
+<tr><th style="width:57%">Archivo dentro del ZIP</th><th>Función</th></tr>
+<tr><td><strong>Utars遥操作SOP-2.pdf</strong></td><td>Procedimiento de teleoperación (50 páginas). Leer antes de plantear una instalación.</td></tr>
+<tr><td><code>XRoboToolkit-PICO-1.1.1.apk</code></td><td>Aplicación para visor PICO.</td></tr>
+<tr><td><code>QuestTool_v3.5.3.apk</code></td><td>Aplicación para el entorno de visor Quest descrito en el SOP.</td></tr>
+<tr><td><code>ubt-remote-control_4.1.0_amd64.deb</code></td><td>Interfaz de control para PC Linux de 64 bits.</td></tr>
+<tr><td><code>ubt_controller_5.3.0_ubuntu22.04_amd64.deb</code></td><td>Backend/controlador para Ubuntu 22.04, según el nombre del paquete.</td></tr>
+<tr><td><code>XRoboToolkit_PC_Service_1.0.0_ubuntu_22.04_amd64.deb</code><br><code>XRoboToolkit_PC_Service_1.0.0_ubuntu_24.04_amd64.deb</code></td><td>Dos variantes del servicio PC. Seleccionar la correspondiente al sistema operativo; no instalar ambas por defecto.</td></tr>
+<tr><td><code>usb_driver.zip</code></td><td>Reglas y scripts USB/serie para módulos RS485 y guantes OYMotion. No son necesarios para abrir documentos o modelos 3D.</td></tr>
+</table>
+<p class="note"><strong>Compatibilidad:</strong> el SOP asocia controller 5.3.0 + interfaz 4.1.0 con <code>utars-udoke-config-v0.2.0-dac-beta.2</code>. Ese firmware no viene en este ZIP. No equivale al v0.2.0 genérico ni demuestra que sea apropiado actualizar la unidad actual. Revisar la combinación real antes de instalar.</p>
+<p class="small">Extraer un ZIP no instala sus programas. Los APK se instalan en el visor; los DEB, en un PC compatible. Los scripts del paquete pueden modificar el sistema: no hay que ejecutarlos para consultar este material. No se reproducen contraseñas ni datos de acceso de los documentos originales.</p>
+
+<div class="page"></div>
+<h2>5. Uso práctico y copia al disco externo</h2>
+<h3>Qué significa cada formato</h3>
+<table>
+<tr><th style="width:21%">Formato</th><th>Cómo se utiliza</th></tr>
+<tr><td><strong>PDF / DOCX</strong></td><td>Documentos: lector PDF, Word o LibreOffice. No se descomprimen para leerlos.</td></tr>
+<tr><td><strong>ZIP</strong></td><td>Paquete comprimido. Extraer en su propia carpeta y conservar subcarpetas y nombres.</td></tr>
+<tr><td><strong>URDF + STL</strong></td><td>El URDF describe enlaces/articulaciones y referencia las mallas STL. Un visor compatible con URDF necesita el paquete completo.</td></tr>
+<tr><td><strong>STL ensamblado</strong></td><td>Malla estática que puede abrirse en visores 3D o importarse como malla en CAD. No es un sólido paramétrico.</td></tr>
+<tr><td><strong>USD</strong></td><td>Escena para un visor o simulador compatible con USD. Puede depender de otros archivos de la misma carpeta.</td></tr>
+<tr><td><strong>STEP</strong></td><td>Intercambio CAD. El STEP disponible aquí representa la brida, no el robot completo.</td></tr>
+<tr><td><strong>XLSX / MP4</strong></td><td>Hoja de cálculo y vídeos del procedimiento de sustitución de efectores.</td></tr>
+</table>
+
+<h3>Añadidos opcionales preparados en el PC</h3>
+<p>La carpeta <code>preparado/</code> contiene las vistas extraídas del manual, el STL ensamblado de abrazaderas, los originales URDF extraídos por separado y los informes de verificación. Estos añadidos no forman parte de la estructura original recibida.</p>
+<p>Para enviar una selección cómoda a otra persona, está preparado el archivo <strong>Cruzr_S2_vistas_y_modelo_3D_abrazaderas.zip</strong> (aproximadamente 42 MB). Incluye vistas, STL, URDF/mallas de abrazaderas e instrucciones. No contiene la variante PGC ni el software de teleoperación.</p>
+<p><strong>Unidades:</strong> importar <code>Cruzr_S2_abrazaderas_referencia_mm.stl</code> en <strong>milímetros</strong>. El URDF usa metros. El STL corresponde a articulaciones q=0 del modelo: no representa la postura actual del robot ni certifica HOME. Las vistas del manual pueden mostrar manos distintas de las abrazaderas del modelo.</p>
+
+<h3>Qué copiar ahora al disco externo</h3>
+<ol>
+<li>Copia <strong>este DOCX</strong> en la raíz de <code>Lark20261021-084746/</code>, junto a los originales.</li>
+<li>Conserva la carpeta original <strong>末端 urdf/</strong> y los ZIP originales. No hace falta descomprimirlos todos.</li>
+<li>Si quieres tener la entrega 3D lista sin repetir el trabajo, copia también <strong>Cruzr_S2_vistas_y_modelo_3D_abrazaderas.zip</strong>. Es suficiente para compartir las vistas y el modelo de referencia.</li>
+<li>Copiar <code>preparado/</code> es opcional: útil si quieres abrir directamente los archivos sin extraer el paquete de entrega.</li>
+<li>Abre el DOCX y algún PDF desde el disco externo para comprobar la copia. Guarda las variantes extraídas en carpetas separadas.</li>
+</ol>
+<p class="small"><strong>Si solicitan un STEP del robot completo:</strong> habrá que pedir el CAD apropiado al proveedor. La conversión de las mallas STL no recupera el modelo paramétrico original. Esta guía inventaría los archivos; no instala software ni modifica el robot.</p>
+</body>
+</html>

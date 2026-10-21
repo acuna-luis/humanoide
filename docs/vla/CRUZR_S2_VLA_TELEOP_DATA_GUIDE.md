@@ -1,5 +1,33 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**21-10-2026 — GR2-CLOUD-PILOT-20261021: ER 2 nube probado, sin control.**
+[Prueba y receta](GEMINI_ER2_PRUEBA_NUBE.md): 3 formas sintéticas en3,468 s;
+8 piezas en un ROI real autorizado en9,401 s, cajas2D y JSON válidos. No identidad
+industrial, 3D, control S2/Y1 ni acceso VLA/On-Device demostrados. La producción
+local sigue vigente; nube autorizada sólo como experimento temporal.
+
+**21-10-2026 — GR2-COMPAT-20261021: Gemini Robotics 2 no es GR00T ni un reemplazo directo.**
+[Auditoría de SDK y compatibilidad S2/Y1](GEMINI_ROBOTICS_2_COMPATIBILIDAD.md).
+ER 2 permite orquestación vía API y habilidades propias; adaptación S2 viable
+como inferencia de ingeniería, aún no implementada/probada. On-Device 2 requiere
+Trusted Testers; CLI público sin embodiment S2/Y1 y runtime Orin no verificado.
+Igual tamaño de vector ALOHA/S2 no implica igualdad de acción. Capturas PICO
+necesitan conversión, calibración y contrato nuevos. Sin entrenamiento,
+inferencia, control, instalación o conexión al robot en esta revisión.
+
+Seguimiento GR2-ACCESS-20261021: catálogo de modelos HTTP200 expone ER2 y
+Streaming; no inferencia probada. API Robotics Developer devuelve403 con motivo
+SERVICE_DISABLED usando las credenciales disponibles. Sin credencial Safari,
+adaptador Cruzr o evaluación GR2 localizados. No se acredita acceso a VLA2 o
+On-Device2; aprobación Trusted Testers pendiente de constancia. Sólo GET de
+metadatos, sin generación, imágenes o cambios de servicios. Recibo saneado en
+`../Humanoide-vla-evidence/20261021T093438Z_GR2_ACCESS_METADATA/`.
+
+GR2-LOCAL-REQ-20261021: ejecución sólo en Ubuntu interno y sin API Internet;
+la propuesta ER2 nube no aplica. On-Device2 es candidata pendiente de artefactos,
+runtime Orin y adaptación/evaluación S2. No se presupone simulador; evaluar
+salidas con grabaciones sin actuadores no certifica su ejecución física.
+
 **2026-09-14 — Reutilización de cálculos de trayectorias documentada.**
 Separados métodos, pruebas reutilizables por inclusión de dominio y resultados
 que dependen de escena/ejecución. Incluye matriz de cambios, flujo de reutilización,

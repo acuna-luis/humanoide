@@ -1,5 +1,92 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**21-10-2026 — GR2-CLOUD-PILOT-20261021: prueba temporal de ER 2 autorizada y ejecutada.**
+[Resultados y límites](vla/GEMINI_ER2_PRUEBA_NUBE.md). Dos inferencias: sintética
+3 instancias/3,468 s y ROI real de bandeja 8 instancias/9,401 s, JSON válido.
+Captura real autorizada expresamente; sólo recorte sin personas. Coincide con
+recuento visual previo, sin benchmark, referencia de material, pose 3D o control.
+ER2 API probado; VLA/On-Device y adaptación S2/Y1 siguen pendientes. Producción
+local conservada; excepción sólo para esta prueba. Sin conexión al robot,
+instalaciones, CVAT modificado o imágenes en Git. Helper y evidencia en informe.
+
+**21-10-2026 — GR2-COMPAT-20261021: Gemini Robotics 2 contrastado con código público.**
+[Revisión de compatibilidad S2/Y1](vla/GEMINI_ROBOTICS_2_COMPATIBILIDAD.md).
+SDK 2.156.0 fijado en `26b49f1a15b96f1e65b05160f5b991d6167aba74`:
+cliente/datos/adaptadores extensibles, sin pesos ni driver Cruzr incluidos.
+El CLI On-Device v2 enumera Trossen/SO101/Dexmate/FR3 Duo, sin S2/Y1.
+ER 2 con habilidades S2 es una integración técnicamente viable por desarrollar
+(INFERENCIA), no probada. VLA/On-Device requieren acceso y adaptación; Orin no
+confirmada. Ficha On-Device 2 limita alcance de movilidad/control corporal.
+APP2 local no cambia; ER 2 usa nube. Sólo auditoría estática y documentación;
+sin instalación, inferencia, envío de imágenes privadas o conexión/movimiento.
+Evidencia: `../Humanoide-vla-evidence/20261021T091906Z_GR2_SOURCE_REVIEW/`.
+
+Seguimiento GR2-ACCESS-20261021: catálogo Google HTTP200 con credenciales
+disponibles; expone ER2/ER2 Streaming, sin probar inferencia/cuotas. Robotics
+Developer discovery devuelve403/SERVICE_DISABLED con esas credenciales. No hay
+credencial Safari, adaptador Cruzr–Gemini o evaluación GR2 localizados en el
+ámbito revisado. Acceso al modelo de acciones/adaptación/control no acreditados;
+no equivale a rechazo Trusted Testers. Sólo metadatos GET, sin habilitar APIs,
+generación o imágenes privadas. Evidencia `20261021T093438Z_GR2_ACCESS_METADATA/`.
+
+Aclaración GR2-LOCAL-REQ-20261021: usuario requiere ejecución en Ubuntu interno,
+sin API Internet. ER2 nube queda descartado para este flujo. On-Device2 es la
+variante candidata, aún sin acceso/runtime/adapter acreditados; no instalación
+completa comprobada. No se presupone simulador: futura evaluación offline sobre
+grabaciones no equivale a simulación física o validación del control. Registro
+y backup en `GR2_ACCESS_METADATA/local-requirement-clarification/`.
+
+**21-10-2026 — LARK-ARCHIVE-MANUAL-20261021: manual resumido español en Word, listo para copia externa.**
+Creado `~/Descargas/Lark20261021-084746/Manual_resumen_archivos_Cruzr_S2_ES.docx`,
+seis páginas A4 tras revisión del alcance inicial. Explica la estructura original, qué descomprimir, modelos del
+cuerpo/efectores, formatos, documentos e instaladores. Distingue los derivados
+opcionales `preparado/` y ZIP de entrega: no presupone que estén en el disco externo.
+Contenido contrastado con ZIP/documentos; sin trasladar credenciales. DOCX/XML,
+conversión PDF y maquetación revisados, tablas dentro del margen. Originales
+conservados; no acceso al disco externo, robot o servidor ni instalaciones.
+[Fuente editable](guides/MANUAL_RESUMEN_ARCHIVOS_LARK_CRUZR_S2_ES.html) y
+[generador](../scripts/docs/build_lark_summary_docx.py). Evidencia privada:
+`../Humanoide-vla-evidence/20261021T072449Z_LARK_MANUAL_DOCX/`.
+
+Revisión solicitada: primera página «Qué incluye y qué no incluye», orientada a
+quien espera vistas o modelo 3D. Aclara ausencia de CAD completo STEP/SolidWorks,
+planos de fabricación, ensamblaje cuerpo+v4 integrado y software listo sin ajustes;
+distingue especificaciones de referencia de validación física. Capítulos originales
+conservados. Revisión y copia previa: `20261021T073055Z_LARK_MANUAL_ALCANCE/`.
+
+**21-10-2026 — MODELS-VIEWS-20261021: vistas y modelo 3D preparados para compartir.**
+Material local de `~/Descargas/Lark20261021-084746`: verificados y extraídos en
+carpetas separadas los modelos URDF/STL de abrazaderas (`splint`) y pinzas PGC.
+Se preparó un STL ensamblado de referencia en mm, articulaciones URDF q=0,
+846.393 triángulos / 42.319.734 bytes; fuentes y geometría verificadas. No representa
+la postura actual ni acredita cotas físicas. PDF de vistas/especificaciones (manual
+páginas 7–8) y PNG frontal/trasera/perspectiva acompañan URDF y mallas originales.
+ZIP listo: `~/Descargas/Lark20261021-084746/Cruzr_S2_vistas_y_modelo_3D_abrazaderas.zip`,
+41.954.103 bytes, 74 archivos; CRC y hashes de cada miembro comprobados. Originales
+conservados; no instalaciones ni conexión/cambios del robot o servidor.
+No hay CAD STEP nativo del robot completo; el STEP recibido es una brida separada.
+[Contenido, límites y reproducción](guides/CRUZR_S2_MODELOS_3D_Y_VISTAS.md).
+Evidencia: `../Humanoide-vla-evidence/20261021T071610Z_MODELOS_3D_LOCAL/`.
+
+ZIP actualizado el 21-10 a las 09:38:04 Europe/Madrid: incorpora el manual español
+revisado de seis páginas y LEEME con el alcance de esta selección. Se conservan
+los demás contenidos idénticos. Copia del ZIP previo y hashes antes/después en
+`20261021T073801Z_ZIP_MANUAL_UPDATE/`; CRC y 74 hashes de archivos verificados.
+
+**21-10-2026 — EFFECTOR-CLAMP-MISMATCH-20261021: arranque bloqueado por perfil de manos aún cargado.**
+Operador confirma sustitución física de manos por abrazaderas con el robot apagado;
+no ejecutó el selector de software. Comprobación real `cambiar_efector.sh --to clamp --check`
+a las 08:59:40 Europe/Madrid: procesos y archivos no coinciden con clamp; nueve
+servicios Motion y Control Center mantienen `HW_TYPE=cruzr_s2_v1_sps`, sin sesión
+de cambio pendiente. En el arranque actual hardware detecta `hand cnt=0`, falla
+`dexterous_hand_controller` esperando `/ecat/hand/get_version`; CC pasa selfcheck
+pero `StartMotion` falla con motivo 19 y termina en `Fault`. La aplicación Motion
+se reinicia y luego espera fuerza/par; eso no demuestra avería del sensor FT.
+Sólo consultas de lectura: ningún HOME, movimiento, reinicio o perfil modificado.
+Recuperación supervisada a clamp y HOME **PENDIENTES**; no repetir liberación del
+paro como prueba. [Diagnóstico y siguiente paso](incidents/2026-10-21_CAMBIO_A_ABRAZADERAS_SIN_PERFIL.md).
+Evidencia privada: `../Humanoide-vla-evidence/EFFECTOR-20261021T065940Z-53b52e6b/`.
+
 **20-10-2026 — PICO-USB-CONNECT-20261020: conexión USB recuperada y seguimiento verificado.**
 A las 10:13 Europe/Madrid, PICO PA94Y0MGKB070822G estaba conectado por USB1-3,
 despierto y con XRoboToolkit abierto; servicio PC63901 activo, pero reverse ADB

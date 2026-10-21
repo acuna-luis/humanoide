@@ -1,5 +1,15 @@
 # Demostraciones de manos Cruzr S2
 
+**21-10-2026 — EFFECTOR-CLAMP-MISMATCH-20261021: cambio físico a abrazaderas;
+perfil v4 aún activo.** El operador confirma cambio con el robot apagado y
+liberación posterior del paro, sin ejecutar el selector. Lectura actual: nueve
+servicios Motion y CC siguen SPS; hardware detecta cero manos, falla el
+controlador v4 y StartMotion termina en Fault. `--to clamp --check` devuelve 0,
+pero archivos y procesos no coinciden con clamp; no certifica HOME. Aplicación
+del perfil mediante recuperación con brazos asegurados y gates actuales
+PENDIENTE, sin movimiento ni reinicios del agente.
+[Diagnóstico, evidencia y punto de reanudación](../../docs/incidents/2026-10-21_CAMBIO_A_ABRAZADERAS_SIN_PERFIL.md).
+
 **16-10-2026 — SWITCH-EFFECTOR-RESTORE-20261016: restauración CORREGIDA y cambio a v4 VERIFICADO.**
 La sesión `EFFECTOR-20261016T081258Z-1bddf143` instaló SPS y recreó los nueve
 servicios Motion y CC; falló antes de arrancarlos al restaurar historiales sobre

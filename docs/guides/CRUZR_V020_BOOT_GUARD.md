@@ -1,5 +1,24 @@
 # Cruzr S2 v0.2.0 boot-readiness guard
 
+**21-10-2026 — EFFECTOR-CLAMP-MISMATCH-20261021: arranque fallido tras cambio físico a abrazaderas; perfil SPS conservado.**
+**OBSERVADO/VERIFICADO por lectura.** El operador cambió las manos por abrazaderas
+con el robot apagado, sin cambiar el perfil software. El check de `clamp` terminó
+rc0, pero sus resultados `archivos=false` y `cargado=false` no acreditan ese perfil:
+nueve contenedores Motion y Control Center conservan `HW_TYPE` SPS; no hay
+`active_session`. En este arranque hw informa `hand_cnt=0`, intenta inicializar
+`dexterous_hand_controller` y consultar `/ecat/hand/get_version`; la consulta expira
+y termina con `Unknown hand type`/inicialización fallida. CC pasa SelfCheck, pero
+StartMotion falla con reason19 y entra en Fault; HOME no queda demostrado.
+La app se reinicia y después espera FT: esto no demuestra una avería del sensor FT.
+
+No se envió HOME, movimiento, StartMotion, reinicio ni cambio de perfil durante
+este diagnóstico. **PENDIENTE:** aplicar/cargar el perfil `clamp` mediante el
+selector y preparar la recuperación supervisada con sus gates físicos/técnicos;
+no se ha ejecutado. No reutilizar el HOME del 16-10 como estado actual ni forzar
+StartMotion para saltar la inicialización. [Incidente, evidencia y reanudación](../incidents/2026-10-21_CAMBIO_A_ABRAZADERAS_SIN_PERFIL.md).
+Evidencia privada: `../Humanoide-vla-evidence/EFFECTOR-20261021T065940Z-53b52e6b/`
+(`boot-logs/*.json`, check de perfil); copia documental previa en `before-docs/`.
+
 **16-10-2026 — BOOT-CURRENT-20261016: arranque y HOME VERIFICADOS por lectura.**
 Nuevo encendido informado por operador. Instancias actuales hw/app/CC running,
 restart0, HW_TYPE base/cruzr_s2_v1. Guard Motion3/3 y seis cámaras2/2 con marcas
