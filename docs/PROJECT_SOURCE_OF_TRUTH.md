@@ -1,69 +1,56 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
-**20-10-2026 — APP2-STORAGE-20261020: el SSD vuelve a detectarse tras retirar AC; datos aún sin validar.**
-[Incidente, cronología y siguiente paso](incidents/2026-10-20_APP2_SSD_DOCKER_NO_RESPONDE.md).
-VERIFICADO por lectura tras el arranque nuevo `cebc2464-2073-4f1e-82fc-17ee30941a22`:
-SSH operativo; systemd running, cero unidades fallidas y ningún job pendiente.
-Las consultas07:25:35/07:26:14UTC (09:25:35/09:26:14Madrid; uptimes40,92/78,62s)
-detectan **dos NVMe live**, incluido el SSD Docker de2.000.398.934.016bytes,
-serialS7DRNJ0X107187F, UUIDb819b286-2006-4474-b2d5-13982b0f1536, ahora nvme0n1p1.
-El SSD del SO, serialS7DRNJ0X107095A, es ahora nvme1n1; no identificar por nombres
-históricos. Cinco unidades inactive/masked, fstab noauto,ro,noload0,0 y volumen
-Docker sin montar VERIFICADOS de nuevo. Docker/CVAT y demás cargas siguen detenidos.
-RAM~503GiB, GPU RTX6000Ada49140MiB a32°C/0% y raíz82.683.002.880bytes libres:
-observaciones del SO en reposo, no prueba de integridad del SSD o de CVAT.
-Kernel observado tras arrancar6.8.0-147-generic (antes6.8.0-142), sin instalación
-o cambio de kernel ejecutado en esta intervención.
-Lectura adicional a184,11s/mismo boot: ambos live/UUID correcto/sin montar;
-composite Docker33,85°C/SO36,85°C, alarmas0, enlacesPCIe16GT/s x4. No es SMART.
+**20-10-2026 — PICO-USB-CONNECT-20261020: conexión USB recuperada y seguimiento verificado.**
+A las 10:13 Europe/Madrid, PICO PA94Y0MGKB070822G estaba conectado por USB1-3,
+despierto y con XRoboToolkit abierto; servicio PC63901 activo, pero reverse ADB
+vacío, sin TCP XR y vr_status0. El configurador --check confirmó STOP y terminó1
+por falta del mapping. Tras autorización expresa de restaurar sólo el túnel,
+`bash scripts/teleoperation/configure_pico_xr_usb.sh --configure` creó únicamente
+tcp63901→63901; --check posterior rc0. A las 10:15:40, operador confirma
+Connected/Working en127.0.0.1; lectura pasiva verifica peer loopback y vr_status1,
+operation_type1/STOP. Transporte y seguimiento recuperados; no habilitación física.
+La primera consulta ADB inició automáticamente el daemon local5037; se conserva
+junto al túnel transitorio. Sin reinicio de app/servicios/robot, START, HOME,
+cambio de modo, vídeo o cambios de red. Ruta Motion/Vision eno1/.11.250 observada.
+Reversión: configurador --remove bajo STOP retira sólo63901. Puede perderse al
+desconectar/reiniciar USB; repetir --check antes de conectar. Estado físico,
+efector y tarea Motion actuales no comprobados en esta intervención.
+[Procedimiento y evidencia](teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md#pico-usb-connect-20261020).
+Evidencia privada: ../Humanoide-vla-evidence/20261020T081316Z_PICO_USB_CONNECT_READONLY/.
 
-SMART/error-log/kernel recibidos como salida sudo pegada por el operador,
-no lectura independiente del agente (recibo07:30:29UTC/09:30:29Madrid):
-critical_warning0,307K/33,85°C, spare100%, percent_used0, media_errors0,
-num_err_log_entries0 y8entradas vacías. unsafe_shutdowns35/power_cycles36/
-power_on_hours48 son contadores históricos; no atribuir35al último apagado o a
-dañoEXT4. Extracto kernel enumera ambos NVMe sin resetfallido/EIO visible;
-_OSC[AER LTR DPC] es aviso de capacidades, no prueba de error PCIe.
-Ambos SSD firmware4B2QJXD7; notas posteriores de Samsung son pista, no causa
-probada. No actualizar antes del rescate. Integridad EXT4/DB y backup pendientes.
-El operador confirma que no dispone de otro almacenamiento: no hay destino
-para imagen completa de2TB. Se valora copia selectiva de datos CVAT al SO sano,
-sujeta a comprobar tamaño/capacidad y permisos; sólo PLAN, todavía sin montaje
-ni copia. No se descarta toda forma de backup por faltar otro disco. No se han
-copiado datos, validado EXT4/DB ni recuperado CVAT. Mantener protecciones y backup
-`/root/app2-storage-maintenance/aisrv-7epmpnej`; sin nuevos resets o reinicios.
+Lectura posterior 10:17:39: vr_status1/operation_type2. Aparecen procesos
+--teleoperate/pico_control iniciados fuera de esta intervención; STOP de 10:15:40
+es histórico, no el estado vigente. No se envía STOP ni otro comando para
+interferir con esa sesión. Habilitación y movimiento físico no comprobados.
 
-**Autorización nueva del operador:** «me han dado autorización para actualizar
-lo que sea necesario, pero por favor se cauteloso». Se activa la secuencia de
-rescate selectivo y preparación de la corrección, primero SSDdatos187F tras
-respaldo/comprobación. La lectura authorized-maintenance-before.json
-(07:43:52UTC/09:43:52Madrid,uptime1136,79s,mismo bootcebc…) confirma SSD presente,
-cinco máscaras/unidadesinactive,fstab protegido y ningún montaje. En este punto
-no hay helper de rescate desplegado/verificado, montaje temporal, copia, USB o
-firmware aplicado. Ahora sólo hay SSH: sin monitor/teclado/USB. ISO y rescate por
-SSH siguen autorizados; aplicar firmware espera consola/método oficial, sin
-sustituirlo por un binario extraído y enviado por SSH. rescue-tools-readonly.json detecta /dev/ipmi0/sysfsipmi0 y drivers cargados;
-ipmitool ausente. Interfaz local existe; acceso/config/credenciales/consolaBMC
-siguen PENDIENTES, sin cambios ni instalación. GNUtar1.35/rsync/dumpe2fs/debugfs
-ya presentes; raíz82.682.929.152bytes libres en esa lectura. Registrar cada resultado real al llegar; conservar SO095A si
-es el único destino del backup y no actualizar ambos SSD juntos.
+**20-10-2026 — APP2-STORAGE-20261020: APP2/CVAT operativo y verificado.**
+[Estado, evidencia y cronología](incidents/2026-10-20_APP2_SSD_DOCKER_NO_RESPONDE.md).
+Firmware de datos `S7DRNJ0X107187F` activo en `8B2QJXD7`; SO `S7DRNJ0X107095A`
+conservado en `4B2QJXD7`. CSM/EFI restaurados; journal recuperado offline y cinco
+pasadas de lectura posteriores sin avisos. Configuración original y montaje EXT4
+RW en `/var/lib/docker` restaurados. Docker/socket/containerd activos y enabled;
+ninguna unidad fallida. Veinte contenedores conservan IDs, imágenes, políticas y
+montajes; todos running, restart 0/error vacío. Ambos Ollama autoiniciados.
 
-Hoja de ruta correctiva AUTORIZADA, ejecución técnica PENDIENTE en el incidente: preservar esenciales y probar
-restauración; verificar firmware oficial compatible8B para el SSD de datos187F
-antes de una eventual actualización ISO/USB; integridadoffline y observación
-orientativa24–48h; si recae, aislar energía/PCIe y hardware/RMA con un cambio cada
-vez. No garantía ni causa demostrada. No actualizar ambos SSD o el SO si contiene
-la única copia. Sin cambios aplicados por este plan; USB/arranque ASUS pendientes.
+CVAT `2.79.0` API/UI HTTP 200. API autenticada de lectura: 4 tareas, 4 trabajos,
+9 formas globales; tarea 5 / trabajo 5, shape 10 del frame 1 presente. Ambos PNG
+originales servidos con los hashes/tamaños/dimensiones conservados; chunk del
+editor ZIP de 2 JPEG con CRC correcto. No se modificaron anotaciones.
 
-Historia en el incidente: EIO/dead0B, un reboot sin recuperar SSD, presencia física,
-apagado solicitado y ventiladores tardíos, AC retirada1min/reconectada según
-operador y arranque actual con SSD presente. No se confirmó que el apagado
-ordenado previo terminara antes de retirar AC. Causa y pérdida de datos siguen
-sin confirmar. Fotos y snapshot19-10 tarea5/job5 conservados; backup privado del
-app2 del SO sano11.903.996bytes no incluye DB/volúmenes del SSD. Alternativa PC
-aplazada. Sin conexión ni movimiento del robot. Evidencia
-20261020T061422Z_APP2_RESUME_READONLY, booting-review-initial.json y
-cold-boot-system-review.json.
+Túnel PC restaurado a las 11:36:53 UTC: `localhost:18080`, PID `1042428`, socket
+privado `/tmp/app2-cvat-tunnel-58rqjz4k/ssh.sock`; API local y trabajo 5 HTTP 200.
+Comando y cierre sólo del túnel en el incidente; [receta portable](app2/RETOMAR_APP2.md#3-retomar-hoy-con-el-servidor-existente).
+**Siguiente:** [continuar anotación/revisión humana del trabajo 5](http://localhost:18080/tasks/5/jobs/5).
+No sudo pendiente, recuperación repetida, entrenamiento real o movimiento del robot.
+
+Backups de 20 volúmenes, recetas y capas escribibles conservados; copias APP2 en
+SO y PC verificadas. PostgreSQL físico y dump restaurado ya comprobados. No imagen
+completa del SSD; Ollama no tiene tercera copia PC. BMC propio cerrado con logout
+no confirmado y perfil privado retenido, sin secretos en Git. **Fiabilidad a largo
+plazo pendiente de observación**, sin promesa de solución definitiva por estos chequeos.
+Última lectura 11:37:55 UTC: ambos NVMe live, Docker 20 running/0 paused/0 stopped,
+rootdir y overlay2 correctos, warnings null. Evidencia privada:
+`20261020T061422Z_APP2_RESUME_READONLY`, recibos/hashes finales en el incidente.
 
 **19-10-2026 — APP2-FIRST-CONTOUR-20261019: primera anotación real guardada y revisada.**
 Consulta de CVAT tarea5/job5 tras aviso del operador: un polígono manual ID10,

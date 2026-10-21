@@ -1,5 +1,49 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+## PICO-USB-CONNECT-20261020
+
+**20-10-2026, Europe/Madrid — VERIFICADO transporte USB y tracking.**
+Diagnóstico 10:13: PICO PA94Y0MGKB070822G, device USB1-3/transport1, Awake y
+XRoboToolkit PID13513. Servicio XR PC escucha63901, reverse vacío, ningún TCP XR;
+log pasivo operation_type1 y vr_status0. --check del configurador termina1
+después de confirmar STOP porque falta tcp63901→63901. No se atribuye el fallo
+a la IP127.0.0.1 ni a una avería del visor. La primera consulta ADB inicia
+automáticamente su daemon local5037, antes detenido.
+
+El operador autoriza **restaurar sólo el túnel USB**. A las 10:14:49, con STOP
+revalidado, receta existente:
+
+```bash
+bash scripts/teleoperation/configure_pico_xr_usb.sh --configure
+bash scripts/teleoperation/configure_pico_xr_usb.sh --check
+```
+
+Ambas rc0, mapping UsbFfs tcp:63901 tcp:63901. El operador usa PC service IP
+127.0.0.1 → Connect → Head + Controllers → Send data y confirma Connected/Working.
+A las 10:15:40, consulta pasiva verifica TCP127.0.0.1→127.0.0.1:63901,
+vr_status1 y operation_type1/STOP. Esto verifica conexión y seguimiento; no
+demuestra efector, tarea Motion cargada, HOME ni preparación física para mover.
+Sin START/Y/HOME/modo, vídeo, reinicio de app/backend/robot o cambio de red.
+PC→Motion/Vision observado por eno1, origen192.168.11.250.
+
+Se conserva únicamente el nuevo reverse63901 y el daemon ADB de la consulta.
+Túnel transitorio: desconectar/reiniciar USB puede eliminarlo. Si falta de nuevo,
+comprobar primero con --check y reaplicar bajo STOP; después reconectar en el visor.
+Reversión: mismo configurador --remove bajo STOP; no retirar otros mappings ni
+restaurar sesiones de control. No se altera APK, SDK, firmware o autoarranque.
+Fuente SHA2567967cf6b5090ee15f3c71658f33f3de231741e668b95bfaeecb27fc79cd83be5.
+Evidencia privada ../Humanoide-vla-evidence/20261020T081316Z_PICO_USB_CONNECT_READONLY/
+con before-docs, fuentes, consultas, aplicación, check posterior y conexión final.
+Sin commit/push. Reanudación: transporte listo; cualquier teleoperación requiere
+su lanzador y comprobaciones físicas/técnicas actuales.
+
+**Estado posterior, 10:17:39:** consulta pasiva vr_status1/operation_type2.
+A las 10:16:58 se observaron procesos --teleoperate/pico_control iniciados fuera
+de esta intervención. STOP de 10:15:40 describe el cierre de la reparación del
+túnel, no el estado posterior del backend. No se envía STOP ni otro comando
+para interferir con esa sesión externa. Habilitación y movimiento físico no
+comprobados. Evidencias control-process-verification.json/final-passive-state.json.
+
 **19-10-2026 — HEAD-ACTION-BUSY-20261019: tarea nativa identificada; sólo lectura.**
 El bloqueo de --prepare-vision corresponde al UUID27318de6-c1a6-4d86-a9c5-
 6f8b127df3da: teleoperation/cruzr_v4_pico_teleoperation, iniciada09:22 CEST

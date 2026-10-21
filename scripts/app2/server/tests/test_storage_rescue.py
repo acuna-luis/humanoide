@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import tarfile
 import tempfile
 import unittest
@@ -86,6 +87,25 @@ class StorageRescueTests(unittest.TestCase):
         selected, _ = M.choose_plan(report, M.RESERVE + 200 * 1024 ** 3)
         self.assertIn(M.CACHE, selected)
 
+    def test_all_volume_plan_preserves_others_and_essential_first(self):
+        report = self.report()
+        report["volumes"]["ollama_other_service"] = {"logical_bytes": 3 * 1024 ** 3,
+                                                    "allocated_bytes": 3 * 1024 ** 3}
+        selected, estimate = M.choose_plan(report, M.RESERVE + 10 * 1024 ** 3, all_volumes=True)
+        self.assertEqual(selected[:len(M.ESSENTIAL)], list(M.ESSENTIAL))
+        self.assertEqual(set(selected), set(report["volumes"]))
+        self.assertGreater(estimate, 3 * 1024 ** 3)
+        old, _ = M.choose_plan(report, M.RESERVE + 10 * 1024 ** 3)
+        self.assertNotIn("ollama_other_service", old)
+
+    def test_all_volume_plan_refuses_unreadable_or_nonfitting_other_volume(self):
+        for sizes in ({"inventory_error": "unreadable"},
+                      {"logical_bytes": 100 * 1024 ** 3, "allocated_bytes": 100 * 1024 ** 3}):
+            report = self.report()
+            report["volumes"]["other_service"] = sizes
+            with self.subTest(sizes=sizes), self.assertRaises(ValueError):
+                M.choose_plan(report, M.RESERVE + 10 * 1024 ** 3, all_volumes=True)
+
     def test_symlink_path_guard_including_dangling(self):
         with tempfile.TemporaryDirectory() as directory:
             link = Path(directory) / "link"
@@ -142,6 +162,20 @@ class StorageRescueTests(unittest.TestCase):
             self.assertEqual(destination.stat().st_mode & 0o777, 0o600)
             with self.assertRaises(FileExistsError):
                 M.archive(source, ["."], destination)
+
+    @unittest.skipUnless(shutil.which("tar") and "GNU tar" in M.command("tar", "--version"), "GNU tar required")
+    def test_real_tar_limit_preserves_partial_archive_and_private_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            source.mkdir()
+            (source / "data").write_bytes(os.urandom(65536))
+            destination = root / "limited.tar"
+            with self.assertRaises(subprocess.SubprocessError):
+                M.archive(source, ["."], destination, file_limit=4096)
+            self.assertTrue(destination.exists())
+            self.assertLessEqual(destination.stat().st_size, 4096)
+            self.assertEqual(destination.with_suffix(".error.log").stat().st_mode & 0o777, 0o600)
 
 
 if __name__ == "__main__":

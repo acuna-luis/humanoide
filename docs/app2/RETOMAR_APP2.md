@@ -1,23 +1,34 @@
 # app2 — trabajar y retomar desde cero
 
-**20-10-2026 — acceso a CVAT todavía bloqueado:** tras el ciclo de apagado
-completo y encendido del servidor, el SSD de Docker ha reaparecido `live`, con
-capacidad de 2 TB, serie `S7DRNJ0X107187F` y UUID
-`b819b286-2006-4474-b2d5-13982b0f1536`. Boot verificado:
-`cebc2464-2073-4f1e-82fc-17ee30941a22`; sistema `running`, cero unidades fallidas
-y GPU accesible. El disco sigue **sin montar**, Docker está detenido y las cinco
-unidades de protección siguen enmascaradas. La lectura SMART privilegiada aportada
-por el operador indica `critical_warning=0`, 33,85 °C, cero errores de medio y
-cero entradas de error; el extracto nuevo del kernel no muestra EIO ni resets
-fallidos. No valida la integridad de EXT4/CVAT ni la estabilidad del disco.
-La copia y verificación de los datos siguen **PENDIENTES**: al no disponer de
-otro almacenamiento, se prevé copiar los esenciales al disco sano del sistema
-(82,68 GB libres observados), previa estimación del tamaño. No se ha montado
-el SSD ni iniciado Docker para hacerlo.
-[Incidente, copias conservadas y recuperación pendiente](../incidents/2026-10-20_APP2_SSD_DOCKER_NO_RESPONDE.md).
-Las comprobaciones de instalación/anotación descritas abajo son del día anterior;
-no reinstalar ni repetir la importación para resolver este fallo de almacenamiento.
+**20-10-2026 — datos rescatados, firmware datos8B verificado; rollback CSM/EFI verificado; APP2/CVAT operativo; datos y acceso local verificados.**
+Se verificaron 22 TAR (47.034.378.240 bytes) de los 20 volúmenes persistentes,
+recetas y definiciones Docker en el SSD sano del SO. De ellos, 13 TAR no Ollama
+(1.373.347.840 bytes) y el recibo están también en el PC con los 13 SHA coincidentes.
+Ollama permanece respaldado en el SSD del SO; no tiene tercera copia en el PC.
 
+**PostgreSQL: PASS** en una copia aislada del PC: recuperación física y dump
+restaurado en otra DB vacía; 4 tareas, 4 trabajos y 9 formas globales, con
+tarea 5 / trabajo 5 / shape 10 del frame 1 presentes. No significa 9 piezas reales.
+**Medios de tarea 5: PASS**: ambos PNG originales, CRC, decodificación completa,
+dimensiones, hashes originales y manifiesto coinciden. Esto no es una prueba
+completa de la UI/API de CVAT; Docker/CVAT del servidor siguen detenidos.
+
+Las capas escribibles de 20 contenedores y metadatos ya están respaldadas:
+200.683.520 bytes, compare PASS y copia en PC con SHA coincidente. Origen desmontado,
+cinco protecciones conservadas. No incluye capas inmutables ni imagen completa.
+**Estado actual: APP2/CVAT operativo y verificado.** Configuración, montaje y
+servicios restaurados; veinte contenedores conservados y running. CVAT `2.79.0`,
+API/UI HTTP 200. API autenticada confirma 4 tareas, 4 trabajos y 9 formas globales;
+tarea 5 / trabajo 5, shape 10 del frame 1 presente. Originales PNG con hashes
+exactos y chunk del editor con 2 JPEG/CRC correcto.
+
+Túnel del PC activo en `localhost:18080`, PID `1042428`; API local y trabajo 5
+HTTP 200. [Retomar anotación/revisión humana](http://localhost:18080/tasks/5/jobs/5).
+No sudo pendiente ni recuperación que repetir. No se modificaron anotaciones,
+no se entrenó un modelo real y no se conectó o movió el robot en esta recuperación.
+Conservar backups/undo; fiabilidad a largo plazo pendiente de observación.
+[Incidente y punto de reanudación](../incidents/2026-10-20_APP2_SSD_DOCKER_NO_RESPONDE.md).
+No reinstalar ni reimportar sobre el origen para resolver la incidencia.
 
 **ID:** APP2-HANDOFF-20261019. **Fecha/zona:** 19-10-2026, Europe/Madrid.
 **Estado:** documentación operativa contrastada con la instalación comprobada.

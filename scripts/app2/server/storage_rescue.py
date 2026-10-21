@@ -218,18 +218,55 @@ def inventory(mountpoint):
     if not {"setup", "cvat", "receipts", "secrets"} <= set(server_paths):
         raise ValueError("Required app2 server configuration directories are missing")
     server_sizes = [size_tree(APP2 / name) for name in server_paths]
+    definitions, definition_files, definitions_size = [], [], 0
+    candidates = [mountpoint / "volumes" / "metadata.db"]
+    containers = mountpoint / "containers"
+    no_symlink_path(containers)
+    if containers.exists():
+        entries = list(containers.iterdir())
+        if len(entries) > 1000:
+            raise ValueError("Unexpected container inventory size")
+        for path in entries:
+            if path.is_symlink():
+                raise ValueError("Symlink in container definitions")
+            if path.is_dir():
+                candidates.extend(path / name for name in ("config.v2.json", "hostconfig.json"))
+    for path in candidates:
+        if not os.path.lexists(path):
+            continue
+        info = path.lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_size > 16 * 1024 ** 2:
+            raise ValueError("Unexpected Docker definition/metadata file")
+        definitions_size += max(info.st_size, info.st_blocks * 512)
+        if definitions_size > 64 * 1024 ** 2:
+            raise ValueError("Docker definitions exceed bounded rescue allowance")
+        definitions.append(str(path.relative_to(mountpoint)))
+        definition_files.append({"path": definitions[-1], "bytes": info.st_size,
+                                 "allocated_bytes": info.st_blocks * 512})
     return {"volumes": volumes, "server_paths": server_paths,
+            "docker_definitions": definitions, "docker_definitions_bytes": definitions_size,
+            "docker_definition_files": definition_files,
             "server_files": {key: sum(item[key] for item in server_sizes)
                              for key in ("allocated_bytes", "logical_bytes")}}
 
 
-def choose_plan(report, free_bytes):
+def choose_plan(report, free_bytes, all_volumes=False):
     names = plan_tar_paths(report["volumes"])
     def estimate(selected):
         # Conservative logical size (even for sparse files), plus tar/PAX metadata margin.
         sizes = [report["server_files"]] + [report["volumes"][name] for name in selected]
-        amount = sum(max(item["logical_bytes"], item["allocated_bytes"]) for item in sizes)
+        amount = report.get("docker_definitions_bytes", 0) + sum(
+            max(item["logical_bytes"], item["allocated_bytes"]) for item in sizes)
         return amount + max(1024 ** 3, amount // 10)
+    if all_volumes:
+        for name, sizes in report["volumes"].items():
+            if ("inventory_error" in sizes or any(not isinstance(sizes.get(key), int)
+                    or sizes[key] < 0 for key in ("logical_bytes", "allocated_bytes"))):
+                raise ValueError("All-volume rescue requires readable sizes for every volume")
+        names += [CACHE] + sorted(set(report["volumes"]) - set(names) - {CACHE})
+        if free_bytes - estimate(names) < RESERVE:
+            raise ValueError("All named volumes do not fit while preserving 16 GiB free")
+        return names, estimate(names)
     if free_bytes - estimate(names) < RESERVE:
         raise ValueError("Essential rescue does not fit while preserving 16 GiB free")
     if free_bytes - estimate(names + [CACHE]) >= RESERVE:
@@ -255,7 +292,7 @@ def archive(source, names, destination, file_limit=None):
         command("tar", "--compare", *options, "--", *names, timeout=1800)
     except subprocess.SubprocessError as error:
         log = destination.with_suffix(".error.log")
-        with log.open("w", opener=lambda p, f: os.open(p, f | os.O_NOFOLLOW, 0o600)) as stream:
+        with open(log, "w", opener=lambda p, f: os.open(p, f | os.O_NOFOLLOW, 0o600)) as stream:
             stream.write(str(getattr(error, "stderr", "")))
         raise
     with destination.open("rb") as stream:
@@ -265,14 +302,14 @@ def archive(source, names, destination, file_limit=None):
 
 
 def save_json(path, value):
-    with path.open("w", opener=lambda p, flags: os.open(p, flags | os.O_NOFOLLOW, 0o600)) as stream:
+    with open(path, "w", opener=lambda p, flags: os.open(p, flags | os.O_NOFOLLOW, 0o600)) as stream:
         json.dump(value, stream, indent=2)
         stream.write("\n")
         stream.flush()
         os.fsync(stream.fileno())
 
 
-def backup(mountpoint, source, root_device, report):
+def backup(mountpoint, source, root_device, report, all_volumes=False):
     no_symlink_path(RECOVERY)
     user = pwd.getpwnam("luisacuna")
     if not RECOVERY.exists():
@@ -283,7 +320,8 @@ def backup(mountpoint, source, root_device, report):
         raise ValueError("Recovery parent must be private and owned by luisacuna")
     if os.stat(RECOVERY).st_dev != root_device:
         raise ValueError("Recovery destination filesystem changed")
-    selected, estimate = choose_plan(report, os.statvfs(RECOVERY).f_bavail * os.statvfs(RECOVERY).f_frsize)
+    selected, estimate = choose_plan(report, os.statvfs(RECOVERY).f_bavail * os.statvfs(RECOVERY).f_frsize,
+                                     all_volumes=all_volumes)
     dest = Path(tempfile.mkdtemp(prefix=datetime.now(timezone.utc).strftime("rescue-%Y%m%dT%H%M%SZ-"),
                                  dir=RECOVERY))
     print(f"BACKUP={dest}", flush=True)
@@ -291,12 +329,18 @@ def backup(mountpoint, source, root_device, report):
                "source_device": source["name"], "estimate_bytes": estimate, "inventory": report,
                "selected_volumes": selected, "excluded_volumes": sorted(set(report["volumes"]) - set(selected)),
                "archives": [], "full_ssd_backup": False,
-               "firmware_gate": "NOT_CLEARED_OTHER_CRITICAL_DATA_NOT_BACKED_UP"}
+               "scope": "all_named_volumes" if all_volumes else "app2_persistence",
+               "all_named_volumes_archived_and_compared": False,
+               "firmware_gate": "NOT_CLEARED_WRITABLE_LAYERS_EXTERNAL_COPY_RESTORE_TEST_PENDING"
+                   if all_volumes else "NOT_CLEARED_OTHER_CRITICAL_DATA_NOT_BACKED_UP"}
     save_json(dest / "receipt.json", receipt)
     try:
-        # Preserve CVAT first; omit only the regenerable training cache if capacity requires.
+        # CVAT first; all-volume mode never drops cache or other volumes to fit.
         jobs = [(mountpoint / "volumes" / name / "_data", ["."], name + ".tar") for name in selected]
         jobs.append((APP2, ["./" + name for name in report["server_paths"]], "server-app2.tar"))
+        if report["docker_definitions"]:
+            jobs.append((mountpoint, ["./" + name for name in report["docker_definitions"]],
+                         "docker-definitions.tar"))
         for directory, names, filename in jobs:
             free = os.statvfs(dest).f_bavail * os.statvfs(dest).f_frsize
             limit = free - RESERVE - 64 * 1024 ** 2
@@ -305,6 +349,7 @@ def backup(mountpoint, source, root_device, report):
             receipt["archives"].append(archive(directory, names, dest / filename, file_limit=limit))
             save_json(dest / "receipt.json", receipt)
         receipt["status"] = "ARCHIVES_VERIFIED_PENDING_EXTERNAL_COPY_AND_RESTORE_TEST"
+        receipt["all_named_volumes_archived_and_compared"] = set(selected) == set(report["volumes"])
         save_json(dest / "receipt.json", receipt)
     except BaseException:
         receipt["status"] = "FAILED_PARTIAL_PRESERVED"
@@ -325,7 +370,11 @@ def main():
     modes = parser.add_mutually_exclusive_group(required=True)
     for name in ("check", "inventory", "backup"):
         modes.add_argument("--" + name, action="store_true")
+    parser.add_argument("--all-volumes", action="store_true",
+                        help="Inventory/backup every named Docker volume; never omit one to fit")
     args = parser.parse_args()
+    if args.check and args.all_volumes:
+        parser.error("--all-volumes requires --inventory or --backup")
     try:
         source, root_device = preflight()
         if args.check:
@@ -336,13 +385,38 @@ def main():
                 raise ValueError("Inventory/backup require root for the temporary read-only mount")
             with readonly_source(source) as mounted:
                 report = inventory(mounted)
-                result = backup(mounted, source, root_device, report) if args.backup else report
+                free = os.statvfs(APP2).f_bavail * os.statvfs(APP2).f_frsize
+                try:
+                    selected, estimate = choose_plan(report, free, all_volumes=args.all_volumes)
+                    report["backup_plan"] = {"fits": True, "selected_volumes": selected,
+                        "estimate_bytes": estimate, "free_bytes": free, "reserve_bytes": RESERVE,
+                        "scope": "all_named_volumes" if args.all_volumes else "app2_persistence"}
+                except ValueError as error:
+                    report["backup_plan"] = {"fits": False, "reason": str(error), "free_bytes": free}
+                result = backup(mounted, source, root_device, report, all_volumes=args.all_volumes) if args.backup else report
             result["source_unmounted"] = True
         print(json.dumps(result, indent=2))
     except Exception as error:
         # A subprocess stderr could contain private names; do not echo it.
         detail = type(error).__name__ if isinstance(error, subprocess.SubprocessError) else str(error)
-        parser.exit(1, f"RESCUE_FAILED: {detail}; preserve partial files and maintenance guards\n")
+        diagnostic = ""
+        if not args.check and os.geteuid() == 0 and "source" in locals():
+            try:
+                folder = APP2 / "maintenance"
+                no_symlink_path(folder)
+                user = pwd.getpwnam("luisacuna")
+                if not folder.exists():
+                    folder.mkdir(mode=0o700)
+                    os.chown(folder, user.pw_uid, user.pw_gid)
+                path = folder / f"rescue-error-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}-{os.getpid()}.json"
+                save_json(path, {"type": type(error).__name__, "detail": str(error),
+                    "stderr": str(getattr(error, "stderr", ""))[:100000],
+                    "returncode": getattr(error, "returncode", None)})
+                os.chown(path, user.pw_uid, user.pw_gid)
+                diagnostic = f"; private_diagnostic={path}"
+            except Exception:
+                diagnostic = "; private diagnostic unavailable"
+        parser.exit(1, f"RESCUE_FAILED: {detail}{diagnostic}; preserve partial files and maintenance guards\n")
 
 
 if __name__ == "__main__":
