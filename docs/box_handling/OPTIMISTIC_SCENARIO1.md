@@ -1,5 +1,16 @@
 # Escenario 1 con supervisión continua
 
+**Segunda toma integrada74, 22-10-2026, 18:54 CEST:**
+`20261022T165426Z_OPTIMISTIC_SCENARIO1_1558421` volvió a terminar antes del
+agarre por `Correction made no significant progress`. get1:16,066 s;
+visión:1,703 s; preparación/ajuste hasta error:19,073 s. Distancia al objetivo
+en mapa22,032→25,976 mm; no hubo convergencia neta. Envolvente de eventos
+Motion52,858 s, no duración completa del comando PC. No se alcanzó depósito
+ni HOME. Proceso ya finalizado cuando se buscó la ejecución; análisis local
+retrospectivo, sin órdenes ni cambios de control. Resumen privado:
+`../Humanoide-vla-evidence/20261022_SECOND_UNIFIED_TIMING/summary.json`.
+
+
 ### Ensayo integrado74 interrumpido antes de recoger — 22-10-2026, 18:49 CEST
 
 **BOX-UNIFIED74-ALIGNMENT-FAIL-20261022 — OBSERVADO; no valida depósito ni tiempo de ciclo.**
