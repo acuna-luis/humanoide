@@ -1,5 +1,403 @@
 # Corrección visual de posición antes de recoger
 
+## Contacto del brazo izquierdo durante la entrada — 22-10-2026
+
+### Prueba limitada de yaw izquierdo+2° y retorno — 22-10-2026
+
+**BOX-LEFT-SHOULDER-YAW-2DEG-20261022. PROBADO FÍSICAMENTE en alcance acotado;
+staging REVERTIDO.** El operador confirma preparación y después «hecho» a HOME
+visual estable/libre/sin ruido y ruedas inmovilizadas. La única ejecución SDK
+completa+2°/retorno en vacío y el operador confirma «Todo normal, sin contacto
+ni ruidos». No valida rango completo, carga, postura del agarre ni depósito695;
+la causa de la divergencia original permanece PENDIENTE.
+
+**Plan revisado.** Fuente canónica por nombre, cinco grupos head/left_arm/
+right_arm/lifter/waist,20D sin ruedas. Sólo `L_shoulder_yaw_joint` varía+2°
+(0,034906585 rad) respecto al inicio; los otros19 ejes permanecen fijados a la
+muestra medida. Inicio=final:22 s, hold inicial2, rampa quíntica8, hold máximo2,
+retorno8 y hold final2. No se infiere el signo desde posiciones crudas de motor.
+Límites de posición URDF y FK nominales pasan; origen de manoizquierda recorre
+≈3,279 mm y codo-roll≈0,698 mm. Son orígenes del modelo, no certificación del
+volumen de brazo/clamp, la calibración, la colisión global o la parada física.
+
+**Contrato y admisión.** Player nativo y orden articular se contrastan por hash:
+`8744a30ecce20c414dcf67b60d9aa7ac486bab752d5eee3de08a7336d65ddf0d` y
+`7f9d7975ebd27774e5248afa666a71ecaeb24bad30a234c9af2b81abc321f39c`.
+Preflight pasivo PASS: delta inicial0,20D habilitados/sin fault/velocidad0,
+SDK libre, manipulación terminal4, paros0/0, cargador0 y baterías52/52,5%.
+`run_native_diagnostic.py` repite los requisitos justo antes del envío; todos
+pasan. Staging/preflight anteriores no son autorización reutilizable. Fuerza,
+watchdogs, límites y configuración no cambian. La captura pasiva conserva
+usable=false por el INFO no JSON; los mensajes completos se analizan de forma
+informativa, sin falsear el flag o certificar toda la traza.
+
+**Artefacto y receta concreta.** En
+`../Humanoide-vla-evidence/20261022T071028Z_LEFT_SHOULDER_CONTROL_DIAG/yaw-left-candidate/`
+se conservan constructor, muestra inicial, revisión FK/URDF, comprobador SDK y
+archivo candidato original. SHA256 de sus bytes:
+`b533dd93540a5bb604660d8a257aad80bac6a6da332751653d83ed66f13e6610`.
+Se copió a una ruta nueva del contenedor Motion, con hash idéntico; archivo y
+directorio se retiraron tras el cierre, conservando los bytes originales privados:
+`/tmp/left_shoulder_yaw_diag_20261022T071028Z/left_shoulder_yaw_plus2deg_22s.motion`.
+El primer auxiliar de staging falla de sintaxis antes de ejecutar; v2 confirma
+copia/hash sin sobrescribir originales. La receta nativa que usa el runner,
+después de sus gates y dentro del contenedor redescubierto, es:
+
+```bash
+source /opt/walker/setup.bash
+export ROS2CLI_DISABLE_DAEMON=1
+rosa run manipulation_outline_sdk player -- --robot utars \
+  --input /tmp/left_shoulder_yaw_diag_20261022T071028Z/left_shoulder_yaw_plus2deg_22s.motion
+```
+
+Es registro de esta ejecución autorizada, no instrucción para repetirla.
+Se omite `--loop` por el defecto conocido del parser. El SDK original no se
+modifica. El inspector versionado `scripts/teleoperation/inspect_pico_motion.py`
+y los archivos exactos del constructor/runner permiten revisar la preparación;
+una reproducción futura necesitaría su propia admisión y orden explícitas.
+
+**Resultado y estado final.** Una ejecución nativa sin `--loop`: preflight
+inmediato completo PASS, inicio remoto07:24:38,818705 UTC y fin07:25:01,962784,
+23,144 s de runtime para22 s solicitados. Player rc0 y texto
+`is_finished=true ... bag has been played successfully`. No reintento ni
+HOME después.3102 mensajes de actuadores y14 de cada paro, todos0:
+
+| Medida del ensayo en vacío | Resultado |
+| --- | --- |
+| Excursión yaw real | 1,9775390625° frente a2° solicitados |
+| Máximo error yaw consigna/posición | 0,000822637820 rad =0,047133675° |
+| Mayor rango de los otros19 ejes | 0,00124636 rad |
+| Postflight20D | Habilitados, sin fault, velocidad0 |
+| Máximo delta corporal consigna/posición final | 0,001246359 rad |
+| Máxima posición canónica corporal final | 0,004122573 rad, headpitch |
+| Cliente SDK / writers de comando SDK | 0 /0 |
+
+El servidor SDK permanece1; controlador de manipulación running,
+`sdk_controller` y `vla_sdk_controller` initialized, módulos sin locks y
+paros0/0/cargador0. Esto no significa arrancar el modelo VLA. Logs HW de la
+ventana consultada sin patrones jump/fault/SAFEOP/Excessive; no se afirma
+que no exista otro aviso. Operador: «Todo normal, sin contacto ni ruidos».
+La observación y estos datos demuestran seguimiento de este movimiento pequeño,
+lento y sin carga cerca de HOME; no el seguimiento en la postura del incidente.
+
+**Hallazgo independiente de arranque.** `startup-limit-observations.json`
+conserva102 avisos de cabeza: cmd−0,694701 frente a mínimo−0,688727 rad,
+y315 de segunda articulación derecha: cmd0,133264 frente a máximo0,0987266 rad.
+Ocurren durante HOME de arranque15:06:33/34, hora nativa, antes de esta prueba;
+BTree termina correctamente15:06:48 y después se mide postura próxima a HOME.
+No ampliar límites ni atribuir estos avisos al fallo previo de yaw izquierdo.
+
+El log HW también conserva `servo cmd timeout, diff5 ms` a15:26:14 hora nativa,
+posterior al fin del ensayo15:25:01. No es ausencia total de avisos ni causa
+demostrada de la divergencia anterior. Muestra final con sello de fuente
+07:29:53,473967 UTC:20 actuadores, velocidad0, delta máximo0,001246359 rad,
+sin error o eje deshabilitado (`final-lowload-actuator-summary.json`).
+
+**Reversión temporal completada y evidencia.** Player terminado y postflight
+comprobado; `motion-diagnostic-cleanup.json` confirma eliminación del único
+archivo nuevo y de su directorio vacío, cod0, con hash verificado antes de borrar.
+Se conservan candidato original, constructor/SDK/contrato con hashes, runner y
+receta exactos privados en esta evidencia. No hay persistencia nueva de SDK,
+servicios o configuración. `physical-test-summary.json`,
+`yaw-test-informative-tracking-analysis.json`, `motion-native-diagnostic-run.jsonl`
+y `motion-test-postflight.json` contienen resultados; `yaw-test-passive-trace/`
+conserva los datos y su usable=false original. Backups documentales en
+`before-yaw-test-documentation/` y manifiesto. El cierre no incluye más pruebas u objetivos. Queda pendiente revisar la
+postura de agarre y posibles limitaciones por carga antes de otro ensayo. `scope-close.json` confirma un goal SDK, cero HOME independientes,
+resets, modos, reinicios o configuración cambiados. Sin commit/push.
+
+### Reposo actual y semántica del aviso hardware — 22-10-2026
+
+**BOX-LEFT-SHOULDER-CONTROL-DIAG-20261022. VERIFICADO por lectura pasiva;
+causa bajo carga PENDIENTE.** El usuario ofrece liberar el paro para pruebas;
+se indicó mantenerlo durante el diagnóstico y confirmar el estado físico.
+Las consultas posteriores muestran que el paro ya fue liberado: CC registra
+liberación a15:06:09,986 (hora nativa UTC+8), self-check y StartMotion correcto
+a15:06:48, después JoystickMode. Son eventos observados, no comandos del agente.
+En este corte pasivo estaban pendientes ruedas y HOME visual. El operador
+los confirmó posteriormente para la prueba acotada cerrada arriba; aquella
+lectura aislada no autorizaba por sí sola una prueba física.
+
+**Lecturas actuales, no reconstrucción del incidente:** entre07:09 y07:11 UTC,
+ambos paros0, cargador0, baterías52/52,5%, estado canónico20D próximo a cero
+y velocidad máxima0. Servicio nativo de controlador disponible, cero writers
+de `/mc/sdk/robot_command` y status de acción4 retenido: éste no es un latido
+periódico ni una prueba adicional del movimiento histórico. ActuatorState con
+BEST_EFFORT da20 ejes corporales habilitados, sin error ni fault, velocidad0 y
+delta máximo consigna/posición0,0028762139773 rad. Yaw izquierdo medido
+−0,0002876214 rad, consigna0; effort0,33 y current0,09 son valores reportados,
+sin unidades/calibración validadas para diagnosticar carga o fuerza de contacto.
+Este reposo posterior al arranque no demuestra que el motor esté globalmente
+sano ni que el problema al agarrar haya desaparecido.
+
+**Corrección de interpretación de `jump command`, limitada al binario verificado.**
+La biblioteca viva `/opt/walker/ecat_hardware/lib/libecat_hardware.so`, SHA256
+`d2594d81ac62376d2357529b2aa8a60008abd6f32ac08e0b29684eb4d9597957`,
+coincide con el análisis estático offline. La rama compara
+`abs(q_command-q_actual) >= 0.087 rad`; no calcula salto entre consignas
+consecutivas. El log está limitado a intervalos mayores de1 s: siete mensajes
+no demuestran siete saltos discretos. Esa rama no rechaza, recorta ni retorna
+tras avisar; continúa con la consigna hacia CSP/mode8, `ServoCmdArray` y
+`setServoCmdArray`. Hay `enforceLimits` antes y el comportamiento posterior del
+master/servo no queda probado por esta rama. No generalizar la conclusión a
+otra biblioteca o versión, ni interpretar el aviso como prueba de aceptación
+física de cada orden. Las notas históricas que equiparaban «jump» con «rechazo»
+no deben usarse para explicar este binario coincidente.
+
+Una captura pasiva de6 s conserva148 muestras de actuadores y una de cada paro,
+pero el analizador estricto mantiene **`usable_capture=false`** por una línea
+INFO `Shared memory mode is turned off` no JSON. Se conservan datos y error
+originales: no se modifica el flag ni se presenta la captura como plenamente
+válida o como prueba física de parada. Sólo mide reposo en esa ventana.
+
+**Evidencia y continuación:**
+`../Humanoide-vla-evidence/20261022T071028Z_LEFT_SHOULDER_CONTROL_DIAG/`,
+lecturas Motion/Vision, `fresh-actuator-summary.json`, `stationary-passive-trace/`
+y scripts `collect*`/`remote*`; `before/` respalda esta documentación.
+El análisis estático y su disassembly están en la evidencia anterior
+`20261022T065229Z_LEFT_ELBOW_READONLY_DIAG/jump-command-semantics-readonly.json`
+y `binary-semantics/`; su hash vivo se verifica en `motion-supplement-readonly.json`
+del directorio nuevo. Diagnóstico en reposo; contacto/carga, control o límites
+siguen por discriminar. No se ejecutan optimistic, agarre, HOME, reset, cambios
+de servicio, configuración o umbrales. Sin commit/push. Las observaciones
+previas siguientes conservan su fecha y no describen el estado actual.
+
+### Diagnóstico nativo de seguimiento izquierdo — 22-10-2026
+
+**BOX-LEFT-ELBOW-HW-TRACKING-20261022. VERIFICADO en registros recuperados;
+causa física/control PENDIENTE.** El usuario autoriza diagnóstico con el robot
+en paro. Se redescubren Motion, hardware y ROS activos tras el nuevo arranque,
+`HW_TYPE=cruzr_s2_v1`. Una lectura fresca de `/emb/estop_key_state` devuelve
+`data:1` a07:00:03 UTC (09:00:03 CEST); la app nativa espera ListControllers. No se demuestra
+HOME ni estado seguro de caja/brazos. Todas las consultas son de lectura;
+no se envían movimiento, reset, rearme, reinicios o cambios de configuración.
+
+Los logs Docker de la app contienen corrupción/NUL y se cortan antes del goal.
+Se recuperan sin repararlos los logs persistidos de `/etc/walker/log/motion/`,
+con copia y SHA256. `robot_app.20261022-143452.65.log` identifica el UUID
+`d48c4ef5-a880-4cab-ad21-a01b17de7889` del intento220593. En horario nativo
+UTC+8, HW registra siete avisos `L_shoulder_yaw_motor send a jump command`
+entre14:39:17,366 y14:39:23,371; registra E-stop después, a14:39:24,426772.
+Posición reportada≈−1,03342→−1,03227 rad; consigna−0,946269→−0,125697 rad.
+La separación crece hasta0,906573 rad (≈51,94°), frente a la advertencia0,087 rad
+(≈4,98°). El hardware **advierte**: el log no demuestra si transmite o rechaza
+esas consignas. La divergencia importante precede al registro del paro en el
+mismo log HW; no es una falsa alarma causada sólo por detener el robot.
+
+El vector articular nativo presenta elemento6 hasta−0,912253 rad, compatible
+con esa divergencia, sin certificar el mapeo de índices sólo por su orden.
+La mano izquierda registra errores de posición de hasta≈30 mm antes del último
+fallo. `CheckPoseTrackingError` imprime a14:39:24,266854 los vectores de posición
+`[-0.152945,-0.180321,0.0221676]` y rotación`[0.461929,-0.171935,-0.0869033]`;
+termina `ClampPoseTrackingError`7101107. No se infiere su criterio interno exacto
+de norma/eje sólo de esos textos. La separación aborta antes de completar su
+trayectoria y **bodyback no comienza**. En149970/196799 no se observan aquellos
+avisos HW previos; sus errores grandes crecen después de registrarse el paro.
+No agrupar esos resultados como un mismo fallo de seguimiento anterior al paro.
+
+**Objetivos y configuración leídos, no trayectoria física reconstruida.** El
+log nativo entrega caja`[.7610,-.0608,.9057]`, entrada izquierda VISION
+`[.4809,.0407,.9057]` y valor original clamp`[.7659,.2407,.9057]`.
+El objetivo izquierdo nominal t14→16 pasa de`[.480856,.0407036,.905712]` a
+`[.761026,.3015,.90566]`; son objetivos impresos, no posiciones3D reales del codo.
+El stack instalado SHA256`bd8f5c38ac97c2a9ff19097b2bae43b0ab59827e377fd601ddfcfc1709da0e33`
+coincide con la referencia histórica: manos, CoM, límites shoulder-roll y
+manipulabilidad. No declara tareas explícitas de codo, torso o distancia a caja;
+esa ausencia en este stack no demuestra ausencia de otras protecciones.
+
+Contacto/carga, límites o funcionamiento del control y configuración requieren
+discriminación; no hay motor averiado, singularidad o rama IK demostrados.
+Faltan ángulos canónicos completos en el instante del contacto y fuerza calibrada:
+no reconstruir FK del codo rellenando ejes con cero o confundiendo motor con
+articulación, ni mezclar marcos de mano/base. El vínculo exacto vídeo↔goal sigue
+sin confirmarse. Mantener la recuperación específica: no HOME, rearme o repetición
+automática; no ampliar advertencias, fuerza o trayectoria para forzar un ensayo.
+
+**Evidencia y reversión documental:**
+`../Humanoide-vla-evidence/20261022T065229Z_LEFT_ELBOW_READONLY_DIAG/`,
+`native-ik-hw-comparison.json`, `installed-config-structural-review.json`,
+`kinematic-inputs/`, `motion-fresh-estop.json` y capturas/código `collect_*` y
+`remote_*_readonly.py`. `before/` conserva estos dos documentos previos.
+Sólo lectura remota y documentación local, sin cambios de código/sistema,
+tests nuevos, commit o push. Historia de las observaciones anteriores a continuación.
+
+### Vídeo WhatsApp: plegado del codo izquierdo — 22-10-2026
+
+**Actualización del relato, OBSERVADO por el operador.** Sobre el nuevo vídeo
+indica que la caja apenas se separa y que el izquierdo se fue hacia dentro;
+aclara que pulsó el paro por ese movimiento y precisa: **«El codo se plegó
+hacia el torso»**. No reducir el diagnóstico a que la muñeca necesite más
+desplazamiento lateral. Debe revisarse la postura articular del brazo y la
+envolvente del codo: una muñeca próxima a su objetivo no demostraría por sí sola
+un recorrido adecuado del codo. En este caso tampoco hay seguimiento medido de
+muñeca. No se ha demostrado singularidad, selección de solución IK, autocolisión
+o una causa física concreta; el plegado reportado no acredita contacto con el torso.
+
+**Qué aporta el vídeo.** Original
+`/home/lacuna/Descargas/WhatsApp Video 2026-10-22 at 08.42.46.mp4`,21,373792 s,
+478×850 a12,5 fps; SHA256
+`3555cd77987ae51e450f5e633951bc49da3287c739eff9e5c6ddcdac7466643e`.
+Se conserva copia,43 frames a2 fps y hoja de contacto. Se ve apertura/separación
+vertical parcial entre cajas, pero no hay referencia métrica
+para convertirla en altura o holgura lateral suficiente para entrar. El ángulo
+cambia y no identifica inequívocamente el lado exacto de cada brazo. No concluir
+que la caja se retiró ni que el codo siguió una determinada trayectoria 3D.
+
+**Diario nuevo, distinto de las cancelaciones anteriores.** En
+`20261022T063829Z_OPTIMISTIC_SCENARIO1_220593`, las fuentes de recuperación
+capturadas coinciden con la revisión actual. El agarre nativo
+`d48c4ef5-a880-4cab-ad21-a01b17de7889` devuelve a21,783 s de su aceptación
+**ABORTED/status6, `ClampPoseTrackingError`,7101107**. En la misma ventana se
+registra `LIVE_HEALTH_FAILED: estop not confirmed clear`. No hay
+`cancel_requested` ni acuse de cancelación0 en ese objetivo: no presentarlo
+como el terminal cancelado5 de los intentos196799 o149970. El resultado nativo
+indica fallo de seguimiento de pose, pero no identifica articulación ni demuestra
+su causa, y la proximidad de ambos eventos no fija por sí sola su orden físico.
+El relato sitúa el paro como respuesta protectora al movimiento observado.
+
+El manifiesto de ese diario corresponde al perfil695; no completa agarre,
+retirada, put1, depósito o HOME. El vínculo entre este objetivo y el clip
+WhatsApp continúa PENDIENTE de confirmación. El diario local sólo conserva
+feedback global de ejecución, detección y resultado: no hay series de estados
+articulares/actuadores, trayectorias cartesianas medidas/objetivo de muñeca,
+residuales HQP ni FT durante el agarre. Los ceros de seguridad anteriores no
+reconstruyen el mensaje que provocó el fallo. No deducir una postura o causa
+mediante FK con datos de otra fase ni extrapolar un ensayo de llegada de base.
+
+**Estado actual y siguiente paso.** El usuario comunica que se está encendiendo
+con el paro todavía sin liberar. Es estado reportado, sin lectura nueva ni HOME
+comprobado; caja sujeta/apoyada/retirada, estabilidad y contacto actuales siguen
+PENDIENTES. No enviar HOME, rearmar, liberar para probar o repetir el agarre.
+Primero confirmar el estado presencial y el arranque; después contrastar la
+postura/objetivo izquierdos y percepción/TF de la ejecución correcta antes de
+proponer cambios. Más fuerza, un objetivo de muñeca más exterior o más reintentos
+no resuelven por sí solos el plegado del codo. El gate XYZ sigue siendo sólo un
+filtro de posición de caja, no verificación de alcance, codo o barrido sin colisión.
+
+**Evidencia y alcance:**
+`../Humanoide-vla-evidence/20261022T064428Z_WHATSAPP_BOX_LEFT_ARM_VIDEO/`:
+`source.json` conserva hash/receta de frames; `optimistic-latest-runs-review.json`
+y `in-flight-telemetry-availability.json` conservan fuentes y límites del análisis.
+`before/` respalda estos dos documentos antes de esta actualización. Sólo
+documentación y consultas de archivos locales, sin SSH, movimiento, código,
+fuerza, instalación o reinicio del agente. Sin nuevos tests por tratarse de
+documentación; no commit/push. Historia anterior conservada a continuación.
+
+**BOX-VIDEO-DESAPILADO-20261022. OBSERVADO por el operador y revisión local;
+causa geométrica PENDIENTE.** El operador precisa: «yo presioné el paro porque
+el brazo izquierdo golpeó la caja en vez de ponerse por el lado izquierdo».
+Esta aclaración fija el orden comunicado: contacto primero, paro protector
+después. El error de paro de una ejecución que corresponda a ese hecho sería
+una consecuencia de la intervención, no la explicación inicial del golpe.
+No tratarlo como una alarma falsa ni reducir la supervisión del paro.
+
+Antes del paro, el operador indica que la maniobra continúa pero no consigue
+retirar la caja; confirma que son las mismas cajas de la demo. El vídeo de
+19,167 s muestra contacto de la abrazadera visible e inclinación/separación
+parcial de la caja superior, sin retirada completa. La cámara se mueve y no
+permite medir desplazamiento real, demostrar deslizamiento ni reconstruir el
+recorrido del brazo izquierdo oculto por la caja. El contacto izquierdo queda
+acreditado por el relato presencial; su instante y geometría exactos siguen
+pendientes. Usar las mismas cajas no demuestra que su pose, altura de apoyo
+y postura inicial del robot coincidan con las del ensayo que funcionó.
+
+**Qué se ha contrastado sin mover.** El
+[árbol nativo](../../vendor/ubtech/cruzr_s2/snapshot_20260916/motion/tasks/Singapore/separate_right_cruzr.xml)
+prepara ambos brazos durante 3 s y después ejecuta separación y bodyback,
+con duraciones nominales de 18 y 6 s. La
+[trayectoria izquierda](../../vendor/ubtech/cruzr_s2/snapshot_20260916/motion/meta_clamp/wrc/separate_right_cruzr.yaml)
+incluye un punto `ABSOLUTE [0.3, 0.4, 1.0]` en t=2 s y otro
+`VISION [-0.285, -0.2, 0]` en t=8 s. No aparece un waypoint intermedio
+explícito que rodee la cara de la caja entre esos puntos. El
+[adaptador frontal](../../scripts/box_handling/front_box_integration.py)
+conserva esa trayectoria. El
+[contrato SPS](../../scripts/box_handling/front_sps_contract.py)
+entrega la pose óptica original y comprueba el rango XYZ en `base_link`,
+declarando `reachability_checked=False`. Cumplir el rango de posición de la
+caja no demuestra que el camino del brazo esté libre de colisiones.
+
+**Aclaración: hueco creado por la derecha y segunda entrada izquierda.** El
+usuario pregunta si falta desplazamiento de la caja hacia la derecha o
+recorrido del brazo izquierdo. La secuencia tiene otra entrada izquierda
+posterior a la aproximación inicial t2→8. Estos tiempos pertenecen al
+MetaClamp de separación; no están sincronizados con los segundos del vídeo:
+
+| Tiempo nominal | Objetivo derecho | Objetivo izquierdo |
+| --- | --- | --- |
+| t14 | `SEPARATE_ABSOLUTE [0, -0.07, +0.06]` | `RELATIVE [0, 0, 0]` |
+| t16 | `RELATIVE [0, 0, 0]` | `SEPARATE_ABSOLUTE [0, 0, 0]` |
+| t17 | `RELATIVE [0, 0, 0]` | Cierre `RELATIVE [0, -0.07, 0]` |
+| t18 | `RELATIVE [0, -0.005, 0]` | `RELATIVE [0, +0.005, +0.06]` |
+
+La configuración fija una temporización; no contiene una condición explícita
+que mida el hueco creado y sólo entonces autorice esa entrada izquierda. Esto
+no permite afirmar qué comprobaciones internas adicionales realiza el binario.
+Los offsets derechos no demuestran que la caja se traslade 7 cm lateralmente
+o suba 6 cm: falta comprobar el movimiento efectivo de caja y abrazadera.
+Si el contacto ocurre en t14→16, tanto una separación efectiva insuficiente
+como un objetivo/recorrido izquierdo incorrecto son hipótesis compatibles;
+pueden coexistir. Hay que comparar la holgura real en ese instante, la pose
+de caja y los objetivos/posiciones reales del izquierdo antes de decidir qué
+movimiento modificar. No aumentar recorridos a ciegas ni confundir esta fase
+con un error del ajuste de base. No hay nueva prueba o cambio de trayectoria.
+
+**Hipótesis a distinguir, no causas demostradas:**
+
+- La pose/orientación detectada o su interpretación por Motion coloca mal el
+  objetivo lateral izquierdo. Es necesario reconstruir la pose original, el
+  quaternion y la TF correspondiente al instante de detección.
+- El destino lateral es correcto, pero el recorrido desde la preparación
+  articular o desde el punto absoluto cruza la caja. Hay que identificar la
+  fase del golpe y comparar objetivos y posiciones reales del brazo.
+
+Los offsets `VISION` no pueden interpretarse como coordenadas directas del
+robot ni corregirse invirtiendo un signo por intuición. Tampoco basta con
+aumentar alcance, altura, fuerza o número de intentos. La hipótesis anterior
+sobre pérdida de sujeción en bodyback queda relegada frente al contacto
+comunicado durante la entrada. La diferencia local de consignas laterales
+nominales entre separación y bodyback, ±20 y ±5 N, no demuestra fuerzas
+medidas ni explica por sí sola este choque. Los movimientos relativos de
+6 cm tampoco equivalen a una elevación vertical garantizada de la caja.
+
+**Relación con los reintentos y el diario.** La recuperación acotada descrita
+más abajo actúa antes del agarre nativo y sólo ante falta de progreso de la
+aproximación del chasis. No recupera contacto, paro ni agarre interrumpido.
+El diario `20261022T061026Z_OPTIMISTIC_SCENARIO1_149970` registra éxito del
+ajuste de base solicitado de 17,845 mm y cancelación durante el agarre unos
+22 s después de aceptarlo. El worker termina con `estop not confirmed clear`;
+acuse0/status5 no acreditan parada física, retirada ni sujeción. No está
+demostrado que sea la ejecución del vídeo. El mensaje de seguridad que
+provocó aquel fallo no se conservó; los valores cero anteriores no prueban
+que el paro permaneciera liberado después. No usar ese diario para invertir
+el orden contacto→paro que comunica el operador.
+
+**Estado y punto de reanudación.** El usuario informa después «estamos
+reiniciando». Sólo se registra el reinicio comunicado; no se ha verificado
+que haya finalizado ni que el robot alcance HOME. Estado actual de la caja
+(apoyada, sujeta o retirada), estabilidad de brazos, ambos paros y recorrido
+PENDIENTES. No se ordenan HOME, rearme, liberación del paro, reinicio de
+servicios ni repetición del agarre. Antes de cualquier nueva prueba debe
+comprobarse la recuperación física y revisarse la entrada izquierda conforme
+a la [guía de recuperación tras contacto](../guides/CRUZR_S2_RECUPERACION_TRAS_CONTACTO_TELEOP.md).
+Un arranque correcto no valida la trayectoria que produjo el golpe.
+
+**Evidencia y alcance documental.** Original:
+`/home/lacuna/Descargas/MicrosoftTeams-video.mp4`, SHA256
+`e0a0488377efc0e7837d54b787da92aa35a523af3509ca597cdb326bf84515ed`.
+Copia, 19 frames, hoja de contacto, receta de extracción, relato actualizado
+del operador, fuentes revisadas y análisis del diario en
+`../Humanoide-vla-evidence/20261022T062519Z_BOX_MOTION_VIDEO_DIAG/`.
+`incident-contact-report.md` conserva la aclaración; `source.json`,
+`operator-confirmations.json` y `latest-optimistic-journal-review.json`
+permiten contrastarla. `before-rewrite/` y `before-rewrite-sha256.json`
+respaldan estos dos documentos antes de reescribirlos en `feriabarcelona`,
+tras el cambio temporal de rama comunicado por el usuario. Se conservan las
+notas y verificaciones anteriores; no se copian archivos completos de otra
+rama. Reversión documental selectiva desde el respaldo, sin tocar controles.
+Esta intervención sólo analiza archivos locales y actualiza documentación:
+sin conexión al robot, cambios de código/configuración, instalación, pruebas
+físicas, commit o push. La integración documental no valida el depósito695.
+
 ## Presupuesto vigente de ajustes visuales — 22-10-2026
 
 **BOX-01-VISUAL-ALIGN-RETRY-BUDGET-20261022. Implementado y VERIFICADO localmente

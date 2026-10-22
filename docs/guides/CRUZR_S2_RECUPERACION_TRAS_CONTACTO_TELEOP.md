@@ -1,5 +1,47 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**22-10-2026 — diagnóstico pequeño PROBADO en vacío; staging REVERTIDO.**
+El operador confirma condiciones/HOME visual/ruedas y después del único yaw
+izquierdo+2° y retorno indica «Todo normal, sin contacto ni ruidos». Player rc0,
+`is_finished=true`; yaw medido1,977539°, error máximo0,047134°. Postflight20D
+inmóviles/habilitados/sin fault, delta máximo0,001246359 rad; sin clientes ni
+writers SDK y sin locks. Archivo/directorio temporal borrados tras verificar hash;
+artefacto privado conservado. Sin HOME posterior o cambios de SDK/fuerza/límites.
+Esta prueba lenta y pequeña cerca de HOME no valida carga, rango completo,
+postura de agarre o depósito695. El problema original sigue pendiente.
+Captura estricta usable=false por INFO no JSON, sin falsear ese resultado.
+Avisos de límites durante HOME de arranque se conservan como hallazgo separado,
+al igual que un timeout5 ms posterior al ensayo; última muestra07:29:53 UTC
+confirma20 actuadores en reposo/sin errores, delta máximo0,001246359 rad.
+Sin ampliar límites ni asignar causalidad izquierda. No se enviaron otros objetivos en esta intervención. Queda pendiente revisar
+la postura de agarre y posibles limitaciones por carga antes de otro ensayo.
+[Resultado y receta](../box_handling/BOX_AXIS_REPOSITION_20261002.md#prueba-limitada-de-yaw-izquierdo2-y-retorno--22-10-2026).
+Evidencia/backup: `20261022T071028Z_LEFT_SHOULDER_CONTROL_DIAG/`,
+`before-yaw-test-documentation/`, en el directorio privado habitual.
+
+**22-10-2026 — lectura posterior al arranque, sin prueba física del hombro.**
+BOX-LEFT-SHOULDER-CONTROL-DIAG-20261022: CC registra liberación del paro,
+self-check, StartMotion correcto y JoystickMode. Lecturas07:09–07:11 UTC dan
+paros0/0, cargador0, baterías52/52,5%,20D canónicos próximos a HOME, reposo y
+actuadores habilitados sin fault; delta máximo consigna/posición0,002876214 rad.
+Es reposo actual, no reconstrucción del golpe ni prueba de salud bajo carga.
+En ese corte pasivo faltaban ruedas y HOME visual; el usuario los confirmó
+después para el ensayo pequeño cerrado arriba. No se envió optimistic, agarre,
+HOME, reset, rearme o cambio de servicios durante aquellas lecturas.
+
+Para la biblioteca HW viva SHA256`d2594d81ac62376d2357529b2aa8a60008abd6f32ac08e0b29684eb4d9597957`,
+«jump command» significa diferencia consigna/posición≥0,087 rad, no salto entre
+consignas. El aviso se limita a intervalos>1 s; su rama no rechaza ni recorta la
+orden y continúa hacia CSP/ServoCmdArray. Otros límites previos y master/servo
+posteriores requieren su propio contraste. No usar las descripciones históricas
+«jump=orden rechazada» para este hash; tampoco concluir ausencia de protección.
+La captura pasiva6 s/148 muestras mantiene usable=false por INFO no JSON:
+no se falsea ese estado ni se declara validación física. Causa de seguimiento
+bajo carga PENDIENTE, sin ampliar umbrales o fuerza para ensayar.
+[Datos y límites](../box_handling/BOX_AXIS_REPOSITION_20261002.md#reposo-actual-y-semántica-del-aviso-hardware--22-10-2026).
+Evidencia/backup `../Humanoide-vla-evidence/20261022T071028Z_LEFT_SHOULDER_CONTROL_DIAG/`,
+`before/`; sólo lecturas pasivas y documentación, sin configuración, commit o push.
+
 **21-10-2026 — paro real tras el cuarto ensayo695; recuperación y apagado pendientes.**
 El operador comunica que pulsó y liberó el paro. Los logs de Control Center
 corroboran `estop1`, `publishEstopPressed` y la transición

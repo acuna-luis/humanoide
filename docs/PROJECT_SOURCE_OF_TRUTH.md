@@ -1,5 +1,93 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-LEFT-SHOULDER-YAW-2DEG-20261022: PROBADO FÍSICAMENTE en vacío; staging REVERTIDO.**
++2° y retorno por SDK, una sola ejecución22 s solicitados: player rc0 y
+`is_finished=true`,23,144 s observados (reloj remoto07:24:38,819–07:25:01,963 UTC).
+Yaw medido1,977539°, error máximo consigna/posición0,000822638 rad(0,047134°).
+Operador confirma «Todo normal, sin contacto ni ruidos»; condiciones, HOME visual
+previo y ruedas inmovilizadas confirmados. Postflight20D inmóviles/sin fault,
+delta máximo0,001246359 rad, cerca de HOME, sin clientes/writers SDK ni locks.
+Archivo/directorio temporal retirados con hash comprobado; original privado
+conservado. No nueva persistencia, reconfiguración o HOME después del ensayo.
+La captura conserva usable=false por INFO no JSON; sus3102 muestras analizadas
+no se convierten en certificación global. Prueba acotada, no salud bajo carga,
+postura de agarre o depósito695; causa original PENDIENTE. Avisos de límites del
+HOME de arranque y timeout de comando5 ms posterior al ensayo quedan separados;
+última muestra07:29:53 UTC vuelve a confirmar reposo/sin errores, sin cambiar
+límites ni atribuir esos avisos al fallo izquierdo. No se enviaron otros objetivos tras la prueba. Queda pendiente revisar
+la postura de agarre y posibles limitaciones por carga antes de otro ensayo.
+[Resultado, receta y reversión](box_handling/BOX_AXIS_REPOSITION_20261002.md#prueba-limitada-de-yaw-izquierdo2-y-retorno--22-10-2026).
+
+**22-10-2026 — BOX-LEFT-SHOULDER-CONTROL-DIAG-20261022: reposo posterior al arranque y significado del aviso.**
+Lecturas pasivas07:09–07:11 UTC: paros0/0, cargador0, baterías52/52,5%,
+20D canónicos próximos a HOME y velocidad0; actuadores habilitados, sin fault,
+delta máximo consigna/posición0,002876214 rad. CC registra liberación, self-check,
+StartMotion correcto y JoystickMode, sin órdenes del agente. Esto no reconstruye
+el golpe ni prueba salud bajo carga. Ruedas y HOME visual, pendientes en ese
+corte pasivo, se confirmaron después para el ensayo acotado documentado arriba.
+Hash vivo `d2594d81…97957` coincide con el binario analizado: «jump command»
+compara consigna con posición real, no consignas consecutivas; la rama sólo
+avisa, no rechaza ni recorta y continúa hacia CSP/ServoCmdArray. No demuestra
+comportamiento downstream ni elimina otros límites. Siete avisos no son siete
+saltos discretos. La causa del fallo bajo carga sigue PENDIENTE. Captura pasiva6 s
+con148 muestras conserva `usable_capture=false` por una línea INFO no JSON.
+Sin agarre, HOME, reset o cambios del sistema. [Estado, alcance y evidencia](box_handling/BOX_AXIS_REPOSITION_20261002.md#reposo-actual-y-semántica-del-aviso-hardware--22-10-2026).
+
+**22-10-2026 — BOX-LEFT-ELBOW-HW-TRACKING-20261022: divergencia izquierda anterior al registro del paro.**
+Diagnóstico SSH de sólo lectura autorizado por el usuario con el robot en paro.
+El UUID220593 queda identificado en logs persistidos de Motion. Hardware registra
+siete avisos de salto en `L_shoulder_yaw_motor` antes de registrar E-stop:
+separación consigna/posición hasta0,906573 rad (≈51,94°), con posición alrededor
+de−1 rad. Son **advertencias**, no rechazo de comandos demostrado. No atribuir
+la divergencia inicial al paro ni declarar motor averiado o una causa IK probada.
+Motion termina7101107 sin ejecutar bodyback; no son equivalentes los intentos
+149970/196799, cuyos errores grandes aparecen después del registro del paro.
+Paro principal fresco `data:1` leído a07:00:03 UTC (09:00:03 CEST); nuevo arranque con procesos
+activos y Motion esperando ListControllers, sin HOME demostrado. Caja/contacto
+y estabilidad siguen pendientes. No HOME/rearme/reintento ni ampliar umbrales,
+fuerza o trayectoria para ensayar. Sin comandos físicos o cambios de sistema.
+[Datos, fuentes y límites](box_handling/BOX_AXIS_REPOSITION_20261002.md#diagnóstico-nativo-de-seguimiento-izquierdo--22-10-2026).
+
+**22-10-2026 — vídeo WhatsApp: plegado del codo izquierdo y paro protector.**
+El operador precisa «El codo se plegó hacia el torso» y que pulsó el paro por
+ese movimiento. La prioridad pasa a la postura articular del izquierdo y su
+recorrido, además de visión/TF; no basta con desplazar la muñeca o subir fuerza.
+El nuevo clip muestra separación parcial, sin holgura lateral medida ni
+identificación inequívoca de ambos lados desde ese ángulo. No se
+demuestran causa IK/singularidad ni contacto con el torso. Diario220593 separado:
+agarre termina ABORTED6/ClampPoseTrackingError7101107 y fallo de paro en la misma
+ventana, sin cancel_requested/acuse0; no confundir con cancelaciones5 anteriores.
+El vínculo clip↔diario sigue PENDIENTE; no hay trazas articulares/cartesianas/FT
+locales durante el agarre para reconstruir la causa. El usuario comunica ahora
+encendido con el paro aún sin liberar: OBSERVADO por su relato, sin verificar
+arranque, HOME, caja o estabilidad. Sin HOME/rearme/repetición automática;
+sólo lectura local y documentación, sin SSH ni código modificado.
+[Vídeo, resultado y límites](box_handling/BOX_AXIS_REPOSITION_20261002.md#vídeo-whatsapp-plegado-del-codo-izquierdo--22-10-2026).
+
+**22-10-2026 — BOX-VIDEO-DESAPILADO-20261022: contacto izquierdo y paro del operador.**
+El operador aclara que pulsó el paro porque el brazo izquierdo golpeó la caja
+en vez de colocarse por su lateral. El contacto precede al paro comunicado;
+no atribuir el golpe al paro ni diagnosticar esa intervención como un falso
+fallo de seguridad. Antes había indicado que la maniobra continuaba sin lograr
+retirar la caja y que eran las mismas cajas. El vídeo conservado muestra una
+separación/inclinación parcial; no permite reconstruir el contacto izquierdo
+ni medir la trayectoria completa. La prioridad es revisar la entrada del brazo,
+la pose/orientación SPS y su transformación, no ampliar reintentos o fuerza.
+La pregunta posterior sobre el hueco creado por la derecha centra también la
+revisión en la segunda entrada izquierda, nominalmente t14→16 del MetaClamp:
+el YAML fija tiempos y no declara una condición explícita de holgura medida.
+Falta distinguir separación efectiva insuficiente de la caja y recorrido
+izquierdo incorrecto; los offsets de mano no miden el movimiento de la caja.
+El gate XYZ sólo valida la posición de la caja, no la ausencia de colisión
+durante el recorrido. La recuperación por falta de progreso del chasis no
+autoriza repetir un agarre tras contacto. El usuario comunica «estamos
+reiniciando»: reinicio OBSERVADO por su relato; arranque terminado, HOME,
+paros, estabilidad y estado actual de la caja PENDIENTES. No se han enviado
+comandos al robot. No repetir el ciclo ni enviar HOME automático desde este
+estado sin comprobar la carga y la trayectoria. La correspondencia del vídeo
+con el diario149970 sigue sin demostrarse; su cancelación no prueba retirada.
+[Evidencia, hipótesis y continuación](box_handling/BOX_AXIS_REPOSITION_20261002.md#contacto-del-brazo-izquierdo-durante-la-entrada--22-10-2026).
+
 **22-10-2026 — BOX-01-VISUAL-ALIGN-RECOVERY-20261022: una recuperación supervisada antes del agarre.**
 Implementado sólo en PC: permite una única recuperación dentro de una sesión
 nueva de alineación visual si el guard clasifica específicamente falta de
