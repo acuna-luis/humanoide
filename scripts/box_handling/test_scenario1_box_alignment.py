@@ -127,27 +127,27 @@ class GeometryTests(unittest.TestCase):
                 self.assertAlmostEqual(delta[axis], expected[axis])
             self.assertEqual(pending, before)
 
-    def test_near_edge_correction_includes_arrival_residual_and_improvement(self):
-        # The box is natively admissible but lies outside the preparation margin.
-        pending = selection(x=.7805179438290441)
-        sps.validate_position(pending['selection']['selected_pose'])
-        delta = alignment.displacement(pending)
-        self.assertAlmostEqual(delta['x'], .0245179438290441)
-        self.assertGreater(delta['x'], alignment.POLICY['max_arrival_distance_m'])
-        worst = pending['selection']['selected_pose']['position']['x']-(delta['x']-.012)
-        self.assertAlmostEqual(worst, .768)
-
-    def test_tiny_both_axis_goals_have_meaningful_distance_and_stay_in_gate(self):
-        for x, y in ((.779, 0.), (.421, 0.), (.6, .379), (.6, -.379), (.779, .379)):
+    def test_native_admissible_edges_and_two_real_failures_need_no_correction(self):
+        for x, y in ((.7714131815854335, .09999027275454075), (.7780323494142376, 0.),
+                     (.41, -.39), (.79, .39), (.779, .379), (.421, -.379)):
             pending = selection(x=x, y=y)
-            delta = alignment.displacement(pending)
-            self.assertLessEqual(math.hypot(*delta.values()), .05)
-            projected = copy.deepcopy(pending['selection']['selected_pose'])
-            for axis in 'xy':
-                projected['position'][axis] -= delta[axis]
-                if delta[axis]:
-                    self.assertGreater(abs(delta[axis]), .012)
-            sps.validate_position(projected)
+            before = copy.deepcopy(pending)
+            sps.validate_position(pending['selection']['selected_pose'])
+            self.assertEqual(alignment.displacement(pending), dict(x=0., y=0.))
+            self.assertEqual(alignment.violation(pending), 0.)
+            self.assertEqual(pending, before)
+
+    def test_only_violated_axis_moves_even_if_other_axis_is_near_native_edge(self):
+        delta = alignment.displacement(selection(x=.8, y=.38))
+        self.assertAlmostEqual(delta['x'], .03)
+        self.assertEqual(delta['y'], 0.)
+
+    def test_just_outside_native_gate_keeps_target_margin_and_exact_gate(self):
+        for x, sign in ((.790000001, 1.), (.409999999, -1.)):
+            p = selection(x=x)
+            with self.assertRaises(ValueError): sps.validate_position(p['selection']['selected_pose'])
+            self.assertAlmostEqual(alignment.displacement(p)['x'], sign*.020000001)
+            self.assertGreater(alignment.violation(p), 0.)
 
     def test_z_and_excessive_xy_requests_are_not_planar_recoverable(self):
         for pending in (selection(z=0.), selection(z=1.5), selection(x=.821),

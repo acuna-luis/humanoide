@@ -1049,7 +1049,9 @@ with socket.socket(socket.AF_UNIX) as conn:
                 atomic_json(self.session/'box-alignment-reference.json', pending)
                 self.emit('box_alignment', phase='ready', attempts=attempt,
                           total_requested_m=total, observation=pending,
-                          inside_margin_m=policy['inside_margin_m'])
+                          correction_trigger='outside_native_pickup_gate',
+                          native_position_gate_unchanged=True,
+                          correction_target_margin_m=policy['inside_margin_m'])
                 return
             limit_reason = ('attempts' if attempt >= policy['max_corrections'] else
                             'distance' if total+step > policy['max_total_m']+1e-12 else None)

@@ -1,5 +1,23 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-ALIGNMENT-NATIVE-ACCEPTANCE-20261022
+
+22-10-2026, Europe/Madrid — fuentes PC y pruebas offline; no instalado/cargado
+ni probado físicamente en robot. Usuario autoriza corregir la alineación tras
+dos cancelaciones previas al agarre. Fuente: scenario1_box_alignment.py y
+mensajes de scenario1_runtime.py. Activación al próximo CLI, por transmisión
+en memoria de fuentes y hashes; sin modificación persistente del robot.
+Sólo se solicita corrección siXY está fuera del gate nativo; margen2 cm como
+destino, sin ampliar gate ni reserva10 mm. Remeasure tras éxito/reposo y
+asociación conservados; guard4 s/2 mm, velocidades, distancias y cancelación
+sin cambios. Recogida nativa y depósito intactos. LOCATE_RUNNING no se toma
+como prueba de inmovilidad para aplazar el guard.
+Backup/resultados/hashes: ../Humanoide-vla-evidence/20261022_ALIGNMENT_ACCEPTANCE_190005/.
+Reversión: revertir sólo este commit antes de otra sesión. Próximo paso:
+ensayo con condiciones físicas nuevas y medición; no repetir automáticamente
+objetivos interrumpidos. [Contrato y alcance](box_handling/OPTIMISTIC_SCENARIO1.md#corrección-de-ajustes-innecesarios-antes-del-agarre--22-10-2026).
+
+
 ## BOX-UNIFIED74-ALIGNMENT-FAIL-20261022
 
 22-10-2026, Europe/Madrid — OBSERVADO en journal de ejecución del usuario;

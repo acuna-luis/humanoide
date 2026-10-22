@@ -1,5 +1,52 @@
 # Escenario 1 con supervisión continua
 
+### Corrección de ajustes innecesarios antes del agarre — 22-10-2026
+
+**BOX-ALIGNMENT-NATIVE-ACCEPTANCE-20261022 — implementado y probado offline;
+validación física PENDIENTE.** La preparación visual deja de ordenar un
+movimiento sólo por estar fuera del margen interior adicional de2 cm cuando
+la posición medida ya satisface el gate original SPS. Rangos sin cambios en
+base_link: X[0,41;0,79], Y[−0,39;0,39], Z[0,01;1,49] m; Z no es altura al suelo.
+La reserva10 mm del contrato original no cambia. Estos rangos no certifican
+alcance, ausencia de colisiones ni agarre correcto.
+
+Si una coordenadaXY queda fuera de su rango original, se corrige sólo ese eje
+hacia el interior de2 cm; el otro eje válido no se mueve por su proximidad al
+borde. Se mantienen paso máximo5 cm, acumulado10 cm, tiempo120 s, número de
+intentos, asociación de la misma caja, llegada, reposo y éxito terminal antes
+de volver a medir. Tras una corrección, estar dentro del gate original cierra
+la alineación aunque no se haya alcanzado el margen interior deseado. La
+magnitud de violación para evaluar mejora usa ahora el gate original.
+
+Regresión de las tomas18:49/18:54: X0,771413 y0,778032 m son admisibles y ya
+no disparan navegación preparatoria. Se mantienen cabeza y dos capturas
+frescas, y el adaptador nativo recaptura/compruebaXYZ antes del único agarre.
+No se transforma, sustituye ni falsifica la posición recibida de visión.
+`box_alignment/ready` registra motivo y margen de destino por separado.
+
+Revisión de relocalización: LOCATE_RUNNING coexistió con movimiento observado;
+no equivale a reposo ni justifica conceder más tiempo por sí solo. **No se
+modifica el guard de4 s/2 mm**, ni se reinicia su contador, ni se añade una
+espera ciega o un reintento tras cancelación. La solución aplicada evita los
+objetivos innecesarios que provocaron las dos tomas. Si un ajuste realmente
+necesario vuelve a no converger, continuará deteniéndose y requerirá revisar
+la localización con evidencia nueva. No se afirma corregida toda causa posible.
+
+Fuentes: scenario1_box_alignment.py y mensaje de diagnóstico en Runtime;
+constructores/tarea de brazos, depósito74/90, navegación y controles de fuerza
+intactos. Activación: próximo lanzamiento del mismo comando; no hay instalación
+persistente en robot. El CLI transmite las fuentes y registra sus hashes.
+No se ha conectado ni movido el robot durante esta intervención.
+Backup, resultados de pruebas y hashes:
+`../Humanoide-vla-evidence/20261022_ALIGNMENT_ACCEPTANCE_190005/`.
+Reversión: revertir sólo el commit de esta corrección antes de una nueva sesión,
+sin reemplazar scripts durante una acción o reiniciar desde una caja sujeta.
+Retoma: comprobar estado físico; ensayo y cronometraje nuevos pendientes.
+Verificación:1138 pruebas de regresión correctas;49 pruebas focalizadas finales
+de alineación y fuentes de brazos correctas. Suite antigua de instalador genérico
+excluida por fixtures ya documentados; sin cambios en ella.
+
+
 **Segunda toma integrada74, 22-10-2026, 18:54 CEST:**
 `20261022T165426Z_OPTIMISTIC_SCENARIO1_1558421` volvió a terminar antes del
 agarre por `Correction made no significant progress`. get1:16,066 s;

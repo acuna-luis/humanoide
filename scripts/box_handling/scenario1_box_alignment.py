@@ -65,21 +65,26 @@ def observe(report, now_ns):
 
 
 def displacement(pending):
-    """Move violated planar axes inside the gate, avoiding sub-tolerance goals."""
+    """Correct only native gate violations; use the inner margin as a target.
+
+    A valid measured pose needs no chassis correction. The native adapter still
+    recaptures and checks its unchanged XYZ gate before moving the arms.
+    """
     position = pending['selection']['selected_pose']['position']
     low, high = sps.POSITION_BOUNDS_M['z']
-    if not low <= position['z'] <= high:
+    if (type(position['z']) not in (int, float) or not math.isfinite(position['z'])
+            or not low <= position['z'] <= high):
         raise ValueError('BOX_ALIGNMENT_Z_UNCORRECTABLE: no planar correction for Z')
     delta = dict(x=0., y=0.)
     for axis in 'xy':
         value = position[axis]
         low, high = sps.POSITION_BOUNDS_M[axis]
-        low += POLICY['inside_margin_m']
-        high -= POLICY['inside_margin_m']
-        if value < low-1e-12:
-            delta[axis] = value-low
-        elif value > high+1e-12:
-            delta[axis] = value-high
+        if type(value) not in (int, float) or not math.isfinite(value):
+            raise ValueError('BOX_ALIGNMENT_INVALID_POSITION: '+axis)
+        if value < low:
+            delta[axis] = value-(low+POLICY['inside_margin_m'])
+        elif value > high:
+            delta[axis] = value-(high-POLICY['inside_margin_m'])
     # A target within the arrival radius can succeed without chassis motion.
     # Add room for that residual and a meaningful observed improvement, on
     # affected axes only. Never change the measured box pose or pickup gate.
@@ -99,12 +104,11 @@ def displacement(pending):
 
 
 def violation(pending):
-    """Distance to the pickup preparation envelope, including its XY margin."""
+    """Residual violation of the native pickup gate, not its optional target margin."""
     position = pending['selection']['selected_pose']['position']
     errors = []
     for axis, (low, high) in sps.POSITION_BOUNDS_M.items():
-        margin = POLICY['inside_margin_m'] if axis in 'xy' else 0.
-        error = max(low+margin-position[axis], 0., position[axis]-(high-margin))
+        error = max(low-position[axis], 0., position[axis]-high)
         errors.append(error if error > 1e-12 else 0.)
     return math.hypot(*errors)
 

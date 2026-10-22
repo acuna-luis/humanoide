@@ -1,5 +1,16 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-ALIGNMENT-NATIVE-ACCEPTANCE-20261022: microajustes innecesarios corregidos offline.**
+La alineación previa sólo mueve ejesXY fuera del gate SPS original; el margen
+interior2 cm queda como destino de corrección, no condición extra de entrada.
+X77,141 y77,803 cm de las dos tomas fallidas ahora no provocan navegación.
+Gate/reserva10 mm, capturas nativas nuevas y único agarre intactos. Tras éxito
+y reposo se vuelve a medir; si ya entra en el gate, continúa. No se amplían4 s
+de falta de progreso ni otros límites: LOCATE_RUNNING no demuestra reposo.
+Sin movimiento ni cambios remotos; ensayo físico y tiempos PENDIENTES.
+[Detalle y reversión](box_handling/OPTIMISTIC_SCENARIO1.md#corrección-de-ajustes-innecesarios-antes-del-agarre--22-10-2026).
+
+
 **22-10-2026 — BOX-UNIFIED74-ALIGNMENT-FAIL-20261022: ensayo interrumpido antes del agarre.**
 get1:31,948 s; visión:1,794 s; preparación/recogida hasta error:17,874 s.
 Primer ajusteX15,413 mm cancelado a4,003 s por falta de mejora significativa;

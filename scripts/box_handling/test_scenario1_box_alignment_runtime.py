@@ -89,6 +89,25 @@ class AlignmentRuntimeTests(unittest.TestCase):
         machine.measure_box_for_pickup.assert_called_once()
         machine.pose_references.assert_not_called()
 
+    def test_actual_admissible_box_does_not_dispatch_navigation_and_grasps_once(self):
+        for x in (.7714131815854335, .7780323494142376, .79):
+            machine = self.machine([self.observation(x)])
+            machine.stage(dict(stage='grasp'))
+            self.assertEqual(self.kinds(machine), ['motion', 'motion'])
+            self.assertEqual(machine.action.call_args_list[-1].args[1]['task_name'], runtime.TASKS['grasp'][0])
+            machine.pose_references.assert_not_called()
+            ready = [c.kwargs for c in machine.emit.call_args_list if c.kwargs.get('phase') == 'ready']
+            self.assertEqual(ready[-1]['attempts'], 0)
+            self.assertTrue(ready[-1]['native_position_gate_unchanged'])
+
+    def test_successful_correction_accepts_native_gate_without_demanding_inner_margin(self):
+        machine = self.machine([self.observation(),
+            self.observation(.785, stamp=101_000_000_000, base_x=1.006)])
+        with patch.object(alignment, 'validate_association', return_value={}):
+            machine.stage(dict(stage='grasp'))
+        self.assertEqual(self.kinds(machine), ['motion', 'navigation', 'motion'])
+        self.assertEqual(machine.measure_box_for_pickup.call_count, 2)
+
     def test_zero_and_legacy_payload_do_not_add_preparation_or_repeat_arms(self):
         for include_option in (True, False):
             machine = self.machine(attempts=0, include_option=include_option)
@@ -101,20 +120,22 @@ class AlignmentRuntimeTests(unittest.TestCase):
 
     def test_three_configured_corrections_are_sequential_then_grasp_once(self):
         machine = self.machine([self.observation(.81),
-            self.observation(.78, stamp=101_000_000_000, base_x=1.03),
-            self.observation(.777, stamp=102_000_000_000, base_x=1.044),
-            self.observation(.765, stamp=103_000_000_000, base_x=1.055)], attempts=3)
+            self.observation(.795, stamp=101_000_000_000, base_x=1.03),
+            self.observation(.791, stamp=102_000_000_000, base_x=1.044),
+            self.observation(.78, stamp=103_000_000_000, base_x=1.055)], attempts=3)
         machine.pose_references.side_effect = [[dict(x=x, y=2., yaw=0.)]*2 for x in (1.03, 1.044, 1.055)]
-        machine.stage(dict(stage='grasp'))
+        # Isolate attempt accounting; association has its own drift tests.
+        with patch.object(alignment, 'validate_association', return_value={}):
+            machine.stage(dict(stage='grasp'))
         self.assertEqual(self.kinds(machine), ['motion', 'navigation', 'navigation', 'navigation', 'motion'])
         requests = machine.action.call_args_list[1:4]
         self.assertEqual([c.kwargs['correction']['attempt'] for c in requests], [1, 2, 3])
         self.assertEqual(machine.measure_box_for_pickup.call_count, 4)
-        self.assertAlmostEqual(json.loads((machine.session/'box-alignment.json').read_text())['total_requested_m'], .085)
+        self.assertAlmostEqual(json.loads((machine.session/'box-alignment.json').read_text())['total_requested_m'], .086)
 
     def test_configured_attempt_limit_stops_before_another_nav_or_grasp(self):
         machine = self.machine([self.observation(.795),
-            self.observation(.78, stamp=101_000_000_000, base_x=1.015)], attempts=1)
+            self.observation(.792, stamp=101_000_000_000, base_x=1.015)], attempts=1)
         machine.pose_references.return_value = [dict(x=1.015, y=2., yaw=0.)]*2
         with self.assertRaisesRegex(RuntimeError, 'BOX_ALIGNMENT_LIMIT.*attempts'):
             machine.stage(dict(stage='grasp'))
@@ -124,15 +145,15 @@ class AlignmentRuntimeTests(unittest.TestCase):
 
     def test_hundred_mm_budget_stops_before_next_dispatch_without_reset(self):
         machine = self.machine([self.observation(.82),
-            self.observation(.795, stamp=101_000_000_000, base_x=1.038),
-            self.observation(.789, stamp=102_000_000_000, base_x=1.051),
-            self.observation(.782, stamp=103_000_000_000, base_x=1.058)])
-        machine.pose_references.side_effect = [[dict(x=x, y=2., yaw=0.)]*2 for x in (1.038, 1.051, 1.058)]
-        with self.assertRaisesRegex(RuntimeError, 'BOX_ALIGNMENT_LIMIT.*distance'):
-            machine.stage(dict(stage='grasp'))
-        self.assertEqual(self.kinds(machine), ['motion', 'navigation', 'navigation', 'navigation'])
+            self.observation(.80, stamp=101_000_000_000, base_x=1.038),
+            self.observation(.796, stamp=102_000_000_000, base_x=1.056)])
+        machine.pose_references.side_effect = [[dict(x=x, y=2., yaw=0.)]*2 for x in (1.038, 1.056)]
+        with patch.object(alignment, 'validate_association', return_value={}):
+            with self.assertRaisesRegex(RuntimeError, 'BOX_ALIGNMENT_LIMIT.*distance'):
+                machine.stage(dict(stage='grasp'))
+        self.assertEqual(self.kinds(machine), ['motion', 'navigation', 'navigation'])
         record = json.loads((machine.session/'box-alignment.json').read_text())
-        self.assertAlmostEqual(record['total_requested_m'], .094)
+        self.assertAlmostEqual(record['total_requested_m'], .08)
         self.assertFalse((machine.session/'box-alignment-reference.json').exists())
 
     def test_absolute_time_budget_not_restarted_after_successful_nav(self):
