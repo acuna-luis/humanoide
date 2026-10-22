@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — VLA-PASSIVE-EPISODE-CAPTURE-20261022: capturador pasivo disponible.**
+PC captura RGB PNG, posiciones20D, consignas `cmd_pos` y fuerzas con sellos
+originales y recepción común Vision, sin control/movimiento ni arranque VLA.
+Piloto final5 s:23 imágenes,21 emparejadas,2 de borde excluidas; diferencias de
+origen≤49,082 ms; QC correcto.14 pruebas offline pasan. `training_ready=false`:
+falta cualificar acción, etiquetar y convertir. Capturas largas/movimiento sin
+validar. SSH del PC observado inactivo, no activado; uso local disponible.
+[Comando y límites](vla/CAPTURA_PASIVA_EPISODIOS.md).
+
 **22-10-2026 — BOX-CYCLE-VOICE-RECOVERY-20261022: voz y recuperación acotada, offline.**
 Voz asíncrona por defecto en inglés en robot (`--voice robot-en`); español PC
 opcional con espeak, actualmente no instalado. Audio no interviene en control.

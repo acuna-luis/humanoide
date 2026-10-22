@@ -1,5 +1,14 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**22-10-2026 — VLA-PASSIVE-EPISODE-CAPTURE-20261022: capturador pasivo disponible.**
+PC captura RGB PNG, posiciones20D, consignas `cmd_pos` y fuerzas con sellos
+originales y recepción común Vision, sin control/movimiento ni arranque VLA.
+Piloto final5 s:23 imágenes,21 emparejadas,2 de borde excluidas; diferencias de
+origen≤49,082 ms; QC correcto.14 pruebas offline pasan. `training_ready=false`:
+falta cualificar acción, etiquetar y convertir. Capturas largas/movimiento sin
+validar. SSH del PC observado inactivo, no activado; uso local disponible.
+[Comando y límites](CAPTURA_PASIVA_EPISODIOS.md).
+
 **2026-09-14 — Reutilización de cálculos de trayectorias documentada.**
 Separados métodos, pruebas reutilizables por inclusión de dominio y resultados
 que dependen de escena/ejecución. Incluye matriz de cambios, flujo de reutilización,

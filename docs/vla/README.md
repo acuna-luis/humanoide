@@ -6,6 +6,7 @@ checkpoint de forma gradual.
 
 ## Documentos
 
+- [Capturador pasivo disponible](CAPTURA_PASIVA_EPISODIOS.md): comando único local, RGB/20D/consignas/fuerza y QC; sin movimiento ni entrenamiento automático.
 - [Fuente de verdad operativa PICO/PC/robot](../teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md): estado real del enlace, versiones, fallos reproducidos, workarounds y gates pendientes antes de mover.
 - [Guía de teleoperación, datos y entrenamiento](CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md): arquitectura, compatibilidad v0.2.0, procedimiento completo y criterios de decisión.
 - [Guía en PDF](CRUZR_S2_VLA_TELEOP_DATA_GUIDE.pdf): versión maquetada para compartir.

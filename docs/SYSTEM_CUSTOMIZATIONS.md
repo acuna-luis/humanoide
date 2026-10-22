@@ -1,5 +1,22 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## VLA-PASSIVE-EPISODE-CAPTURE-20261022
+
+**22-10-2026, Europe/Madrid — instalado como fuentes PC; cargado temporalmente y lectura real VERIFICADA, movimiento/entrenamiento no probados.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo/autoridad | Usuario pide ayuda para implementar/validar captura sincronizada; trabajo autónomo de capturador pasivo, sin autorizar movimiento |
+| Destino/fuente | PC scripts/vla/capture_passive_episode.py, passive_episode_remote.py, passive_episode_quality.py y test_passive_episode.py. Python estándar PC; rclpy/tipos ya instalados en ROS Vision descubierto. Fuente por stdin, sin instalar paquetes/tareas ni arrancar VLA |
+| Aplicación/activación | Un comando versionado en guía. Crea nueva carpeta externa por episodio, lee RGB/JointState/ActuatorState/FT y SDK opcional.5 FPS/30 Hz límites predeterminados; duración1–1800 s. CAPTURA_LISTA sólo tras warmup de señales. Final por plazo o Ctrl+C sólo sobre capturador |
+| Sincronización | Sello original más recepción Vision común y PC separados. Vecino por origen≤80 ms y recepción≤500 ms; bordes excluidos explícitos. Rechaza reloj fuera de edad−50/500 ms, sellos repetidos, datos ausentes/corruptos, cuentas discrepantes, transporte incompleto, cobertura corta/huecos largos |
+| Verificación |14 pruebas offline; piloto final5 s:23 PNG reales960×576,135 joints,112 actuators,110 FT-L/109 FT-R;21 pares,2 bordes, desfase máximo49,081052 ms, descartes de cola0, QC true. Sin muestras SDK. Pilotos01/02 rechazados preservados;03 también correcto |
+| Estado/deuda | Consigna de actuador `cmd_pos` separada de posiciones, sin llamarla acción oficial. training_ready=false; faltan semántica de acción, etiquetas/conversión y validación de largas sesiones/demostraciones móviles. No certifica sincronía física. Servidor SSH del PC observado inactive, no instalado/activado |
+| Evidencia/backup/versión | ../Humanoide-vla-evidence/20261022_PASSIVE_DATASET_PREP_173629Z/: before/, before.json, gráficos/topics, pilotos, tests.txt, verification.json con SHA de fuentes; manifest/collector_remote.py en cada toma. Sólo fuentes/documentación a Git; binarios/episodios fuera |
+| Reversión/pendientes | Retirar sólo archivos/referencias nuevos; conservar episodios y cambios paralelos. Sin configuración persistente del robot que revertir; procesos temporales terminaron. Uso local listo; acceso desde otro Windows pendiente de conexión SSH elegida por usuario |
+
+[Receta y criterios](vla/CAPTURA_PASIVA_EPISODIOS.md).
+
 ## BOX-CYCLE-VOICE-RECOVERY-20261022
 
 22-10-2026, Europe/Madrid — implementación PC/repositorio, validada offline;
