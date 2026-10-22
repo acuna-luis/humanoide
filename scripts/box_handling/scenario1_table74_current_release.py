@@ -18,7 +18,7 @@ else:
     import scenario1_deposit as deposit
 
 
-BUILDER_VERSION = 1
+BUILDER_VERSION = 2
 PHASE = 'current_pin_release'
 NAMESPACE = 'local_table74_release/'
 TASK_ROOT = deposit.TASK_ROOT
@@ -72,6 +72,18 @@ def canonical(value):
     return json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False)
 
 
+def pin_relief_distance_m(version):
+    """Keep v1 immutable for historical proofs/rollback; new references use v2."""
+    if type(version) is not int or version not in (1, BUILDER_VERSION):
+        raise ValueError('Unsupported current release reference version')
+    return .03 if version == 1 else .04
+
+
+def minimum_tool_clearance_m(version, stage):
+    pin_relief_distance_m(version)
+    return .05 if version == 2 and stage == 'pin_relief' else .04
+
+
 def validate_reference(reference):
     """Require the exact phase and explicit current physical declarations.
 
@@ -80,8 +92,7 @@ def validate_reference(reference):
     """
     if not isinstance(reference, dict) or set(reference) != _REFERENCE_KEYS:
         raise ValueError('Current release reference: missing or unknown fields')
-    if type(reference['version']) is not int or reference['version'] != 1:
-        raise ValueError('Unsupported current release reference version')
+    relief_distance = pin_relief_distance_m(reference['version'])
     stage = reference['stage']
     if (type(stage) is not str or stage not in ('pin_relief', 'lateral_open') or
             reference['scope'] != 'current_supported_box_only'):
@@ -114,10 +125,11 @@ def validate_reference(reference):
         result[name] = float(value)
     if result['surface_height_m'] != .74:
         raise ValueError('Current release is restricted to the 74 cm surface')
-    if result['tool_table_clearance_m'] < .04:
-        raise ValueError('Current tool/table clearance must be at least 4 cm')
-    if not 0. < result['required_pin_exit_m'] <= .03:
-        raise ValueError('Required pin exit must be positive and at most the nominal 3 cm relief')
+    clearance = minimum_tool_clearance_m(reference['version'], stage)
+    if result['tool_table_clearance_m'] < clearance:
+        raise ValueError('Current tool/table clearance must be at least '+format(clearance*100, 'g')+' cm')
+    if not 0. < result['required_pin_exit_m'] <= relief_distance:
+        raise ValueError('Required pin exit must be positive and at most the nominal '+format(relief_distance*100, 'g')+' cm relief')
     return result
 
 
@@ -127,7 +139,8 @@ def _replace_once(text, old, new):
     return text.replace(old, new, 1)
 
 
-def _trajectory(stage):
+def _trajectory(stage, version=BUILDER_VERSION):
+    distance = pin_relief_distance_m(version)
     if stage not in ('pin_relief', 'lateral_open'):
         raise ValueError('Unknown release trajectory stage')
     output = ['  robot_trajectory_data:\n']
@@ -135,7 +148,7 @@ def _trajectory(stage):
         position = '[0.0, 0.0, 0.0]'
         if body != 'torso':
             if stage == 'pin_relief':
-                position = '[0.0, 0.0, -0.03]'
+                position = '[0.0, 0.0, -'+format(distance, '.2f')+']'
             else:
                 position = '[0.0, '+('0.1' if body == 'left_hand' else '-0.1')+', 0.0]'
         output.extend(['    - body_name: "'+body+'"\n', '      data:\n',
@@ -148,21 +161,23 @@ def _trajectory(stage):
 def build_bundle(reference, source_xml, source_yaml):
     """Build one phase; preserve all bytes outside the XML action and trajectory."""
     config = validate_reference(reference)
+    version = config['version']
     for path, source in ((SOURCE_XML_PATH, source_xml), (SOURCE_YAML_PATH, source_yaml)):
         if type(source) is not str or sha256(source) != DEPENDENCIES[path]:
             raise ValueError('Current release source checksum mismatch: '+path)
     stage = config['stage']
-    changed_yaml = _replace_once(source_yaml, _SOURCE_TRAJECTORY, _trajectory(stage))
+    changed_yaml = _replace_once(source_yaml, _SOURCE_TRAJECTORY, _trajectory(stage, version))
     xml_template = _replace_once(source_xml, _PUT_LINE, '')
     xml_template = _replace_once(xml_template, 'name="wrc/open_arm_cruzr"', 'name="'+_TASK_TOKEN+'"')
     templates = {'yaml': sha256(changed_yaml), 'xml_template': sha256(xml_template)}
-    identity = sha256(canonical(dict(builder_version=BUILDER_VERSION, phase=PHASE,
+    identity = sha256(canonical(dict(builder_version=version, phase=PHASE,
         reference=config, dependencies=DEPENDENCIES, content_templates=templates)))
     task_name = NAMESPACE+identity+'_release'
     changed_xml = _replace_once(xml_template, _TASK_TOKEN, task_name)
     tasks = {META_ROOT+task_name+'.yaml': changed_yaml, TASK_ROOT+task_name+'.xml': changed_xml}
     hashes = {path: sha256(text) for path, text in tasks.items()}
-    positions = ([0., 0., -.03], [0., 0., -.03]) if stage == 'pin_relief' else ([0., .1, 0.], [0., -.1, 0.])
+    distance = pin_relief_distance_m(version)
+    positions = ([0., 0., -distance], [0., 0., -distance]) if stage == 'pin_relief' else ([0., .1, 0.], [0., -.1, 0.])
     review = dict(phase=PHASE, stage=stage, reference=copy.deepcopy(config),
         reference_kind='operator_confirmed_current_support_clearance_and_pin_state_not_sensor_measurement',
         physical_validation='pending', kinematic_validation='pending',
@@ -190,7 +205,7 @@ def build_bundle(reference, source_xml, source_yaml):
             'SUCCEED does not prove pin disengagement, stable support, release or authorization for HOME.',
             'A repeated relative task repeats its displacement; no automatic retry or next phase is authorized.',
         ])
-    manifest = dict(version=1, builder_version=BUILDER_VERSION, id=identity, phase=PHASE,
+    manifest = dict(version=1, builder_version=version, id=identity, phase=PHASE,
         task_name=task_name, reference_sha256=sha256(canonical(config)),
         content_template_sha256=templates, dependencies=dict(DEPENDENCIES),
         robot_files={**DEPENDENCIES, **hashes}, physical_validation='pending', automatic_execution_authorized=False)
@@ -213,7 +228,7 @@ def validate_bundle(bundle):
         raise ValueError('Current release requires exactly one bounded XML and opening YAML')
     try:
         config = validate_reference(bundle['review']['reference'])
-        source_yaml = _replace_once(tasks[META_ROOT+name+'.yaml'], _trajectory(config['stage']), _SOURCE_TRAJECTORY)
+        source_yaml = _replace_once(tasks[META_ROOT+name+'.yaml'], _trajectory(config['stage'], config['version']), _SOURCE_TRAJECTORY)
         source_xml = _replace_once(tasks[TASK_ROOT+name+'.xml'],
             '            <Action ID="MetaClamp" name="'+name+'" />\n', _PUT_LINE+_OPEN_LINE)
         expected = build_bundle(config, source_xml, source_yaml)

@@ -1,5 +1,26 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-TABLE74-RELEASE4-20261022
+
+**22-10-2026, Europe/Madrid — cambio solicitado de 3 a 4 cm, sólo PC;
+no instalado/cargado/probado en el robot.**
+
+| Campo | Registro |
+| --- | --- |
+| Motivo/fuente | Petición expresa de aumentar el descenso de pines a4 cm. Builder `scripts/box_handling/scenario1_table74_current_release.py`, runner `_release_run.py`, supervisor `_finish.py` y pruebas asociadas; entrada habitual `optimistic_scenario1.sh --finish-deposit` |
+| Versión/trayectoria | Nuevas referencias `version=2`, manifest builder_version2: alivio RELATIVE manos Z−0,04 m, XY0, cuaternión identidad, waypoint2 s, torso pide0. Apertura separada Y±0,10 m/Z0/rotación identidad |
+| Requisitos | Pin-relief exige holgura actual≥0,05 m y salida de pines positiva≤0,04 m; conserva margen nominal1 cm. Open mantiene holgura actual≥0,04 m y confirmación nueva de pines libres. No se inventa una holgura5 cm a partir de la anterior4 cm |
+| Alcance/destino | Sólo archivos versionados en PC; sin SSH, cambio de robot/servicios, instalación, consumo de journal o movimiento. Nuevos bundles sólo se crean tras aportar los hechos físicos requeridos |
+| Compatibilidad/retirada | Bundle v1 `9621edaa01540251414915ada2781d194e7fffa277a028163c244b3348d30f04` sigue instalado según la intervención anterior, sin modificar sus hashes ni recibos. Su reproducción/validación y rollback mantienen3 cm/min4 cm; runner bloquea usarlo como nuevo despacho. Pruebas históricas v1 pueden autenticar un antecesor sin cambiar lo que hizo |
+| Dependencias/controles | Mismos XML/open YAML/libmeta_clamp pinados en la ficha anterior; ningún umbral de fuerza, batería20 %, cargador, watchdog, paro o límite alterado. Perfil de depósito74 ordinario sigue pendiente |
+| Verificación | 167 pruebas PASS7,530 s: trayectoria4 cm, mínimos por fase, identidad/versiones, reconstrucción exacta del bundle v1, consulta de instalación v1 intacta, bloqueo de nuevo despacho v1 y aceptación de prueba histórica v1→open v2. Bash/diff correctos; sin ensayo físico |
+| Aplicación | Actualizar estos fuentes de PC; futuras invocaciones del supervisor generan v2 e instalan aditivamente sólo su propia tarea. No sustituir ni editar paquetes v1 ya instalados ni journals |
+| Backup/evidencia | `../Humanoide-vla-evidence/20261022T115244Z_TABLE74_PIN_RELIEF_4CM/`: `before/`, hashes y commit base en `before.json`, pruebas y recibo final. Sin nueva evidencia de estado físico del robot |
+| Reversión | Restaurar selectivamente fuentes de PC desde el backup/base214bc2a si se decide volver a3 cm; no implica autorización para ejecutar el paquete anterior ni restaura postura. Para retirar archivos v1 usar su rollback por hashes descrito abajo, sólo sin consumidores |
+| Deuda/reanudación | Confirmar carga y cargador desconectado, apoyo estable, postura/contexto, paros/ruedas/modo/controles/persona y nueva holgura≥5 cm antes de la prueba de4 cm. Continúa pendiente de recarga anunciada por el operador; no repetir el ciclo ni HOME |
+
+[Receta vigente](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#finalización-por-fases-y-bloqueo-de-batería--22-10-2026).
+
 ## BOX-TABLE74-FINISH-20261022
 
 **22-10-2026, Europe/Madrid — alivio INSTALADO, no ejecutado;

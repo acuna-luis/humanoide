@@ -121,6 +121,8 @@ def validate_predecessor(proof,profile,*,_depth=0):
 
 def validate_entry(proof,profile,bundle):
     info=validate_predecessor(proof,profile);bundle=release.validate_bundle(bundle)
+    if bundle['manifest']['builder_version'] != release.BUILDER_VERSION:
+        raise ValueError('Historical 3 cm release bundle is proof/rollback only; regenerate a version2 reference with current clearance for the 4 cm release')
     ref=bundle['review']['reference']
     expected=('support','settle') if ref['stage']=='pin_relief' else ('pin_relief',)
     if (info['completed_stage']not in expected or ref['predecessor_bundle_id']!=info['bundle_id'] or
@@ -191,10 +193,12 @@ def cli_main(argv=None):
     proof,info,hashes=load_predecessor(args.after,profile)
     bundle=release.validate_bundle(json.loads(args.bundle.read_text()));info,bundle=validate_entry(proof,profile,bundle)
     ref=bundle['review']['reference']
-    text=('Ensayo único '+('descenso de3cm para aliviar pines' if ref['stage']=='pin_relief' else
-            'apertura lateral de10cm por lado con pines ya libres')+
+    clearance_cm=release.minimum_tool_clearance_m(ref['version'],ref['stage'])*100
+    relief_cm=release.pin_relief_distance_m(ref['version'])*100
+    text=('Ensayo único '+('descenso de '+format(relief_cm,'g')+' cm para aliviar pines' if ref['stage']=='pin_relief' else
+            'apertura lateral de 10 cm por lado con pines ya libres')+
           '. Confirme apoyo real estable de toda la caja, misma postura y agarre, holgura herramienta-tablero '
-          'de almenos4cm, salida requerida de pines no mayor3cm, corredor lateral libre. Manos/cinta retiradas, '
+          'de al menos '+format(clearance_cm,'g')+' cm, salida requerida de pines no mayor '+format(relief_cm,'g')+' cm, corredor lateral libre. Manos/cinta retiradas, '
           'cargador desconectado, paros liberados, otros mandos detenidos y persona junto al paro. '
           'Las confirmaciones son del operador; el resultado técnico no verifica apoyo ni pines libres.')
     return phase_cli.execute(args,profile,proof,info,hashes,bundle,make_payload=make_payload,

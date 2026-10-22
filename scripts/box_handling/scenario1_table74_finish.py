@@ -46,8 +46,8 @@ def parser():
     mode.add_argument('--check',action='store_true',help='Check installed files only; never install or move')
     mode.add_argument('--run',action='store_true',help='Install, perform live read-only preflight, then run this phase with a TTY token')
     p.add_argument('--supported',action='store_true',help='Current box is fully supported, flat and stable; arms do not carry its weight')
-    p.add_argument('--tool-clearance-cm',type=float,help='Current clearance from the entire tool to the table, at least4cm')
-    p.add_argument('--pin-exit-cm',type=float,help='Current required pin exit, positive and at most3cm')
+    p.add_argument('--tool-clearance-cm',type=float,help='Current entire-tool/table clearance: at least5cm before pin-relief, at least4cm before open')
+    p.add_argument('--pin-exit-cm',type=float,help='Current required pin exit, positive and at most4cm; nominal pin-relief is4cm')
     p.add_argument('--path-clear',action='store_true',help='Current entire lateral10cm-per-side path is clear')
     p.add_argument('--pins-free',action='store_true',help='Required for open, after direct inspection following pin relief')
     p.add_argument('--operator-note',help='Optional current-state provenance, preserved literally; at most1500characters')
@@ -76,7 +76,7 @@ def reference_for(args,info):
     if missing:return None,missing,facts
     evidence='optimistic --finish-deposit; explicit current operator declarations; predecessor_sha256='+info['predecessor_sha256']+'; facts='+release.canonical(facts)
     if args.operator_note is not None:evidence+='; operator_note='+args.operator_note
-    reference=dict(version=1,stage=stage,surface_height_m=.74,
+    reference=dict(version=release.BUILDER_VERSION,stage=stage,surface_height_m=.74,
         predecessor_bundle_id=info['bundle_id'],predecessor_goal_id=info['goal_id'],
         operator_support_confirmed=args.supported,tool_table_clearance_m=args.tool_clearance_cm/100.,
         required_pin_exit_m=args.pin_exit_cm/100.,operator_pins_free=args.pins_free,

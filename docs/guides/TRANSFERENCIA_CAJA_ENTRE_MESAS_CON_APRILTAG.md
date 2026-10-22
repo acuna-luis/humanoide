@@ -1,5 +1,15 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**22-10-2026 — BOX-TABLE74-RELEASE4-20261022: alivio de pines4 cm, sólo PC.**
+La continuación explícita de Optimistic usa referencias v2: baja4 cm tras
+confirmar apoyo completo y≥5 cm libres bajo ambas abrazaderas. Apertura
+separada Y±10 cm/Z0, con pines libres y holgura actual≥4 cm. Sin instalación
+ni movimiento en esta revisión; los3 cm de las notas históricas inferiores
+no son la receta vigente. El bundle v1 instalado se conserva intacto como
+historia/rollback, sin admitir nuevo despacho. Carga y estado físicos actuales
+pendientes de nueva comprobación.
+[Comandos y alcance](../box_handling/DEPOSITO_WRC_ALTURA_100CM.md#finalización-por-fases-y-bloqueo-de-batería--22-10-2026).
+
 **30-09-2026 — BOX-01-TABLE74-PAUSE-01: apagado confirmado por el operador.**
 «Ya apagado y todo asegurado y estable»: caja, brazos y cuerpo asegurados;
 sin verificación física independiente del agente. Última prueba support_only

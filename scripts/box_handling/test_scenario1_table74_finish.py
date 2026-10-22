@@ -23,7 +23,7 @@ def args(after,*,phase='pin-relief',mode=None,complete=True,evidence=None):
     values=['--finish-deposit','--table-height-cm','74','--phase',phase,'--after',str(after)]
     if mode:values.append('--'+mode)
     if complete:
-        values+=['--supported','--tool-clearance-cm','4','--pin-exit-cm','3','--path-clear']
+        values+=['--supported','--tool-clearance-cm','5'if phase=='pin-relief'else'4','--pin-exit-cm','4','--path-clear']
         if phase=='open':values.append('--pins-free')
     if evidence:values+=['--evidence-dir',str(evidence)]
     return values
@@ -73,6 +73,10 @@ class FinishPlanTests(unittest.TestCase):
             _,info,_=finish.runner.load_predecessor(after,json.loads(finish.PROFILE.read_text()))
             reference,_,_=finish.reference_for(parsed,info)
             self.assertTrue(reference['evidence'].endswith('; operator_note='+note))
+            self.assertEqual(reference['version'],2)
+            candidate=finish.build_bundle(reference)
+            self.assertEqual(candidate['review']['left_hand_delta_m'],[0.,0.,-.04])
+            self.assertEqual(candidate['review']['right_hand_delta_m'],[0.,0.,-.04])
             self.assertNotEqual(first['bundle_id'],capture_plan(args(after)+['--operator-note',note+'x'])[1]['bundle_id'])
             self.assertEqual([p.name for p in root.iterdir()],['after'])
 
@@ -106,8 +110,8 @@ class FinishPlanTests(unittest.TestCase):
     def test_invalid_clearance_and_pin_measurements_never_create_a_candidate(self):
         with tempfile.TemporaryDirectory()as directory:
             after=Path(directory)/'after';write_proof(after,support_proof())
-            for flag,value in (('--tool-clearance-cm','3.99'),('--tool-clearance-cm','nan'),
-                               ('--pin-exit-cm','3.001'),('--pin-exit-cm','0')):
+            for flag,value in (('--tool-clearance-cm','4.999'),('--tool-clearance-cm','nan'),
+                               ('--pin-exit-cm','4.001'),('--pin-exit-cm','0')):
                 arguments=args(after);arguments[arguments.index(flag)+1]=value
                 with self.subTest(flag=flag,value=value),self.assertRaises(ValueError):capture_plan(arguments)
 

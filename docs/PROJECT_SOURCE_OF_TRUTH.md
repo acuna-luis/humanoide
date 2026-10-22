@@ -1,5 +1,21 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-TABLE74-RELEASE4-20261022: alivio cambiado a 4 cm en PC.**
+`optimistic_scenario1.sh --finish-deposit --phase pin-relief` genera ahora
+referencias v2: ambas manos Z−0,04 m, sin giro ni separación. Exige **≥5 cm
+libres antes del descenso**, conservando 1 cm de margen nominal. No se ha
+confirmado esa nueva holgura ni se fabrica una referencia física que la afirme.
+La apertura sigue separada, Y±0,10 m/Z0, con pines libres y holgura actual
+≥4 cm; no se arrastra la medida previa al descenso.
+
+El bundle v1 `9621edaa…30f04` y sus bytes permanecen intactos como historia/
+rollback, pero el runner rechaza despacharlo como una nueva liberación.
+Cambios sólo locales, sin conexión, instalación ni movimiento del robot.
+La última lectura de batería y la recarga anunciada abajo siguen siendo
+históricas: carga, condiciones físicas y ensayo de 4 cm PENDIENTES.
+[Receta vigente](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#finalización-por-fases-y-bloqueo-de-batería--22-10-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#box-table74-release4-20261022).
+
 **22-10-2026 — BOX-TABLE74-FINISH-20261022: apoyo declarado tras ajuste manual;
 liberación bloqueada por batería.** El operador informa ahora caja plana,
 estable y descargada sobre la mesa, con ≥4 cm bajo ambas abrazaderas,

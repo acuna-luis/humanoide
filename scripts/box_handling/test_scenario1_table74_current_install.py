@@ -88,9 +88,9 @@ def release_bundle():
     original = sources()
     opening = (Path(__file__).resolve().parents[2]/
         'vendor/ubtech/cruzr_s2/snapshot_20260916/motion/meta_clamp/wrc/open_arm_cruzr.yaml').read_text()
-    return release.build_bundle(dict(version=1, stage='pin_relief', surface_height_m=.74,
+    return release.build_bundle(dict(version=2, stage='pin_relief', surface_height_m=.74,
         predecessor_bundle_id='c'*64, predecessor_goal_id='a8b7e6b9-f578-4b37-b028-9e2b5e179819',
-        operator_support_confirmed=True, tool_table_clearance_m=.04, required_pin_exit_m=.03,
+        operator_support_confirmed=True, tool_table_clearance_m=.05, required_pin_exit_m=.04,
         operator_pins_free=False, lateral_path_clear=True, scope='current_supported_box_only',
         evidence='SYNTHETIC test of operator support declarations, not physical evidence'),
         original[release.SOURCE_XML_PATH], opening)
@@ -98,6 +98,21 @@ def release_bundle():
 
 class ReleaseInstallationTests(CurrentInstallationTests):
     factory = staticmethod(release_bundle)
+
+    def test_historical_installed_three_cm_pair_still_checks_without_rewriting(self):
+        root=Path(__file__).resolve().parents[2]
+        historical=json.loads((root/'config/box_handling/scenario1_table74/current_trial_20261022/pin-relief-bundle/bundle.json').read_text())
+        docker=FakeDocker()
+        docker.files[release.SOURCE_YAML_PATH]=(root/'vendor/ubtech/cruzr_s2/snapshot_20260916/motion/meta_clamp/wrc/open_arm_cruzr.yaml').read_text()
+        docker.files.update(historical['tasks'])
+        original=copy.deepcopy(docker.files)
+        with tempfile.TemporaryDirectory()as directory:
+            checked=installer.operate(historical,operation='check',run=docker,
+                evidence_root=Path(directory)/'evidence',lock_path=Path(directory)/'lock')
+        self.assertTrue(checked['installed'])
+        self.assertEqual(checked['id'],'9621edaa01540251414915ada2781d194e7fffa277a028163c244b3348d30f04')
+        self.assertEqual(docker.writes,[])
+        self.assertEqual(docker.files,original)
 
 
 if __name__ == '__main__':

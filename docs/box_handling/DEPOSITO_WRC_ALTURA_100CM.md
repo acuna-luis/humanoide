@@ -2,8 +2,18 @@
 
 ## Finalización por fases y bloqueo de batería — 22-10-2026
 
-**BOX-TABLE74-FINISH-20261022 — estado actual: apoyo completo declarado;
-alivio instalado, no ejecutado.** El operador aclara que ajustó manualmente
+**BOX-TABLE74-RELEASE4-20261022 — receta vigente de alivio4 cm en PC,
+sin instalar ni ensayar en el robot.** El usuario aumenta el descenso de3
+a4 cm. Las referencias nuevas son v2 y exigen **≥5 cm libres bajo cada
+útil antes de bajar4 cm**: margen nominal1 cm, sin nueva calibración ni
+verificación física de esa holgura. La apertura mantiene Z0, sus10 cm
+laterales y la comprobación separada de pines libres y holgura actual≥4 cm.
+El paquete v1 de3 cm se conserva intacto para historia/rollback; el runner
+no permite usarlo como nueva tarea. No se ha conectado al robot para este
+cambio local, por lo que la carga y condiciones actuales siguen pendientes.
+
+**Registro anterior BOX-TABLE74-FINISH-20261022:** apoyo completo declarado;
+alivio3 cm instalado, no ejecutado. El operador aclara que ajustó manualmente
 la caja y ahora la confirma **plana, estable, apoyada en la mesa y sin peso
 sostenido por los brazos**. Confirma además ≥4 cm bajo ambos útiles, salida
 de los pines bajando como máximo3 cm y corredor lateral de10 cm por lado,
@@ -34,7 +44,8 @@ El flujo normal del script conserva su entrada anterior.
 
 Las fases son:
 
-1. `pin-relief`: ambas manos piden Z−3 cm, sin desplazamiento lateral ni giro.
+1. `pin-relief`: ambas manos piden Z−4 cm, sin desplazamiento lateral ni giro;
+   exige al menos5 cm libres bajo los dos útiles antes de mover.
 2. `open`: sólo después de confirmar físicamente ambos pines libres; pide
    izquierda Y+10 cm y derecha Y−10 cm, Z0 y giro identidad.
 
@@ -58,15 +69,17 @@ omitidas aparecen como requisitos pendientes, nunca como `true` inventado:
 ```
 
 **Después de recargar**, con contexto/postura todavía válidos y confirmaciones
-físicas renovadas, declarar sólo las holguras actuales reales. `4` es el
-mínimo comunicado en esta intervención, no una medida transferible a otra
-postura; `3` es la salida máxima de pines declarada:
+físicas renovadas, declarar sólo las holguras actuales reales. El nuevo
+requisito `5` **no está confirmado** por la declaración anterior de4 cm;
+hay que comprobarlo antes de usar esta receta. `3` conserva la salida máxima
+de pines anteriormente declarada; el nuevo límite admisible es4 cm, pero
+el dato físico indicado en el argumento debe ser el realmente comprobado:
 
 ```bash
 ./scripts/optimistic_scenario1.sh --finish-deposit --table-height-cm 74 \
   --phase pin-relief \
   --after /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/settle-run \
-  --supported --tool-clearance-cm 4 --pin-exit-cm 3 --path-clear \
+  --supported --tool-clearance-cm 5 --pin-exit-cm 3 --path-clear \
   --operator-note 'Caja ajustada manualmente; apoyo completo y holguras vueltos a comprobar tras recargar, sin mover el robot.' \
   --run
 ```
@@ -77,8 +90,10 @@ permite una acción. **Con la batería observada actualmente no moverá.**
 La evidencia nueva incluye `physical-run/`; el journal anterior se consume
 antes de armar, nunca durante plan/check. Una interrupción no se reintenta.
 La referencia concreta ya instalada y sus recibos conservan la declaración
-del ajuste manual en `pin-relief-reference.json`; una nueva invocación del
-supervisor crea otra referencia a partir de los hechos explícitos actuales.
+del ajuste manual en `pin-relief-reference.json`; es una referencia **v1 de
+3 cm histórica**, no una declaración válida del nuevo margen5 cm. Una nueva
+invocación del supervisor crea una referencia **v2 de4 cm** a partir de los
+hechos explícitos actuales, sin modificar el bundle v1 ni sus hashes.
 `--operator-note` preserva literalmente la nota del operador, hasta1500
 caracteres; en este caso debe dejar constancia del ajuste manual. La fecha
 de registro se guarda aparte y no acredita por sí sola que el estado siga
@@ -87,11 +102,16 @@ siendo válido. No copiar la frase de nueva comprobación antes de realizarla.
 `--check` en este supervisor consulta sólo la instalación: devuelve55
 `INSTALLATION_PENDING` si faltan archivos y nunca afirma `health_ready`.
 No instala ni mueve. El check de salud siempre se repite en `--run` antes
-de pedir el token; para el bundle concreto se puede consultar directamente
+de pedir el token; para un bundle **v2** ya instalado se puede consultar directamente
 `scenario1_table74_current_release_run.py --after DIR --bundle JSON --check`.
+El runner rechaza el bundle v1 antes de conectar; su consulta de archivos y
+rollback siguen disponibles mediante el instalador compartido.
 
 Tras el alivio correcto, detenerse y comprobar apoyo/estabilidad, pines libres
-y holguras **nuevas**. Los4 cm anteriores no se arrastran después de bajar3 cm.
+y holguras **nuevas**. La medida anterior no se arrastra después de bajar4 cm;
+la apertura sigue exigiendo≥4 cm actuales, aunque el descenso pidiera≥5 cm.
+Una declaración de sólo5 cm antes del descenso no demuestra4 cm después:
+si no queda esa holgura, el contrato actual no permite abrir.
 Sólo si siguen cumpliéndose los requisitos de apertura:
 
 ```bash
@@ -110,9 +130,12 @@ Evidencia: `../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/
 `current-support-operator-confirmation.json`, `pin-relief-check/`,
 `finish-battery-readonly.json`, `pin-relief-robot-backup/` y
 `before-finish-release/`. [Ficha de destinos, hashes y rollback](../SYSTEM_CUSTOMIZATIONS.md#box-table74-finish-20261022).
-Verificación local: **147 pruebas** de builders, runners, instalador y
-preparación74, más **15 pruebas** del supervisor, correctas. Bash y diff
-sin errores. Esto no sustituye el ensayo físico de las dos fases pendientes.
+Verificación de la revisión4 cm: **167 pruebas correctas**, incluida
+reproducción exacta del bundle v1, rechazo de nuevas ejecuciones v1, cadena
+histórica v1→open v2, desplazamientos4 cm y mínimos por fase. Sintaxis Bash
+y diff correctos. Evidencia/backup de esta revisión local:
+`../Humanoide-vla-evidence/20261022T115244Z_TABLE74_PIN_RELIEF_4CM/`.
+Estos resultados locales no sustituyen el ensayo físico pendiente.
 
 ## Historial anterior: apoyo parcial y detección nativa
 

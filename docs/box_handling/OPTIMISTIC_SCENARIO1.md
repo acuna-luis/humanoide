@@ -4,13 +4,19 @@
 
 **BOX-TABLE74-FINISH-20261022.** Nueva entrada exclusiva
 `--finish-deposit --table-height-cm 74 --phase pin-relief|open --after DIR`.
-Una fase por invocación: alivio3 cm y después apertura lateral10 cm por lado,
+Una fase por invocación: **alivio4 cm** (referencia v2, holgura mínima5 cm
+antes de bajar) y después apertura lateral10 cm por lado,
 con nueva declaración de pines libres. Plan offline; run instala aditivamente,
 comprueba salud y exige `LIBERAR74`. No cambia la recogida ni activa el
 depósito ordinario74 pendiente, navegación o HOME.
 
-Estado actual: tras ajuste manual, operador declara apoyo plano y completo.
-Alivio concreto instalado pero **check bloqueado por batería17,6 %/18,6 %**
+El cambio4 cm es local, no instalado ni ensayado en el robot; no afirma una
+nueva holgura5 cm. El paquete v1 de3 cm queda para historia/rollback,
+rechazado como nuevo despacho. La apertura mantiene su holgura actual≥4 cm,
+Z0 y confirmación separada de pines libres.
+
+Último estado comunicado: tras ajuste manual, operador declara apoyo plano y completo.
+Alivio concreto **v1 de3 cm** instalado pero check bloqueado por batería17,6 %/18,6 %
 frente al mínimo20 %; no se movió ni consumió el journal de settle.
 Operador recargará y avisará. Revalidar postura/condiciones/contexto después,
 sin reutilizar los4 cm de holgura tras un descenso ni derivar pines libres

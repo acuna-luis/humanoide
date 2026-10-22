@@ -14,10 +14,11 @@ from scripts.box_handling import scenario1_deposit as deposit
 from scripts.box_handling import scenario1_table74_current_release as release
 
 
-def reference(stage='pin_relief'):
-    return dict(version=1, stage=stage, surface_height_m=.74,
+def reference(stage='pin_relief',version=2):
+    return dict(version=version, stage=stage, surface_height_m=.74,
         predecessor_bundle_id='a'*64, predecessor_goal_id='80974a9d-f9b2-4322-a2d7-2db41f28766e',
-        operator_support_confirmed=True, tool_table_clearance_m=.04, required_pin_exit_m=.03,
+        operator_support_confirmed=True, tool_table_clearance_m=(.05 if version==2 and stage=='pin_relief' else .04),
+        required_pin_exit_m=(.04 if version==2 else .03),
         operator_pins_free=stage == 'lateral_open', lateral_path_clear=True,
         evidence='SYNTHETIC TEST ONLY: operator confirms supported box, current clearance and pin state.',
         scope='current_supported_box_only')
@@ -29,13 +30,13 @@ def sources():
             (root/'meta_clamp/wrc/open_arm_cruzr.yaml').read_text())
 
 
-def bundle(stage='pin_relief'):
-    return release.build_bundle(reference(stage), *sources())
+def bundle(stage='pin_relief',version=2):
+    return release.build_bundle(reference(stage,version), *sources())
 
 
 class CurrentReleaseTests(unittest.TestCase):
     def test_two_separate_exact_phases_without_roll_or_combined_movement(self):
-        for stage, left, right in (('pin_relief', [0., 0., -.03], [0., 0., -.03]),
+        for stage, left, right in (('pin_relief', [0., 0., -.04], [0., 0., -.04]),
                                     ('lateral_open', [0., .1, 0.], [0., -.1, 0.])):
             with self.subTest(stage=stage):
                 b = bundle(stage); review = b['review']; name = b['task_name']
@@ -81,7 +82,7 @@ class CurrentReleaseTests(unittest.TestCase):
         original = bundle()
         for key, value in (('predecessor_bundle_id', 'b'*64),
                            ('predecessor_goal_id', '8a15575b-f746-4405-8a1d-c819b092d01f'),
-                           ('tool_table_clearance_m', .05), ('required_pin_exit_m', .02),
+                           ('tool_table_clearance_m', .06), ('required_pin_exit_m', .02),
                            ('evidence', 'Another synthetic current report')):
             r = reference(); r[key] = value
             self.assertNotEqual(release.build_bundle(r, *sources())['task_name'], original['task_name'])
@@ -90,8 +91,8 @@ class CurrentReleaseTests(unittest.TestCase):
     def test_missing_support_unknown_pin_state_and_insufficient_clearance_rejected(self):
         for key, value in (('operator_support_confirmed', False), ('operator_support_confirmed', 1),
                 ('lateral_path_clear', False), ('lateral_path_clear', 1), ('operator_pins_free', True),
-                ('operator_pins_free', 0), ('tool_table_clearance_m', .0399), ('tool_table_clearance_m', True),
-                ('required_pin_exit_m', 0), ('required_pin_exit_m', -.01), ('required_pin_exit_m', .03001),
+                ('operator_pins_free', 0), ('tool_table_clearance_m', .04999), ('tool_table_clearance_m', True),
+                ('required_pin_exit_m', 0), ('required_pin_exit_m', -.01), ('required_pin_exit_m', .04001),
                 ('required_pin_exit_m', True), ('tool_table_clearance_m', float('inf')),
                 ('required_pin_exit_m', float('nan')), ('tool_table_clearance_m', 10**400),
                 ('surface_height_m', .695), ('version', True), ('stage', 'combined'), ('scope', 'any_box'),
@@ -112,7 +113,7 @@ class CurrentReleaseTests(unittest.TestCase):
         xml, yaml = sources()
         for changed_xml, changed_yaml in ((xml+'\n', yaml), (xml, yaml+'\n')):
             with self.assertRaises(ValueError): release.build_bundle(reference(), changed_xml, changed_yaml)
-        for old, new in (('position: [0.0, 0.0, -0.03]', 'position: [0.0, 0.0, -0.05]'),
+        for old, new in (('position: [0.0, 0.0, -0.04]', 'position: [0.0, 0.0, -0.05]'),
                 ('orientation: [1.0, 0.0, 0.0, 0.0]', 'orientation: [0.7933533, 0.6087614, 0.0, 0.0]'),
                 ('duration: 2.0', 'duration: 1.0'),
                 ('position_rotation_limit_up: [1.0, 0.1, 0.0, 0.5, 0.4]',
@@ -123,9 +124,42 @@ class CurrentReleaseTests(unittest.TestCase):
             b['manifest']['robot_files'][path] = release.sha256(b['tasks'][path])
             with self.subTest(old=old), self.assertRaises(ValueError): release.validate_bundle(b)
         for key, value in (('physical_validation', 'complete'), ('release_physically_qualified', True),
-                           ('left_hand_delta_m', [0., .1, -.03])):
+                           ('left_hand_delta_m', [0., .1, -.04])):
             b = bundle(); b['review'][key] = value
             with self.subTest(key=key), self.assertRaises(ValueError): release.validate_bundle(b)
+
+    def test_checked_in_three_cm_bundle_remains_byte_exact_and_historically_valid(self):
+        path=Path(__file__).resolve().parents[2]/'config/box_handling/scenario1_table74/current_trial_20261022/pin-relief-bundle/bundle.json'
+        historical=json.loads(path.read_text())
+        self.assertEqual(historical['manifest']['id'],'9621edaa01540251414915ada2781d194e7fffa277a028163c244b3348d30f04')
+        self.assertEqual(historical['review']['reference']['version'],1)
+        self.assertEqual(release.validate_bundle(historical),historical)
+        self.assertEqual(release.build_bundle(historical['review']['reference'],*sources()),historical)
+        self.assertEqual(historical['review']['left_hand_delta_m'],[0.,0.,-.03])
+
+    def test_versioned_three_and_four_cm_contracts_have_distinct_exact_displacements(self):
+        legacy=reference(version=1);legacy['tool_table_clearance_m']=.05
+        current=dict(legacy,version=2)
+        first=release.build_bundle(legacy,*sources());second=release.build_bundle(current,*sources())
+        self.assertNotEqual(first['manifest']['id'],second['manifest']['id'])
+        self.assertEqual(first['manifest']['builder_version'],1)
+        self.assertEqual(second['manifest']['builder_version'],2)
+        for value,distance in ((first,-.03),(second,-.04)):
+            self.assertEqual(release.validate_bundle(value),value)
+            self.assertEqual(value['review']['left_hand_delta_m'],[0.,0.,distance])
+            self.assertEqual(value['review']['right_hand_delta_m'],[0.,0.,distance])
+            self.assertEqual(value['review']['torso_delta_m'],[0.,0.,0.])
+
+    def test_v2_requires_five_cm_before_relief_and_four_cm_before_zero_z_opening(self):
+        for stage,minimum in (('pin_relief',.05),('lateral_open',.04)):
+            r=reference(stage);r['tool_table_clearance_m']=minimum
+            self.assertEqual(release.validate_reference(r)['tool_table_clearance_m'],minimum)
+            r['tool_table_clearance_m']=minimum-.00001
+            with self.subTest(stage=stage),self.assertRaises(ValueError):release.validate_reference(r)
+        legacy=reference(version=1)
+        self.assertEqual(release.validate_reference(legacy)['tool_table_clearance_m'],.04)
+        legacy['required_pin_exit_m']=.04
+        with self.assertRaises(ValueError):release.validate_reference(legacy)
 
     def test_validator_pure_in_memory_without_file_or_native_runtime(self):
         b = bundle(); namespace = {'__name__': 'current_release_in_memory', '__package__': None}

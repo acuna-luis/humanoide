@@ -37,11 +37,12 @@ def support_proof():
     return set_goal(proof,'1100702d-2081-47ca-8776-d1fc4ea52a6f')
 
 
-def bundle(proof=None,stage='pin_relief'):
+def bundle(proof=None,stage='pin_relief',version=2):
     proof=proof or support_proof()
-    ref=dict(version=1,stage=stage,surface_height_m=.74,
+    ref=dict(version=version,stage=stage,surface_height_m=.74,
         predecessor_bundle_id=proof['bundle.json']['manifest']['id'],predecessor_goal_id=proof['trial.json']['result']['goal_id'],
-        operator_support_confirmed=True,tool_table_clearance_m=.04,required_pin_exit_m=.03,
+        operator_support_confirmed=True,tool_table_clearance_m=(.05 if version==2 and stage=='pin_relief' else .04),
+        required_pin_exit_m=.04 if version==2 else .03,
         operator_pins_free=stage=='lateral_open',lateral_path_clear=True,
         evidence='Synthetic direct operator support and clearance confirmation; not sensor data',
         scope='current_supported_box_only')
@@ -93,12 +94,23 @@ class ReleaseProofTests(unittest.TestCase):
         self.assertEqual(lowering.validate_predecessor(first,PROFILE)['completed_stage'],'support')
 
     def test_unconfirmed_support_pins_or_clearance_cannot_authorize_either_action(self):
-        for field,value in (('operator_support_confirmed',False),('tool_table_clearance_m',.039999),
-                            ('required_pin_exit_m',.030001),('lateral_path_clear',False),('operator_pins_free',True)):
+        for field,value in (('operator_support_confirmed',False),('tool_table_clearance_m',.049999),
+                            ('required_pin_exit_m',.040001),('lateral_path_clear',False),('operator_pins_free',True)):
             package=bundle();package['review']['reference'][field]=value
             with self.subTest(field=field),self.assertRaises(ValueError):run.validate_entry(support_proof(),PROFILE,package)
         package=bundle(relief_proof(),'lateral_open');package['review']['reference']['operator_pins_free']=False
         with self.assertRaises(ValueError):run.validate_entry(relief_proof(),PROFILE,package)
+
+    def test_legacy_bundle_cannot_be_newly_dispatched_but_its_authentic_proof_can_precede_v2_open(self):
+        supported=support_proof();historical=bundle(supported,version=1)
+        with self.assertRaisesRegex(ValueError,'(?i)historical|regenerate'):
+            run.validate_entry(supported,PROFILE,historical)
+        old_relief=proof_record(historical,run.digest(supported),parent=supported)
+        old_relief=set_goal(old_relief,'3d58dbd8-9bfe-4b83-82e7-7a2f828ddbeb')
+        info=run.validate_predecessor(old_relief,PROFILE)
+        self.assertEqual(info['completed_stage'],'pin_relief')
+        current=bundle(old_relief,'lateral_open',version=2)
+        self.assertEqual(run.validate_entry(old_relief,PROFILE,current)[1],current)
 
     def test_completed_settle_is_authenticated_but_still_requires_operator_support(self):
         settled=settled_proof();info,_=run.validate_entry(settled,PROFILE,bundle(settled))
