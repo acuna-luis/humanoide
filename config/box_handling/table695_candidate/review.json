@@ -1,0 +1,24 @@
+{
+  "id": "scenario1_table695_candidate_v1",
+  "reference_surface_height_m": 0.45,
+  "surface_height_m": 0.695,
+  "reference_source": "Requested deposit surface 69.5 cm, 2026-10-21 Europe/Madrid; mathematical translation from the 45 cm vendor reference, not a physical calibration",
+  "physical_validation": "pending",
+  "kinematic_validation": "pending",
+  "torso_policy": "retain_vendor",
+  "version": 1,
+  "delta_height_m": 0.245,
+  "approach_hand_z_m": 0.895,
+  "final_hand_z_m": 0.695,
+  "change": "two_absolute_hand_z_only",
+  "reference": "operator_requested_20261021",
+  "task_name": "local_scenario1_deposit/da20110015415128cfc8d89ba7ce4f1dfa8e23498d72381d528316687545d128",
+  "executable": false,
+  "physical_qualification": null,
+  "source_hashes": {
+    "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/wrc_cruzr/put_cruzr_wrc_low.xml": "579b862962e0ee07a423c92517c29b5ecad80b4929961aac2fae6a0240fa0f78",
+    "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/put_cruzr_wrc_low.yaml": "8aeb0a24a3149c7676f481219299ec85bb872d6b17ad93605a6e461776909ff5",
+    "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/open_arm_cruzr.yaml": "c41bd1d88379c2012ee44639142fb5b55c1d58decd6a75851c8e17763778e37b"
+  },
+  "preserved": "Torso, X/Y, orientations, box_size, durations, force/collision controls, relative descent and opening"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "scenario1_table695_candidate_v1",
+  "reference_surface_height_m": 0.45,
+  "surface_height_m": 0.695,
+  "reference_source": "Requested deposit surface 69.5 cm, 2026-10-21 Europe/Madrid; mathematical translation from the 45 cm vendor reference, not a physical calibration",
+  "physical_validation": "pending",
+  "kinematic_validation": "pending",
+  "torso_policy": "retain_vendor"
+}

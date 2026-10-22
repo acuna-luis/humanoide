@@ -5,12 +5,18 @@ import subprocess
 import threading
 import time
 
+if __package__:
+    from . import scenario1_correction_recovery as recovery
+else:
+    import scenario1_correction_recovery as recovery
+
 
 class ProcessSession:
     def __init__(self, command, emit, *, startup_timeout=20):
         self.emit = emit
         self.sequence = 0
         self.failed = False
+        self.recovery_pending = None
         self.events = queue.Queue()
         self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT, text=True, bufsize=1)
@@ -61,11 +67,14 @@ class ProcessSession:
     def call(self, request, *, timeout):
         if self.failed or self.process.poll() is not None:
             raise RuntimeError('WORKER_SESSION_FAILED: do not retry')
+        if self.recovery_pending is not None:
+            raise RuntimeError('WORKER_RECOVERY_PENDING: retire this worker before another request')
         if 'request_id' in request:
             raise ValueError('Request identity belongs to the session')
         self.sequence += 1
         request_id = str(self.sequence)
         rows = []
+        opaque_output = False
         try:
             self.process.stdin.write(json.dumps(dict(request_id=request_id, **request), allow_nan=False)+'\n')
             self.process.stdin.flush()
@@ -73,12 +82,18 @@ class ProcessSession:
             while True:
                 event = self._next(end)
                 if event['event'] == 'worker_log':
+                    opaque_output = True
                     self.emit(event)
                     continue
                 if event.get('request_id') != request_id:
                     raise RuntimeError('WORKER_REQUEST_MISMATCH: no result confirmed')
                 self.emit(event)
                 if event['event'] == 'request_complete':
+                    if type(event.get('returncode')) is int and event['returncode'] == recovery.RECOVERY_RETURN_CODE:
+                        if opaque_output:
+                            raise RuntimeError('WORKER_RECOVERY_UNCLASSIFIED_OUTPUT: do not retry')
+                        self.recovery_pending = recovery.validate_recovery(request, rows)
+                        return rows
                     if type(event.get('returncode')) is not int or event['returncode'] != 0:
                         reasons = [row.get('reason', 'unknown') for row in rows if row['event'] == 'error']
                         raise RuntimeError('WORKER_REQUEST_FAILED: '+('; '.join(reasons) or 'do not retry'))
@@ -108,13 +123,16 @@ class ProcessSession:
         # Cancellation and terminal observations can arrive after a failed
         # request while EOF/lease expiry is being handled. Preserve them as
         # evidence without clearing the failure or accepting another request.
+        trailing = []
         while True:
             try:
                 event = self.events.get_nowait()
             except queue.Empty:
                 break
             if event is not None:
+                trailing.append(event)
                 self.emit(event)
         self.emit(dict(event='worker_closed', returncode=self.process.returncode,
                        physical_stop_verified=False))
         self.process.stdout.close()
+        return trailing

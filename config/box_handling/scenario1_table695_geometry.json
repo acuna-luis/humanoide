@@ -1,0 +1,17 @@
+{
+  "id": "scenario1_table695_v1",
+  "box_size_m": [
+    0.603,
+    0.397,
+    0.22
+  ],
+  "intended_use": "separate_nested_box",
+  "grasp": {
+    "task": "local_front_box/separate_right_cruzr",
+    "compatibility": "operator_assumed_existing"
+  },
+  "deposit": {
+    "task": "local_scenario1_deposit/da20110015415128cfc8d89ba7ce4f1dfa8e23498d72381d528316687545d128",
+    "compatibility": "calculated_pending_motion"
+  }
+}

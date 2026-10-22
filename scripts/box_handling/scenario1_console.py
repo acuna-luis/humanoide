@@ -181,6 +181,12 @@ class ConsoleReporter:
                     ' (Z no es altura al suelo).']
             if phase == 'prepare_head':
                 return ['  Preparando cabeza para medir la caja antes del agarre']
+            if phase == 'recovery_required':
+                return ['  Recuperación de aproximación 1/1: cancelación confirmada; comprobando reposo antes de volver a medir.']
+            if phase == 'recovery_stationary':
+                return ['  Chasis detenido y postura de recogida comprobados; se renueva la medición sin volver a HOME.']
+            if phase == 'recovered':
+                return ['  Nueva medición válida; se recalcula el ajuste con el presupuesto restante.']
             if phase == 'in_flight':
                 delta = mapping(event.get('displacement_base_m'))
                 axes = ', '.join(axis.upper()+': '+decimal(delta.get(axis, 0)*1000, 1)+' mm'
@@ -242,6 +248,12 @@ class ConsoleReporter:
     def detail(self, event, kind):
         name = clean(event.get('event'))
         reason = clean(event.get('reason'))
+        if (kind == 'navigation' and name == 'error' and
+                event.get('failure_code') == 'BOX_PICKUP_NO_PROGRESS'):
+            return ['  Ajuste sin progreso; solicitando cancelación para evaluar una recuperación.']
+        if (kind == 'navigation' and name == 'request_complete' and
+                type(event.get('returncode')) is int and event['returncode'] == 4):
+            return ['  Ajuste cancelado; recuperación pendiente de comprobar reposo y estado técnico.']
         if name == 'feedback':
             feedback = mapping(event.get('feedback'))
             state = mapping(feedback.get('state'))

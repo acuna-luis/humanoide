@@ -1,5 +1,27 @@
 # Discrepancia del procedimiento de apagado — Cruzr S2 v0.2.0
 
+**21-10-2026 — decisión de apagado tras paro real; ejecución NO confirmada.**
+Después del cuarto ensayo695, el operador informa pulsación y liberación del
+paro; Control Center registra `estop1`, `Ready→WaitStartMotion(ButtonStopMotion)`
+y después `estop0`, sin `StartMotion` posterior en la ventana revisada. HW espera
+`/mc/rosa_control/start` y manipulación `ListControllers`; el preflight de
+recuperación agota 12,9 s y termina rc78, sin actuadores, estado de acción ni
+controlador disponibles. La llegada de señales de seguridad no acredita control
+recuperado ni HOME. No se atribuye a esta secuencia la causa de todos los reinicios.
+
+El usuario confirma caja libre, abrazaderas vacías, recorrido despejado, cargador
+fuera, otros mandos detenidos y persona junto al paro; elige apagar y encender
+todo. **Aseguramiento contra caída de brazos y apagado completo PENDIENTES de
+confirmación.** Se indicó asegurar los brazos antes de desenergizar, completar
+apagado lógico, esperar pantalla y luces apagadas, y sólo después KEY1 y chasis;
+el siguiente encendido se indicó con paro principal pulsado. Estas indicaciones
+no acreditan que se hayan realizado ni validan descenso controlado de los brazos.
+El agente no envió apagado, HOME, reset, rearme ni reinicios de servicios.
+[Cronología y punto de reanudación](../incidents/2026-10-21_BARCELONA_TABLE695_ENSAYO.md).
+Evidencia privada: `../Humanoide-vla-evidence/20261021T115405Z_BARCELONA_TABLE695_TRIAL/`,
+`post-stop-recovery-motion.json`, `post-stop-recovery-vision.json` y
+`post-stop-recovery-and-operator-restart-request.json`.
+
 **15-10-2026 — BOOT-CC-SPS-20261015 / selector CC:** HW_TYPE SPS instalado y
 sólo CC recreado con mismaimagen/orden/montajes. Guard de arranque actualizado
 para reconocer identificadorSPS conservando gates yvoz;18tests pasan.

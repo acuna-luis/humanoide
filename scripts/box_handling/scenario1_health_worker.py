@@ -207,7 +207,13 @@ class NativeReader:
                     qos.transientLocal()
                     qos.keepLast(1)
                 else:
-                    qos.bestEffort()
+                    # Both stop writers were inspected on this unit as RELIABLE.
+                    # Request retransmission instead of dropping their sparse
+                    # updates. Receipt-age limits and stop validation still apply.
+                    if key in ('estop', 'servo'):
+                        qos.reliable()
+                    else:
+                        qos.bestEffort()
                     qos.durabilityVolatile()
                 self.readers[key] = self.node.create_reader(resolve_message_type(type_name), topic,
                                                             self.callback(key), qos=qos)

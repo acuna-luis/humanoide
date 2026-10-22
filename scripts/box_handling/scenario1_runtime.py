@@ -24,12 +24,14 @@ import urllib.request
 
 if __package__:
     from . import scenario1_table90 as table90
+    from . import scenario1_deposit_profiles as deposit_profiles
     from . import scenario1_checks as checks, scenario1_contract as contract
     from . import scenario1_sensors as sensors
     from . import scenario1_dependencies as dependencies
     from . import scenario1_box_alignment as box_alignment
     from . import scenario1_perception as perception
     from . import scenario1_nav_correction as nav_correction
+    from . import scenario1_correction_recovery as correction_recovery
     from . import scenario1_resume as resume
     from . import scenario1_live_health as live_health
     from .scenario1_session import ProcessSession
@@ -37,6 +39,7 @@ if __package__:
     from .front_sps_session import check_sps_discovery
 else:
     import scenario1_table90 as table90
+    import scenario1_deposit_profiles as deposit_profiles
     import scenario1_checks as checks
     import scenario1_contract as contract
     import scenario1_sensors as sensors
@@ -44,6 +47,7 @@ else:
     import scenario1_box_alignment as box_alignment
     import scenario1_perception as perception
     import scenario1_nav_correction as nav_correction
+    import scenario1_correction_recovery as correction_recovery
     import scenario1_resume as resume
     import scenario1_live_health as live_health
     from scenario1_session import ProcessSession
@@ -135,14 +139,18 @@ runpy.run_path(root+'/front_sps_native.py',run_name='__main__')
 class Runtime:
     def __init__(self, payload, emit=None):
         self.payload = payload
-        if payload.get('profile') is not None and table90.is_table90(payload['profile']):
-            _, deposit_hashes = table90.validate_bundle(payload.get('deposit_bundle'))
+        deposit_profiles.validate_trial(payload.get('profile') or {},
+            payload.get('checkpoint', {}).get('stop_after'), payload.get('deposit_trial', False))
+        deposit_contract = deposit_profiles.select(payload.get('profile') or {})
+        if deposit_contract is not None:
+            _, deposit_hashes = deposit_contract.validate_bundle(payload.get('deposit_bundle'))
             if any(payload.get('extra_hashes', {}).get(path) != digest
-                   for path, digest in dict(deposit_hashes, **table90.CURRENT_MODEL_PINS).items()):
-                raise ValueError('Table90 dependency pins are missing or changed')
+                   for path, digest in dict(deposit_hashes, **deposit_contract.CURRENT_MODEL_PINS).items()):
+                raise ValueError('Deposit dependency pins are missing or changed')
             if payload.get('mode') != 'check':
-                table90.require_motion_ready(payload['profile'], payload['checkpoint']['stop_after'],
-                                             payload['checkpoint'].get('entry_stage', 'navigate_get1'))
+                deposit_profiles.require_motion_ready(payload['profile'], payload['checkpoint']['stop_after'],
+                    payload['checkpoint'].get('entry_stage', 'navigate_get1'),
+                    deposit_trial=payload.get('deposit_trial', False))
         self.emit = emit or (lambda event, **values: print(json.dumps(
             dict(event=event, time_ns=time.time_ns(), **values), allow_nan=False), flush=True))
         self.commands = queue.Queue()
@@ -170,6 +178,7 @@ class Runtime:
         self.sensor_process = None
         self.sensor_min_stamp_ns = 0
         self.action_sessions = {}
+        self.action_sessions_lock = threading.RLock()
         self.health_session = None
         self.box_association = None
         self.resume_plan = None
@@ -245,10 +254,11 @@ class Runtime:
             self.check_live_health()
 
     def check_workers(self):
-        for worker in ([self.health_session] if self.health_session else []) + list(self.action_sessions.values()):
-            if worker.failed or worker.process.poll() is not None:
-                self.stop.set()
-                raise RuntimeError('PERSISTENT_WORKER_LOST: no se permiten nuevas órdenes')
+        with self.action_sessions_lock:
+            for worker in ([self.health_session] if self.health_session else []) + list(self.action_sessions.values()):
+                if worker.failed or worker.process.poll() is not None:
+                    self.stop.set()
+                    raise RuntimeError('PERSISTENT_WORKER_LOST: no se permiten nuevas órdenes')
 
     def start_health(self):
         if self.health_session is not None:
@@ -517,7 +527,7 @@ class Runtime:
             self.forward_perception(force=detail.get('event') in ('result', 'error', 'request_complete'))
         self.emit('action', kind=kind, detail=detail)
 
-    def action(self, kind, goal, timeout, *, correction=None):
+    def action(self, kind, goal, timeout, *, correction=None, recover_no_progress=False):
         # A session is created before preflight. Reuse each endpoint's client;
         # keep one-shot mode for isolated diagnostics without a session.
         if correction is not None:
@@ -525,18 +535,29 @@ class Runtime:
                 raise RuntimeError('CORRECTION_REQUIRES_GUARDED_NAVIGATION_SESSION')
             nav_correction.validate_spec(correction, goal=goal)
             nav_correction.require_motion_qualified()
+        if recover_no_progress and (self.execution_profile != 'optimistic_v1' or kind != 'navigation'
+                or correction is None or correction.get('point') != 'box_pickup'):
+            raise RuntimeError('RECOVERY_REQUIRES_VISUAL_PICKUP_CORRECTION')
         if self.session is not None:
             self.connected()
             if kind not in self.action_sessions:
                 command = code_command(self.payload['action_client'], ['--serve', '--kind', kind,
                     '--lease-file', str(self.session/'control-lease.json')])
-                self.action_sessions[kind] = ProcessSession(['docker', 'exec', '-i', self.native_container,
+                channel = ProcessSession(['docker', 'exec', '-i', self.native_container,
                     'bash', '-lc', SETUP+'exec '+shlex.join(command)],
                     lambda detail: self.action_event(kind, detail))
+                with self.action_sessions_lock:
+                    self.action_sessions[kind] = channel
             request = {'goal': goal, 'timeout': timeout}
             if correction is not None:
                 request['correction'] = correction
+            if recover_no_progress:
+                request['allow_correction_recovery'] = True
             rows = self.action_sessions[kind].call(request, timeout=timeout+18)
+            if any(row.get('event') == correction_recovery.EVENT for row in rows):
+                report = correction_recovery.validate_recovery(request, rows)
+                self.last_action_end_ns = time.time_ns()
+                raise correction_recovery.CorrectionRecoveryRequired(report, self.action_sessions[kind])
             results = [row for row in rows if row['event'] == 'result']
             if len(results) != 1:
                 raise RuntimeError('ACTION_UNCONFIRMED: resultado terminal ausente o duplicado')
@@ -960,6 +981,48 @@ with socket.socket(socket.AF_UNIX) as conn:
                   reference=after[-1], association=self.box_association)
         return second, after[-1]
 
+    def recover_box_alignment(self, error):
+        """Admit one new observation, never reuse an interrupted native client."""
+        channel = error.channel
+        terminal_ns = error.report['terminal_received_ns']
+        self.connected()
+        self.discover()
+        self.hashes()
+        report = self.health()
+        box_alignment.pickup_posture(report)
+        if any(live_health.source_stamp_ns(row) <= terminal_ns for row in report['actuator']):
+            raise RuntimeError('BOX_ALIGNMENT_RECOVERY_POST_CANCEL_POSTURE_REQUIRED')
+        base = self.stationary_base()
+        box_alignment.odom_reference(base)
+        if base['requested_ns'] <= terminal_ns:
+            raise RuntimeError('BOX_ALIGNMENT_RECOVERY_POST_CANCEL_ODOM_REQUIRED')
+        references = self.pose_references()
+        box_alignment.stable_base(references)
+        if len(references) != 2 or any(row['stamp_ns'] <= terminal_ns for row in references):
+            raise RuntimeError('BOX_ALIGNMENT_RECOVERY_POST_CANCEL_MAP_REQUIRED')
+        # This is an expected retirement, after fresh rest and health evidence.
+        # The watcher still checks the independent health/SPS workers and lease.
+        # Never clear failed/terminal state on the old ROSA action client.
+        with self.action_sessions_lock:
+            if (channel is None or self.action_sessions.get('navigation') is not channel
+                    or channel.failed or channel.process.poll() is not None
+                    or channel.recovery_pending != error.report):
+                raise RuntimeError('BOX_ALIGNMENT_RECOVERY_WORKER_UNCONFIRMED')
+            del self.action_sessions['navigation']
+        retirement_rows = channel.close()
+        if channel.process.returncode != 0:
+            raise RuntimeError('BOX_ALIGNMENT_RECOVERY_RETIREMENT_FAILED')
+        correction_recovery.validate_retirement(error.report, retirement_rows, str(channel.sequence))
+        self.connected()
+        # Only now create a different native client. These queries cannot move
+        # the chassis and must confirm idle navigation before a new measurement.
+        if self.map_state() != ('utars_nav_map', 'FSM_WAITNAVIGATE'):
+            raise RuntimeError('BOX_ALIGNMENT_RECOVERY_MAP_NOT_READY')
+        self.map_points()
+        self.emit('box_alignment', phase='recovery_stationary',
+                  cancellation=error.report, base=base, references=references,
+                  arms_torso_home_verified=True, old_client_retired=True)
+
     def align_box_for_pickup(self, *, empty_entry=False):
         """Correct visual range BEFORE the native arm preparation, never retry it."""
         declared_empty = self.checkpoint['box_state'] == 'empty' or (
@@ -973,7 +1036,10 @@ with socket.socket(socket.AF_UNIX) as conn:
             self.connected()
             remaining = deadline-time.monotonic()
             if remaining <= 0:
-                raise RuntimeError('BOX_ALIGNMENT_TOTAL_BUDGET_EXCEEDED')
+                self.emit('box_alignment', phase='limit', reason='time',
+                          total_budget_s=policy['total_budget_s'])
+                raise RuntimeError('BOX_ALIGNMENT_TOTAL_BUDGET_EXCEEDED: '+
+                                   str(policy['total_budget_s'])+' s')
             return remaining
 
         # Review posture before any preparation; a rejected old grasp can have
@@ -989,10 +1055,10 @@ with socket.socket(socket.AF_UNIX) as conn:
         anchor = self.box_association
         if anchor is None:
             raise RuntimeError('BOX_ALIGNMENT_ASSOCIATION_REQUIRED')
-        total, attempt = 0., 0
+        total, attempt, recoveries = 0., 0, 0
         while True:
             budget()
-            delta = box_alignment.displacement(pending)
+            delta = box_alignment.displacement(pending, recovery=recoveries > 0)
             step = math.hypot(delta['x'], delta['y'])
             if step == 0:
                 # This is a comparison reference, never a cached authorization.
@@ -1002,9 +1068,22 @@ with socket.socket(socket.AF_UNIX) as conn:
                           total_requested_m=total, observation=pending,
                           inside_margin_m=policy['inside_margin_m'])
                 return
-            if attempt >= policy['max_corrections'] or total+step > policy['max_total_m']+1e-12:
-                raise RuntimeError('BOX_ALIGNMENT_LIMIT: no further visual correction allowed')
+            limit_reason = ('attempts' if attempt >= policy['max_corrections'] else
+                            'distance' if total+step > policy['max_total_m']+1e-12 else None)
+            if limit_reason is not None:
+                self.emit('box_alignment', phase='limit', reason=limit_reason,
+                          attempts=attempt, max_corrections=policy['max_corrections'],
+                          total_requested_m=total, next_step_m=step,
+                          max_total_m=policy['max_total_m'])
+                raise RuntimeError('BOX_ALIGNMENT_LIMIT: '+limit_reason+
+                    '; attempts='+str(attempt)+'/'+str(policy['max_corrections'])+
+                    '; requested='+format(total*1000, '.3f')+' mm'+
+                    '; next='+format(step*1000, '.3f')+' mm'+
+                    '; max_total='+format(policy['max_total_m']*1000, '.3f')+' mm')
             attempt += 1
+            # Reserve at dispatch: a canceled goal may already have moved the
+            # chassis and must consume the same aggregate distance budget.
+            total += step
             old_violation = box_alignment.violation(pending)
             expected = box_alignment.target(reference, delta)
             spec = nav_correction.make_spec(expected, reference, attempt, point='box_pickup')
@@ -1013,11 +1092,32 @@ with socket.socket(socket.AF_UNIX) as conn:
                                  'angular': {'x': 0., 'y': 0., 'z': .15}})
             goal = {'command': 'navigation_start', 'arg_json': json.dumps({'target_point': target})}
             record = dict(phase='in_flight', attempt=attempt, displacement_base_m=delta,
-                          observation=pending, spec=spec, total_requested_m=total+step)
+                          observation=pending, spec=spec, total_requested_m=total)
             atomic_json(self.session/'box-alignment.json', record)
             self.emit('box_alignment', **record)
-            result = self.action('navigation', goal,
-                min(nav_correction.POLICY['action_timeout_s'], budget()), correction=spec)
+            try:
+                result = self.action('navigation', goal,
+                    min(nav_correction.POLICY['action_timeout_s'], budget()), correction=spec,
+                    recover_no_progress=recoveries < policy['max_recoveries'])
+            except correction_recovery.CorrectionRecoveryRequired as error:
+                if recoveries >= policy['max_recoveries']:
+                    raise RuntimeError('BOX_ALIGNMENT_RECOVERY_LIMIT') from error
+                recoveries += 1
+                self.emit('box_alignment', phase='recovery_required', attempt=attempt,
+                          recoveries=recoveries, total_requested_m=total,
+                          cancellation=error.report)
+                budget()
+                self.recover_box_alignment(error)
+                budget()
+                pending, reference = self.measure_box_for_pickup()
+                association = box_alignment.validate_association(anchor, self.box_association)
+                if (box_alignment.violation(pending) > 0 and
+                        old_violation-box_alignment.violation(pending) < policy['min_improvement_m']-1e-12):
+                    raise RuntimeError('BOX_ALIGNMENT_RECOVERY_NO_VISUAL_IMPROVEMENT')
+                self.emit('box_alignment', phase='recovered', attempt=attempt,
+                          recoveries=recoveries, total_requested_m=total,
+                          observation=pending, association=association)
+                continue
             contract.validate_navigation_result(result)
             # Success/rest still require two fresh map poses. Native navigation
             # has centimeter terminal precision; after this correspondence gate
@@ -1026,7 +1126,6 @@ with socket.socket(socket.AF_UNIX) as conn:
             measurements = box_alignment.validate_arrival(references, expected)
             self.emit('box_alignment', phase='arrival', attempt=attempt, measurements=measurements,
                       pickup_verified=False)
-            total += step
             pending, reference = self.measure_box_for_pickup()
             try:
                 association = box_alignment.validate_association(anchor, self.box_association)
@@ -1107,7 +1206,8 @@ with socket.socket(socket.AF_UNIX) as conn:
                 task, timeout = TASKS[stage]
                 if stage == 'deposit':
                     task = self.payload.get('profile', {}).get('deposit', {}).get('task', task)
-                    table90.require_motion_ready(self.payload.get('profile', {}), self.checkpoint['stop_after'], 'deposit')
+                    deposit_profiles.require_motion_ready(self.payload.get('profile', {}), self.checkpoint['stop_after'], 'deposit',
+                        deposit_trial=self.payload.get('deposit_trial', False))
                 if stage == 'grasp' and self.execution_profile == 'optimistic_v1':
                     self.align_box_for_pickup(empty_entry=entry_box_state == 'empty')
                 result = self.action('motion', {'task_name': task, 'yaml_args': '{}'}, timeout)

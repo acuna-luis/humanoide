@@ -1,5 +1,47 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**21-10-2026 — seguimiento Barcelona: cuarto ensayo FINAL rc78, depósito no ensayado.**
+El cuarto completa `get1`, visión, bajada de cabeza y una corrección de 23,1 mm
+(X de caja 77,910→76,500 cm; llegada ≈4,9 mm / 0,42°). El gate nativo acepta
+XYZ≈76,31 / −3,41 / 79,25 cm. Durante el agarre, tras unos 19,4 s,
+`WATCHDOG PERSISTENT_WORKER_LOST` cancela el objetivo propio; el lector de salud
+termina con `ValueError: estop not confirmed clear`. Ack0/status5 no demuestra
+parada física ni agarre completado. No se alcanzan `verify_held`, retirada,
+`put1`, depósito ni HOME del ciclo. Los valores paro/servo0 conservados son
+anteriores al fallo y no descartan una activación posterior. Reinicio nativo
+count1 y cero servidores ROS en la consulta posterior; `Clamp box succeed`
+y `HQP solve failed` no prueban éxito físico ni la causa del reinicio.
+Cuatro ensayos finalizados, ningún depósito695 probado y
+`PHYSICAL_QUALIFICATION=None`. Confirmación presencial del estado físico actual
+de caja y robot PENDIENTE; no repetir el ciclo ni enviar HOME automáticamente.
+[Estado, diagnóstico y cambios remotos](../incidents/2026-10-21_BARCELONA_TABLE695_ENSAYO.md).
+
+**21-10-2026 — historia de los tres primeros ensayos.**
+Tarea695 instalada. Primer ensayo rc78 durante agarre por monitor del servicio
+controller; segundo rc78 antes del agarre nativo por frescura de recepción del
+paro. El tercero, con lectores de paro RELIABLE, no repite esa alarma, pero
+termina rc78 antes del agarre nativo por falta de progreso de la segunda
+corrección de base y avisos `LOCATION_LOST`. No recogida completada,
+put1/depósito/HOME de ciclo; cualificación695 pendiente. No interpretar una
+sesión sin alarma de frescura como validación exhaustiva del QoS. Resolver
+localización/progreso o renovar preparación física antes de otra prueba,
+comprobando condiciones actuales y sin reutilizar checkpoint de otro boot.
+Antes del cuarto ensayo, el usuario confirma abrazaderas vacías, robot inmóvil
+y preparación; un check termina rc78 sólo por `HOME_NOT_MEASURED` de cabeza
+(`head_pitch≈−0,430569 rad`), sin movimiento en ese check. Son observaciones
+previas: no describen el estado físico posterior al cuarto ensayo.
+
+**21-10-2026 — BOX-01-BARCELONA-695: preparación inicial (histórico).**
+El depósito a 69,5 cm tiene perfil/tarea propios y ensayo explícito con pausa
+antes de liberación/HOME. En este corte inicial todavía no estaba instalado,
+cargado ni probado; los cuatro ensayos posteriores no alcanzaron el depósito.
+Optimistic conserva 90 cm por defecto y admite selección expresa de
+45/69.5/90 cm. Medir la mesa provisional y preparar mapa/get1/put1 del recinto;
+la alineación AprilTag y el ensayo de 90 cm no validan la nueva trayectoria
+vertical. [Preparación, ensayo acotado y retorno separado](../box_handling/SCENARIO1_BARCELONA_695.md).
+La preparación inicial sólo cambió archivos locales, sin conexión ni movimiento;
+el seguimiento superior distingue la instalación y los ensayos posteriores.
+
 **06-10-2026 — BOX-01-VISUAL-ALIGN-INSIDE-MARGIN. VERIFICADO offline.**
 Intento090347 acepta X0,786254m sin ajustar; agarre posterior rechaza0,790663m
 (variación4,409mm). Preparación optimista ahora exige margen interior20mm en

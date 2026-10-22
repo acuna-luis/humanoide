@@ -306,6 +306,87 @@ class LeaseTests(unittest.TestCase):
             self.assertEqual(worker.main(['--session', directory]), 0)
 
 
+class NativeReaderQoSTests(unittest.TestCase):
+    def reader_qos(self, live_session=None):
+        import sys
+        observed = {}
+
+        class RecordingQoS:
+            def __init__(self):
+                self.reliability = None
+                self.durability = None
+                self.depth = None
+
+            def reliable(self):
+                self.reliability = 'reliable'
+
+            def bestEffort(self):
+                self.reliability = 'best_effort'
+
+            def durabilityVolatile(self):
+                self.durability = 'volatile'
+
+            def transientLocal(self):
+                self.durability = 'transient_local'
+
+            def keepLast(self, depth):
+                self.depth = depth
+
+        def create_reader(message_type, topic, callback, *, qos):
+            self.assertNotIn(topic, observed)
+            self.assertTrue(callable(callback))
+            observed[topic] = qos
+            return object()
+
+        node = SimpleNamespace(create_reader=create_reader,
+                               create_client=Mock(return_value=object()))
+        rosa = SimpleNamespace(init=Mock(), shutdown=Mock(),
+                               Node=Mock(return_value=node))
+        modules = {'rosa': rosa,
+                   'rosa.base._QoS': SimpleNamespace(SensorDataQoS=RecordingQoS,
+                                                     ActionStatusQoS=RecordingQoS),
+                   'rosa.utils': SimpleNamespace(resolve_message_type=lambda name: name)}
+        with patch.dict(sys.modules, modules):
+            native = worker.NativeReader(live_session=live_session)
+            native.close()
+        rosa.init.assert_called_once_with()
+        rosa.shutdown.assert_called_once_with()
+        self.assertEqual(set(observed), {topic for topic, _ in worker.TOPICS.values()})
+        self.assertEqual(len({id(qos) for qos in observed.values()}), len(observed))
+        return observed
+
+    def test_only_two_stop_readers_request_reliable_volatile_in_both_modes(self):
+        stops = {'/emb/estop_key_state', '/emb/servo_estop_key_state'}
+        with tempfile.TemporaryDirectory() as directory:
+            for session in (None, Path(directory)):
+                with self.subTest(live=session is not None):
+                    observed = self.reader_qos(session)
+                    reliable_volatile = {topic for topic, qos in observed.items()
+                                         if (qos.reliability, qos.durability) ==
+                                            ('reliable', 'volatile')}
+                    self.assertEqual(reliable_volatile, stops)
+                    for topic in stops:
+                        self.assertIsNone(observed[topic].depth)
+
+    def test_other_sensor_readers_preserve_best_effort_volatile(self):
+        observed = self.reader_qos()
+        others = {'/emb/chrg_input_status', '/emb/battery_state',
+                  '/mc/actuator_state', '/nav/robot_pose'}
+        best_effort = {topic for topic, qos in observed.items()
+                       if qos.reliability == 'best_effort'}
+        self.assertEqual(best_effort, others)
+        for topic in others:
+            with self.subTest(topic=topic):
+                self.assertEqual(observed[topic].durability, 'volatile')
+                self.assertIsNone(observed[topic].depth)
+
+    def test_action_status_preserves_reliable_transient_local_depth_one(self):
+        observed = self.reader_qos()
+        status = observed['/mc/manipulation/action/_action/status']
+        self.assertEqual((status.reliability, status.durability, status.depth),
+                         ('reliable', 'transient_local', 1))
+
+
 class NativeHandshakeTests(unittest.TestCase):
     def make_native(self):
         native = worker.NativeReader.__new__(worker.NativeReader)

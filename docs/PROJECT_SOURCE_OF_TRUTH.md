@@ -1,5 +1,192 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-01-VISUAL-ALIGN-RECOVERY-20261022: una recuperación supervisada antes del agarre.**
+Implementado sólo en PC: permite una única recuperación dentro de una sesión
+nueva de alineación visual si el guard clasifica específicamente falta de
+progreso y confirma cancelación del UUID propio, acuse0 y resultado cancelado5,
+sin otro fallo. Esa evidencia no prueba parada física ni éxito de navegación:
+el cliente anterior queda retirado y antes de continuar se exigen salud y
+postura de brazos/torso HOME, actuadores posteriores a la cancelación, reposo
+odométrico/poses nuevas, mapa listo, nueva visión y asociación a la caja original.
+Sólo entonces otro cliente puede calcular un objetivo nuevo. Si la nueva caja
+sigue fuera del margen, exige mejora visual≥2 mm y objetivo de recuperación
+≥25 mm, dentro del límite50 mm; si ya cumple, pasa al único agarre nativo.
+Los objetivos cancelados también consumen contador y distancia:7/100 mm/120 s
+sin reiniciar el plazo y con el guard4 s intacto. Get1, agarre nativo y demás
+fallos no reciben este reintento. No reanuda el checkpoint ya abortado.
+340 pruebas locales pasan en el corte actual; recuento final y hashes pendientes
+de cierre. Sin SSH, instalación, reinicio o movimiento; prueba física y
+cualificación695 PENDIENTES. [Contrato, activación y reversión](box_handling/BOX_AXIS_REPOSITION_20261002.md#recuperación-acotada-antes-del-agarre--22-10-2026).
+
+**22-10-2026 — BOX-01-VISUAL-ALIGN-NO-PROGRESS-DIAG-20261022: el intento117383 carga el presupuesto nuevo y falla por progreso.**
+En el corte de diagnóstico, anterior a la recuperación acotada, los cuatro
+módulos archivados coincidían con las fuentes de7 ajustes/100 mm/120 s.
+La primera corrección solicita15,414 mm; a7,728 s del armado
+el guard cancela por4,008 s sin nueva mejora aceptada. No agotó contador ni
+distancia/tiempo global. Residual final de mapa15,089 mm/1,367°, fuera de
+llegada12 mm; odometría5,831 mm tras un mínimo previo0,832 mm. Recorridos
+mapa/odom43,942/67,054 mm: hubo desplazamiento medido, no convergencia sostenida.
+Cancelación ack0/status5 no demuestra parada física. No agarre nativo,
+retirada, put1, depósito ni HOME. Lectura sólo de diarios PC, sin SSH, cambios
+de código o movimiento. Se conservan los límites; causa física/localización
+PENDIENTE. [Diagnóstico y continuación](box_handling/BOX_AXIS_REPOSITION_20261002.md#diagnóstico-de-progreso-del-intento117383--22-10-2026).
+
+**22-10-2026 — BOX-01-VISUAL-ALIGN-RETRY-BUDGET-20261022: más margen para los ajustes visuales.**
+El diario local `20261022T052858Z_OPTIMISTIC_SCENARIO1_40744` se interrumpe
+después del primer ajuste por presupuesto acumulado, no por agotar intentos:
+29,828970 mm solicitados y un segundo objetivo de 24,517944 mm sumarían
+54,346914 mm, por encima de los 50 mm anteriores. La nueva medida de caja,
+X=78,051794 cm, aún queda fuera del margen interior X≤77 cm; cumplir el gate
+exterior X≤79 cm no autoriza directamente el agarre. Los errores de lease
+posteriores pertenecen al cierre. Es evidencia histórica, no una lectura actual.
+Por petición del usuario se conservan los siete ajustes configurados y se
+amplía sólo esta fase a 100 mm solicitados acumulados y 120 s. Cada objetivo
+sigue limitado a 50 mm. El validador de navegación acepta los siete intentos
+de `box_pickup`; `get1` conserva dos intentos y su presupuesto anterior.
+Se mantienen llegada12 mm/2°, margen20 mm, progreso mínimo2 mm, vigilancia
+de4 s sin progreso, salud, asociación, localización, límites de movimiento y
+cancelación. No se repiten automáticamente acciones nativas fallidas.
+Código sólo PC, transmitido en memoria en la siguiente ejecución; sin SSH,
+movimiento, instalación, reinicio ni cambio del SDK/proveedor en esta intervención.
+Verificación local PASS: 238 pruebas distintas (135 de componentes y103 de
+integración), sintaxis, planes45/69.5/90 y bootstrap real de20 módulos sin
+ejecutar `main` ni clientes ROS. El guard embebido admite ajustes de caja3/7,
+rechaza8 y conserva el rechazo de get1/3. Los seis hashes finales constan en
+`changed-code-sha256.json`; prueba física y depósito695 siguen PENDIENTES,
+sin cualificación nueva.
+[Límites vigentes, activación y reversión](box_handling/BOX_AXIS_REPOSITION_20261002.md#presupuesto-vigente-de-ajustes-visuales--22-10-2026).
+Backup y evidencia: `../Humanoide-vla-evidence/20261022T053302Z_BOX_ALIGNMENT_RETRY_BUDGET/`.
+
+**21-10-2026 — BOX-01-BARCELONA-695, paro real corroborado; apagado/arranque elegido, PENDIENTE.**
+El usuario confirma caja libre, abrazaderas vacías/libres, recorrido y cargador
+fuera, mandos y persona junto al paro; después elige «mejor apagaré todo e
+iniciaré todo». No se ha confirmado aseguramiento de los brazos contra caída
+ni que haya apagado o encendido. No se envían HOME, reset, rearme ni reinicios
+software. Se han explicado aseguramiento antes de desenergizar, apagado lógico
+→ pantalla/luces apagadas → KEY1 → chasis, y encendido con paro principal
+mantenido; son indicaciones pendientes de ejecución/confirmación.
+`recovery-home-preflight-4` termina rc78 tras unos 12,9 s: cero muestras/publicadores
+de actuadores/status y controller no recibido, aunque llegan todas las señales
+de seguridad. Lecturas posteriores: hardware reiniciado a 12:31:28.848384166Z,
+RestartCount1, espera `/mc/rosa_control/start`; manipulación reiniciada a
+12:31:33.7017Z, RestartCount1, espera ListControllers. Control Center registra
+estop1 a 20:31:28.367641 UTC+08, `publishEstopPressed` y Ready→WaitStartMotion
+(ButtonStopMotion); estop0 a 20:32:17.633082 sólo publica liberación, sin
+StartMotion posterior en el corte. Esto corrobora un paro real comunicado por
+el operador: no clasificarlo como fallo software o payload inválido. No fija
+la causa de todos los reinicios; conservar el desfase PC/robot.
+Recibo privado `post-stop-recovery-and-operator-restart-request.json`, con
+hashes de `post-stop-recovery-motion.json` y `post-stop-recovery-vision.json`.
+
+**21-10-2026 — BOX-01-BARCELONA-695, cuarto ensayo final rc78 y petición HOME previa.**
+Tras confirmación nueva de HOME y mandos detenidos, `deposit-trial-4` ejecuta
+el mismo optimistic `--run --table-height-cm 69.5 --stop-after deposit
+--deposit-trial`, de 12:31:03.029430 a 12:32:27.543990 UTC en el reloj del PC.
+Get1≈10,6 mm/0,44°, visión/cabeza SUCCEED; caja X77,910→76,500 cm tras pedir
+ajuste 23,1 mm. Gate nativo XYZ76,31/−3,41/79,25 cm dentro de límites.
+Agarre nativo progresa 19,4 s y watchdog interrumpe por worker persistente perdido;
+health worker termina `ValueError: estop not confirmed clear`. Cancelación del
+UUID propio con acuse0/status5, sin parada física medida. No verify-held,
+retirada, put1, depósito ni HOME. Snapshot posterior conserva últimos paros0/0
+previos: no excluyen una señal de fallo entrante. Aplicación nativa registra
+RestartCount1, ROS0; éxito nativo tardío/HQP solve failed no acreditan sujeción
+ni causa del reinicio. Relojes PC/robot difieren aproximadamente un minuto:
+no ordenar eventos remotos y recibos PC como un único reloj.
+Los cuatro ensayos terminan antes del depósito695, aún sin cualificación física.
+Después el usuario comunica haber pulsado y liberado el paro, pide recuperar
+HOME e identifica `./scripts/force_home.sh` como su mando habitual. El orden
+respecto al fallo no se deduce de relojes distintos. La confirmación física
+posterior y la decisión de apagado/arranque se registran arriba; la petición
+HOME anterior no se ejecutó. **No nuevos intentos ni HOME automático.** Resultado y
+lectura `fourth-interruption-read.json` en la evidencia privada habitual.
+
+**21-10-2026 — BOX-01-BARCELONA-695, checks previos al cuarto ensayo (histórico).**
+El usuario solicita el mismo optimistic hasta depósito y confirma abrazaderas
+vacías, robot inmóvil, preparación, zona y persona junto al paro. La nueva
+lectura `before-deposit-trial-4-check` termina rc78 sólo por
+`HOME_NOT_MEASURED`, `head_pitch≈−0,430569 rad`. Es un check sin movimiento;
+en ese corte todavía no se había iniciado un cuarto ensayo ni una orden física
+de recuperación del agente.
+`bash scripts/cruzr_recover_to_home.sh --check` termina después rc1: primera
+lectura de 20 actuadores quietos/OperationEnabled, clamp, baterías 67,5/67,3,
+paros0/0 y cargador fuera; acciones listas, FSM unlocked e historial unknown
+sin unsafe observado. El segundo capturador falla: «No se obtuvo una muestra
+fresca de /mc/actuator_state». No se clasifica ruta ni se mueve. Evidencia
+`head-home-recovery-check.log` en la carpeta privada del ensayo. La consulta
+posterior sobre HOME con el mando habitual precede a la nueva confirmación del
+operador y al lanzamiento real del cuarto ensayo registrados arriba. Los
+resultados previos se conservan a continuación.
+
+**21-10-2026 — BOX-01-HEALTH-SAFETY-QOS-20261021: lectores de paro con QoS RELIABLE.**
+Segundo ensayo695 interrumpido antes del agarre nativo por `LIVE_HEALTH_STALE:
+estop receipt`; operador confirma que nadie tocó controles. Se comprueba un
+publicador RELIABLE/VOLATILE por paro y API SensorDataQoS.reliable disponible.
+Lector de salud actualizado sólo para recibir estop/servo con RELIABLE/VOLATILE;
+caducidad5s, validación del valor, latch y watchdog sin cambios. No se atribuye
+causa definitiva ni éxito físico al cambio de QoS. 68 pruebas pasan (3 nuevas).
+Tras HOME enviado por operador, preflight y cinco rondas adicionales de lectura
+CHECK_OK. Tercer ensayo final rc78: no reaparece la alarma de frescura de paro
+en esa sesión; termina por falta de progreso de una corrección de base antes
+del agarre nativo. No es una validación exhaustiva del cambio de QoS ni una
+prueba del depósito. Fuente PC transmitida en memoria; sin modificar
+publicadores, firmware, servicios o paquetes vendor.
+[Cronología y resultados](incidents/2026-10-21_BARCELONA_TABLE695_ENSAYO.md).
+Backup, endpoints, prueba API y recibos: `20261021T115405Z_BARCELONA_TABLE695_TRIAL/`
+en el directorio privado de evidencia habitual.
+
+**21-10-2026 — BOX-01-BARCELONA-695, tres ensayos finalizados antes del depósito.**
+Operador confirma mesa69,5, abrazaderas vacías/HOME y condiciones físicas antes
+de los ensayos autorizados; esas declaraciones no acreditan el estado actual.
+Perfil clamp coordinado Motion/Vision y seis pines nativos comprobados en lectura.
+Instalados aditivamente XML/YAML695 en Motion, originales intactos, sin recarga.
+Primer preflight rc78 detecta seis fuentes SPS ausentes sólo en el nuevo contenedor
+Motion; restaurado exactamente `bf145fa17e1116fc`, tareas existentes intactas.
+Segundo check confirma salud/HOME y termina55 por `FSM_WAITRELOCATE`.
+Primer ensayo INTERRUMPIDO rc78 durante agarre: relocalización y get1 correctos
+(≈10 mm), visión y dos ajustes visuales completados; no depósito ni HOME.
+El monitor pierde cardinalidad única del servicio de controller y termina;
+watchdog revoca lease y cancela el UUID propio (status5; parada física no medida).
+Respuesta controller previa de0,301s era fresca: no atribuirlo a timeout.
+Se observó reinicio posterior de Motion11:59:17UTC; causa inicial pendiente.
+Operador indica retirada/apagado/encendido sin problema; sobre su orden responde
+«no lo sé, quizás antes de eso». No atribuir el primer fallo al paro o al guard.
+El checkpoint viejo no sirve tras reinicio. Corte Wi-Fi posterior y recuperación
+automática observados, sin cambio de red por el agente. Tras check bloqueado por
+paro no confirmado libre, confirma nuevamente las condiciones; lectura nueva
+salud/HOME PASS y sólo mapa pendiente. Segundo ensayo rc78 tras get1/visión/cabeza,
+antes de medir caja o iniciar agarre nativo, por `LIVE_HEALTH_STALE: estop receipt`;
+operador afirma que nadie tocó controles.
+Tercer ensayo 12:20:11–12:21:14 UTC rc78 con lectores de paro RELIABLE: get1
+≈9,5 mm/0,37°, visión/cabeza correctas; caja X79,803→77,672 cm tras pedir una
+corrección de 28,0 mm. La segunda, de 20,7 mm, se cancela por `Correction made no
+significant progress`, con avisos `LOCATION_LOST`; acuse0/status5, sin prueba
+de parada física. No agarre nativo, recogida, retirada, put1, depósito ni HOME
+del tercer ciclo. Ninguno de los tres acredita depósito69,5;
+`PHYSICAL_QUALIFICATION=None`. Resolver localización/progreso o renovar la
+preparación física antes de otro ensayo. La petición posterior del usuario de continuar con el mismo optimistic hasta
+depósito precede a la nueva confirmación de HOME y al cuarto ensayo registrado
+arriba; los resultados descritos aquí corresponden sólo a los tres primeros.
+[Cronología y resultado](incidents/2026-10-21_BARCELONA_TABLE695_ENSAYO.md).
+Evidencia `../Humanoide-vla-evidence/20261021T115405Z_BARCELONA_TABLE695_TRIAL/`.
+
+**21-10-2026 — BOX-01-BARCELONA-695: preparación inicial del perfil (histórico).**
+`optimistic_scenario1.sh --table-height-cm 69.5 --plan` selecciona una tarea
+propia, con dos Z absolutas de manos 0,895 m y descenso relativo original
+−0,20 m; final nominal 0,695 m en coordenadas de tarea. Sólo cambian esas dos Z;
+recogida, XY, torso, tiempos, fuerza, colisión, apertura y HOME conservados.
+El valor solicitado aún debe medirse en la mesa real; no es una calibración del suelo.
+90 cm sigue siendo el valor por defecto; 45/90 conservan perfiles y hashes.
+VERIFICADO localmente: 686 pruebas correctas (20 nuevas), planes y hashes45/90
+conservados. En ese corte inicial no estaba instalado, cargado ni probado
+físicamente; la instalación y los tres ensayos posteriores se registran arriba.
+El ensayo explícito `--deposit-trial --stop-after deposit` se detiene antes de
+liberación/HOME; el ciclo completo 69,5 permanece bloqueado hasta registrar
+ensayo real propio de depósito. No hereda la cualificación de 90 cm. La
+preparación inicial no conectó al robot; la intervención posterior sí incluyó
+instalación y movimiento, sin alcanzar el depósito.
+[Preparación, instalación aditiva, ensayo y retorno](box_handling/SCENARIO1_BARCELONA_695.md).
+Backup/recibos: `../Humanoide-vla-evidence/20261021T113037Z_BARCELONA_TABLE695/`.
+
 **21-10-2026 — GR2-CLOUD-PILOT-20261021: prueba temporal de ER 2 autorizada y ejecutada.**
 [Resultados y límites](vla/GEMINI_ER2_PRUEBA_NUBE.md). Dos inferencias: sintética
 3 instancias/3,468 s y ROI real de bandeja 8 instancias/9,401 s, JSON válido.

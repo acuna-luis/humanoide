@@ -19,6 +19,7 @@ import time
 
 if __package__:
     from . import scenario1_table90 as table90
+    from . import scenario1_deposit_profiles as deposit_profiles
     from . import scenario1_contract as contract
     from . import scenario1_sensors as sensors
     from . import scenario1_nav_correction as nav_correction
@@ -28,6 +29,7 @@ if __package__:
     from .front_box_integration import build_bundle, TASK_ROOT, META_ROOT, SNAPSHOT
 else:
     import scenario1_table90 as table90
+    import scenario1_deposit_profiles as deposit_profiles
     import scenario1_contract as contract
     import scenario1_sensors as sensors
     import scenario1_nav_correction as nav_correction
@@ -39,7 +41,10 @@ else:
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 MODULES = [('cruzr_home_posture_gate', ROOT/'scripts/lib/cruzr_home_posture_gate.py'),
+           ('scenario1_correction_recovery', HERE/'scenario1_correction_recovery.py'),
            ('scenario1_table90', HERE/'scenario1_table90.py'),
+           ('scenario1_table695', HERE/'scenario1_table695.py'),
+           ('scenario1_deposit_profiles', HERE/'scenario1_deposit_profiles.py'),
            ('front_sps_session', HERE/'front_sps_session.py'),
            ('scenario1_contract', HERE/'scenario1_contract.py'),
            ('scenario1_checks', HERE/'scenario1_checks.py'),
@@ -102,14 +107,15 @@ def make_payload(mode, profile, checkpoint):
         prefix, name = relative.split('/', 1)
         extra[(TASK_ROOT if prefix == 'tasks' else META_ROOT)+name] = hashlib.sha256((SNAPSHOT/relative).read_bytes()).hexdigest()
     deposit_bundle = None
-    if table90.is_table90(profile):
-        deposit_bundle = table90.build_bundle(
+    deposit_contract = deposit_profiles.select(profile)
+    if deposit_contract is not None:
+        deposit_bundle = deposit_contract.build_bundle(
             (SNAPSHOT/'tasks/wrc_cruzr/put_cruzr_wrc_low.xml').read_text(),
             (SNAPSHOT/'meta_clamp/wrc/put_cruzr_wrc_low.yaml').read_text(),
             (SNAPSHOT/'meta_clamp/wrc/open_arm_cruzr.yaml').read_text())
-        table90.validate_bundle(deposit_bundle)
+        deposit_contract.validate_bundle(deposit_bundle)
         extra.update(deposit_bundle['manifest']['robot_files'])
-        extra.update(table90.CURRENT_MODEL_PINS)
+        extra.update(deposit_contract.CURRENT_MODEL_PINS)
     # Reuse reviewed HOME contracts, including user edits; never import shell secrets.
     pins = dict(re.findall(r'^readonly (\w+_SHA)="([a-f0-9]{64})"$',
                           (ROOT/'scripts/cruzr_blue_workbin_cycle.sh').read_text(), re.M))
@@ -118,7 +124,11 @@ def make_payload(mode, profile, checkpoint):
     # The action worker runs in a separate native container/process. Carry its
     # pure telemetry guard in memory too; importing on the supervisor is not enough.
     guard_source = (HERE/'scenario1_nav_correction.py').read_text()
+    recovery_source = (HERE/'scenario1_correction_recovery.py').read_text()
     action_source = ('import sys,types\n'
+                    "_recovery=types.ModuleType('scenario1_correction_recovery')\n"
+                    "sys.modules['scenario1_correction_recovery']=_recovery\n"
+                    'exec(compile('+repr(recovery_source)+",'scenario1_correction_recovery.py','exec'),_recovery.__dict__)\n"
                     "_guard=types.ModuleType('scenario1_nav_correction')\n"
                     "sys.modules['scenario1_nav_correction']=_guard\n"
                     'exec(compile('+repr(guard_source)+",'scenario1_nav_correction.py','exec'),_guard.__dict__)\n"+
@@ -316,8 +326,13 @@ def parser(policy='ask', execution_profile='standard_v1'):
                    help='Sólo con --check: medir de 1 a 5 rondas adicionales de consultas sin mover')
     p.add_argument('--stop-after', choices=('get1', 'grasp', 'deposit', 'cycle'), default='cycle',
                    help='get1: llegada; grasp: caja sujeta; deposit: depósito/apertura, pausa antes de verificar liberación y HOME')
-    p.add_argument('--profile', type=Path, default=(ROOT/'config/box_handling/scenario1_table90_geometry.json'
+    geometry = p.add_mutually_exclusive_group()
+    geometry.add_argument('--profile', type=Path, default=(ROOT/'config/box_handling/scenario1_table90_geometry.json'
                    if execution_profile == 'optimistic_v1' else HERE/'scenario1_current_geometry.json'))
+    geometry.add_argument('--table-height-cm', type=float, choices=(45., 69.5, 90.),
+                          help='Altura de la superficie de depósito en cm; selecciona un perfil propio. Por defecto optimistic conserva 90 cm')
+    p.add_argument('--deposit-trial', action='store_true',
+                   help='Ensayo supervisado de mesa 69,5 cm; requiere --run/--resume y --stop-after deposit. Pausa antes de liberación/HOME')
     if policy == 'sensors':
         p.add_argument('--sensor-profile', type=Path, default=HERE/'scenario1_sensor_profile.json',
                        help='Referencias FT por postura; --run requiere perfil cualificado')
@@ -339,7 +354,18 @@ def _main(args):
     if args.benchmark_checks and (moving or args.plan):
         raise ValueError('--benchmark-checks sólo permite comprobaciones de lectura')
     stop_after = {'get1': 'navigate_get1', 'grasp': 'verify_held', 'deposit': 'deposit', 'cycle': 'verify_home'}[args.stop_after]
-    profile = contract.validate_profile(json.loads(args.profile.read_text()), stop_after=stop_after)
+    profile_path = args.profile
+    if args.table_height_cm is not None:
+        profile_path = {45.: HERE/'scenario1_current_geometry.json',
+                        69.5: ROOT/'config/box_handling/scenario1_table695_geometry.json',
+                        90.: ROOT/'config/box_handling/scenario1_table90_geometry.json'}[args.table_height_cm]
+    profile = contract.validate_profile(json.loads(profile_path.read_text()), stop_after=stop_after)
+    deposit_contract = deposit_profiles.select(profile)
+    if args.deposit_trial:
+        if not (args.run or args.resume):
+            raise ValueError('--deposit-trial requiere --run o --resume; use --plan sin ese flag para revisar la geometría')
+        if deposit_contract is not deposit_profiles.table695 or stop_after != 'deposit':
+            raise ValueError('--deposit-trial requiere mesa 69,5 cm y --stop-after deposit')
     checkpoint = contract.new_checkpoint(profile, stop_after=stop_after, policy=policy,
                                          execution_profile=execution_profile)
     sensor_profile = None
@@ -364,21 +390,34 @@ def _main(args):
     if moving and policy == 'ask' and not sys.stdin.isatty():
         raise RuntimeError('Se requiere un terminal y operador junto al robot')
     if moving:
-        table90.require_motion_ready(profile, stop_after,
-                                     resume_plan['stage'] if resume_plan and 'stage' in resume_plan else (args.from_stage or 'navigate_get1'))
-    print('Geometría: '+('mesa de depósito 90 cm; '+('ensayo físico y HOME completados.' if table90.motion_qualified(profile) else 'validación física pendiente.')
-                        if table90.is_table90(profile) else 'force_escenario1.sh actual; tareas y límites del proveedor conservados.'))
+        deposit_profiles.require_motion_ready(profile, stop_after,
+            resume_plan['stage'] if resume_plan and 'stage' in resume_plan else (args.from_stage or 'navigate_get1'),
+            deposit_trial=args.deposit_trial)
+    if deposit_contract is not None:
+        height = format(deposit_contract.RECIPE['surface_height_m']*100, 'g').replace('.', ',')
+        print('Geometría: mesa de depósito '+height+' cm; '+
+              ('ensayo físico y HOME completados.' if deposit_contract.motion_qualified(profile) else 'validación física pendiente.'))
+        if args.deposit_trial:
+            print('Ensayo supervisado: pausa tras depósito/apertura; compruebe apoyo y liberación antes de reanudar HOME.')
+    else:
+        print('Geometría: mesa de depósito 45 cm; tarea y límites del proveedor conservados.')
     print('Confirmación: '+{'ask': 'operador', 'assume': 'sin preguntas; sujeción/liberación asumidas tras éxito técnico',
                           'sensors': 'sin preguntas; ventanas FT y postura con referencias cualificadas'}[policy])
     if execution_profile == 'optimistic_v1':
         print('Optimista: salud recibida continuamente; sin repetir la adquisición completa entre etapas. '
               'Se conservan errores, reposo, límites de caja, llegada y HOME medido.')
         margin_mm = format(box_alignment.POLICY['inside_margin_m']*1000, 'g').replace('.', ',')
+        step_mm = format(box_alignment.POLICY['max_step_m']*1000, 'g').replace('.', ',')
+        total_mm = format(box_alignment.POLICY['max_total_m']*1000, 'g').replace('.', ',')
+        budget_s = format(box_alignment.POLICY['total_budget_s'], 'g').replace('.', ',')
         print(f"Recogida: ajuste visual automático de X/Y fuera del margen interior de {margin_mm} mm; "
               f"hasta {box_alignment.POLICY['max_corrections']} ajustes, "
-              f'50 mm de corrección solicitada en total, objetivo {margin_mm} mm dentro del límite. Ensayo físico pendiente.')
+              f'máximo {step_mm} mm por ajuste y {total_mm} mm solicitados acumulados en {budget_s} s; '
+              f'objetivo {margin_mm} mm dentro del límite. Ensayo físico pendiente.')
         minimum_mm = format(box_alignment.POLICY['min_correction_m']*1000, 'g').replace('.', ',')
         print(f'Ajustes dentro de la tolerancia de llegada: mínimo {minimum_mm} mm, ampliado según error permitido y progreso requerido.')
+        print('Recuperación de aproximación: una cancelación por falta de progreso puede volver a medirse '
+              'tras confirmar cancelación y reposo; conserva los presupuestos y no reintenta el agarre.')
     correction_status = nav_correction.qualification_report()
     if correction_status['motion_enabled']:
         approach = format(nav_correction.POLICY['max_approach_angular_speed_rad_s'], '.2f').replace('.', ',')
@@ -394,11 +433,12 @@ def _main(args):
             interstage_health=('live_snapshot_and_fresh_stationary_actuators'
                                if execution_profile == 'optimistic_v1' else 'full_acquisition'),
             sensor_qualification=sensor_profile['qualification'] if sensor_profile else None,
-            physical_validation=('completed_operator_confirmed' if table90.is_table90(profile) and table90.motion_qualified(profile) else 'pending'), automatic_retries=0,
-            deposit_calculation=(dict(table90.RECIPE, task_name=table90.TASK_NAME,
-                                      kinematic_validation='conditional_sample_review', executable=table90.motion_qualified(profile),
-                                      physical_qualification=table90.PHYSICAL_QUALIFICATION)
-                                 if table90.is_table90(profile) else None),
+            physical_validation=('completed_operator_confirmed' if deposit_contract is not None and deposit_contract.motion_qualified(profile) else 'pending'), automatic_retries=0,
+            deposit_calculation=(dict(deposit_contract.RECIPE, task_name=deposit_contract.TASK_NAME,
+                                      kinematic_validation=('conditional_sample_review' if deposit_contract is table90 else 'pending'),
+                                      executable=deposit_contract.motion_qualified(profile),
+                                      physical_qualification=deposit_contract.PHYSICAL_QUALIFICATION)
+                                 if deposit_contract is not None else None),
             get1_correction=dict(nav_correction.qualification_report(), policy=dict(nav_correction.POLICY)),
             box_alignment=(dict(enabled=True, physical_validation='pending',
                                 phase='before_native_grasp', policy=dict(box_alignment.POLICY))
@@ -418,6 +458,7 @@ def _main(args):
     payload = make_payload('run' if moving else 'check', profile, checkpoint)
     payload['policy'] = policy
     payload['execution_profile'] = execution_profile
+    payload['deposit_trial'] = args.deposit_trial
     payload['check_repetitions'] = args.benchmark_checks
     if sensor_profile is not None:
         payload['sensor_profile'] = sensor_profile

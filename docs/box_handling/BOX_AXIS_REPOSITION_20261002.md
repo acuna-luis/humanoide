@@ -1,5 +1,203 @@
 # Corrección visual de posición antes de recoger
 
+## Presupuesto vigente de ajustes visuales — 22-10-2026
+
+**BOX-01-VISUAL-ALIGN-RETRY-BUDGET-20261022. Implementado y VERIFICADO localmente
+en PC; prueba física PENDIENTE.** Las secciones de octubre2–7
+que siguen conservan el alcance y los valores históricos de aquellas revisiones.
+Esta sección fija el presupuesto vigente de la fase de aproximación visual.
+
+El usuario solicita más intentos tras `BOX_ALIGNMENT_LIMIT`. El diario local
+`20261022T052858Z_OPTIMISTIC_SCENARIO1_40744` muestra un primer desplazamiento
+solicitado de29,828969950998596 mm y llegada9,2 mm/0,44°. La caja se vuelve a
+medir en X=0,7805179438290441 m (78,051794 cm), Y≈−4,441 cm y Z≈79,055 cm
+en `base_link`; Z no es altura al suelo. X cumple el gate exterior nativo de
+0,79 m, pero excede el máximo interior0,77 m. La corrección necesaria10,517944 mm
+se amplía por la tolerancia de llegada12 mm y el progreso mínimo2 mm, dando
+24,51794382904414 mm. Sumada a la primera,54,34691378004274 mm, superaba los
+50 mm acumulados: se detenía tras **un ajuste**, aunque el contador ya permitía
+siete. Los errores de lease posteriores son consecuencias del cierre.
+Son datos del intento archivado, no un estado actual ni una prueba de agarre.
+
+| Límite de aproximación visual | Valor vigente |
+| --- | --- |
+| Correcciones máximas de caja | 7, conservadas |
+| Solicitud máxima por objetivo, norma del vector X/Y | 50 mm, conservada |
+| Suma de longitudes solicitadas | 100 mm, antes50 mm |
+| Presupuesto global de esta fase | 120 s, antes70 s |
+| Llegada terminal antes de volver a observar | 12 mm /2°, conservada |
+| Margen interior del gate X/Y | 20 mm, conservado |
+| Mejora visual mínima si persiste incumplimiento | 2 mm, conservada |
+| Vigilancia de falta de progreso durante una acción | 4 s, conservada |
+
+No significa que se ejecuten siete ajustes siempre: la primera medida que
+cumple el margen termina la fase. Salud, percepción, asociación, localización
+y navegación conservan sus rechazos. Sólo la falta de progreso tipada admite
+la recuperación única descrita a continuación; los demás fallos interrumpen.
+El guard conserva30 s por acción, excursión80 mm y recorrido120 mm por acción,
+además de velocidades, giro, frescura, frames, heartbeat, lease y cancelación
+del UUID propio.100 mm solicitados acumulados no son una cota de recorrido real
+ni de distancia de frenado. El ajuste de llegada al waypoint `get1` conserva
+dos intentos y su presupuesto anterior; el contador de siete se comparte sólo
+entre el planificador de caja y la validación del mensaje `box_pickup`.
+
+El error mantiene `BOX_ALIGNMENT_LIMIT` e incorpora motivo `attempts` o
+`distance`, contador/máximo, acumulado solicitado, siguiente paso y máximo
+acumulado. También se registra un evento `box_alignment`, `phase=limit`, con
+estos valores. Así se distingue falta de intentos de falta de distancia sin
+inventar movimiento ni ocultar el cierre posterior.
+
+**Fuentes y activación.** `scripts/box_handling/scenario1_box_alignment.py`
+define el presupuesto; `scenario1_nav_correction.py` comparte el máximo de
+`box_pickup` sin modificar el de `get1`; `scenario1_runtime.py` aplica los
+límites y el diagnóstico. La presentación de consola/CLI usa la política vigente.
+Se cargan en memoria por el mismo wrapper en la siguiente ejecución autorizada,
+sin instalación o recarga de paquetes del robot. Se conservan los gates XYZ
+nativos, SPS, tareas, perfiles de depósito y SDK originales. Esta intervención
+es sólo local: sin SSH, comandos de movimiento, cambio de modo o reinicio.
+
+Antes de otra ejecución, comprobar la situación física tras la interrupción y
+recuperar HOME mediante la ruta apropiada, con abrazaderas vacías y trayectoria
+libre. No reiniciar el ciclo automáticamente. Para la mesa69,5 cm sigue vigente
+el ensayo acotado con `--stop-after deposit --deposit-trial`; este cambio no
+declara cualificado el depósito ni autoriza HOME posterior sin caja liberada.
+
+```bash
+# Plan local; no conecta al robot:
+./scripts/optimistic_scenario1.sh --table-height-cm 69.5 --plan
+# Sólo con condiciones físicas actuales y HOME comprobados:
+./scripts/optimistic_scenario1.sh --table-height-cm 69.5 \
+  --run --stop-after deposit --deposit-trial
+```
+
+**Verificación y reversión.** PASS: 238 pruebas distintas,135 de componentes
+de alineación/navegación y103 de integración runtime/políticas/consola/sesión/
+mesa695. La ejecución de componentes consta como informe del agente revisor
+en `verification.json`, sin inventar un log bruto; la integración conserva
+`integration-tests-command.json` e `integration-tests.log`. Sintaxis y planes
+locales45/69.5/90 pasan (`offline-validation.json`). Revisión del bootstrap real
+de20 módulos, sin `main` ni clientes ROS: el guard embebido admite caja/intentos3
+y7, rechaza8 y get1/intento3. Estas pruebas validan código, no movimiento real.
+`changed-code-sha256.json` conserva los seis hashes finales de fuentes y tests,
+incluido el planificador SHA256
+`0fcbd6fdad16dfad532951c0f1f176b1cd8f60624c4c61b08089dcf3dd1091e7`.
+Backup/evidencia: `../Humanoide-vla-evidence/20261022T053302Z_BOX_ALIGNMENT_RETRY_BUDGET/`,
+`before/` conserva las fuentes y documentación previas con sus cambios locales.
+Revertir sólo los fragmentos de este cambio desde la copia cotejada, con el
+ejecutor detenido y preservando cambios del usuario y del perfil695. No hay
+configuración remota persistente que restaurar. Ensayo físico PENDIENTE;
+sin commit o push.
+
+### Recuperación acotada antes del agarre — 22-10-2026
+
+**BOX-01-VISUAL-ALIGN-RECOVERY-20261022. Implementado sólo en PC; prueba física
+PENDIENTE.** Esta revisión permite una única recuperación de falta de progreso
+dentro de una sesión nueva de alineación visual, antes del agarre nativo.
+Sustituye exclusivamente el aborto definitivo por esa causa en la versión usada
+por el intento117383, descrita a continuación. No reabre ni reanuda el checkpoint
+ya abortado. No se ha conectado al robot ni solicitado movimiento en este cambio.
+
+La recuperación exige todas estas condiciones, en este orden:
+
+1. El guard de `box_pickup` identifica falta de progreso mediante excepción
+   tipada. No basta con buscar un texto de error ni con recibir un código genérico.
+   El supervisor debe haber optado expresamente por esta ruta; get1 y agarre
+   nativo no la usan. Se conserva el watchdog de4 s.
+2. Cancelación aceptada del único UUID propio y resultado terminal cancelado5,
+   sin otra causa, identidad ambigua o evento de fallo. El contrato puro valida
+   orden, tipo y pertenencia de la evidencia. Su retorno interno4 significa
+   `recovery_required`, nunca navegación exitosa ni parada física verificada.
+3. El worker antiguo queda vivo sólo para retirarse y rechaza nuevos goals.
+   El supervisor exige salud actual, brazos/torso HOME y cabeza de observación,
+   muestras de actuadores con sello posterior al terminal, dos muestras nuevas
+   de reposo odométrico y dos poses nuevas de mapa posteriores a la cancelación.
+   Contenedores, dependencias y hashes deben seguir siendo los mismos.
+4. Sólo después se cierra el worker anterior y se exige salida0. No se borra el
+   fallo ni se reutiliza su cliente ROSA cancelado. Un cliente nuevo confirma
+   mapa `utars_nav_map`, estado `FSM_WAITNAVIGATE` y puntos originales.
+5. Se adquieren dos detecciones nuevas con TF exacta, frescura/coherencia y
+   asociación a la caja ancla original. Si ya cumplen el margen interior,
+   termina la alineación y el agarre nativo conserva sus comprobaciones propias.
+   Si siguen fuera, se exige mejora visual≥2 mm respecto a la observación previa
+   y se calcula un nuevo objetivo de longitud vectorial mínima25 mm y máxima
+   50 mm, escalando sólo los ejes afectados y manteniendo la proyección dentro
+   del margen interior.
+   No es una repetición del objetivo cancelado ni una nueva selección de caja.
+
+Fallar cualquier comprobación termina el escenario. Una segunda falta de
+progreso tampoco permite otra recuperación. Fallos de salud, percepción,
+asociación, localización, cancelación desconocida u otras violaciones siguen
+abortando; no se reintenta un agarre nativo fallido ni se envía HOME automático.
+La cancelación sola nunca equivale a comprobar reposo: éste se mide de nuevo
+después, sin convertir una observación de inmovilidad en certificación de frenado.
+
+**Presupuestos y activación.** Cada solicitud reserva su longitud y consume un
+intento **antes del envío**, aunque acabe cancelada. Se conservan siete objetivos,
+100 mm solicitados acumulados y el plazo único120 s desde el inicio de la fase;
+la recuperación no reinicia ninguno. Siguen50 mm por objetivo y los demás
+límites de llegada, asociación, excursión, recorrido, velocidad y frescura.
+El mínimo25 mm se aplica sólo a objetivos recalculados tras esta recuperación;
+la alineación ordinaria conserva su mínimo anterior. El mismo comando de ensayo
+695 ya documentado usa esta revisión en la próxima sesión nueva autorizada,
+con HOME inicial y estado físico actual comprobados. No concede cualificación
+física al depósito695 ni autoriza reanudar una caja de estado desconocido.
+
+**Fuentes, verificación y reversión.** Helper puro nuevo
+`scenario1_correction_recovery.py`, guard tipado, cliente/worker de acción,
+sesión, supervisor, planificador y consola/CLI en `scripts/box_handling/`;
+tests del contrato, cancelación y orquestación. Se transmiten en memoria, sin
+instalación persistente, cambio de SDK o modificación de tareas del proveedor.
+340 pruebas locales PASS en el corte actual; cierre final de recuento/hashes
+pendiente. Bootstrap autocontenido de21 módulos verificado sin ejecutar main
+ni clientes ROS. Es comprobación de código, no ensayo físico de recuperación.
+Backup/evidencia `../Humanoide-vla-evidence/20261022T061103Z_BOX_ALIGNMENT_RECOVERY/`
+con `before/` de15 archivos, fuentes, recibos y tests. Revertir selectivamente
+esta revisión con ejecutor detenido, retirar sólo helper/tests nuevos si
+procede y conservar presupuesto7/100/120 y cambios695 anteriores. Sin SSH,
+movimiento, instalación, reinicio, commit o push en esta intervención.
+
+### Diagnóstico de progreso del intento117383 — 22-10-2026
+
+Nota histórica: describe la versión ejecutada antes de la recuperación acotada
+anterior. El aborto del intento se conserva y no se transforma en éxito.
+
+**BOX-01-VISUAL-ALIGN-NO-PROGRESS-DIAG-20261022. OBSERVADO offline; sin cambio
+de código ni consulta al robot.** El usuario indica que no reintenta. Se revisa
+`20261022T055833Z_OPTIMISTIC_SCENARIO1_117383` y se contrastan sus hashes:
+alineación, navegación, runtime y CLI coincidían con los cuatro módulos vigentes
+en ese corte, anterior a la recuperación acotada.
+El presupuesto nuevo de7 ajustes,100 mm y120 s estaba cargado; no es una
+ejecución de las fuentes antiguas ni un nuevo agotamiento de50 mm.
+
+El primer objetivo solicita15,414475 mm. A7,728032 s del armado el guard
+interrumpe `Correction made no significant progress`, tras4,008352 s sin otra
+mejora aceptada. La odometría relativa al objetivo se acercó hasta0,832094 mm,
+pero el residual final fue5,830833 mm tras volver a alejarse. En mapa, residual
+final15,089369 mm y yaw1,367060°; distancia fuera de llegada12 mm, también
+fuera de5 mm. No explicar el rechazo como diferencia entre esos dos umbrales.
+Los recorridos registrados fueron43,941741 mm en mapa y67,054137 mm en odometría;
+excursiones30,525577/35,795459 mm. Hubo variación de pose medida, pero no nueva
+convergencia suficiente durante la ventana. Estos registros no permiten decidir
+si el origen es movimiento físico, localización, control o una combinación.
+
+Los7 ajustes permiten nuevos objetivos después de que el anterior termine bien
+y se vuelva a observar la caja. No autorizan repetir una navegación fallida ni
+eludir el guard de4 s. Cancelación ack0/status5 no demuestra parada física;
+no se inicia el agarre nativo, retirada, put1, depósito o HOME. El perfil695
+sigue sin cualificación física. Se conservan7/100 mm/120 s y todos los demás
+límites; no ampliar watchdog ni ignorar localización para forzar otra pasada.
+
+La continuación requiere revisar navegación y mediciones del intento y confirmar
+la situación física actual antes de recuperar o repetir. No ejecutar otro ciclo
+ni HOME automáticamente. Evidencia y copia documental previa:
+`../Humanoide-vla-evidence/20261022T060229Z_BOX_ALIGNMENT_NO_PROGRESS_DIAG/`.
+`diagnosis.json` conserva las métricas y los SHA256 del diario, checkpoint y
+manifiesto de fuentes originales. No hay modificación de implementación o
+configuración remota que revertir; reversión documental selectiva desde el
+respaldo, preservando los cambios del presupuesto. Sin nuevos tests, por tratarse
+de lectura y documentación; las238 pruebas anteriores validan el código local,
+no este resultado físico. Sin SSH, comandos de movimiento, commit o push.
+
 **07-10-2026 — BOX-MARGIN-CONSOLE-20261007. VERIFICADO offline; instaladoPC.**
 Usuario pide cambiar20mm. Margen real actual editado porusuario inside_margin_m
 0,002(2mm) se conserva; antes CLI/ready mostraban20mm fijo. CLI leePOLICY y

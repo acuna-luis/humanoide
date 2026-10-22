@@ -1,5 +1,34 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**21-10-2026 — paro real tras el cuarto ensayo695; recuperación y apagado pendientes.**
+El operador comunica que pulsó y liberó el paro. Los logs de Control Center
+corroboran `estop1`, `publishEstopPressed` y la transición
+`Ready→WaitStartMotion(ButtonStopMotion)`, seguida de `estop0` sin un
+`StartMotion` posterior en la ventana consultada. El fallo de salud
+`estop not confirmed clear` del ensayo no debe clasificarse como un payload
+inválido ni como fallo software demostrado: hubo una activación real del paro.
+La causa de todos los reinicios observados sigue sin determinarse.
+
+`recovery-home-preflight-4` termina rc78 tras 12,9 s: cero publicadores de actuadores,
+cero fuentes de estado de acción y controlador no disponible, aunque llegan todos los canales
+de seguridad. HW espera `/mc/rosa_control/start` (`Wait to running`) y la app
+de manipulación espera `ListControllers`; ambos registran un reinicio. Liberar
+el paro no restauró por sí solo el control ni demuestra HOME. Los relojes PC y
+robot difieren aproximadamente un minuto; conservar origen y secuencia de logs.
+
+El usuario confirma caja libre, abrazaderas vacías, recorrido despejado, cargador
+desconectado, otros mandos detenidos y persona junto al paro; después opta por
+apagar y encender todo. **PENDIENTES:** aseguramiento presencial de brazos contra
+caída, apagado completado y nuevo arranque. Se explicó el aseguramiento antes
+de desenergizar y el orden apagado lógico→pantalla/luces apagadas→KEY1→chasis,
+con principal pulsado en el siguiente encendido. Son indicaciones comunicadas,
+no operaciones realizadas. El agente no envió HOME, reset, rearme, reinicios
+de servicios ni apagado. El depósito695 sigue sin prueba física.
+[Cronología y estado vigente](../incidents/2026-10-21_BARCELONA_TABLE695_ENSAYO.md).
+Evidencia privada: `../Humanoide-vla-evidence/20261021T115405Z_BARCELONA_TABLE695_TRIAL/`,
+`post-stop-recovery-motion.json`, `post-stop-recovery-vision.json` y
+`post-stop-recovery-and-operator-restart-request.json`.
+
 **Ampliación 15-10 — postura PICO incompleta:** logs HW confirman rechazo
 `send a jump command` (>0,087rad) en cuatro ejes, no contacto según operador.
 Cancelación a auto_task deja consignas latentes~1,57rad; HOME/reset/rearme

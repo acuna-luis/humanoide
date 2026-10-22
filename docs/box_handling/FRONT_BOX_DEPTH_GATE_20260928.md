@@ -1,5 +1,18 @@
 # Caja frontal: profundidad y rechazo de posición — 28-09-2026
 
+**21-10-2026 — reposición de BOX-01-FRONT-DEPTH-GATE en Motion recreado.**
+Ensayo Barcelona: preflight detecta seis fuentes de `bf145fa17e1116fc` ausentes
+sólo en `manipulation_robot_app`; ROS, host y tres tareas ya estaban presentes.
+Tras respaldo se repone exactamente la misma versión con
+`python3 -B scripts/box_handling/front_box_integration.py --install`;
+recibo `created_tasks=[]`, originales intactos, sin reinicio o movimiento de
+instalación. Preflight posterior supera dependencias, salud y HOME. El ensayo
+alinea la caja y supera el gate XYZ, pero se interrumpe durante el agarre por
+pérdida de cardinalidad única del servicio del controlador; no se alteran
+selección, límites, fuerza ni watchdog. Reinicio posterior comunicado por el
+operador exige estado y preflight nuevos; no reanudar el checkpoint anterior.
+[Evidencia, estado y reversión](../incidents/2026-10-21_BARCELONA_TABLE695_ENSAYO.md).
+
 ## Configuración local y paquete ausente — 28-09-2026 18:35 CEST
 
 **BOX-01-SPS-PREFLIGHT — VERIFICADO offline y en lectura remota.** El intento del operador

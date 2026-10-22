@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 from types import SimpleNamespace as NS
 import unittest
+import uuid
 
 if __package__:
     from . import scenario1_action_client as action
@@ -65,6 +66,117 @@ class FakeTransport:
 
 ACCEPT = {'event': 'accepted', 'accepted': True}
 RESULT = {'event': 'result', 'status': 4, 'result': SUCCESS}
+
+
+def recovery_cancel_ack(goal_id=GOAL_ID):
+    return dict(event='cancel_response', response=dict(return_code=0,
+        goals_canceling=[dict(goal_id=dict(uuid=list(uuid.UUID(goal_id).bytes)))]))
+
+
+class NoProgressTransport(FakeTransport):
+    """Synthetic accepted navigation interrupted by a typed guarded failure."""
+    def __init__(self, clock, *, point='box_pickup', failure=None, cancel_schedule=None):
+        from scripts.box_handling import scenario1_nav_correction as nav
+        super().__init__(clock, ((.25, ACCEPT),), cancel_schedule=(
+            ((.25, recovery_cancel_ack()), (.25, dict(event='result', status=5, result={})))
+            if cancel_schedule is None else cancel_schedule))
+        self.correction_guard = NS(spec=nav.make_spec(
+            dict(point_x=0., point_y=0., point_yaw=0.),
+            dict(x=.03, y=0., yaw=0., stamp_ns=1), 1, point=point), failure=None)
+        self.failure = failure or nav.NoProgress('Correction made no significant progress')
+
+    def correction_ready(self):
+        return True
+
+    def configure_correction(self, spec):
+        self.correction_guard.spec = spec
+
+    def arm_correction(self):
+        pass
+
+    def check_correction(self):
+        if self.clock() >= .5:
+            self.correction_guard.failure = str(self.failure)
+            raise self.failure
+
+    def correction_snapshot(self):
+        return dict(point=self.correction_guard.spec['point'], attempt=self.correction_guard.spec['attempt'],
+                    failure=self.correction_guard.failure, telemetry_failure=None, velocity_violation=None)
+
+
+class CorrectionRecoveryTests(unittest.TestCase):
+    def run_case(self, *, opt_in=True, point='box_pickup', failure=None,
+                 cancel_schedule=None, interrupt=lambda clock: None, lease_file=None):
+        clock = FakeClock()
+        transport = NoProgressTransport(clock, point=point, failure=failure,
+                                       cancel_schedule=cancel_schedule)
+        rows = []
+        goal = dict(command='navigation_start', arg_json=json.dumps(dict(target_point=dict(
+            map_name='utars_nav_map', mode='free_nav', **transport.correction_guard.spec['target']))))
+        code = action.run_action(transport, 'navigation', goal, 4., lambda **row: rows.append(row),
+            interrupted=lambda: interrupt(clock), lease_file=lease_file, clock=clock,
+            cancel_grace=1., allow_correction_recovery=opt_in)
+        return code, rows, transport
+
+    def test_typed_pickup_failure_only_returns_classified_cancellation_not_success(self):
+        from scripts.box_handling import scenario1_correction_recovery as recovery
+        code, rows, transport = self.run_case(interrupt=lambda clock: None)
+        self.assertEqual(code, recovery.RECOVERY_RETURN_CODE)
+        self.assertEqual(transport.sent, 1)
+        self.assertEqual(transport.canceled, [GOAL_ID])
+        self.assertEqual(rows[-1]['event'], recovery.EVENT)
+        self.assertFalse(rows[-1]['physical_stop_verified'])
+        self.assertEqual(rows[-1]['goal_id'], GOAL_ID)
+        self.assertEqual(rows[-1]['attempt'], 1)
+        error = next(row for row in rows if row['event'] == 'error')
+        self.assertEqual(error['failure_code'], recovery.FAILURE_CODE)
+        self.assertEqual(transport.correction_guard.failure, 'Correction made no significant progress')
+
+    def test_opt_in_get1_and_message_lookalike_do_not_recover(self):
+        for options in (dict(opt_in=False), dict(point='get1'),
+                        dict(failure=ValueError('Correction made no significant progress')),
+                        dict(failure=RuntimeError('health failed'))):
+            with self.subTest(options=options):
+                code, rows, _ = self.run_case(**options, interrupt=lambda clock: None)
+                self.assertEqual(code, 2)
+                self.assertFalse(any(row['event'] == 'correction_recovery_required' for row in rows))
+
+    def test_ack_and_exact_canceled_terminal_are_both_required(self):
+        canceled = dict(event='result', status=5, result={})
+        for schedule in (((.25, canceled),), ((.25, recovery_cancel_ack()),),
+                         ((.25, recovery_cancel_ack()), (.25, RESULT)),
+                         ((.25, recovery_cancel_ack('11111111-1111-1111-1111-111111111111')),
+                          (.25, canceled)),
+                         ((.25, recovery_cancel_ack()), (.25, canceled), (.25, canceled))):
+            with self.subTest(schedule=schedule):
+                code, rows, _ = self.run_case(cancel_schedule=schedule, interrupt=lambda clock: None)
+                self.assertIn(code, (2, 3))
+                self.assertFalse(any(row['event'] == 'correction_recovery_required' for row in rows))
+
+    def test_ack_can_arrive_after_canceled_result_within_observation_window(self):
+        code, rows, _ = self.run_case(cancel_schedule=(
+            (.25, dict(event='result', status=5, result={})), (.5, recovery_cancel_ack())),
+            interrupt=lambda clock: None)
+        self.assertEqual(code, 4)
+        self.assertEqual(rows[-1]['event'], 'correction_recovery_required')
+
+    def test_signal_or_bad_lease_after_terminal_prevents_recovery(self):
+        code, rows, _ = self.run_case(interrupt=lambda clock: 'Signal 2' if clock() >= .75 else None)
+        self.assertEqual(code, 2)
+        self.assertFalse(any(row['event'] == 'correction_recovery_required' for row in rows))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/'lease.json'
+            path.write_text('{"deadline":0.7}')
+            code, rows, _ = self.run_case(lease_file=path, interrupt=lambda clock: None)
+        self.assertEqual(code, 2)
+        self.assertFalse(any(row['event'] == 'correction_recovery_required' for row in rows))
+
+    def test_extra_transport_error_prevents_recovery(self):
+        code, rows, _ = self.run_case(cancel_schedule=(
+            (.25, recovery_cancel_ack()), (.25, dict(event='result', status=5, result={})),
+            (.25, dict(event='error', reason='DDS failed'))), interrupt=lambda clock: None)
+        self.assertEqual(code, 2)
+        self.assertFalse(any(row['event'] == 'correction_recovery_required' for row in rows))
 
 
 class LifecycleTests(unittest.TestCase):

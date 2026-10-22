@@ -215,7 +215,9 @@ class AlignmentPlanTests(unittest.TestCase):
         spec = nav.make_spec(target, ref, 1, point='box_pickup')
         self.assertEqual(nav.Guard(spec, 100_100_000_000).distance_tolerance_m, .005)
         self.assertEqual(nav.Guard(nav.make_spec(target, ref, 1), 100_100_000_000).distance_tolerance_m, .02)
-        for invalid in (dict(spec, point='anything'), dict(spec, attempt=3)):
+        for attempt in range(1, 8):
+            nav.validate_spec(dict(spec, attempt=attempt))
+        for invalid in (dict(spec, point='anything'), dict(spec, attempt=8)):
             with self.assertRaises(ValueError): nav.validate_spec(invalid)
 
     def test_archived_terminal_poses_allow_recapture_with_original_turn_window(self):
@@ -404,13 +406,14 @@ class AlignmentRuntimeTests(unittest.TestCase):
         # First request is 25 mm; the second is 10 + 12 + 2 = 24 mm.
         self.assertAlmostEqual(json.loads((machine.session/'box-alignment.json').read_text())['total_requested_m'], .049)
 
-    def test_two_corrections_cannot_grasp_with_margin_still_missing(self):
+    def test_historical_fifty_mm_budget_blocks_third_correction_without_grasp(self):
         machine = self.machine([self.observation(x=.795),
             self.observation(x=.78, stamp=200, base_x=1.015),
             self.observation(x=.777, stamp=300, base_x=1.03)])
         machine.pose_references.side_effect = [[dict(x=1.015,y=2.,yaw=0.)]*2,
                                              [dict(x=1.03,y=2.,yaw=0.)]*2]
-        with self.assertRaisesRegex(RuntimeError, 'BOX_ALIGNMENT_LIMIT'):
+        with patch.object(alignment, 'POLICY', dict(alignment.POLICY, max_total_m=.05)), \
+                self.assertRaisesRegex(RuntimeError, 'BOX_ALIGNMENT_LIMIT.*distance'):
             machine.stage(dict(stage='grasp'))
         self.assertEqual([c.args[0] for c in machine.action.call_args_list],
                          ['motion', 'navigation', 'navigation'])
@@ -538,13 +541,110 @@ class AlignmentRuntimeTests(unittest.TestCase):
                 machine.align_box_for_pickup()
         machine.action.assert_not_called()
 
-    def test_second_adjustment_has_a_finite_budget_and_no_third(self):
+    def test_historical_fifty_mm_budget_can_block_second_adjustment(self):
         machine = self.machine([self.observation(x=.80),
             self.observation(x=.797, stamp=200, base_x=1.003)])
         machine.pose_references.return_value = [dict(x=1.03, y=2., yaw=0.)]*2
-        with self.assertRaisesRegex(RuntimeError, 'BOX_ALIGNMENT_LIMIT'):
+        with patch.object(alignment, 'POLICY', dict(alignment.POLICY, max_total_m=.05)), \
+                self.assertRaisesRegex(RuntimeError, 'BOX_ALIGNMENT_LIMIT.*distance'):
             machine.align_box_for_pickup()
         self.assertEqual(machine.action.call_count, 2)
+
+    def test_reported_first_correction_can_measure_again_and_grasp_once(self):
+        # Replay the reported distances as arithmetic, using synthetic map
+        # poses. These are not current telemetry or a physical qualification.
+        initial_x, next_x = .79982897, .78051794
+        first_base = 1.02062897  # 9.2 mm terminal residual on a 29.82897 mm goal.
+        final_base = 1.03614691
+        machine = self.machine([self.observation(x=initial_x, z=.79055),
+            self.observation(x=next_x, stamp=200, base_x=first_base, z=.79055),
+            self.observation(x=.765, stamp=300, base_x=final_base, z=.79055)])
+        machine.pose_references.side_effect = [[dict(x=first_base, y=2., yaw=0.)]*2,
+                                               [dict(x=final_base, y=2., yaw=0.)]*2]
+        machine.stage(dict(stage='grasp'))
+        self.assertEqual([call.args[0] for call in machine.action.call_args_list],
+                         ['motion', 'navigation', 'navigation', 'motion'])
+        requests = machine.action.call_args_list[1:3]
+        distances = [abs(call.kwargs['correction']['target']['point_x'] -
+                         call.kwargs['correction']['reference']['x']) for call in requests]
+        self.assertAlmostEqual(distances[0], .02982897)
+        self.assertAlmostEqual(distances[1], .02451794)
+        self.assertGreater(sum(distances), .05)
+        self.assertLess(sum(distances), .1)
+        self.assertEqual(machine.measure_box_for_pickup.call_count, 3)
+        reference = json.loads((machine.session/'box-alignment-reference.json').read_text())
+        self.assertEqual(reference['stamp_ns'], 300)
+        self.assertEqual(machine.checkpoint['completed'].count('grasp'), 1)
+        self.assertEqual(machine.action.call_args_list[-1].args[1]['task_name'],
+                         'local_front_box/separate_right_cruzr')
+
+    def test_third_visual_correction_requires_fresh_measurement_before_one_grasp(self):
+        machine = self.machine([self.observation(x=.8),
+            self.observation(x=.785, stamp=200, base_x=1.020),
+            self.observation(x=.777, stamp=300, base_x=1.035),
+            self.observation(x=.765, stamp=400, base_x=1.047)])
+        machine.pose_references.side_effect = [[dict(x=x, y=2., yaw=0.)]*2
+                                               for x in (1.020, 1.035, 1.047)]
+        machine.stage(dict(stage='grasp'))
+        self.assertEqual([call.args[0] for call in machine.action.call_args_list],
+                         ['motion', 'navigation', 'navigation', 'navigation', 'motion'])
+        requests = machine.action.call_args_list[1:4]
+        self.assertEqual([call.kwargs['correction']['attempt'] for call in requests], [1, 2, 3])
+        self.assertEqual(machine.measure_box_for_pickup.call_count, 4)
+        self.assertAlmostEqual(json.loads((machine.session/'box-alignment.json').read_text())
+                               ['total_requested_m'], .066)
+        self.assertEqual(json.loads((machine.session/'box-alignment-reference.json').read_text())
+                         ['stamp_ns'], 400)
+        self.assertEqual(machine.checkpoint['completed'].count('grasp'), 1)
+
+    def test_hundred_mm_budget_blocks_next_correction_and_reports_distance(self):
+        machine = self.machine([self.observation(x=.81),
+            self.observation(x=.797, stamp=200, base_x=1.028),
+            self.observation(x=.784, stamp=300, base_x=1.043),
+            self.observation(x=.781, stamp=400, base_x=1.045)])
+        machine.pose_references.side_effect = [[dict(x=x, y=2., yaw=0.)]*2
+                                               for x in (1.028, 1.043, 1.045)]
+        with self.assertRaisesRegex(RuntimeError, 'BOX_ALIGNMENT_LIMIT.*distance'):
+            machine.stage(dict(stage='grasp'))
+        self.assertEqual([call.args[0] for call in machine.action.call_args_list],
+                         ['motion', 'navigation', 'navigation', 'navigation'])
+        self.assertEqual(machine.measure_box_for_pickup.call_count, 4)
+        limit = [call.kwargs for call in machine.emit.call_args_list
+                 if call.args == ('box_alignment',) and call.kwargs.get('phase') == 'limit'][-1]
+        self.assertEqual(limit['reason'], 'distance')
+        self.assertEqual(limit['attempts'], 3)
+        self.assertAlmostEqual(limit['total_requested_m'], .081)
+        self.assertAlmostEqual(limit['next_step_m'], .025)
+        self.assertEqual(limit['max_total_m'], .1)
+        self.assertFalse((machine.session/'box-alignment-reference.json').exists())
+
+    def test_seven_attempt_limit_never_dispatches_an_eighth_or_grasp(self):
+        # Isolate the attempt cap from the independently tested distance and
+        # cross-observation association caps. Production retains both caps.
+        observations, poses, base_x = [], [], 1.
+        for index in range(8):
+            pending = self.observation(x=.802-index*.003, stamp=100*(index+1), base_x=base_x)
+            observations.append(pending)
+            if index < 7:
+                delta = alignment.displacement(pending[0])
+                base_x += delta['x']
+                poses.append([dict(x=base_x, y=2., yaw=0.)]*2)
+        machine = self.machine(observations)
+        machine.pose_references.side_effect = poses
+        with patch.object(alignment, 'POLICY', dict(alignment.POLICY, max_total_m=.5)), \
+                patch.object(alignment, 'validate_association', return_value={'comparison_only': True}), \
+                self.assertRaisesRegex(RuntimeError, 'BOX_ALIGNMENT_LIMIT.*attempts'):
+            machine.stage(dict(stage='grasp'))
+        requests = machine.action.call_args_list[1:]
+        self.assertEqual([call.args[0] for call in requests], ['navigation']*7)
+        self.assertEqual([call.kwargs['correction']['attempt'] for call in requests], list(range(1, 8)))
+        self.assertEqual(machine.measure_box_for_pickup.call_count, 8)
+        limit = [call.kwargs for call in machine.emit.call_args_list
+                 if call.args == ('box_alignment',) and call.kwargs.get('phase') == 'limit'][-1]
+        self.assertEqual(limit['reason'], 'attempts')
+        self.assertEqual(limit['attempts'], limit['max_corrections'])
+        self.assertEqual(limit['max_corrections'], 7)
+        self.assertFalse((machine.session/'box-alignment-reference.json').exists())
 
     def test_second_measurement_can_trigger_one_more_bounded_adjustment(self):
         machine = self.machine([self.observation(x=.795),
@@ -694,11 +794,26 @@ class AlignmentRuntimeTests(unittest.TestCase):
     def test_deadline_after_measurement_prevents_dispatch(self):
         machine = self.machine([self.observation()])
         clock = [100.]
-        machine.measure_box_for_pickup.side_effect = lambda: (clock.__setitem__(0, 171.) or self.observation())
+        machine.measure_box_for_pickup.side_effect = lambda: (clock.__setitem__(0, 221.) or self.observation())
         with patch.object(runtime.time, 'monotonic', side_effect=lambda: clock[0]), \
                 self.assertRaisesRegex(RuntimeError, 'TOTAL_BUDGET'):
             machine.align_box_for_pickup()
         machine.action.assert_called_once()
+
+    def test_measurement_after_old_seventy_second_budget_can_complete_within_new_budget(self):
+        machine = self.machine([])
+        clock = [100.]
+        def measure():
+            clock[0] = 171.
+            pending, reference = self.observation(x=.77)
+            machine.box_association = dict(frames=dict(frame_id='test_odom', child_frame_id='base_link'),
+                observation=alignment.in_map(pending, reference), comparison_only=True)
+            return pending, reference
+        machine.measure_box_for_pickup.side_effect = measure
+        with patch.object(runtime.time, 'monotonic', side_effect=lambda: clock[0]):
+            machine.align_box_for_pickup()
+        machine.action.assert_called_once()  # Head preparation only.
+        self.assertTrue((machine.session/'box-alignment-reference.json').exists())
 
     def test_head_failed_result_never_captures_or_navigates(self):
         machine = self.machine([])

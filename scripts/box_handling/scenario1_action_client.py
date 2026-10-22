@@ -10,8 +10,9 @@ Native API reference: archived rosa/action_client.py from the 2026-09-21 front
 SPS audit. The installed SDK is not modified. Its goal callback loses the real
 acceptance flag, and its cancel helper swaps the stored UUID; this adapter reads
 the response directly and copies the UUID into its own cancel request.
-Optional --serve keeps one reviewed client alive for sequential requests, and
-exits permanently on failure. It never recreates or retries an interrupted goal.
+Optional --serve keeps one reviewed client alive for sequential requests. A
+classified opt-in visual no-progress cancellation parks that client until EOF;
+other failures exit permanently. It never retries an interrupted goal.
 """
 
 import argparse
@@ -174,6 +175,14 @@ def correction_module():
     else:
         import scenario1_nav_correction
     return scenario1_nav_correction
+
+
+def recovery_module():
+    if __package__:
+        from . import scenario1_correction_recovery
+    else:
+        import scenario1_correction_recovery
+    return scenario1_correction_recovery
 
 
 def native_client_class(base, to_string):
@@ -469,12 +478,21 @@ class RosaTransport:
 
 
 def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
-               lease_file=None, clock=time.monotonic, cancel_grace=8.0):
+               lease_file=None, clock=time.monotonic, cancel_grace=8.0,
+               allow_correction_recovery=False):
     """Transport state machine. A late success after interruption stays failure."""
     deadline = clock() + timeout
     accepted = False
     terminal = None
     failure = None
+    recovery_candidate = False
+    observed = []
+    output = emit
+
+    def emit(**row):
+        observed.append(dict(time_ns=time.time_ns(), **row))
+        output(**row)
+
     correction = getattr(transport, 'correction_guard', None) is not None
     last_correction_report = clock()
 
@@ -584,7 +602,12 @@ def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
         return 2
     except Exception as error:
         failure = str(error)
-        emit(event='error', goal_id=transport.goal_id, reason=failure)
+        recovery_candidate = (allow_correction_recovery is True and correction and
+            kind == 'navigation' and
+            transport.correction_guard.spec.get('point') == 'box_pickup' and
+            isinstance(error, correction_module().NoProgress))
+        detail = {'failure_code': recovery_module().FAILURE_CODE} if recovery_candidate else {}
+        emit(event='error', goal_id=transport.goal_id, reason=failure, **detail)
         try:
             report_correction('failed')
         except Exception:
@@ -601,7 +624,8 @@ def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
         except Exception as error:
             emit(event='error', goal_id=transport.goal_id,
                  reason='Targeted cancel could not be sent: ' + str(error))
-        while clock() < grace_deadline and terminal is None:
+        while clock() < grace_deadline and (terminal is None or
+                recovery_candidate and not any(row['event'] == 'cancel_response' for row in observed)):
             try:
                 transport.spin()
             except Exception as error:
@@ -621,6 +645,28 @@ def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
         return 3
     emit(event='interrupted_terminal', goal_id=transport.goal_id,
          status=terminal['status'], physical_stop_verified=False)
+    if recovery_candidate:
+        # This does not clear the failed guard or reuse its native client. The
+        # parent must first verify fresh post-cancel rest, health and perception.
+        try:
+            reason = interrupted()
+            if reason:
+                raise RuntimeError(reason)
+            check_lease(lease_file, clock())
+            if clock() >= deadline:
+                raise TimeoutError('Action deadline exceeded during cancellation')
+            request = dict(goal=goal, correction=transport.correction_guard.spec,
+                           allow_correction_recovery=True)
+            recovery = recovery_module()
+            marker = dict(event=recovery.EVENT, version=1, code='NO_PROGRESS_CANCELLED',
+                goal_id=transport.goal_id, attempt=transport.correction_guard.spec['attempt'],
+                terminal_received_ns=time.time_ns(), physical_stop_verified=False)
+            recovery.validate_recovery(request, observed+[marker])
+            emit(**marker)
+            return recovery.RECOVERY_RETURN_CODE
+        except Exception as error:
+            emit(event='error', goal_id=transport.goal_id,
+                 reason='Correction recovery unavailable: '+str(error))
     return 2
 
 
@@ -631,8 +677,9 @@ SESSION_NAV_COMMANDS = frozenset(('get_map_name', 'check_state', 'map_set',
 def validate_session_request(kind, raw, seen):
     request = object_json(raw)
     required = {'request_id', 'goal', 'timeout'}
-    if set(request) not in (required, required | {'correction'}):
-        raise ValueError('Request requires request_id, goal, timeout and optional correction')
+    if set(request) not in (required, required | {'correction'},
+                           required | {'correction', 'allow_correction_recovery'}):
+        raise ValueError('Request requires request_id, goal, timeout and optional correction recovery')
     request_id = request['request_id']
     if (not isinstance(request_id, str)
             or re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}', request_id) is None):
@@ -652,6 +699,10 @@ def validate_session_request(kind, raw, seen):
         if kind != 'navigation' or goal['command'] != 'navigation_start':
             raise ValueError('Correction is limited to navigation_start')
         correction_module().validate_spec(request['correction'], goal=goal)
+    if 'allow_correction_recovery' in request:
+        if (request['allow_correction_recovery'] is not True or kind != 'navigation' or
+                request['correction']['point'] != 'box_pickup'):
+            raise ValueError('Correction recovery requires explicit box_pickup navigation')
     return request_id, goal, timeout
 
 
@@ -757,16 +808,21 @@ def run_session(transport, kind, inbox, emit, interrupted=lambda: None,
             if 'correction' in request:
                 transport.configure_correction(request['correction'])
             terminal = None
+            request_rows = []
 
             def request_emit(**row):
                 nonlocal terminal
+                request_rows.append(row)
                 if row['event'] == 'result':
                     terminal = row
                 emit(request_id=request_id, **row)
 
+            options = ({'allow_correction_recovery': True}
+                       if request.get('allow_correction_recovery') is True else {})
+            recovery_code = recovery_module().RECOVERY_RETURN_CODE if options else None
             code = run_one(transport, kind, goal, timeout, request_emit,
                            interrupted=lambda: interrupted() or inbox.reason,
-                           lease_file=lease_file, clock=clock)
+                           lease_file=lease_file, clock=clock, **options)
             if code == 0:
                 # Do not clear a goal before all successful-result checks pass.
                 validate_session_result(kind, goal, terminal)
@@ -774,7 +830,49 @@ def run_session(transport, kind, inbox, emit, interrupted=lambda: None,
                     raise RuntimeError(interrupted() or inbox.reason)
                 check_lease(lease_file, clock())
                 transport.finish_successful_request()
+            elif recovery_code is not None and code == recovery_code:
+                recovery_module().validate_recovery(request, request_rows)
+                if interrupted() or inbox.reason:
+                    raise RuntimeError(interrupted() or inbox.reason)
+                check_lease(lease_file, clock())
             emit(event='request_complete', request_id=request_id, returncode=code)
+            if recovery_code is not None and code == recovery_code:
+                # Keep the failed client's UUID/guard intact until the parent
+                # finishes passive recovery checks. It can only close via EOF;
+                # no additional goal may use this canceled client.
+                def observe_retired_evidence():
+                    for row in transport.drain():
+                        if (row.get('goal_id') != transport.goal_id or
+                                row.get('event') not in ('status', 'feedback')):
+                            raise RuntimeError('Unexpected evidence after canceled correction')
+                        if (row['event'] == 'status' and
+                                (type(row.get('status')) is not int or row['status'] not in (1, 2, 3, 5))):
+                            raise RuntimeError('Contradictory status after canceled correction')
+                        emit(request_id=request_id, **row)
+
+                while True:
+                    reason = interrupted()
+                    if reason:
+                        raise RuntimeError(reason)
+                    check_lease(lease_file, clock())
+                    if inbox.reason:
+                        if inbox.eof and inbox.requests.empty():
+                            # EOF cannot discard a queued late error or a
+                            # contradictory terminal status. Run one bounded
+                            # native spin, then drain before confirming closure.
+                            transport.spin()
+                            observe_retired_evidence()
+                            reason = interrupted()
+                            if reason:
+                                raise RuntimeError(reason)
+                            check_lease(lease_file, clock())
+                            emit(event='session_closed', request_id=None, reason=inbox.reason)
+                            return 0
+                        raise RuntimeError(inbox.reason)
+                    if not inbox.requests.empty():
+                        raise RuntimeError('Correction recovery worker is retired; no new request permitted')
+                    transport.spin()
+                    observe_retired_evidence()
             if code:
                 return code
         except Exception as error:

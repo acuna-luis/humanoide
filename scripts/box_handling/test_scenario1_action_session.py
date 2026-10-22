@@ -197,7 +197,155 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(len(transport.sent), 1)
 
 
+class CanceledRecoverySessionTests(unittest.TestCase):
+    def run_parked(self, after_complete, *, interrupted=lambda: None, lease_file=None):
+        from scripts.box_handling.test_scenario1_action_client import NoProgressTransport
+        clock = FakeClock()
+        transport = NoProgressTransport(clock)
+        source = inbox()
+        correction = transport.correction_guard.spec
+        goal = dict(command='navigation_start', arg_json=json.dumps(dict(target_point=dict(
+            map_name='utars_nav_map', mode='free_nav', **correction['target']))))
+        value = dict(request_id='first', goal=goal, timeout=30., correction=correction,
+                     allow_correction_recovery=True)
+        source.requests.put(json.dumps(value))
+        rows = []
+        def emit(**row):
+            rows.append(row)
+            if row['event'] == 'request_complete' and row['returncode'] == 4:
+                after_complete(source, transport, value)
+        code = action.run_session(transport, 'navigation', source, emit, clock=clock,
+                                  interrupted=interrupted, lease_file=lease_file)
+        return code, rows, transport
+
+    def test_canceled_worker_stays_retired_and_eof_closes_cleanly(self):
+        def close(source, transport, value):
+            source.eof = True
+            source.reason = 'Request input pipe disconnected'
+        code, rows, transport = self.run_parked(close)
+        self.assertEqual(code, 0)
+        self.assertEqual(transport.sent, 1)
+        self.assertEqual(transport.canceled, [transport.goal_id])
+        self.assertIsNotNone(transport.correction_guard.failure)
+        self.assertEqual([row['returncode'] for row in rows if row['event'] == 'request_complete'], [4])
+        self.assertEqual(rows[-1]['event'], 'session_closed')
+
+    def test_canceled_client_rejects_any_further_request_without_dispatch(self):
+        def queue_next(source, transport, value):
+            source.requests.put(json.dumps(dict(value, request_id='second')))
+        code, rows, transport = self.run_parked(queue_next)
+        self.assertEqual(code, 2)
+        self.assertEqual(transport.sent, 1)
+        self.assertTrue(any('retired' in row.get('reason', '') for row in rows))
+        self.assertIsNotNone(transport.correction_guard.failure)
+
+    def test_late_transport_error_poisoned_parked_worker(self):
+        def extra_error(source, transport, value):
+            transport.pending.append(dict(event='error', goal_id=transport.goal_id, reason='late DDS failure'))
+        code, rows, transport = self.run_parked(extra_error)
+        self.assertEqual(code, 2)
+        self.assertEqual(transport.sent, 1)
+        self.assertTrue(any('Unexpected evidence after canceled' in row.get('reason', '') for row in rows))
+
+    def test_late_contradictory_or_malformed_status_poisoned_parked_worker(self):
+        for status in (4, 6, 0, True, False, 5., '5', None):
+            def extra_status(source, transport, value):
+                transport.pending.append(dict(event='status', goal_id=transport.goal_id, status=status))
+            with self.subTest(status=status):
+                code, rows, transport = self.run_parked(extra_status)
+                self.assertEqual(code, 2)
+                self.assertEqual(transport.sent, 1)
+                self.assertIsNotNone(transport.correction_guard.failure)
+                self.assertTrue(any('Contradictory status after canceled' in row.get('reason', '')
+                                    for row in rows))
+
+    def test_eof_does_not_discard_late_errors_or_contradictory_terminal_status(self):
+        for evidence in (dict(event='error', reason='late DDS failure'),
+                         dict(event='status', status=4), dict(event='status', status=6)):
+            def close_with_evidence(source, transport, value):
+                transport.pending.append(dict(goal_id=transport.goal_id, **evidence))
+                source.eof = True
+                source.reason = 'Request input pipe disconnected'
+            with self.subTest(evidence=evidence):
+                code, rows, transport = self.run_parked(close_with_evidence)
+                self.assertEqual(code, 2)
+                self.assertEqual(transport.sent, 1)
+                self.assertFalse(any(row['event'] == 'session_closed' for row in rows))
+
+    def test_late_valid_status_does_not_reopen_canceled_worker(self):
+        for status in (1, 2, 3, 5):
+            closed = [False]
+            def extra_status(source, transport, value):
+                transport.pending.append(dict(event='status', goal_id=transport.goal_id, status=status))
+                original_spin = transport.spin
+                def spin_and_close():
+                    original_spin()
+                    if closed[0]:
+                        source.eof = True
+                        source.reason = 'Request input pipe disconnected'
+                    closed[0] = True
+                transport.spin = spin_and_close
+            with self.subTest(status=status):
+                code, rows, transport = self.run_parked(extra_status)
+                self.assertEqual(code, 0)
+                self.assertEqual(transport.sent, 1)
+                self.assertIsNotNone(transport.correction_guard.failure)
+                self.assertEqual([row['returncode'] for row in rows if row['event'] == 'request_complete'], [4])
+
+    def test_parked_worker_preserves_signal_and_lease_checks(self):
+        stop = [None]
+        def signal(source, transport, value):
+            stop[0] = 'Signal 2'
+        code, rows, transport = self.run_parked(signal, interrupted=lambda: stop[0])
+        self.assertEqual(code, 2)
+        self.assertEqual(transport.sent, 1)
+        self.assertTrue(any(row.get('reason') == 'Signal 2' for row in rows))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/'lease.json'
+            path.write_text('{"deadline":0.8}')
+            code, rows, transport = self.run_parked(lambda *args: None, lease_file=path)
+        self.assertEqual(code, 2)
+        self.assertEqual(transport.sent, 1)
+        self.assertTrue(any('Lease missing' in row.get('reason', '') for row in rows))
+
+    def test_bare_recovery_return_code_cannot_park_without_validated_evidence(self):
+        from scripts.box_handling import scenario1_nav_correction as nav
+        clock = FakeClock()
+        transport = FakeTransport(clock)
+        transport.configure_correction = lambda candidate: None
+        candidate = nav.make_spec(dict(point_x=0., point_y=0., point_yaw=0.),
+                                  dict(x=.03, y=0., yaw=0., stamp_ns=1), 1, point='box_pickup')
+        goal = dict(command='navigation_start', arg_json=json.dumps(dict(target_point=dict(
+            map_name='utars_nav_map', mode='free_nav', **candidate['target']))))
+        source = inbox()
+        source.requests.put(json.dumps(dict(request_id='bad', goal=goal, timeout=30.,
+            correction=candidate, allow_correction_recovery=True)))
+        rows = []
+        code = action.run_session(transport, 'navigation', source, lambda **row: rows.append(row),
+                                  clock=clock, run_one=lambda *args, **kwargs: 4)
+        self.assertEqual(code, 2)
+        self.assertEqual(transport.sent, [])
+        self.assertEqual(transport.completed, [])
+        self.assertFalse(any(row['event'] == 'request_complete' and row['returncode'] == 4 for row in rows))
+
+
 class InputTests(unittest.TestCase):
+    def test_recovery_flag_requires_explicit_visual_pickup_correction(self):
+        from scripts.box_handling import scenario1_nav_correction as nav
+        candidate = nav.make_spec(dict(point_x=0., point_y=0., point_yaw=0.),
+                                  dict(x=.03, y=0., yaw=0., stamp_ns=1), 1, point='box_pickup')
+        goal = dict(command='navigation_start', arg_json=json.dumps(dict(target_point=dict(
+            map_name='utars_nav_map', mode='free_nav', **candidate['target']))))
+        value = dict(request_id='r', goal=goal, timeout=30., correction=candidate,
+                     allow_correction_recovery=True)
+        action.validate_session_request('navigation', json.dumps(value), set())
+        for invalid in (dict(value, allow_correction_recovery=False),
+                        dict(value, allow_correction_recovery=1),
+                        dict(value, correction=dict(candidate, point='get1')),
+                        {key: item for key, item in value.items() if key != 'correction'}):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                action.validate_session_request('navigation', json.dumps(invalid), set())
+
     def test_exact_request_fields_and_timeout_required(self):
         for raw in (request(1, timeout=True), request(1, timeout=0), request(1, timeout=-1),
                     request(1, timeout=float('inf')), '{}',

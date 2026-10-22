@@ -79,6 +79,39 @@ class SpecificationTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 correction.validate_spec(candidate)
 
+    def test_box_pickup_supports_seven_attempts_and_get1_remains_limited_to_two(self):
+        for point, allowed in (('get1', 2), ('box_pickup', 7)):
+            for attempt in range(1, allowed+1):
+                candidate = spec()
+                candidate.update(point=point, attempt=attempt)
+                with self.subTest(point=point, attempt=attempt):
+                    self.assertEqual(correction.validate_spec(candidate)['attempt'], attempt)
+                    self.assertEqual(correction.make_spec(candidate['target'], candidate['reference'],
+                        attempt, point=point), candidate)
+            for attempt in (0, allowed+1, True, 1., '1'):
+                candidate = spec()
+                candidate.update(point=point, attempt=attempt)
+                with self.subTest(point=point, attempt=attempt), self.assertRaises(ValueError):
+                    correction.validate_spec(candidate)
+        self.assertEqual(correction.POLICY['max_corrections'], 2)
+
+    def test_later_pickup_attempt_cannot_widen_goal_or_initial_envelope(self):
+        candidate = spec()
+        candidate.update(point='box_pickup', attempt=7)
+        for axis in ('x', 'y'):
+            invalid = dict(candidate, reference=dict(candidate['reference'], **{axis: .050001}))
+            with self.subTest(axis=axis), self.assertRaisesRegex(ValueError, 'initial'):
+                correction.validate_spec(invalid)
+        invalid = dict(candidate, reference=dict(candidate['reference'], yaw=math.radians(5.001)))
+        with self.assertRaisesRegex(ValueError, 'initial'):
+            correction.validate_spec(invalid)
+        goal = self.goal()
+        args = json.loads(goal['arg_json'])
+        args['target_point']['point_x'] = .001
+        goal['arg_json'] = json.dumps(args)
+        with self.assertRaises(ValueError):
+            correction.validate_spec(candidate, goal)
+
     def test_initial_envelope_inclusive(self):
         correction.validate_spec(spec(x=.05, yaw=math.radians(5)))
         for x, yaw in ((.050001, 0.), (.03, math.radians(5.001))):
@@ -244,6 +277,26 @@ class MalformedTelemetryTest(unittest.TestCase):
 
 
 class ActiveLimitsTest(unittest.TestCase):
+    def test_seventh_pickup_attempt_keeps_velocity_progress_and_freshness_guards(self):
+        def later_guard():
+            candidate = spec()
+            candidate.update(point='box_pickup', attempt=7)
+            guard = warm(correction.Guard(candidate, START))
+            guard.arm(START+200_000_000)
+            return guard
+        for options, reason in ((dict(linear=.100001), 'velocity'),
+                                (dict(angular=.600001), 'velocity'),
+                                (dict(map_x=.045001), 'worsened')):
+            with self.subTest(options=options), self.assertRaisesRegex(ValueError, reason):
+                tick(later_guard(), .3, **options)
+        with self.assertRaisesRegex(ValueError, 'stale'):
+            later_guard().check(START+700_000_001)
+        guard = later_guard()
+        for index in range(3, 42):
+            tick(guard, index/10)
+        with self.assertRaisesRegex(ValueError, 'no significant progress'):
+            tick(guard, 4.2)
+
     def test_angular_violation_keeps_exact_sample_and_active_phase(self):
         guard = armed()
         when = START + 300_000_000

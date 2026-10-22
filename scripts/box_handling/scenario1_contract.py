@@ -15,8 +15,10 @@ import re
 
 if __package__:
     from . import scenario1_table90 as table90
+    from . import scenario1_deposit_profiles as deposit_profiles
 else:
     import scenario1_table90 as table90
+    import scenario1_deposit_profiles as deposit_profiles
 
 
 STAGES = (
@@ -192,14 +194,15 @@ def validate_profile(profile, *, stop_after='verify_home'):
     for phase, task in _TASKS.items():
         item = profile[phase]
         _keys(item, {'task', 'compatibility'}, phase)
-        if phase == 'deposit' and item['task'] == table90.TASK_NAME:
-            if profile['id'] != table90.PROFILE_ID or item['compatibility'] != table90.COMPATIBILITY:
-                raise ValueError('Table90 requires its own calculated profile identity')
+        deposit_contract = deposit_profiles.select(profile) if phase == 'deposit' else None
+        if deposit_contract is not None:
+            if profile['id'] != deposit_contract.PROFILE_ID or item['compatibility'] != deposit_contract.COMPATIBILITY:
+                raise ValueError('Deposit requires its own calculated profile identity')
             continue
         if item['task'] != task:
             raise ValueError('Unsupported ' + phase + ' task')
         if item['compatibility'] == table90.COMPATIBILITY:
-            raise ValueError('Calculated compatibility is exclusive to table90 deposit')
+            raise ValueError('Calculated compatibility is exclusive to reviewed deposit profiles')
         if item['compatibility'] not in COMPATIBILITY:
             raise ValueError('Unknown ' + phase + ' compatibility')
         if (phase == 'grasp' or STAGES.index(stop_after) >= STAGES.index('deposit')) and (

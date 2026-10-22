@@ -8,21 +8,23 @@ import math
 from types import MappingProxyType
 
 if __package__:
+    from . import scenario1_nav_correction as nav_correction
     from . import front_sps_contract as sps
     from .probe_front_box import transform_poses, validate_detection
     from .select_front_box import select_front_box
     from .scenario1_perception import validate_pair
     from . import scenario1_resume_worker as base_gate
 else:
+    import scenario1_nav_correction as nav_correction
     import front_sps_contract as sps
     from probe_front_box import transform_poses, validate_detection
     from select_front_box import select_front_box
     from scenario1_perception import validate_pair
     import scenario1_resume_worker as base_gate
 
-POLICY = MappingProxyType(dict(max_corrections=7, max_step_m=.05,
-    max_total_m=.05, min_correction_m=.01, inside_margin_m=.02, total_budget_s=70., min_improvement_m=.002,
-    max_arrival_distance_m=.012, max_arrival_yaw_deg=2.))
+POLICY = MappingProxyType(dict(max_corrections=nav_correction.BOX_PICKUP_MAX_CORRECTIONS, max_step_m=.05,
+    max_total_m=.10, min_correction_m=.01, inside_margin_m=.02, total_budget_s=120., min_improvement_m=.002,
+    max_arrival_distance_m=.012, max_arrival_yaw_deg=2., max_recoveries=1, recovery_min_step_m=.025))
 HEAD_TASK = 'cruzr/move_head_lower'
 HEAD_PATH = '/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/'+HEAD_TASK+'.xml'
 HEAD_SHA256 = 'f3a73626f97b471d4a0a03c98c24de32243651116c497328e69b5ddc57ea46c1'
@@ -45,7 +47,7 @@ def observe(report, now_ns):
     return pending
 
 
-def displacement(pending):
+def displacement(pending, *, recovery=False):
     """Move violated planar axes inside the gate, avoiding sub-tolerance goals."""
     position = pending['selection']['selected_pose']['position']
     low, high = sps.POSITION_BOUNDS_M['z']
@@ -74,6 +76,15 @@ def displacement(pending):
             if not low+POLICY['inside_margin_m'] <= projected <= high-POLICY['inside_margin_m']:
                 raise ValueError('BOX_ALIGNMENT_MIN_STEP_OUTSIDE_PICKUP_ENVELOPE')
             delta[axis] = math.copysign(distance, delta[axis])
+    step = math.hypot(*delta.values())
+    if recovery and 0 < step < POLICY['recovery_min_step_m']:
+        scale = POLICY['recovery_min_step_m']/step
+        delta = {axis: value*scale for axis, value in delta.items()}
+        for axis in 'xy':
+            low, high = sps.POSITION_BOUNDS_M[axis]
+            projected = position[axis]-delta[axis]
+            if not low+POLICY['inside_margin_m'] <= projected <= high-POLICY['inside_margin_m']:
+                raise ValueError('BOX_ALIGNMENT_RECOVERY_STEP_OUTSIDE_PICKUP_ENVELOPE')
     if math.hypot(*delta.values()) > POLICY['max_step_m']+1e-12:
         raise ValueError('BOX_ALIGNMENT_OUTSIDE_ENVELOPE: correction exceeds 50 mm')
     return delta

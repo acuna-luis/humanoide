@@ -9,6 +9,11 @@ import math
 from types import MappingProxyType
 
 
+# Shared with visual pickup planning and embedded in the native guard source.
+# GET1 retains its separate two-correction limit below.
+BOX_PICKUP_MAX_CORRECTIONS = 7
+
+
 POLICY = MappingProxyType({
     'max_corrections': 2,
     'max_initial_distance_m': .05,
@@ -32,6 +37,10 @@ POLICY = MappingProxyType({
 })
 _NS = 1_000_000_000
 _EPS = 1e-12
+
+
+class NoProgress(ValueError):
+    """Typed navigation stop; never by itself permission to retry a goal."""
 
 
 def qualification_report():
@@ -110,7 +119,9 @@ def validate_spec(spec, goal=None):
     _exact(spec, ('version', 'point', 'target', 'reference', 'attempt'), 'Correction spec')
     if type(spec['version']) is not int or spec['version'] != 1 or spec['point'] not in ('get1', 'box_pickup'):
         raise ValueError('Correction only supports version 1 / get1 or box_pickup')
-    if type(spec['attempt']) is not int or not 1 <= spec['attempt'] <= POLICY['max_corrections']:
+    attempt_limit = (BOX_PICKUP_MAX_CORRECTIONS if spec['point'] == 'box_pickup'
+                     else POLICY['max_corrections'])
+    if type(spec['attempt']) is not int or not 1 <= spec['attempt'] <= attempt_limit:
         raise ValueError('Correction attempt outside budget')
     _exact(spec['target'], ('point_x', 'point_y', 'point_yaw'), 'Correction target')
     _exact(spec['reference'], ('x', 'y', 'yaw', 'stamp_ns'), 'Correction reference')
@@ -228,6 +239,8 @@ class Guard:
     def _fail(self, message):
         if self.failure is None:
             self.failure = str(message)
+        if isinstance(message, NoProgress):
+            raise NoProgress(self.failure)
         raise ValueError(self.failure)
 
     def _healthy(self):
@@ -458,7 +471,7 @@ class Guard:
         distance, yaw = _errors(self._recent['map'][-1], self.spec['target'])
         if ((distance > self.distance_tolerance_m + _EPS or yaw > math.radians(2.) + _EPS) and
                 (now_ns - self._progress_ns) / _NS >= POLICY['no_progress_s']):
-            self._fail('Correction made no significant progress')
+            self._fail(NoProgress('Correction made no significant progress'))
         return self.summary()
 
     def begin_settle(self, now_ns):

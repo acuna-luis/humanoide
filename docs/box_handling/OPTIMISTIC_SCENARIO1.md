@@ -1,5 +1,110 @@
 # Escenario 1 con supervisión continua
 
+**22-10-2026 — una recuperación preagarre tras falta de progreso.**
+La próxima sesión nueva puede recuperar **una sola vez** una corrección visual
+cancelada específicamente por falta de progreso. Exige cancelación propia
+confirmada, cliente antiguo retirado, salud/postura y reposo posteriores,
+mapa listo y nueva visión asociada a la caja original. Si sigue fuera del
+margen, requiere mejora visual≥2 mm y recalcula un objetivo de25–50 mm.
+Conserva7 objetivos/100 mm/120 s, contando también los cancelados, y guard4 s.
+No reintenta get1, agarre nativo ni otros fallos; no reanuda automáticamente
+el checkpoint ya abortado. Mismo comando, condiciones actuales y HOME inicial.
+340 pruebas locales pasan en este corte; cierre final pendiente. Sin conexión
+o movimiento del robot; ensayo físico y depósito695 siguen PENDIENTES.
+[Contrato y reversión](BOX_AXIS_REPOSITION_20261002.md#recuperación-acotada-antes-del-agarre--22-10-2026).
+
+**22-10-2026 — intento117383: el nuevo presupuesto está cargado; falla el progreso.**
+Historia de la versión anterior a la recuperación acotada descrita arriba.
+La primera corrección solicita15,414 mm, pero se cancela tras4,008 s sin nueva
+mejora aceptada. No agotó los7 ajustes/100 mm/120 s. El residual en mapa15,089 mm
+supera la llegada12 mm, aunque el odómetro había alcanzado0,832 mm antes de
+alejarse otra vez. Un ajuste fallido no se repite automáticamente: cancelación
+ack0/status5 no acredita parada física. No se inicia agarre nativo ni depósito.
+Diagnóstico sólo de diarios locales, sin cambio de código, SSH o movimiento;
+conserva los límites y requiere examinar navegación antes de otro intento.
+[Métricas, evidencia y pendientes](BOX_AXIS_REPOSITION_20261002.md#diagnóstico-de-progreso-del-intento117383--22-10-2026).
+
+**22-10-2026 — presupuesto vigente de aproximación visual.**
+Contador, distancia y plazo se conservan con la recuperación acotada superior.
+Esta nota histórica exigía éxito de cada ajuste; la sección superior fija ahora
+la única excepción admitida.
+Se permiten hasta **7 correcciones**, **50 mm solicitados por objetivo**,
+**100 mm solicitados acumulados** y **120 s** para esta fase. El fallo reportado
+tras un ajuste agotaba los 50 mm acumulados anteriores: 29,829+24,518=54,347 mm.
+La caja observada en X=78,052 cm sigue fuera del margen interior X≤77 cm;
+no se amplía el alcance nativo para aceptar esa medida sin corregir.
+El validador admite siete ajustes de caja; la corrección de llegada a `get1`
+conserva sus dos intentos. Cada ajuste exige éxito, reposo, llegada12 mm/2° y
+nueva visión/coherencia/progreso. Se conservan watchdogs, paros, mapa y todos
+los límites por acción; un fallo nativo no se reproduce automáticamente.
+`BOX_ALIGNMENT_LIMIT` indica ahora contador o distancia y sus valores concretos.
+Cambio sólo de fuentes PC, cargadas en memoria en la siguiente ejecución;
+verificación local PASS: 238 pruebas distintas, sintaxis, planes45/69.5/90 y
+bootstrap real de20 módulos sin iniciar clientes ROS. Ensayo físico PENDIENTE.
+No se ha enviado movimiento ni se ha cualificado el depósito695. Las notas anteriores conservan
+los límites históricos de sus ensayos, no sustituyen estos valores vigentes.
+[Detalle, evidencia y reversión](BOX_AXIS_REPOSITION_20261002.md#presupuesto-vigente-de-ajustes-visuales--22-10-2026).
+
+**21-10-2026 — cuarto ensayo695 FINAL rc78, interrumpido durante el agarre.**
+Completa `get1` (≈10,6 mm / 0,44°), visión y bajada de cabeza. Una corrección
+solicitada de 23,1 mm lleva la observación X de caja de 77,910 a 76,500 cm;
+llegada del ajuste ≈4,9 mm / 0,42°. El gate nativo acepta
+XYZ≈76,31 / −3,41 / 79,25 cm. Tras unos 19,4 s de agarre nativo aparece
+`WATCHDOG PERSISTENT_WORKER_LOST`; el lector de salud termina con
+`ValueError: estop not confirmed clear`. Cancelación aceptada (ack0/status5)
+no demuestra parada física, caja sujeta ni agarre completado.
+No se alcanzan `verify_held`, retirada, `put1`, depósito o HOME del ciclo.
+La lectura posterior conserva valores de paro/servo0 anteriores al fallo:
+no descarta una activación recibida después. Se observa reinicio de la app
+nativa (count1) y cero servidores ROS en esa consulta; los mensajes nativos
+`Clamp box succeed` y `HQP solve failed` no acreditan éxito físico ni explican
+por sí solos la causa del reinicio. Los relojes PC/robot difieren alrededor de
+un minuto; no ordenar eventos remotos por su hora absoluta sin corregirlo.
+Los **cuatro ensayos han finalizado sin depósito695**;
+`PHYSICAL_QUALIFICATION=None`. Estado físico actual de caja y robot pendiente
+de confirmación presencial: no repetir el ciclo ni enviar HOME automáticamente.
+[Evidencia, diagnóstico y punto de reanudación](../incidents/2026-10-21_BARCELONA_TABLE695_ENSAYO.md).
+
+**21-10-2026 — BOX-01-HEALTH-SAFETY-QOS-20261021; histórico del tercer ensayo.** Ambos paros se reciben ahora
+con RELIABLE/VOLATILE, coherente con los publicadores inspeccionados. Conserva
+caducidad5s, valores, latch y watchdog; no confundir mejora de transporte con
+cualificación física. 68 tests y preflight con cinco rondas adicionales de
+lectura pasan. Cambio PC transmitido en memoria; **tercer ensayo695 finalizado
+rc78**, antes del agarre nativo. Completa `get1`, visión y bajada de cabeza;
+observa X de caja≈79,803→77,672 cm tras la primera corrección solicitada de
+28,0 mm. La segunda, de 20,7 mm, se cancela por
+`Correction made no significant progress`, con avisos `LOCATION_LOST`.
+No se completan recogida, navegación a `put1`, depósito ni HOME del ciclo.
+En esta sesión no reaparece `estop receipt stale`; la observación junto a las
+cinco rondas de check no demuestra una solución exhaustiva del transporte.
+En ese corte los tres ensayos terminaban antes del depósito. La petición
+posterior de continuar produjo el cuarto ensayo finalizado descrito arriba;
+su fallo de paro no confirmado libre tampoco valida exhaustivamente el QoS.
+[Evidencia y resultados vigentes](../incidents/2026-10-21_BARCELONA_TABLE695_ENSAYO.md).
+
+**21-10-2026 — historia del primer ensayo: paquete695 instalado; interrumpido en agarre.**
+Relocalización/get1, visión y dos ajustes visuales completados. Se pierde la
+cardinalidad única del servicio de controlador; health worker termina y el
+watchdog cancela el UUID propio. No se alcanzan depósito695 ni HOME. El éxito
+nativo tardío no sustituye al resultado cancelado/status5. Operador informa
+retirada/apagado/encendido; checkpoint antiguo no reanudable, condiciones nuevas
+pendientes. [Cronología y siguiente paso](../incidents/2026-10-21_BARCELONA_TABLE695_ENSAYO.md).
+
+**21-10-2026 — BOX-01-BARCELONA-695: candidato de depósito a 69,5 cm.**
+Optimistic conserva 90 cm por defecto; `--table-height-cm 69.5` selecciona un
+perfil y tarea propios, preparados inicialmente sólo en el PC. Selector limitado a
+45/69.5/90, excluyente con `--profile`. En la preparación local inicial,
+instalación, carga y ensayo físico de 69,5 cm quedaban PENDIENTES; el seguimiento
+superior registra la instalación y los cuatro ensayos posteriores.
+`--run --table-height-cm 69.5 --stop-after deposit
+--deposit-trial` permite el ensayo explícito acotado, con controles vigentes y
+pausa antes de verificar liberación/HOME; el ciclo completo continúa bloqueado.
+El retorno exige checkpoint real, liberación física confirmada y comprobación
+nueva. No hereda la cualificación de 90 cm ni las coordenadas de otro recinto.
+[Montaje de Barcelona, preparación y comandos por etapas](SCENARIO1_BARCELONA_695.md).
+La preparación local inicial no conectó ni movió; el seguimiento anterior
+registra la instalación y ejecución posteriores autorizadas.
+
 **02-10-2026 — BOX-01-VISUAL-ALIGN-ODOM-PROGRESS.** Intento094521 pasa
 HOME/get1 y solicita ajusteX21,200mm; cancela a4,008s por falta de progreso.
 Mapa termina a27,095mm, pero odometría registra42,601mm de recorrido y25,800mm
