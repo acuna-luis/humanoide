@@ -183,6 +183,9 @@ class Runtime:
         self.cycle_number = 1
         self.live_monitor_enabled = False
         self.last_action_end_ns = None
+        self.native_grasp_started = False
+        self.empty_home_recovery_used = False
+        self.empty_home_recovered = False
         self.sensor_process = None
         self.sensor_min_stamp_ns = 0
         self.action_sessions = {}
@@ -1038,7 +1041,7 @@ with socket.socket(socket.AF_UNIX) as conn:
         anchor = self.box_association
         if anchor is None:
             raise RuntimeError('BOX_ALIGNMENT_ASSOCIATION_REQUIRED')
-        total, attempt = 0., 0
+        total, attempt, stalled = 0., 0, 0
         while True:
             budget()
             delta = box_alignment.displacement(pending)
@@ -1052,6 +1055,8 @@ with socket.socket(socket.AF_UNIX) as conn:
                           correction_trigger='outside_native_pickup_gate',
                           native_position_gate_unchanged=True,
                           correction_target_margin_m=policy['inside_margin_m'])
+                if attempt:
+                    self.emit('recovery', code='position_ready', attempts=attempt)
                 return
             limit_reason = ('attempts' if attempt >= policy['max_corrections'] else
                             'distance' if total+step > policy['max_total_m']+1e-12 else None)
@@ -1105,7 +1110,14 @@ with socket.socket(socket.AF_UNIX) as conn:
                 observation=pending, reference=reference))
             if (box_alignment.violation(pending) > 0 and
                     old_violation-box_alignment.violation(pending) < policy['min_improvement_m']-1e-12):
-                raise RuntimeError('BOX_ALIGNMENT_NO_IMPROVEMENT')
+                stalled += 1
+                self.emit('recovery', code='position_retry', stalled_measurements=stalled,
+                          attempt=attempt, max_corrections=policy['max_corrections'],
+                          reason='BOX_ALIGNMENT_NO_IMPROVEMENT', previous_action='successful_and_stationary')
+                if stalled >= 2:
+                    raise RuntimeError('BOX_ALIGNMENT_NO_IMPROVEMENT: two consecutive completed corrections')
+            else:
+                stalled = 0
 
 
     def sync_planner_map(self):
@@ -1176,6 +1188,8 @@ with socket.socket(socket.AF_UNIX) as conn:
         if stage == 'deposit' and height_deposit.profile_height(self.payload.get('profile')) is not None:
             task = self.payload['profile']['deposit']['task']
         goal = {'task_name': task, 'yaml_args': '{}'}
+        if stage == 'grasp':
+            self.native_grasp_started = True  # Set before dispatch; never clear after an uncertain result.
         retry_allowed = (stage == 'home' and self.execution_profile == 'optimistic_v1' and
                          self.policy == 'assume' and contract.home_retry_available(self.checkpoint))
         options = {'allow_home_retry': True} if retry_allowed else {}
@@ -1256,8 +1270,65 @@ with socket.socket(socket.AF_UNIX) as conn:
         self.resume_plan = None
         self.resume_validated = False
         self.cycle_number = cycle_number
+        self.native_grasp_started = False
+        self.empty_home_recovery_used = False
+        self.empty_home_recovered = False
         self.save()
         self.emit('cycle_ready', cycle_number=cycle_number, checkpoint=self.checkpoint)
+
+    def recover_empty_home(self, stage, previous_box_state, error):
+        """One separate recovery, never promote the failed cycle to success.
+
+        No dead client/lease is revived. Only planning/postcondition failures
+        before native pickup are eligible; cancellation and health failures are
+        deliberately excluded even if an operator has enabled this feature.
+        """
+        allowed = ('BOX_ALIGNMENT_LIMIT:', 'BOX_ALIGNMENT_NO_IMPROVEMENT',
+                   'BOX_ALIGNMENT_OUTSIDE_ENVELOPE:', 'BOX_ALIGNMENT_Z_UNCORRECTABLE:',
+                   'GET1_CORRECTION_NO_IMPROVEMENT', 'GET1_CORRECTION_LIMIT')
+        reason = str(error)
+        if (self.payload.get('empty_home_recovery') is not True or
+                self.empty_home_recovery_used or self.native_grasp_started or
+                previous_box_state != 'empty' or stage not in ('navigate_get1', 'grasp') or
+                not reason.startswith(allowed)):
+            self.emit('recovery', code='home_blocked', reason=reason, attempted=False)
+            return
+        self.empty_home_recovery_used = True
+        ledger = dict(status='checking', original_stage=stage, original_error=reason,
+                      box_empty_source='operator_entry_and_no_native_grasp_dispatched',
+                      home_path_source='explicit_current_run_option')
+        path = self.session/'empty-home-recovery.json'
+        atomic_json(path, ledger)
+        try:
+            self.connected()  # Includes worker/lease/live-health identity checks.
+            self.discover()
+            self.hashes()
+            report = self.health(require_home=False)
+            box_alignment.pickup_posture(report, observation=False)
+            for sample in report['actuator']:
+                for item in sample['act_item']:
+                    if item['id'] == 1001 and abs(item['position']) >= .02:
+                        raise RuntimeError('RECOVERY_HEAD_YAW_UNEXPECTED')
+                    if item['id'] == 1002 and not -.45 <= item['position'] <= .02:
+                        raise RuntimeError('RECOVERY_HEAD_PITCH_UNEXPECTED')
+            self.stationary_base()
+            self.quick_health()
+            self.connected()
+            ledger.update(status='dispatched', dispatched_ns=time.time_ns())
+            atomic_json(path, ledger)  # Reserve before the sole recovery goal.
+            self.emit('recovery', code='home_start', reason=reason, record=ledger)
+            result = self.action('motion', {'task_name': 'cruzr/home', 'yaml_args': '{}'}, 60)
+            contract.validate_motion_result(result)
+            self.health(require_home=True)
+            self.empty_home_recovered = True
+            ledger.update(status='home_measured', result=result)
+            atomic_json(path, ledger)
+            self.emit('recovery', code='home_recovered', original_stage=stage,
+                      cycle_success=False, original_checkpoint_preserved=True, record=ledger)
+        except Exception as recovery_error:
+            ledger.update(status='blocked_or_failed', error=str(recovery_error))
+            atomic_json(path, ledger)
+            self.emit('recovery', code='home_blocked', reason=str(recovery_error), attempted=True, record=ledger)
 
     def stage(self, message):
         if not self.armed:
@@ -1324,6 +1395,8 @@ with socket.socket(socket.AF_UNIX) as conn:
         except BaseException as exc:
             self.checkpoint = contract.fail_stage(self.checkpoint, stage, str(exc))
             self.save()
+            if isinstance(exc, Exception):
+                self.recover_empty_home(stage, previous_box_state, exc)
             raise
 
     def run(self):
@@ -1414,7 +1487,8 @@ with socket.socket(socket.AF_UNIX) as conn:
                 else:
                     raise RuntimeError('Unexpected supervisor command')
         except BaseException as exc:
-            self.emit('error', reason=str(exc), physical_state='unconfirmed')
+            self.emit('error', reason=str(exc), physical_state=(
+                'home_measured_box_empty_assumed' if self.empty_home_recovered else 'unconfirmed'))
             return 78
         finally:
             self.stop.set()

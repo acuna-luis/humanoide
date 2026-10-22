@@ -1,5 +1,20 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-CYCLE-VOICE-RECOVERY-20261022: voz y recuperación acotada, offline.**
+Voz asíncrona por defecto en inglés en robot (`--voice robot-en`); español PC
+opcional con espeak, actualmente no instalado. Audio no interviene en control.
+Tras corrección completada y reposo/nueva medida, se permite otro ajuste si
+la mejora fue pequeña; dos resultados consecutivos sin mejora significativa
+agotan esa vía. Presupuestos/guard4 s intactos; no reintento tras cancelación.
+HOME tras error sólo con `--empty-home-recovery`, vacío declarado y recorrido
+HOME comprobado para esta ejecución; excluye cualquier recogida nativa ya
+despachada, objeto sujeto, incertidumbre o salud/worker/lease fallidos.
+Un objetivo separado con intención durable y HOME20D nuevo; conserva fallo del
+ciclo, no reinicia ni navega.1164 pruebas de regresión y28 finales correctas.
+Sin voz real ni movimiento aquí: validación física PENDIENTE.
+[Contrato, comandos y reversión](box_handling/OPTIMISTIC_SCENARIO1.md#voz-y-recuperación-limitada-del-ciclo--22-10-2026).
+
+
 **22-10-2026 — BOX-ALIGNMENT-NATIVE-ACCEPTANCE-20261022: microajustes innecesarios corregidos offline.**
 La alineación previa sólo mueve ejesXY fuera del gate SPS original; el margen
 interior2 cm queda como destino de corrección, no condición extra de entrada.

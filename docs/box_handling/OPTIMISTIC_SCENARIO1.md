@@ -1,5 +1,97 @@
 # Escenario 1 con supervisión continua
 
+### Voz y recuperación limitada del ciclo — 22-10-2026
+
+**BOX-CYCLE-VOICE-RECOVERY-20261022 — implementado y probado offline;
+voz real, recuperación física y tiempos PENDIENTES.** No se han conectado ni
+movido robot/PC audio en esta intervención; sólo fuentes y pruebas locales.
+
+- Voz predeterminada `--voice robot-en`: script existente
+  `scripts/cruzr_say_english.sh`, TTS inglés en Vision, sin reconocimiento de
+  órdenes ni cliente de movimiento. `--voice pc` usa espeak-ng/espeak español;
+  ninguno está instalado actualmente en este PC. `--voice off` desactiva audio.
+- Los avisos se encolan en un hilo PC independiente, con deduplicación, cola
+  acotada y timeout12 s por invocación. Un fallo de audio no retrasa ni altera
+  la supervisión, cancelación o decisión de recuperación. Son avisos de mejor
+  esfuerzo, sin garantía de reproducción inmediata; ver `voice.jsonl`.
+- Se anuncian ajustes/reintentos, error de posición, recuperación HOME y su
+  resultado/bloqueo. El mensaje del error conserva el motivo concreto nativo;
+  diagnóstico y eventos permanecen en consola/journal aunque falle el audio.
+
+**Reintento de posición:** sólo después de resultado nativo exitoso,
+comprobaciones de llegada/reposo y nueva medición/asociación de la misma caja.
+Una corrección completada con mejora visual inferior2 mm ya no interrumpe de
+inmediato: puede haber otra medición/corrección dentro del presupuesto vigente.
+Dos correcciones completadas consecutivas sin mejora significativa detienen
+la alineación. Permanecen máximo configurable7 ajustes,50 mm por objetivo,
+100 mm acumulados y120 s totales. Se calcula cada nuevo objetivo con la
+medición actual, no se repite a ciegas el objetivo anterior. Si la caja ya está
+dentro del gate original, se continúa al único agarre nativo.
+
+No se reintentan cancelaciones, timeout, ausencia de resultado terminal,
+fallos de worker/lease, contacto, pérdida de salud ni localización incierta.
+El guard4 s/2 mm sigue activo durante cada objetivo. Esta actualización no
+convierte las dos cancelaciones anteriores en recuperables automáticamente.
+Los ajustes GET1 conservan su presupuesto y comprobaciones actuales.
+
+**HOME tras error:** desactivado salvo `--empty-home-recovery`. La opción
+constituye declaración del operador para ESA ejecución: abrazaderas vacías al
+iniciar y recorrido completo HOME libre si hay que recuperar antes del agarre.
+No sustituye la comprobación física actual de efector, objeto, paros, batería,
+cargador, ruedas, zona ni persona junto al paro. No reutilizarla si cambia el
+montaje/recorrido; omitirla conserva la parada sin HOME.
+
+Sólo permite un HOME separado ante una lista cerrada de fallos de planificación,
+presupuesto o mejora previos al agarre nativo, con estado anterior empty.
+Un marcador se fija ANTES de enviar la recogida nativa: desde entonces cualquier
+fallo queda excluido, aunque no se vea caja sujeta. Se exige sesión/heartbeat y
+workers vivos, contenedores/hashes intactos, salud completa nueva, brazos/torso
+cerca de HOME, cabeza en rango conocido y chasis parado, más salud viva fresca.
+No revive leases ni sustituye clientes fallidos para recuperar. Un resultado
+cancelado sin parada confirmada queda bloqueado.
+
+Se escribe `empty-home-recovery.json` antes del único objetivo; éxito nativo y
+nueva comprobación20D HOME deben pasar antes de anunciar HOME recuperado. No
+se reintenta un HOME fallido, no se navega a get1, no se reinicia el ciclo ni se
+borra/promueve su checkpoint fallido. El proceso conserva salida de error y
+registra la recuperación aparte. Vacío sigue siendo supuesto del operador y
+no una medición de carga; el estado final lo distingue expresamente.
+
+Plan local sin voz, conexión ni movimiento:
+
+```bash
+./scripts/optimistic_scenario1.sh --table-height-cm 74 \
+  --empty-home-recovery --voice robot-en --plan
+```
+
+Para una futura prueba, tras verificar las condiciones físicas actuales y el
+recorrido de recuperación, habilitar ambas funciones en el mismo comando:
+
+```bash
+./scripts/optimistic_scenario1.sh --table-height-cm 74 \
+  --box-alignment-attempts 7 --height-deposit-trial \
+  --voice robot-en --empty-home-recovery --run
+```
+
+La voz sola queda activa por defecto; para probar sólo disponibilidad del TTS
+sin reproducir audio ni mover: `./scripts/cruzr_say_english.sh --check`.
+Para voz local española, instalar espeak-ng con el procedimiento habitual del
+PC y seleccionar `--voice pc`; no se instaló ningún paquete aquí.
+
+Fuentes: scenario1_voice.py, scenario1_cli.py y scenario1_runtime.py.
+Hash de voz registrado junto a las fuentes del ciclo. Pruebas de recuperación
+con fallos inyectados y audio/transportes simulados; sin ROS ni red.
+Regresión1164 pruebas correcta y28 focalizadas finales correctas (incluye
+comprobación posterior de persistir intención HOME antes de enviarlo).
+La suite antigua de instalador genérico con fixtures fallidos documentados
+permanece excluida y sin cambios. Backup, hashes y resultados:
+`../Humanoide-vla-evidence/20261022_RECOVERY_VOICE_193528/`.
+Reversión: quitar `--empty-home-recovery`, usar `--voice off`, o revertir sólo
+el commit de esta intervención antes de otra sesión; conservar evidencia y
+checkpoint. Próximo paso: prueba física supervisada, sin asumir éxito por los
+ensayos sintéticos ni reutilizar condiciones físicas antiguas.
+
+
 ### Corrección de ajustes innecesarios antes del agarre — 22-10-2026
 
 **BOX-ALIGNMENT-NATIVE-ACCEPTANCE-20261022 — implementado y probado offline;

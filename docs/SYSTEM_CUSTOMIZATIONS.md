@@ -1,5 +1,29 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-CYCLE-VOICE-RECOVERY-20261022
+
+22-10-2026, Europe/Madrid — implementación PC/repositorio, validada offline;
+no instalada/cargada/probada físicamente en robot. Autoridad: usuario pide
+voz, reintentos y HOME en los casos previos acordados. Fuentes reproducibles:
+scenario1_voice.py, scenario1_cli.py, scenario1_runtime.py y pruebas asociadas.
+Activación: voz por defecto robot-en mediante TTS existente, o pc/off; HOME
+sólo con --empty-home-recovery como declaración de vacío/recorrido para cada
+ejecución. Reintento visual tras éxito/reposo/medida, con guard y presupuestos
+sin cambios; dos correcciones completadas sin mejora detienen esa vía.
+HOME separado una vez, sólo ante fallos cerrados antes del agarre, con nueva
+salud/identidad/reposo; no revive leases ni recupera cancelación incierta.
+Se conserva checkpoint fallido y ledger independiente de recuperación. Sin
+nueva instalación de paquetes, configuración remota, cambios de SDK o firmware.
+Dependencias: script TTS inglés existente/Vision; PC español requiere espeak
+(no disponible hoy), Python estándar para cola asíncrona. Fallo de audio no
+altera controles. Voz real/recuperación física PENDIENTES;1164 pruebas generales
+seleccionadas y28 focalizadas finales correctas.
+Backup/resultado/hashes: ../Humanoide-vla-evidence/20261022_RECOVERY_VOICE_193528/.
+Reversión: --voice off, omitir --empty-home-recovery o revertir sólo este commit
+antes de otra sesión; no borrar registros ni reiniciar con objeto sujeto.
+[Procedimiento y límites](box_handling/OPTIMISTIC_SCENARIO1.md#voz-y-recuperación-limitada-del-ciclo--22-10-2026).
+
+
 ## BOX-ALIGNMENT-NATIVE-ACCEPTANCE-20261022
 
 22-10-2026, Europe/Madrid — fuentes PC y pruebas offline; no instalado/cargado
