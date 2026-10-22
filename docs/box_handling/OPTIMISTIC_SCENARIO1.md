@@ -1,5 +1,15 @@
 # Escenario 1 con supervisión continua
 
+**22-10-2026 — BOX-01-ALIGN-HEALTH-RETURN-20261022: corregido el `NoneType`
+de la primera ejecución con alineación.** Se omitió retornar el informe de
+`Runtime.health()` al trasladar el consumidor del donante. Se añade sólo
+`return report` después de todas las validaciones. La prueba real se detuvo
+tras activar visión, antes de bajar cabeza, corregir el chasis o enviar el
+agarre; su checkpoint fallido/`unknown` se conserva. Las seis regresiones con
+el método real y las 127 pruebas focales pasan. No se ha movido el robot para
+esta corrección; ensayo físico del arreglo pendiente. Sintaxis e intentos
+siguen iguales. [Causa, evidencia y uso](BOX_AXIS_REPOSITION_20261002.md#corrección-del-retorno-de-salud-tras-la-primera-prueba-real).
+
 ## 22-10-2026: aproximación visual configurable antes del único agarre
 
 **BOX-01-VISUAL-ALIGN-PORT-20261022 — Implementado en PC; pruebas del cambio

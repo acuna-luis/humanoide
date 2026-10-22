@@ -1,5 +1,30 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-01-ALIGN-HEALTH-RETURN-20261022
+
+**22-10-2026, Europe/Madrid — CORREGIDO en PC; nueva carga y ensayo físico
+PENDIENTES.** El primer ensayo del port, ejecutado por el operador desde
+`e04a7fab1ad44c46eac60f845ed8b51629da2ae4`, terminó al consultar la postura
+inicial de alineación. Llegada y activación de visión completadas, sin objetivo
+de bajar cabeza, corrección visual ni agarre nativo despachados.
+
+| Campo | Registro |
+| --- | --- |
+| Causa verificada | `Runtime.health()` devolvía implícitamente `None`; los dos consumidores nuevos de alineación requieren el informe raw con `actuator`. El método del donante sí retornaba ese informe |
+| Destino/fuente | PC, `scripts/box_handling/scenario1_runtime.py`, método `health`: una línea `return report` al final; receta reproducible en el commit de esta corrección |
+| Aplicación/activación | El lanzador transmite el método corregido en memoria en una próxima sesión; no requiere reinstalar SPS ni reiniciar servicios |
+| Dependencias e invariantes | Mismas validaciones de controladores, estado, paros, cargador, batería, dos muestras frescas, faults/reposo/HOME. Se devuelve sólo después de completarlas; sin cambios de SDK, XML/YAML, fuerzas, límites, `TASKS` o `motion_stage` |
+| Verificación | Replay con `real-health-result.json` y reloj fijado sólo para esa reproducción: fallo exacto antes, informe original y postura inicial válidos después. Seis regresiones con método/validadores reales (sin mock de `health()`): el método anterior produce un fallo y tres errores; después 6/6 PASS. Conjunto focal 127/127 PASS; invariantes de brazos intactos |
+| Evidencia del ensayo | `../Humanoide-vla-evidence/20261022T083157Z_OPTIMISTIC_SCENARIO1_507743/`: cinco intentos configurados, ninguno de alineación ejecutado; sólo `navigate_get1` y `enable_vision` completados. Checkpoint `unknown` intacto |
+| Respaldo/corrección | `../Humanoide-vla-evidence/20261022T083405Z_ALIGNMENT_HEALTH_RETURN_FIX/`: fuentes previas/finales y hashes, informe real guardado, `failure-analysis.json`, reproducciones antes/después y recibos de pruebas |
+| Reversión | Con ejecutor detenido, retirar sólo el retorno añadido comparando el backup y cambios posteriores; esto reintroduce el fallo y no es una receta para continuar. Conservar el checkpoint y toda la evidencia |
+
+Los mensajes de lease posteriores son del cierre; no se amplía su vigencia ni
+se reinician workers. La salud registrada antes del error mostraba HOME, pero
+su lectura histórica no sustituye una comprobación actual. No se hizo consulta,
+movimiento, recuperación HOME, reintento o push en esta corrección. La mesa de
+74 cm y la alineación completa continúan pendientes de prueba física.
+
 ## BOX-01-VISUAL-ALIGN-PORT-20261022
 
 **22-10-2026, Europe/Madrid — IMPLEMENTADO en PC y VERIFICADO offline;

@@ -1,5 +1,32 @@
 # Corrección visual del chasis antes de recoger
 
+## Corrección del retorno de salud tras la primera prueba real
+
+**BOX-01-ALIGN-HEALTH-RETURN-20261022 — 22-10-2026, Europe/Madrid.** El operador
+ejecutó el port con cinco ajustes configurados. La llegada a get1 y visión
+terminaron; antes de cualquier bajada de cabeza, ajuste visual o agarre se
+produjo un `NoneType` en la comprobación de postura. El consumidor nuevo
+`pickup_posture(self.health())` esperaba un informe, mientras que el método
+de esta rama terminaba tras validar y registrar sin devolver nada. El donante
+sí incluía el retorno. No fue un fallo de sensores, distancia o fuerza.
+
+Se añade sólo `return report` al final de `Runtime.health()`, después de todas
+sus validaciones. No se devuelve el resumen de consola ni se genera un informe
+sustitutivo. La reproducción con el informe real guardado falla antes y pasa
+la comprobación inicial después. Las pruebas nuevas ejercitan ese método real;
+el mock del ensayo offline anterior ocultaba la omisión.
+La regresión carga también el método anterior exacto en memoria: produce un
+fallo y tres errores. Tras la corrección pasan las seis pruebas nuevas y las
+127 del conjunto focal de salud, ejecutor, alineación e invariantes de brazos.
+
+Ejecución fallida: `../Humanoide-vla-evidence/20261022T083157Z_OPTIMISTIC_SCENARIO1_507743/`.
+Corrección y backup: `../Humanoide-vla-evidence/20261022T083405Z_ALIGNMENT_HEALTH_RETURN_FIX/`.
+El checkpoint se conserva fallido/`unknown`. Los errores de lease son
+posteriores y no se corrigen ampliando plazos. Este arreglo local todavía no
+se ha probado físicamente; no se envió otra orden al robot. Antes de otra
+ejecución, comprobar de nuevo el estado físico y usar `--check`. La sintaxis
+y los límites de intentos no cambian.
+
 ## Port acotado a la rama de mesa74 — 22-10-2026
 
 **BOX-01-VISUAL-ALIGN-PORT-20261022. IMPLEMENTADO en PC; pruebas del port

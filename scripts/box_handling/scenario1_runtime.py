@@ -470,6 +470,7 @@ class Runtime:
                 raise RuntimeError('HOME_NOT_MEASURED: se exige HOME 20D al inicio/final')
             measurements.append(measurement)
         self.emit('health', safety=health, posture=measurements, home_required=require_home)
+        return report
 
     def forward_perception(self, *, force=False):
         """Forward existing complete JSONL records without querying perception.

@@ -1,5 +1,30 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-01-ALIGN-HEALTH-RETURN-20261022: retorno de salud corregido.**
+El operador probó `e04a7fa` con mesa 74, cinco ajustes y pausa tras recogida.
+Llegó a get1 (7,1 mm / 0,26°) y activó visión; la fase de recogida falló con
+`'NoneType' object is not subscriptable` antes de bajar cabeza, alinear el
+chasis o enviar el agarre. **Causa VERIFICADA:** el port consumía el resultado
+de `Runtime.health()`, pero la versión de esta rama validaba y registraba el
+informe sin devolverlo. El donante sí lo devolvía. Se añade únicamente
+`return report` después de todas las validaciones y del registro existente.
+Reproducción offline con el informe real guardado: mismo error antes; después
+devuelve las dos muestras originales y pasa la comprobación inicial de postura.
+Las pruebas previas de alineación sustituían `health()` por un mock que ya
+devolvía el informe; no detectaron ese contrato incompleto.
+Regresión: seis pruebas nuevas con método/validadores reales; el método anterior
+reproduce un fallo y tres errores, la corrección pasa las seis. Conjunto focal
+de salud, ejecutor, alineación e invariantes de brazos: **127 pruebas PASS**.
+
+El checkpoint fallido conserva `box_state=unknown`, sin editar. Los errores de
+lease posteriores corresponden al cierre y no son la causa del `NoneType`.
+La última salud registrada mostraba HOME; no acredita el estado físico actual.
+Sin reintento, HOME, consulta o movimiento del robot desde esta corrección.
+El arreglo está en PC; validación física de la alineación sigue **PENDIENTE**.
+No cambia SPS, XML/YAML, fuerzas, límites ni trayectorias de brazos.
+[Ficha, pruebas y evidencia](SYSTEM_CUSTOMIZATIONS.md#box-01-align-health-return-20261022),
+[detalle de uso](box_handling/BOX_AXIS_REPOSITION_20261002.md#corrección-del-retorno-de-salud-tras-la-primera-prueba-real).
+
 **22-10-2026 — BOX-01-VISUAL-ALIGN-PORT-20261022: ajuste visual configurable del chasis.**
 Implementado localmente en `feat/scenario1-deposit-table-74cm`, partiendo de
 `8107664`, con planificación adaptada de `feriabarcelona@0cbc320`.
