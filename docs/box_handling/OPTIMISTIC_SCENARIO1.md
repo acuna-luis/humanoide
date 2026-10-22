@@ -9,8 +9,9 @@ margen, requiere mejora visual≥2 mm y recalcula un objetivo de25–50 mm.
 Conserva7 objetivos/100 mm/120 s, contando también los cancelados, y guard4 s.
 No reintenta get1, agarre nativo ni otros fallos; no reanuda automáticamente
 el checkpoint ya abortado. Mismo comando, condiciones actuales y HOME inicial.
-340 pruebas locales pasan en este corte; cierre final pendiente. Sin conexión
-o movimiento del robot; ensayo físico y depósito695 siguen PENDIENTES.
+354 pruebas locales PASS (11 módulos), sintaxis, planes45/69.5/90 y bootstrap
+real de21 módulos. Retiro exige EOF final sin errores o terminales tardíos.
+Sin conexión o movimiento del robot; ensayo físico y depósito695 PENDIENTES.
 [Contrato y reversión](BOX_AXIS_REPOSITION_20261002.md#recuperación-acotada-antes-del-agarre--22-10-2026).
 
 **22-10-2026 — intento117383: el nuevo presupuesto está cargado; falla el progreso.**

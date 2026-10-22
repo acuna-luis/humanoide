@@ -14,8 +14,10 @@ sigue fuera del margen, exige mejora visual≥2 mm y objetivo de recuperación
 Los objetivos cancelados también consumen contador y distancia:7/100 mm/120 s
 sin reiniciar el plazo y con el guard4 s intacto. Get1, agarre nativo y demás
 fallos no reciben este reintento. No reanuda el checkpoint ya abortado.
-340 pruebas locales pasan en el corte actual; recuento final y hashes pendientes
-de cierre. Sin SSH, instalación, reinicio o movimiento; prueba física y
+354 pruebas locales pasan (11 módulos,6,387 s), junto a AST, planes45/69.5/90
+y bootstrap real de21 módulos. Cierre del worker exige EOF final y rechaza
+salida opaca, error o terminal tardío; recibos/hashes finales en la evidencia.
+Sin SSH, instalación, reinicio o movimiento; prueba física y
 cualificación695 PENDIENTES. [Contrato, activación y reversión](box_handling/BOX_AXIS_REPOSITION_20261002.md#recuperación-acotada-antes-del-agarre--22-10-2026).
 
 **22-10-2026 — BOX-01-VISUAL-ALIGN-NO-PROGRESS-DIAG-20261022: el intento117383 carga el presupuesto nuevo y falla por progreso.**

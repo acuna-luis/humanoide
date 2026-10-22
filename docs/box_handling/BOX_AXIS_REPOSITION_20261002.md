@@ -112,8 +112,10 @@ La recuperación exige todas estas condiciones, en este orden:
    muestras de actuadores con sello posterior al terminal, dos muestras nuevas
    de reposo odométrico y dos poses nuevas de mapa posteriores a la cancelación.
    Contenedores, dependencias y hashes deben seguir siendo los mismos.
-4. Sólo después se cierra el worker anterior y se exige salida0. No se borra el
-   fallo ni se reutiliza su cliente ROSA cancelado. Un cliente nuevo confirma
+4. Sólo después se cierra el worker anterior y se exige salida0, EOF final y
+   cola nativa sin salida opaca, errores o terminales tardíos. El worker hace un
+   último spin/drain antes del EOF; el validador sólo admite status enteros
+   1/2/3/5. No se borra el fallo ni se reutiliza su cliente ROSA cancelado. Un cliente nuevo confirma
    mapa `utars_nav_map`, estado `FSM_WAITNAVIGATE` y puntos originales.
 5. Se adquieren dos detecciones nuevas con TF exacta, frescura/coherencia y
    asociación a la caja ancla original. Si ya cumplen el margen interior,
@@ -147,9 +149,12 @@ física al depósito695 ni autoriza reanudar una caja de estado desconocido.
 sesión, supervisor, planificador y consola/CLI en `scripts/box_handling/`;
 tests del contrato, cancelación y orquestación. Se transmiten en memoria, sin
 instalación persistente, cambio de SDK o modificación de tareas del proveedor.
-340 pruebas locales PASS en el corte actual; cierre final de recuento/hashes
-pendiente. Bootstrap autocontenido de21 módulos verificado sin ejecutar main
-ni clientes ROS. Es comprobación de código, no ensayo físico de recuperación.
+354 pruebas de11 módulos PASS en6,387 s: `final-tests-command.json` y
+`final-tests.log`. AST, planes45/69.5/90 y bootstrap real autocontenido de21
+módulos PASS en `offline-checks.json`, sin ejecutar main ni clientes ROS.
+`changed-code-sha256.json`, `verification.json`, `intervention-only.patch` y
+`after/` conservan hashes y fuentes reproducibles. Es comprobación de código,
+no ensayo físico de recuperación.
 Backup/evidencia `../Humanoide-vla-evidence/20261022T061103Z_BOX_ALIGNMENT_RECOVERY/`
 con `before/` de15 archivos, fuentes, recibos y tests. Revertir selectivamente
 esta revisión con ejecutor detenido, retirar sólo helper/tests nuevos si
