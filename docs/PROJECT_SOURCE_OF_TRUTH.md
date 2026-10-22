@@ -1,5 +1,21 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-SCENARIO1-UNIFIED-HEIGHTS-REVIEW-20261022: comparación90/74 y arquitectura común propuesta.**
+Lectura offline de rama90@ad3e23a y74-jacob@7da25ba. Cinco últimas tomas completas
+del perfil90:149,531–182,212 s, última/mediana156,430 s; depósito14,626 s.
+Actual74:323,879 s, de ellos153,026 s en aproximación/descensos/liberación.
+90 usa una acción SDK con colocación12 s y apertura2 s;74 encadena cinco
+sesiones/tareas nominales12+12+12+2+2 s. Dos descensos repiten referencias
+cero hasta10 s. Diferencias de torso y apertura reales: no basta cambiar Z.
+La altura no exige otro motor ni partir el descenso de apoyo. Propuesta:
+sesión única, generador de depósito común y perfiles calibrados por altura,
+modo de ensayo separado, instalación por contenido y agarre conservado.
+Comparación histórica con mapas/boots/versiones distintas; no benchmark
+controlado. El módulo90 coincide por SHA; CLI/runtime completos no coinciden
+con tip90. Sin cambios de código, checkout, conexión ni movimiento.
+[Comparación y plan de consolidación](box_handling/OPTIMISTIC_SCENARIO1.md#comparación-9074-cm-y-diseño-de-un-único-ciclo--22-10-2026).
+Evidencia: `../Humanoide-vla-evidence/20261022T162518Z_TABLE90_74_COMPARISON/`.
+
 **22-10-2026 — BOX-TABLE74-BASELINE-CONTINUOUS-20261022: ciclo actual medido sin interrupciones.**
 Rama `74-jacob`, fuentes de control de commitf18a2bf sin modificar (155 hashes).
 Preflight CHECK_OK y condiciones físicas actuales confirmadas; un único run

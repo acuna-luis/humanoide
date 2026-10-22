@@ -1,5 +1,19 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-SCENARIO1-UNIFIED-HEIGHTS-REVIEW-20261022
+
+**22-10-2026, Europe/Madrid — análisis offline; unificación propuesta, no implementada.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo/fuentes | Comparar feat/scenario1-deposit-table-90cm@ad3e23a con74-jacob@7da25ba y última toma74. Cinco últimas tomas completas90 del14-10; receta90 coincide por SHA, CLI/runtime no íntegramente con tip. Diferentes fechas, boot y destinos: comparación descriptiva |
+| Hallazgo | Depósito/apertura90=14,626 s; aproximación/descensos/liberación74=153,026 s. 90 integra12+2 s en una tarea SDK;74 encadena12+12+12+2+2 s y cinco sesiones. Descensos74 con referencias cero hasta10 s. Diferencias de torso/apertura, no sólo altura. Generador/adaptador de agarre idénticos entre ramas |
+| Diseño propuesto | Un motor/sesión, generador nativo parametrizado, un descenso de apoyo y liberación correspondiente, perfiles calibrados74/90, modo ensayo separado, instalación por contenido. Conservar agarre, guards, pruebas y evidencia; no importar rama antigua completa. Nuevas trayectorias requieren validación propia |
+| Cambios/estado | Sólo documentación en PC; sin checkout, cambios de script/config, SSH, instalación ni movimiento. No se crea/fusiona/borra branch. Baseline físico actual sigue323,879 s; nuevo ciclo/tiempo pendiente |
+| Evidencia/backup | ../Humanoide-vla-evidence/20261022T162518Z_TABLE90_74_COMPARISON/: comparison.json, hashes de25fuentes90+baseline74, branch90/, before/ y before.json con refs. Reversión: sólo restaurar documentos selectivamente; ningún cambio operativo que revertir |
+
+[Detalle y plan común](box_handling/OPTIMISTIC_SCENARIO1.md#comparación-9074-cm-y-diseño-de-un-único-ciclo--22-10-2026).
+
 ## BOX-TABLE74-BASELINE-CONTINUOUS-20261022
 
 **22-10-2026, Europe/Madrid, 18:06:23–18:11:47 — ejecutado y medido; operador confirma resultado físico correcto.**

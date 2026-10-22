@@ -2,6 +2,122 @@
 
 ## Ciclo completo supervisado para mesa de 74 cm
 
+### Comparación 90/74 cm y diseño de un único ciclo — 22-10-2026
+
+**BOX-SCENARIO1-UNIFIED-HEIGHTS-REVIEW-20261022 — comparación offline; implementación pendiente.**
+Se comparan `feat/scenario1-deposit-table-90cm@ad3e23a` y
+`74-jacob@7da25ba`, sin checkout, merge, conexión ni movimiento del robot.
+
+#### Comparación de tiempos y alcance
+
+La última toma completa guardada del perfil90 es
+`20261014T160430Z_OPTIMISTIC_SCENARIO1_1214265`:156,430 s entre primer y último
+evento Motion. Las cinco últimas tomas completas de ese perfil oscilan entre
+149,531 y182,212 s, mediana156,430 s. Todas completan diez etapas sin fallo.
+La toma actual74 es `20261022T160455Z_TABLE74_CURRENT_BASELINE`:323,879 s de
+comando PC, medida continua y confirmada por el operador.
+
+| Bloque | Histórico90, s | Actual74, s |
+| --- | ---: | ---: |
+| Ir a get1 | 28,287 | 28,273 |
+| Alineación/recogida | 43,512 | 56,777 |
+| Ir a put1 | 23,662 | 17,982 |
+| Aproximación, depósito y apertura | **14,626** | **153,026** |
+| HOME y verificaciones de liberación/HOME | 19,737 | 42,514 |
+| Total registrado, aproximadamente | **156,430** | **323,879** |
+
+Los mapas/destinos, fecha y boot son distintos. El total90 usa una ventana de
+eventos Motion; el total74, reloj monotónico del comando PC. Esto describe
+registros históricos, no una prueba controlada de cambio de software.
+El módulo `scenario1_table90.py` de las cinco tomas coincide por SHA con el
+tip de la rama90, igual que la identidad de receta/bundle. CLI/runtime no
+coinciden íntegramente con ese tip: no atribuir todo el tiempo histórico a
+la compilaciónad3e23a. Los recibos y diferencias se conservan en la evidencia.
+
+#### Diferencia funcional que explica la lentitud
+
+**90 cm:** el runtime común ejecuta una etapa deposit, una acción SDK y
+una tarea nativa XML: MetaClamp de colocación12 s, después open_arm2 s.
+El primer bloque aproxima/avanza y contiene un descenso nominal20 cm al final;
+las referencias de manos y torso bajan20 cm. La apertura desplaza cada mano
+10 cm hacia fuera y5 cm hacia abajo simultáneamente. El total nominal es14 s.
+
+**74 cm:** el ciclo de pruebas supervisadas se convirtió en coordinador del
+ciclo automático. Conserva cinco ejecuciones independientes:
+aproximación12 s, precontact14 cm/12 s, support5 cm/12 s, alivio4 cm/2 s
+y apertura lateral10 cm/2 s. Total nominal40 s; acciones SDK medidas41,350 s.
+En precontact/support, las referencias son cero a6 y10 s; el desplazamiento
+final se programa entre10 y12 s. Se repite esa estructura de12 s dos veces,
+aunque ya no hay aproximación que realizar en ellas.
+
+Cada tarea abre sesión, descubre acciones, adquiere salud, valida llegada,
+prepara/instala y archiva antes de ejecutar. Sólo esos cinco arranques hasta
+ready suman71,694 s en la última toma. Las cinco fases completas suman153,026 s;
+la diferencia111,676 s respecto a acciones SDK contiene infraestructura,
+comprobaciones y cierre, no tiempo íntegramente eliminable.
+
+La altura **no exige por sí misma dos descensos de apoyo**. La división14+5 cm
+procedía del ensayo de huecos/apoyo y sigue en producción. El alivio4 cm
+posterior es otra operación: desenganchar pines con la caja ya apoyada.
+Unificar no significa quitar esa función.
+
+También hay una diferencia geométrica real: en los descensos74 se piden
+deltas de torso cero, mientras90 pide descenso del torso. Referencia cero
+no es un bloqueo mecánico. Además, apertura74 separa bajar4 cm de abrir10 cm;
+90 combina bajar5 cm y abrir. No son recetas equivalentes salvo por altura.
+Los generadores `front_box_integration.py` y `front_box_adapter.py` del agarre
+sí son idénticos entre ambas ramas; el runtime/alineación/supervisión evolucionó.
+
+#### Diseño propuesto para un único branch mantenible
+
+1. **Un motor de ciclo y una sesión.** Navegación, visión, agarre, retirada,
+   depósito y HOME comparten runtime/monitor/checkpoints. Recuperar el patrón
+   integrado90 manteniendo las correcciones útiles actuales; no sustituir
+   todo el código nuevo por la rama antigua ni importar cambios de agarre.
+2. **Un generador de depósito parametrizado.** Altura y calibración de
+   caja/efector/mesa alimentan la misma construcción XML/YAML. La altura no
+   selecciona otro orquestador. Una tarea de producción aproxima y hace
+   **un descenso de apoyo**, seguido del desenganche/apertura apropiados.
+   Preservar correctamente referencias y ventanas de fuerza/contacto.
+   Aprovechar el generador geométrico existente scenario1_deposit.py,
+   completando su integración en el runtime común, en lugar de otro módulo
+   de ejecución independiente por cada altura.
+3. **Perfiles de geometría, no forks del programa.** Misma estructura para
+   74 y90 cm: altura de superficie, referencia calibrada de caja/manos,
+   holgura de aproximación, política de torso, descenso, alivio y apertura.
+   El principio deltaZ=altura_objetivo−altura_referencia sólo se aplica a
+   una referencia válida; Z de Motion no se equipara sin más a altura al suelo.
+4. **Producción y puesta a punto diferenciadas.** El modo normal usa la tarea
+   integrada. El modo de ensayo permite parar antes de apoyo/liberación y
+   medir; las pausas/retomas históricas se conservan para diagnóstico, sin
+   imponer sus cinco procesos al flujo normal.
+5. **Instalación por contenido.** Generar/verificar una vez por perfil y
+   contexto; hash de tarea/contexto vigente antes del despacho. Un paquete
+   cambia con su geometría/configuración, no por el UUID del ensayo anterior.
+   Mantener evidencia/consumo por ejecución separados de la receta reutilizable.
+6. **Validación y consolidación.** Reproducir offline la receta90 conocida,
+   mantener exacto el agarre, construir candidato74 integrado y comprobar
+   modelo, alcance y liberación. Después ensayo supervisado por altura,
+   cronometraje y regresión. Un solo branch mantenido; ramas anteriores como
+   historia/rollback, sin borrarlas ni fusionarlas automáticamente.
+
+Objetivo de comportamiento: cambiar la altura o el perfil sin cambiar el motor,
+manteniendo explícita la validación de la nueva geometría. Aún no existe en la
+rama actual un selector90 equivalente al74. No declarar validada una nueva
+trayectoria74 integrada por haber funcionado su versión partida, ni reutilizar
+la cualificación90 para otra altura.
+
+La comparación justifica priorizar la consolidación del depósito sobre pequeños
+ahorros de consola. No se fija todavía un tiempo final del nuevo ciclo:
+el patrón90 ofrece una referencia real de integración, no una garantía para
+otra geometría. Esta intervención **no implementa ni ejecuta la unificación**.
+
+Evidencia privada:
+`../Humanoide-vla-evidence/20261022T162518Z_TABLE90_74_COMPARISON/`:
+comparison.json con las cinco tomas90, hashes y tabla; branch90/ con fuentes
+de referencia; before/ y before.json con documentos/refs anteriores.
+
+
 ### Medición continua de la versión actual — 22-10-2026
 
 **BOX-TABLE74-BASELINE-CONTINUOUS-20261022 — VERIFICADO/OBSERVADO.**

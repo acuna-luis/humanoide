@@ -1,5 +1,14 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**22-10-2026 — comparación90/74 y consolidación propuesta.** El depósito del
+perfil90 registrado dura14,626 s; el actual74,153,026 s incluyendo aproximación
+y liberación.90 integra una tarea;74 conserva cinco tareas/sesiones del ensayo,
+con descensos14+5 cm separados. Hay diferencias de torso y apertura además
+de altura. Se propone un motor, perfiles calibrados y depósito integrado,
+con modo de ensayo separado y agarre conservado. Sólo comparación/documentación:
+ninguna rama fusionada, trayectoria nueva o prueba física en esta intervención.
+[Resultados, límites y diseño común](../box_handling/OPTIMISTIC_SCENARIO1.md#comparación-9074-cm-y-diseño-de-un-único-ciclo--22-10-2026).
+
 **22-10-2026 — BOX-TABLE74-BASELINE-CONTINUOUS-20261022: referencia actual medida.**
 Un run completo de Optimistic mesa74 en74-jacob/f18a2bf, sin optimizaciones
 nuevas ni interrupción, termina en **323,879 s (5 min23,9 s)** de comando;
