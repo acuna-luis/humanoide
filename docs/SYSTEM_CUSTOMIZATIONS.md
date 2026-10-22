@@ -1,5 +1,19 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-UNIFIED74-ALIGNMENT-FAIL-20261022
+
+22-10-2026, Europe/Madrid — OBSERVADO en journal de ejecución del usuario;
+revisión pasiva local, sin SSH, órdenes ni cambios del sistema. Ensayo integrado74
+falló en primer microajuste previo al agarre, por guard sin progreso4 s mientras
+feedback LOCATE_RUNNING. Resultado de cancelación no confirma parada física.
+No se valida depósito ni ahorro de ciclo; código y parámetros intactos.
+Evidencia original: ../Humanoide-vla-evidence/20261022T164937Z_OPTIMISTIC_SCENARIO1_1546460/.
+Informe y backup: ../Humanoide-vla-evidence/20261022_UNIFIED_LIVE_TIMING_185108/.
+[Desglose, causa inmediata e hipótesis](box_handling/OPTIMISTIC_SCENARIO1.md#ensayo-integrado74-interrumpido-antes-de-recoger--22-10-2026-1849-cest).
+Reanudación pendiente de comprobar estado físico y diagnosticar convergencia;
+no relajar límites ni repetir ciclo completo desde estado desconocido.
+
+
 ## BOX-TABLE74-EMPTY-HOME-RECOVERY-20261022
 
 **22-10-2026, Europe/Madrid — ejecutado; HOME20D VERIFICADO.**

@@ -1,5 +1,45 @@
 # Escenario 1 con supervisión continua
 
+### Ensayo integrado74 interrumpido antes de recoger — 22-10-2026, 18:49 CEST
+
+**BOX-UNIFIED74-ALIGNMENT-FAIL-20261022 — OBSERVADO; no valida depósito ni tiempo de ciclo.**
+Ejecución `20261022T164937Z_OPTIMISTIC_SCENARIO1_1546460`, perfil
+`scenario1_height_74_v1`, con `--height-deposit-trial`. Llegó a get1 en31,948 s
+(incluye sincronización de mapa5,3 s), activó visión en1,794 s y falló durante
+la etapa de preparación/recogida tras17,874 s hasta el evento de error. No se
+envió el agarre nativo ni se alcanzaron retirada, put1, depósito o HOME.
+Desde primer evento hasta ready:14,735 s; envolvente completa registrada en
+Motion70,855 s. Son ventanas del registro, no duración total del comando PC:
+no se resta el reloj Motion del PC ni se compara esta toma parcial con323,879 s
+como si fuera un ciclo completo.
+
+Causa inmediata VERIFICADA: el primer ajuste visual pedido fue15,413 mm en X.
+El guard se armó y canceló4,003 s después por falta de mejora significativa;
+el criterio existente exige2 mm de mejora dentro de4 s. Distancia al objetivo
+según mapa15,415→14,464 mm: mejora neta0,951 mm. Hubo telemetría y movimiento:
+excursión máxima mapa7,086 mm y odometría18,023 mm, sin violación de velocidad.
+Son métricas de sus propios marcos; no prueban por sí solas deslizamiento.
+Durante ese intervalo los feedbacks siguieron en LOCATE_RUNNING; el resultado
+tras cancelar fueRELOCATE_CANCEL/status5. Hipótesis: el microajuste no llegó
+a una localización/convergencia utilizable antes de vencer el guard; no se ha
+probado la causa física de esa falta de convergencia. No afirmar que estuvo
+inmóvil o que el depósito integrado falló.
+
+Los errores de lease/health posteriores son cierre en cascada tras el error
+inicial; no constituyen prueba de fallo de brazos. Parada física no confirmada
+por el resultado de cancelación. No se ha enviado nueva orden, reintento ni
+HOME, ni se ha relajado watchdog/localización para continuar. La siguiente
+revisión debe estudiar la gestión del microajuste y la localización; el
+presupuesto de7 intentos no sirve si el primer objetivo se cancela con estado
+físico sin confirmar. La toma no proporciona un nuevo tiempo objetivo medido.
+
+Observación local iniciada con proceso activo; el helper de sondeo llegó cuando
+el PID ya había terminado y no inició captura continua. El desglose se recuperó
+del journal original completo, conservando sus timestamps. Informe JSON/CSV y
+backup documental: `../Humanoide-vla-evidence/20261022_UNIFIED_LIVE_TIMING_185108/`.
+Fuentes originales intactas. Código/robot/servicios sin cambios en esta revisión.
+
+
 **22-10-2026 — BOX-TABLE74-EMPTY-HOME-RECOVERY-20261022: HOME recuperado.**
 Tras confirmar caja/pines libres, abrazaderas vacías y barrido libre con brazos
 aún en agarre/torso inclinado, el usuario autoriza un único HOME. Lecturas nuevas

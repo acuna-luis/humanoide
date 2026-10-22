@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-UNIFIED74-ALIGNMENT-FAIL-20261022: ensayo interrumpido antes del agarre.**
+get1:31,948 s; visión:1,794 s; preparación/recogida hasta error:17,874 s.
+Primer ajusteX15,413 mm cancelado a4,003 s por falta de mejora significativa;
+feedback LOCATE_RUNNING, resultadoRELOCATE_CANCEL/status5. Progreso neto en
+mapa0,951 mm; hubo movimiento/telemetría, sin infracción de velocidad.
+No se llegó a agarre nativo, depósito ni HOME. Envolvente Motion70,855 s,
+no tiempo total PC ni ciclo completo comparable con323,879 s. Sin nuevas
+órdenes ni modificación de controles. [Evidencia y límites](box_handling/OPTIMISTIC_SCENARIO1.md#ensayo-integrado74-interrumpido-antes-de-recoger--22-10-2026-1849-cest).
+
+
 **22-10-2026 — BOX-TABLE74-EMPTY-HOME-RECOVERY-20261022: HOME recuperado.**
 Tras confirmar caja/pines libres, abrazaderas vacías y barrido libre con brazos
 aún en agarre/torso inclinado, el usuario autoriza un único HOME. Lecturas nuevas
