@@ -1,5 +1,32 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## PROJECT-GIT-COMMITS-20261022
+
+**22-10-2026, Europe/Madrid — APLICADO y VERIFICADO en el repositorio local.**
+Por petición explícita del usuario, `AGENTS.md`, sección «Política de commits
+y push», autoriza commits autónomos cuando termine un conjunto coherente de
+cambios, con diff revisado, comprobaciones apropiadas y documentación al día.
+Se preservan los cambios ajenos y se excluyen secretos, evidencias privadas,
+temporales y binarios grandes. El push sigue requiriendo autorización expresa.
+Sustituye la regla anterior que exigía petición para cada commit; las reglas
+de control físico del robot no se modifican.
+
+Fuente reproducible: `AGENTS.md` versionado, aplicable al repositorio y a las
+intervenciones posteriores; dependencias de ejecución: ninguna. Activación:
+lectura de las instrucciones de proyecto. Verificación: diff limitado a la
+política de Git y `git diff --check`; revisión independiente del cambio de
+mesa de 74 cm, hashes de fuentes coincidentes con el recibo de 91 pruebas.
+Ese cambio queda en `e4630f532f04c712e3454907822e8071979ca4b6`.
+SHA256 de `AGENTS.md` actualizado:
+`e32a692bfe9f811016aa78971c9cdabcc69753e3e099564341e7b4241f1ff42c`.
+
+Respaldo previo y SHA256, solicitud, fuentes finales y recibos de los commits:
+`../Humanoide-vla-evidence/20261022T080435Z_GIT_AUTOCOMMIT_POLICY/`.
+Reversión, si el usuario revoca esta preferencia: actualizar sólo la política
+de Git conservando las demás instrucciones, registrar la nueva preferencia y
+crear un commit independiente; no reescribir los commits ya realizados.
+No se modificó ni movió el robot. No se realizó push.
+
 ## BOX-01-TABLE74-PREPARATION-20261022
 
 **22-10-2026, Europe/Madrid — PREPARADO en PC; activación del depósito y

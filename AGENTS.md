@@ -165,5 +165,20 @@ Este baseline es histórico y debe verificarse al comienzo de una intervención:
 - Conserve las afirmaciones de proveedor separadas de lo comprobado en la
   unidad real.
 - En la entrega final enlace los archivos modificados y explique qué se
-  verificó y qué sigue pendiente. No haga commit ni push salvo petición del
-  usuario.
+  verificó y qué sigue pendiente.
+
+## Política de commits y push
+
+- Desde el **22-10-2026**, el usuario autoriza hacer commits de forma autónoma
+  cuando se complete un conjunto coherente de cambios. Hágalo en el momento
+  adecuado, sin pedir confirmación para cada commit.
+- Antes de confirmar, revise el diff, complete las comprobaciones apropiadas
+  y actualice la documentación correspondiente. Incluya código, configuración
+  y documentación relacionados; describa claramente cualquier validación
+  física que siga pendiente.
+- Confirme sólo el trabajo de la intervención. Preserve cambios ajenos y deje
+  fuera secretos, evidencias privadas, archivos temporales y binarios grandes.
+  Use commits separados para cambios independientes y comunique sus hashes
+  en la entrega.
+- El **push requiere una petición o autorización expresa del usuario**. La
+  autorización para crear commits no implica permiso para publicarlos.

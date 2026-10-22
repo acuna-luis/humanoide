@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — PROJECT-GIT-COMMITS-20261022: commits autónomos autorizados.**
+El usuario autoriza desde ahora confirmar conjuntos coherentes de cambios
+cuando sea apropiado, tras revisión, comprobaciones y documentación. Política
+persistida en [AGENTS.md](../AGENTS.md#política-de-commits-y-push); no hace falta
+pedir autorización para cada commit. El push conserva autorización separada.
+Preparación de mesa de 74 cm confirmada en `e4630f5`; grabaciones, archivos
+temporales y evidencias privadas permanecen fuera de esos commits.
+[Registro y respaldo](SYSTEM_CUSTOMIZATIONS.md#project-git-commits-20261022).
+
 **22-10-2026 — BOX-01-TABLE74-PREPARATION-20261022: preparación local para mesa de 74 cm.**
 El CLI admite selección explícita `--table-height-cm 74` mediante un perfil
 operativo distinto, con depósito pendiente e identidad propia en el checkpoint.
