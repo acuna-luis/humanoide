@@ -1,9 +1,31 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-TABLE74-TIMING-20261022
+
+**22-10-2026, Europe/Madrid — análisis histórico verificado offline; sin cambios operativos.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo/alcance | Desglosar el último ciclo real por operación y estudiar mejoras. Sólo archivos locales; ninguna conexión SSH, orden física, instalación o cambio de servicios/scripts |
+| Origen | Primera sesión150133Z1280135, interrumpida tras approach SDK correcto; continuación153114Z1354458/continuation, status=succeeded. No se usa la toma supervisada1198976 como si fuera la última |
+| Resultado observado | Retoma completa 14+5 cm, alivio 4 cm, apertura 10 cm y HOME 8ab357b5-3e0e-4f0d-aa57-70bd034c68a7, SUCCEED4/1101001, dos muestras 20D HOME/velocidad 0/máximo 0,002493 rad. Origen approach consumido, journal failed intacto. Apoyo/pines asumidos, sin nueva observación física del agente |
+| Tiempos | Inicial169,570334948 s + retoma 159,844285427 s =329,414620375 s; pausa1611,540707503 s; extremo a extremo1940,955327878 s. No es una medición de ciclo continuo con una única versión actual |
+| Método | Diferencias PC dentro de PC y Motion dentro de Motion; etapas con elapsed monotónico; acciones accepted→result del mismo reloj. Ventanas PC contiguas por recipe.recorded_ns en retoma. No mtimes ni resta de relojes entre hosts. Queries paralelas y tiempos anidados no se suman. HOME nativo sin timestamps individuales, duración física exacta desconocida |
+| Hallazgos | Recogida 59,319 s, de ellos≈28,5 s preparación/alineación y 30,756 s agarre SDK. Cuatro fases de descenso/liberación 116,709 s, acciones29,059 s y arranques hasta ready 52,936 s. HOME 43,102 s, rondas de lectura 12,680/12,321 s. Docker ≈0,065–0,071 s por consulta, no cuello de botella en retoma |
+| Propuestas/PENDIENTE | Sesión/clientes compartidos, adquisición HOME persistente, evitar instalación duplicada y mejorar repetibilidad get1/cajas. Estimación 25–35 s para compartir sesión, sin sumar ahorros solapados. No implementado. Falta medir varios ciclos completos sin interrupciones y distinguir media/variación |
+| Evidencia reproducible | `../Humanoide-vla-evidence/20261022_TABLE74_TIMING_ANALYSIS/`: analyze_cycle.py (stdlib, sólo lectura local), summary.json con hashes de fuentes, operations.csv, pickup-approach.json, continuation-analysis.json, before/ y before.json. Reproducir con `python3 ../Humanoide-vla-evidence/20261022_TABLE74_TIMING_ANALYSIS/analyze_cycle.py` desde repo |
+| Cambios/reversión | Sólo documentación de este estudio en PC. Backup de los cuatro documentos antes de editar y commit base en before.json. Restaurar selectivamente documentación si hace falta; no restaurar postura ni reutilizar consumed. Ninguna adaptación de robot que reaplicar |
+
+[Informe y tabla por operación](box_handling/OPTIMISTIC_SCENARIO1.md#estudio-del-tiempo-del-último-ciclo--22-10-2026).
+
 
 ## BOX-TABLE74-CONTINUE-LOG-FAILURE-20261022
 
 **22-10-2026, Europe/Madrid — implementado/verificado en PC; ejecución física PENDIENTE.**
+
+**Actualización posterior:** los registros153114Z muestran retoma completa y HOME
+medido; véase BOX-TABLE74-TIMING-20261022 arriba. El pendiente de esta ficha
+corresponde al momento de la implementación; no volver a despachar su origen consumido.
 
 | Campo | Registro |
 | --- | --- |

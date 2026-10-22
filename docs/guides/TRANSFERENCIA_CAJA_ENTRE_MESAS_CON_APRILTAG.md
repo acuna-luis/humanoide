@@ -1,5 +1,21 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**22-10-2026 — BOX-TABLE74-TIMING-20261022: retoma terminada según registros.**
+La continuación153114Z1354458 completó los descensos 14+5 cm, alivio 4 cm,
+apertura y HOME medido, sin preguntas. HOME 8ab357b5 termina SUCCEED/status4,
+dos muestras 20D en HOME, velocidad 0 y máximo 0,002493 rad. El origen
+approach150133Z está consumido; el comando histórico de retoma ya no se reutiliza.
+Este resultado supera el pendiente técnico de ejecución de esa continuación;
+no convierte apoyo/pines asumidos en mediciones ni certifica el estado actual.
+
+Estudio local de tiempos:169,570 s iniciales +159,844 s de retoma =329,415 s
+activos; la pausa de diagnóstico de 1611,541 s se separa del flujo. Una ejecución
+partida y con revisión intermedia no mide el ciclo continuo actual. Destacan
+recogida59,319 s y preparación repetida de fases: cuatro arranques hasta ready
+suman 52,936 s. No se cambia control, geometría ni configuración en este análisis.
+[Tabla, método y propuestas](../box_handling/OPTIMISTIC_SCENARIO1.md#estudio-del-tiempo-del-último-ciclo--22-10-2026).
+Evidencia: `../Humanoide-vla-evidence/20261022_TABLE74_TIMING_ANALYSIS/`.
+
 **22-10-2026 — BOX-TABLE74-FERIA-COORDINATION-20261022: coordinación rápida
 con auditoría adicional opcional.** La aproximación de la toma1280135
 terminó SUCCEED/status4/1101001 en12,367 s, goal

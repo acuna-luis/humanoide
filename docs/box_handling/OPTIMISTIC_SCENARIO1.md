@@ -2,7 +2,186 @@
 
 ## Ciclo completo supervisado para mesa de 74 cm
 
-### Continuar la toma1280135 después del fallo de lectura de logs
+### Estudio del tiempo del último ciclo — 22-10-2026
+
+**BOX-TABLE74-TIMING-20261022 — OBSERVADO/VERIFICADO offline.** Último ciclo
+reconstruido a partir de dos sesiones reales:
+
+- `20261022T150133Z_TABLE74_SUPERVISED_CYCLE_1280135`: recogida, traslado a put1
+  y aproximación; interrumpida por diagnóstico después del SUCCEED nativo.
+- `20261022T153114Z_TABLE74_CONTINUATION_1354458/continuation`: omite lo anterior
+  y completa precontact, apoyo, desenganche, apertura y HOME, sin preguntas.
+
+La segunda termina `status=succeeded`, `phase_boundary=measured_home`.
+HOME goal `8ab357b5-3e0e-4f0d-aa57-70bd034c68a7`, SUCCEED/status4/1101001;
+dos muestras nuevas 20D HOME, velocidad 0 y máximo 0,002493 rad. Es terminación
+técnica observada en registros: apoyo/pines siguen siendo supuestos de receta,
+sin una nueva inspección física del agente. El origen de aproximación está
+**consumido**, manteniendo su journal original failed.
+
+#### Tiempo total y alcance de la comparación
+
+| Medida | Duración |
+| --- | ---: |
+| Sesión inicial | 169,570 s — 2 min49,6 s |
+| Continuación hasta HOME | 159,844 s — 2 min39,8 s |
+| **Suma de sesiones activas** | **329,415 s — 5 min29,4 s** |
+| Parada de diagnóstico y preparación de continuación | 1611,541 s — 26 min51,5 s |
+| Transcurrido desde el primer inicio hasta el final | 1940,955 s — 32 min21,0 s |
+
+Horarios PC, Europe/Madrid: 17:01:33,580→17:04:23,150 y
+17:31:14,691→17:33:54,535. «Activo» significa tiempo dentro de las sesiones,
+incluyendo consultas y preparación; no movimiento continuo.
+La parada incluye revisión, cambios y espera, ajenos al flujo normal.
+
+**Limitación:** una sola toma partida, con una revisión del coordinador entre
+sesiones. Los 5 min29,4 s no son un benchmark del ciclo actual sin interrupciones,
+ni una media o medida de repetibilidad.
+
+#### Tiempo por operación
+
+SDK indica la **acción principal** aceptada→resultado: excluye otras acciones
+auxiliares de esa fila y no mide exclusivamente movimiento físico.
+Los tiempos internos ya están incluidos en el total; no sumarlos otra vez.
+Los centímetros identifican el desplazamiento nominal de la tarea, sin una
+medición independiente del recorrido físico en este análisis.
+
+| Operación | Total, s | % activo | Acción SDK principal, s |
+| --- | ---: | ---: | ---: |
+| Ir a get1, incluida sincronización del planificador | 26,845 | 8,15 % | 18,682 |
+| Activar visión | 1,628 | 0,49 % | — |
+| Alineación y recogida | 59,319 | 18,01 % | 30,756 |
+| Retirada con caja | 4,925 | 1,50 % | 4,631 |
+| Ir a put1 | 16,951 | 5,15 % | 15,690 |
+| Aproximación a mesa, incluidos preparación y cierre del fallo diagnóstico | 38,855 | 11,80 % | 12,367 |
+| Descenso previo 14 cm | 32,897 | 9,99 % | 12,396 |
+| Apoyo 5 cm | 34,610 | 10,51 % | 11,910 |
+| Desenganche 4 cm | 24,418 | 7,41 % | 2,374 |
+| Apertura lateral10 cm por lado | 24,784 | 7,52 % | 2,380 |
+| HOME y comprobación final 20D | 43,102 | 13,08 % | Sin timestamps suficientes |
+| Preparación, coordinación, confirmación asumida y cierres restantes | 21,081 | 6,40 % | — |
+| **Total activo** | **329,415** | **100 %** | — |
+
+Las cinco primeras filas usan `stage_complete.elapsed_s`, monotónico y
+redondeado a milisegundos. Aproximación: primer→último evento Motion, sin
+stage_complete por el fallo diagnóstico posterior. Las cinco últimas
+operaciones físicas usan ventanas PC contiguas entre autorizaciones de receta
+y fin de ciclo. La fila restante es **saldo contable**, no una consulta medida
+de 21,081 s: incluye preflight inicial, coordinación/registro/transporte fuera
+de las otras filas, cierre y confirmación de sujeción asumida de 0,010 s.
+No acredita una verificación sensorial de caja. Las cifras mostradas pueden
+diferir unas milésimas por redondeo.
+
+#### Dónde se consume el tiempo
+
+**Recogida:** de 59,319 s, unos 28,5 s preceden al envío del agarre y 30,756 s
+corresponden a su acción SDK. Preparación previa:
+
+| Bloque | Duración, s |
+| --- | ---: |
+| Salud y comprobación inicial de archivos | 5,002 |
+| Bajar cabeza y primera medición estable | 8,450 |
+| Una corrección de chasis y comprobar llegada | 6,552 |
+| Salud posterior y segunda medición estable | 8,513 |
+
+Hubo **un ajuste**, no siete: 20,403 mm solicitados; X observada de caja
+0,776403→0,760238 m. El máximo configurado no indica correcciones ejecutadas.
+Cabeza 2,302 s SDK y ajuste 5,988 s están incluidos arriba. Los recibos de
+salud completa de esa preparación suman 10,080 s, también incluidos.
+
+**Depósito:** precontact, apoyo, desenganche y apertura suman 116,709 s, con
+29,059 s de acciones SDK. La diferencia 87,649 s incluye comprobaciones útiles,
+conexiones, instalación/archivo, preparación y cierre: no es íntegramente
+eliminable. Sólo desenganchar y abrir ocupan 49,202 s para 4,753 s de acciones.
+
+Cada fase reconstruye una sesión. Primer evento→ready:
+13,237 /14,572 /12,467 /12,660 s =**52,936 s**. Dentro aparece un intervalo
+de 7,57–7,75 s por fase entre dependencias e inicio de salud,30,665 s acumulados.
+Por orden del código corresponde al descubrimiento SPS: lista de acciones y
+dos `action info` secuenciales. Es **INFERENCIA acotada**, no cronómetro
+individual. El handshake inmediato sí reutilizó una entrada válida una vez
+por fase; las comprobaciones rápidas de salud tardan milisegundos.
+
+**HOME:** bloque completo 43,102 s. PC: 13,576 s de LIBRE a intent,
+29,512 s de intent a finished y 0,015 s hasta fin del ciclo.
+Las rondas Motion inmediata/posterior abarcan 12,680 /12,321 s. Cada una
+incluye dos lecturas articulares secuenciales de unos 3 s; las seis consultas
+de salud restantes corren en paralelo y no se suman como consecutivas.
+Entre rondas hay 17,266 s con HOME y trabajo intermedio.
+El stdout de `force_home.sh` no marca temporalmente aceptación/resultado:
+**la duración exacta de la acción HOME no está disponible**.
+
+**Navegación:** get1 suma 26,845 s, incluidos 5,557 s de sincronización del
+planificador, con set_map 4,690 s; se realiza una vez en esta sesión.
+Navegación principal 18,682 s. Put1 suma 16,951 s para 15,690 s de acción:
+en este tramo ya predomina la navegación.
+
+**Log Docker:** en la retoma tarda 0,065–0,071 s por consulta, diagnóstico
+unavailable. Resultado→fin de etapa ≈0,075–0,093 s: no es el cuello de botella.
+El rechazo anterior provocó la parada, pero no consumió por sí mismo
+los 26 min51,5 s de intervención.
+
+#### Prioridades propuestas, todavía sin implementar
+
+1. **Compartir sesión durante el depósito.** Mantener clientes/monitor vivos
+   y conservar entrada fresca, reposo, mapa/llegada, hashes, consumo durable
+   y registro por fase. Los 52,936 s de arranques muestran el margen; no todos
+   son prescindibles. Hipótesis inicial: **25–35 s de ahorro**, pendiente de
+   implementación/medición. Sin cambiar agarre ni trayectorias 74.
+2. **Agrupar adquisición HOME.** Un lector persistente puede proporcionar
+   las mismas dos muestras nuevas 20D y seguridad actual sin otro proceso por
+   lectura. Conservar preflight/postflight; ahorro sin medir.
+3. **Evitar instalación duplicada de liberación.** `stage_release` comprueba,
+   instala y archiva; `finish.main` vuelve a invocar install. Compartir recibo
+   autenticado conservando identidad/hashes. Coste exacto no aislado.
+4. **Mejorar repetibilidad de get1 y pila.** Entrar bien puede evitar ajuste
+   y segunda adquisición; esos bloques suman ≈15,1 s en esta toma. Ahorro
+   condicionado, conservando medición fresca inicial, no garantizado.
+5. **Medir ciclos completos actuales comparables.** Separar primer arranque
+   de siguientes; registrar duración por fase, consultas, instalación,
+   descubrimiento y ajustes. Obtener media/mínimo/máximo de varias repeticiones.
+   Marcar accepted/result de HOME antes de atribuirle duración física exacta.
+
+Sesión compartida, descubrimiento e instalación se solapan: **no sumar sus
+estimaciones**. La primera mejora debe reducir coordinación/arranque de
+clientes. Cambiar duración, geometría o límites requiere otro estudio y
+validación física. El antiguo preflight de aproximación repetido 25,989 s
+pertenece a la revisión anterior; su coste no debe proyectarse sin medir al
+ciclo actual, que ya usa quick_health y el handshake inmediato.
+
+#### Reproducción y evidencia
+
+Directorio privado externo al Git:
+`../Humanoide-vla-evidence/20261022_TABLE74_TIMING_ANALYSIS/`.
+
+- `analyze_cycle.py`: stdlib, sólo lectura local; verifica enlace entre
+  sesiones, estados/objetivos/HOME, fuentes y conservación de tiempos.
+- `summary.json`: totales, operaciones, porcentajes, límites y hashes.
+- `operations.csv`: tabla importable en una hoja de cálculo.
+- `pickup-approach.json`, `continuation-analysis.json`: detalle de intervalos,
+  UUID/campos/líneas, rondas HOME y consultas sin doble conteo.
+- `before/`, `before.json`: documentos anteriores y commit base.
+
+Desde el repositorio, sin conexión al robot:
+
+```bash
+python3 ../Humanoide-vla-evidence/20261022_TABLE74_TIMING_ANALYSIS/analyze_cycle.py
+```
+
+No mtimes ni restas PC contra Motion: sus relojes absolutos difieren.
+Cada duración usa un solo reloj; después se suman duraciones.
+Verificado: enlace original→retoma, activo 329,414620375 s,
+activo+pausa=extremo a extremo, filas=100 % y dos muestras HOME 20D válidas.
+No se han modificado scripts de control, contenedores, parámetros o trayectorias,
+ni conectado al robot durante el estudio.
+
+### Continuación histórica de la toma1280135, ya completada
+
+**Actualización posterior:** la retoma153114Z terminó hasta HOME y consumió
+el origen. El comando siguiente se conserva como receta histórica: **no
+repetirlo con ese origen**. Los pendientes inferiores describen el momento de
+implementación, anterior al resultado analizado arriba.
+
 
 **22-10-2026 — BOX-TABLE74-CONTINUE-LOG-FAILURE-20261022.** Entrada específica
 para la aproximación que terminó correctamente y después quedó registrada

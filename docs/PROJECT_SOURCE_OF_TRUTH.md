@@ -1,5 +1,28 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-TABLE74-TIMING-20261022: último ciclo reconstruido y retoma terminada.**
+**OBSERVADO en registros locales:** la retoma 153114Z1354458 terminó
+precontact 14 cm, support 5 cm, alivio 4 cm, apertura y HOME sin preguntas;
+`cycle.json=status=succeeded`. HOME `8ab357b5-3e0e-4f0d-aa57-70bd034c68a7`,
+SUCCEED/status4/1101001 y dos muestras 20D HOME, velocidad 0, máximo 0,002493 rad.
+El origen approach150133Z1280135 quedó consumido; su journal conserva failed.
+No reutilizar el comando histórico de continuación de las notas inferiores.
+Esto acredita la terminación técnica de esa retoma; apoyo/pines siguen siendo
+supuestos de receta y no se ha inspeccionado el estado físico actual.
+
+**VERIFICADO offline:** sesión inicial 169,570 s + retoma 159,844 s = **329,415 s
+(5 min29,4 s)** de sesiones activas. La pausa de diagnóstico/preparación fue
+1611,541 s; tiempo transcurrido completo 1940,955 s. Una toma partida entre
+dos revisiones no es un benchmark del ciclo actual sin interrupciones.
+Recogida/alineación 59,319 s; HOME 43,102 s; cuatro descensos/liberación 116,709 s
+para 29,059 s de acciones SDK principales. Sus arranques hasta ready suman 52,936 s.
+Propuesta prioritaria: compartir sesión/clientes, conservando comprobaciones
+frescas; ahorro 25–35 s es hipótesis pendiente de implementar/medir, no garantía.
+No se han cambiado scripts ni conectado/movido el robot para este estudio.
+[Tabla, método y prioridades](box_handling/OPTIMISTIC_SCENARIO1.md#estudio-del-tiempo-del-último-ciclo--22-10-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#box-table74-timing-20261022).
+Evidencia y receta de análisis: `../Humanoide-vla-evidence/20261022_TABLE74_TIMING_ANALYSIS/`.
+
 
 **22-10-2026 — BOX-TABLE74-CONTINUE-LOG-FAILURE-20261022: retoma específica desde la aproximación.**
 Nueva entrada `optimistic_scenario1.sh --continue-deposit --table-height-cm 74
