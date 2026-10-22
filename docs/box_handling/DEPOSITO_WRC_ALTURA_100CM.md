@@ -1,5 +1,66 @@
 # Depósito WRC y estantería a 100 cm
 
+## Revisión del 22-10-2026: destino de 74 cm y referencia actual pendiente
+
+**BOX-01-TABLE74-REFERENCE-20261022 — PREPARADO LOCALMENTE; calibración,
+instalación, carga e integración física PENDIENTES.** El operador confirma
+que la mesa actual es de 74 cm. La recogida previa autorizada se detuvo tras
+preparar los brazos: X de la caja 0,790884315 m fuera del máximo 0,79 m.
+No se obtuvo una caja sujeta ni una referencia actual de depósito. Véase
+[el resultado de recogida](OPTIMISTIC_SCENARIO1.md#22-10-2026-recogida-detenida-en-preparación-destino-de-74-cm-pendiente).
+
+Se conserva la referencia de septiembre como historia. Para esta intervención
+se crea un perfil separado:
+[`measured_reference_20261022.pending.json`](../../config/box_handling/scenario1_table74/measured_reference_20261022.pending.json),
+SHA256 `d750a51022bf1acfabc3225023fe3e41428cb14e224284d9a0c842d3ac0cf3d1`.
+Usa `measured_hand_reference`, mesa 0,74 m y caja 0,603 × 0,397 × 0,22 m;
+las tres referencias medidas permanecen `null`, las verificaciones `false`
+y la evidencia de calibración `null`. La altura de 74 cm procede del operador;
+el agente no midió el tablero.
+
+Receta **local, sin conexión ni órdenes al robot**, desde la raíz del repo:
+
+```bash
+salida_candidato="../Humanoide-vla-evidence/$(date -u +%Y%m%dT%H%M%SZ)_TABLE74_DRAFT"
+python3 scripts/box_handling/prepare_scenario1_table74.py \
+  --profile config/box_handling/scenario1_table74/measured_reference_20261022.pending.json \
+  --output "$salida_candidato"
+```
+
+La receta ya se ejecutó en la evidencia de esta intervención. Genera una
+plantilla con ambos Z de mano pendientes y un informe `can_install=false`,
+`integrated_in_optimistic=false`; no genera XML ejecutable. El archivo de
+apertura de 3 cm continúa siendo una propuesta sin validar. No se instalaron
+estos candidatos. El generador exige un directorio nuevo y conserva el SDK.
+
+Para completar después la adaptación, obtener una recogida válida y detenerse
+en una frontera limpia; medir simultáneamente altura de la base de la caja
+sobre el mismo suelo y Z nativo de ambas manos, registrando postura,
+orientación, contexto/arranque y procedencia. Comprobar dos esquinas como mínimo
+para detectar inclinación. La fórmula nominal por mano sigue siendo:
+
+```text
+Z_contacto = 0,74 + Z_mano_medido − altura_base_caja_medida_sobre_suelo
+Z_aproximación = Z_contacto + 0,05
+```
+
+La fórmula requiere marcos, orientación y agarre compatibles; no certifica
+alcance ni apoyo. No usar 1,10 m, −31 cm, el UUID o los journals de septiembre
+como mediciones actuales. Una acción exitosa tampoco demuestra apoyo estable.
+Preparar y revisar fases separadas de aproximación y apoyo con referencias
+nuevas; verificar apoyo completo y nivel antes de estudiar alivio de pines y
+apertura. Los runners históricos están ligados a su referencia y no sirven
+para activar esta nueva por sustitución de un JSON. El ciclo normal no debe
+tratarse como depósito de 74 cm mientras la integración siga pendiente.
+
+Evidencia, recibo del generador y hashes:
+`../Humanoide-vla-evidence/20261022T074315Z_TABLE74_PICKUP_TRIAL/`.
+Reversión local: retirar sólo este perfil nuevo y esta revisión documental,
+comparando hashes; no hay cambios remotos de depósito que revertir. Conservar
+el journal fallido y los antecedentes. El siguiente movimiento requiere
+recuperación específica desde preparación y comprobación física; no se ha
+enviado otro agarre ni HOME desde la parada.
+
 ## Pausa para apagado: caja inclinada y desenganche pendiente
 
 **BOX-01-TABLE74-PAUSE-01 — 30-09-2026, Europe/Madrid.** El operador pide

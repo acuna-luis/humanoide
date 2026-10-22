@@ -1,5 +1,47 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-01-TABLE74-PREPARATION-20261022: preparación local para mesa de 74 cm.**
+El CLI admite selección explícita `--table-height-cm 74` mediante un perfil
+operativo distinto, con depósito pendiente e identidad propia en el checkpoint.
+Permite preparar segmentos hasta get1/recogida/put1; el ciclo que incluya
+depósito queda bloqueado antes de conectar. `--plan` informa de lo pendiente
+sin conectar. No se activa una trayectoria de depósito al indicar la altura.
+La referencia de calibración actual permanece sin medidas; se generó y revisó
+un borrador local sin XML ejecutable. Los ensayos de septiembre no se reutilizan
+como calibración. Instalación, carga y prueba física del depósito de 74 cm
+siguen **PENDIENTES**. No se ejecutó otro movimiento después de la parada descrita
+abajo. [Receta, perfiles y comprobación](box_handling/OPTIMISTIC_SCENARIO1.md#selección-explícita-de-74-cm-preparación-local),
+[ficha y reversión](SYSTEM_CUSTOMIZATIONS.md#box-01-table74-preparation-20261022).
+
+**22-10-2026, Europe/Madrid — BOX-01-TABLE74-PICKUP-REJECT-20261022: recogida aislada rechazada.**
+En la rama `feat/scenario1-deposit-table-74cm`, HEAD
+`c5e8de16936e5e2cac664432eb3e7da9f9e1c1a6`, el usuario pide primero recoger y
+parar, después adaptar el depósito a mesa de 74 cm, y confirma las condiciones
+físicas. `--check --stop-after grasp` termina con código 0. Una sola ejecución
+`optimistic_scenario1.sh --run --stop-after grasp`, 09:47:24–09:48:09 CEST,
+termina con código 78: get1 llega a 7,4 mm / 0,45° y se activa visión, pero SPS rechaza
+X=`0,7908843151889853 m`, fuera de `[0,41;0,79] m` por 0,884315 mm;
+Y=`−0,036360267448621954 m`, Z=`0,9022362914290277 m` en `base_link`,
+no altura al suelo. No se sustituye la caja ni se amplían límites.
+No se ejecutan separación/bodyback, retirada, put1, depósito ni HOME.
+La preparación sí cambia la postura: no declarar HOME completo. Los errores
+de lease aparecen después del rechazo; no prueban su causa. El checkpoint
+fallido conserva `box_state=unknown`, sin editar ni convertirlo en held.
+El usuario confirma después caja apoyada, abrazaderas libres y robot inmóvil:
+estado **OBSERVADO por operador**, distinto del estado conservador del archivo.
+
+Se recargan temporalmente el mismo mapa y destinos en el planificador, sin
+editar sus archivos/puntos; suscripciones pasivas de 120 s terminadas. No se
+instalan tareas, firmware o parámetros. El perfil activo sigue siendo WRC
+original; el nombre de rama no activa ni valida el depósito de 74 cm. El antecedente
+del 22 de octubre —plegado izquierdo/divergencia de seguimiento antes del paro— sigue
+sin causa resuelta; el ensayo de +2° en vacío no valida agarre bajo carga.
+Antes de otro movimiento, revisar posición/alcance y postura actuales; sin
+reintento ni HOME automático. Registro reproducible y reversión documental:
+[BOX-01-TABLE74-PICKUP-REJECT-20261022](SYSTEM_CUSTOMIZATIONS.md#box-01-table74-pickup-reject-20261022).
+Evidencia privada: `../Humanoide-vla-evidence/20261022T074315Z_TABLE74_PICKUP_TRIAL/`,
+`pickup-run/`, recibos y `before-pickup-documentation/` con SHA256.
+
 **30-09-2026 — BOX-01-TABLE74-PAUSE-01: apagado confirmado por el operador.**
 «Ya apagado y todo asegurado y estable»: caja, brazos y cuerpo asegurados;
 sin verificación física independiente del agente. Última prueba support_only

@@ -1,5 +1,73 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-01-TABLE74-PREPARATION-20261022
+
+**22-10-2026, Europe/Madrid — PREPARADO en PC; activación del depósito y
+validación física PENDIENTES.** El destino indicado por el operador es de 74 cm.
+
+| Campo | Estado y reproducción |
+| --- | --- |
+| Motivo | Distinguir la preparación de mesa de 74 cm del ciclo WRC original, conservando la referencia de septiembre como historia |
+| Destino/fuentes | PC/repositorio: `scripts/box_handling/scenario1_cli.py`, `scenario1_table74_preparation.json` en la misma carpeta; referencia de calibración separada `config/box_handling/scenario1_table74/measured_reference_20261022.pending.json` |
+| Versión/hash | Base `c5e8de1`; CLI SHA256 `c8fb7a1f5804057c3c7f445977c4e2bf480c64ce76f838905f2fd1d549320737`. Perfil operativo `scenario1_table74_preparation_v1`, depósito `pending`, hash canónico `28dc98bbebf0ce1e8d18b0ad05bce42adcf3c01510dbba88d9d14daf928acc7c`. Referencia de calibración SHA256 `d750a51022bf1acfabc3225023fe3e41428cb14e224284d9a0c842d3ac0cf3d1`; manifiesto final completo en evidencia |
+| Aplicación | Cambios locales del CLI/perfil; `--table-height-cm 74` es incompatible con `--profile`. La intención queda ligada al ID/hash del checkpoint; no se migran journals anteriores |
+| Activación | Sólo prepara segmentos anteriores al depósito. Selección sin límite que incluya depósito: bloqueo local antes de SSH. `--plan` muestra informe no ejecutable. Runtime/TASKS, tareas del proveedor y límites se conservan |
+| Calibración | Nueva referencia medida con valores `null`, verificaciones `false`; generador versionado `prepare_scenario1_table74.py`. Borrador privado con ambos Z sin resolver, `can_install=false`, sin XML. No usa 1,10 m, −31 cm ni UUID históricos |
+| Dependencias | Contrato existente de compatibilidad pendiente para get1/grasp/put1; fuentes WRC originales verificadas por los pins del generador. Medidas actuales, apoyo estable, alivio de pines y tareas por fases pendientes |
+| Verificación | 91 pruebas afines PASS, incluidas 13 nuevas: límites antes de SSH, planes, identidad/retoma y despacho simulado sólo hasta recogida. Suite de geometría/borrador: 28 pruebas PASS (con solapamiento). Tres planes locales reales, sintaxis y `git diff --check` PASS. Ninguna ejecución física con el selector nuevo ni instalación/carga remota. La recogida fallida de hoy utilizó el perfil anterior |
+| Backup/evidencia | `../Humanoide-vla-evidence/20261022T074315Z_TABLE74_PICKUP_TRIAL/`, `before-table74-preparation/`, `table74-current-reference-draft/`, recibos y hashes finales |
+| Reversión | Con ejecutor detenido, comparar hashes y restaurar sólo el CLI desde su backup si no hay cambios posteriores; retirar únicamente los dos perfiles nuevos de esta ficha. Conservar todo checkpoint/evidencia y no retirar perfiles aún referenciados. No hay adaptación remota de depósito nueva que revertir |
+
+Receta local y límites de uso:
+[selección explícita de 74 cm](box_handling/OPTIMISTIC_SCENARIO1.md#selección-explícita-de-74-cm-preparación-local),
+[borrador y mediciones necesarias](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#revisión-del-22-10-2026-destino-de-74-cm-y-referencia-actual-pendiente).
+El próximo movimiento sigue condicionado a recuperar específicamente la postura
+de preparación y verificar el estado físico. No se repite ni se convierte en
+exitoso el checkpoint fallido de recogida.
+
+## BOX-01-TABLE74-PICKUP-REJECT-20261022
+
+**22-10-2026, Europe/Madrid. PROBADO: intento de recogida aislado, FALLIDO;
+sin adaptación nueva instalada.** Objetivo del usuario: probar primero
+recogida y detenerse; adaptar después el depósito a mesa de 74 cm. Este ensayo no
+activa esa altura ni valida el agarre o el depósito.
+
+| Campo | Registro de esta intervención |
+| --- | --- |
+| Fuente reproducible | `scripts/optimistic_scenario1.sh`, rama `feat/scenario1-deposit-table-74cm`, HEAD `c5e8de16936e5e2cac664432eb3e7da9f9e1c1a6`; fuentes exactas por SHA256 en `pickup-run/source-sha256.json` y respaldo previo en la evidencia |
+| Versión/hash | Entry point SHA256 `346b576222aadd8d35debd7e8c0ff1a9bedb50626a8291a7e9b641cf50630d76`; runtime `cfc4e785e47ec88f0f54751af65b2609093e1536c86ef1d366717e821b1d0642`; perfil `scenario1_current_geometry_v1`, SHA256 `812910e76ba367468d82b699380af702ca69e5f59677b16e3d0183b66753cfa8`, `optimistic_v1/assume` |
+| Dependencias verificadas | Motion 192.168.11.2, `walker-motion.manipulation_robot_app-1` y `walker-ros.ros2-1`; SPS `bf145fa17e1116fc`, HOME v8 `d9e9462792b41300d352604b53ea2a4890a9382e942321990708f6ded2e26ccb`; mapa `utars_nav_map` con get1/put1 `logo_nav`; detalles/hashes exactos en `pickup-run/context.json` |
+| Destino/estado cambiado | Estado temporal de navegación: recarga del mismo mapa y destinos en la caché del planificador una vez por sesión, navegación a get1 y preparación de visión/agarre; sin modificación de archivos del mapa/puntos, tareas instaladas, parámetros, SDK, firmware, servicios o protecciones |
+| Aplicación y activación | Tras confirmación presencial, preflight `--check --stop-after grasp` rc0; una sola ejecución `--run --stop-after grasp`, 09:47:24–09:48:09 CEST, sin `--cycle` ni reintento; suscripciones pasivas de 120 s terminadas, recibo de captura rc0/cero órdenes/cero instalaciones |
+| Verificación | Llegada get1 ≈ 7,4 mm / 0,45°; visión completada. SPS rechaza X=`0,7908843151889853 m` frente a máximo 0,79 m (exceso 0,884315 mm), Y=`−0,036360267448621954 m`, Z=`0,9022362914290277 m` en `base_link`. No se entrega otra caja; resultado nativo `NoneException/status6`, ejecutor rc78. Leases fallan después del rechazo |
+| No ejecutado | Separación/bodyback, retirada, navegación put1, depósito, apertura de liberación o HOME. WRC original continúa como depósito del perfil; no se instaló/cargó una variante de 74 cm |
+| Estado final | Postura de preparación, no HOME completo acreditado. Checkpoint fallido `grasp`, `box_state=unknown`, intacto. Usuario confirma después caja apoyada, abrazaderas libres y robot inmóvil; observación presencial, sin reescribir el checkpoint |
+| Evidencia/backup | `../Humanoide-vla-evidence/20261022T074315Z_TABLE74_PICKUP_TRIAL/`: `request-and-physical.json`, recibos preflight/run/captura, `pickup-run.log`, `pickup-run/events.jsonl`, `pickup-run/checkpoint.json`, contexto/fuentes y captura pasiva; los dos documentos previos y sus hashes en `before-pickup-documentation/` |
+| Reversión | La postura no se revierte restaurando archivos. No hay instalación nueva que retirar; no restaurar cachés, permisos, checkpoint o consumed de otra ejecución. Revertir sólo estas notas comparando `before-pickup-documentation/`, preservando historia y cambios posteriores |
+
+Receta versionada observada en este ensayo; **no es una orden de repetición
+desde el checkpoint fallido**:
+
+```bash
+./scripts/optimistic_scenario1.sh --check --stop-after grasp
+./scripts/optimistic_scenario1.sh --run --stop-after grasp
+```
+
+**PENDIENTE y reanudación:** revisar nueva pose/alcance y postura antes de decidir
+otro movimiento; no ampliar X ni falsear percepción para salvar 0,884 mm. El
+checkpoint sólo acredita `navigate_get1` y `enable_vision`; no es una pausa de
+recogida exitosa. El antecedente del 22 de octubre sigue vigente aunque esta rama antigua
+no contenga sus notas: el codo izquierdo se plegó hacia el torso y los registros
+mostraron divergencia yaw antes del paro; su causa no está resuelta. La prueba
+lenta de +2° en vacío terminó normalmente, pero no califica agarre con carga.
+Fuentes históricas: commit `0cbc320`,
+`docs/box_handling/BOX_AXIS_REPOSITION_20261002.md`, y evidencias privadas
+`20261022T065229Z_LEFT_ELBOW_READONLY_DIAG/` y
+`20261022T071028Z_LEFT_SHOULDER_CONTROL_DIAG/`. Sin retry, HOME, rearme o nuevos
+ensayos automáticos. Adaptación completa a mesa de 74 cm y validación física de
+apoyo/liberación siguen **PENDIENTES**. Sin publicación remota; evidencias
+privadas fuera de Git.
+
 **30-09-2026 — BOX-01-TABLE74-PAUSE-01: apagado confirmado por el operador.**
 «Ya apagado y todo asegurado y estable»: caja, brazos y cuerpo asegurados;
 sin verificación física independiente del agente. Última prueba support_only

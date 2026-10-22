@@ -1,5 +1,98 @@
 # Escenario 1 con supervisión continua
 
+## 22-10-2026: recogida detenida en preparación; destino de 74 cm pendiente
+
+**BOX-01-TABLE74-PICKUP-REJECT-20261022 — OBSERVADO/VERIFICADO, Europe/Madrid.**
+En la rama `feat/scenario1-deposit-table-74cm`, base `c5e8de1`, el operador
+confirma mesa de destino de **74 cm** y autoriza probar primero sólo la recogida.
+El `--check --stop-after grasp` pasa. Un único `--run --stop-after grasp`
+(09:47:24–09:48:09 CEST) termina con código **78**: después de preparar los
+brazos, el guard de percepción rechaza la caja elegida en `base_link`:
+
+- X **0,790884315 m**, máximo permitido **0,79 m**: exceso **0,884315 mm**.
+- Y −0,036360267 m; Z 0,902236291 m. **Ese Z no es altura sobre el suelo.**
+- Goal de recogida `1a7d9db7-8c6a-4913-bdff-16f9d9ae8a1f`, status6,
+  `NoneException`; sólo `navigate_get1` y `enable_vision` constan completadas.
+
+No comenzó la separación nativa ni su `bodyback`. Tampoco se ejecutaron
+retirada, depósito o HOME. La preparación sí movió brazos y cabeza: la postura
+final **no es HOME**. El operador confirma después caja totalmente apoyada,
+abrazaderas vacías y sin contacto, y robot inmóvil. El checkpoint conserva
+`box_state=unknown` y el fallo; esa confirmación no lo transforma en recogida
+completada ni autoriza a repetir el ciclo desde esa postura.
+
+La llegada a get1 registró `VSLAM_LOCATION_LOST`, aunque la acción terminó y
+la llegada medida fue 7,4 mm / 0,45°. Se conserva ese aviso para diagnóstico.
+Los errores de lease del cierre son posteriores; no sustituyen al rechazo de
+posición como motivo de esta interrupción. No se amplió el límite de 79 cm.
+La prueba tampoco repite la fase de separación del incidente del codo izquierdo
+del 22-10; su causa sigue pendiente y el ensayo vacío de 2° no valida el agarre.
+
+Evidencia privada completa, capturas pasivas de posición/consigna y respaldo:
+`../Humanoide-vla-evidence/20261022T074315Z_TABLE74_PICKUP_TRIAL/`.
+El preflight y la ejecución utilizaron los scripts versionados; durante la
+ejecución se recargaron mapa/puntos en el planner, sin editar sus valores.
+Los suscriptores de diagnóstico terminaron, sin instalar archivos en Motion.
+La captura contiene 7.602 mensajes (4.596 estados articulares y 3.006 de
+actuadores), sin valores no finitos ni errores de esquema; se conserva aparte
+la línea INFO de arranque. Las últimas muestras muestran velocidades cero en
+los 20 ejes, códigos de error cero y diferencia máxima posición/consigna de
+0,002330 rad. Durante preparación la mayor diferencia capturada fue 0,021500
+rad (yaw derecho), y 0,020482 rad en yaw izquierdo. Son muestras de esta
+preparación, no una validación de la separación ni del fallo anterior.
+Resumen y procedencia: `analysis/trace-summary.json`; confirmación del operador
+separada en `analysis/operator-confirmation.json`. Los relojes PC/robot no están
+sincronizados; el análisis conserva tiempos fuente y no los fusiona como uno.
+
+La altura de la mesa no cambia este rechazo de **recogida**. El ejecutor de
+esta revisión continúa utilizando el depósito WRC original. Los ensayos de
+74 cm descritos abajo son **históricos**, con mediciones y journals de
+septiembre; no acreditan el depósito desde esta recogida.
+
+Referencia actual pendiente, preparación reproducible y punto de reanudación:
+[Depósito de 74 cm: revisión del 22-10](DEPOSITO_WRC_ALTURA_100CM.md#revisión-del-22-10-2026-destino-de-74-cm-y-referencia-actual-pendiente).
+
+### Selección explícita de 74 cm: preparación local
+
+**BOX-01-TABLE74-PREPARATION-20261022 — Implementado en PC; sin activación
+del depósito ni prueba física del selector.** Para revisar sin conectar:
+
+```bash
+./scripts/optimistic_scenario1.sh --table-height-cm 74 --plan
+./scripts/optimistic_scenario1.sh --table-height-cm 74 --plan --stop-after grasp
+```
+
+El primer comando declara el depósito no ejecutable y las fases pendientes.
+El segundo muestra únicamente `navigate_get1 → enable_vision → grasp → verify_held`.
+Este selector no altera los movimientos de recogida. Una ejecución o check
+limitados explícitamente a `get1`, `grasp` o `put1` pueden utilizar el perfil
+operativo nuevo; incluir depósito/ciclo completo queda bloqueado localmente,
+antes de SSH. El valor aceptado actualmente es sólo 74; `--profile` y
+`--table-height-cm` no pueden combinarse. Sin selector se conserva el perfil
+original: el nombre de la rama no selecciona mesa.
+
+El perfil operativo `scripts/box_handling/scenario1_table74_preparation.json`
+tiene ID propio y `deposit.compatibility=pending`. La intención queda ligada al
+hash del perfil en el checkpoint. Una retoma debe conservar el selector y la
+identidad originales; no se puede convertir un checkpoint anterior o fallido
+en una recogida de este perfil. Las órdenes de retoma impresas conservan la
+selección. El checkpoint fallido de hoy se deja intacto.
+
+El **perfil de calibración** de `config/box_handling/scenario1_table74/` es
+distinto del operativo del CLI: lo utiliza el preparador offline, no `--profile`
+del ciclo. Las referencias de alturas siguen pendientes. No hay una tarea
+nueva de depósito instalada, ni apertura o HOME de 74 cm validados. El siguiente
+ensayo físico requiere resolver primero la postura y aproximación de recogida;
+los comandos anteriores son sólo planes locales.
+
+Verificación offline: **91 pruebas afines pasan**, incluidas 13 nuevas sobre
+selección, bloqueo antes de SSH, despacho simulado hasta recogida y continuidad
+de retomas. Los tres planes locales (74 completo, 74 hasta recogida y original)
+terminan con código 0 y contenidos esperados. Sintaxis y `git diff --check`
+correctos. Recibos en `table74-preparation-verification/` y `*-plan-receipt.json`
+de la evidencia de esta intervención. Los archivos finales sin commit también
+quedan respaldados en `final-worktree/`, con su manifiesto SHA256.
+
 **30-09-2026 — BOX-01-TABLE74-PAUSE-01: apagado confirmado por el operador.**
 «Ya apagado y todo asegurado y estable»: caja, brazos y cuerpo asegurados;
 sin verificación física independiente del agente. Última prueba support_only

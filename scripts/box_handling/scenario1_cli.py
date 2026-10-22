@@ -35,6 +35,8 @@ else:
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
+TABLE74_PREPARATION_PROFILE = HERE/'scenario1_table74_preparation.json'
+TABLE74_PREPARATION_ID = 'scenario1_table74_preparation_v1'
 MODULES = [('cruzr_home_posture_gate', ROOT/'scripts/lib/cruzr_home_posture_gate.py'),
            ('front_sps_session', HERE/'front_sps_session.py'),
            ('scenario1_contract', HERE/'scenario1_contract.py'),
@@ -128,7 +130,9 @@ def report_pause(wrapper, checkpoint_path, checkpoint, cycle, *, args=None, resu
     if stage is not None:
         command = ['./scripts/'+wrapper, *(['--cycle'] if cycle else []), '--resume', str(checkpoint_path.resolve())]
         if args is not None:
-            if args.profile.resolve() != (HERE/'scenario1_current_geometry.json').resolve():
+            if getattr(args, 'table_height_cm', None) is not None:
+                command += ['--table-height-cm', '74']
+            elif args.profile.resolve() != (HERE/'scenario1_current_geometry.json').resolve():
                 command += ['--profile', str(args.profile.resolve())]
             if args.wifi:
                 command += ['--wifi']
@@ -363,7 +367,11 @@ def parser(policy='ask', execution_profile='standard_v1'):
     p.add_argument('--stop-after', choices=('get1', 'grasp', 'put1', 'cycle'), default='cycle',
                    help='get1: sólo navegar y medir llegada; grasp: terminar tras confirmar caja sujeta; '
                         'put1: llegar con la caja sujeta y detenerse antes del depósito')
-    p.add_argument('--profile', type=Path, default=HERE/'scenario1_current_geometry.json')
+    profile_selection = p.add_mutually_exclusive_group()
+    profile_selection.add_argument('--profile', type=Path, default=HERE/'scenario1_current_geometry.json')
+    profile_selection.add_argument('--table-height-cm', type=float, choices=(74.,),
+        help='Preparación explícita para mesa de 74 cm; permite sólo get1/grasp/put1. '
+             'El depósito sigue pendiente y no se activa por indicar la altura')
     if policy == 'sensors':
         p.add_argument('--sensor-profile', type=Path, default=HERE/'scenario1_sensor_profile.json',
                        help='Referencias FT por postura; --run requiere perfil cualificado')
@@ -373,6 +381,66 @@ def parser(policy='ask', execution_profile='standard_v1'):
 
 def is_moving(args):
     return bool(args.run or args.resume or getattr(args, 'cycle', False)) and not (args.check or args.plan)
+
+
+class Table74PreparationPending(ValueError):
+    """Table selection records intent; it does not authorize a deposit task."""
+
+
+def selected_profile(args, stop_after):
+    table74 = getattr(args, 'table_height_cm', None) == 74.
+    path = TABLE74_PREPARATION_PROFILE if table74 else args.profile
+    profile = json.loads(path.read_text())
+    if table74:
+        if (profile.get('id') != TABLE74_PREPARATION_ID or
+                profile.get('deposit', {}).get('compatibility') != 'pending'):
+            raise ValueError('TABLE74_PREPARATION_PROFILE_CHANGED: se exige el perfil de preparación pendiente')
+    elif profile.get('id') == TABLE74_PREPARATION_ID:
+        raise ValueError('El perfil de preparación de mesa74 requiere --table-height-cm 74')
+    # The existing contract already admits a pending deposit for these three
+    # boundaries. A full table74 plan is an unavailable-plan report only: never
+    # construct a checkpoint that claims the pending deposit is executable.
+    validation_stop = 'navigate_put1' if table74 and stop_after == 'verify_home' else stop_after
+    return contract.validate_profile(profile, stop_after=validation_stop), table74
+
+
+def table74_preparation_report(profile):
+    return dict(surface_height_cm=74., status='preparation_only',
+                profile_id=profile['id'], profile_sha256=contract._profile_hash(profile),
+                deposit_executable=False, physical_validation='pending',
+                legacy_task_not_activated_by_selection=profile['deposit']['task'],
+                available_stop_after=['get1', 'grasp', 'put1'],
+                future_phases=['approach_only', 'support_only', 'pin_disengagement', 'opening'],
+                missing=['current_measured_reference_for_this_held_box_and_posture',
+                         'reviewed_approach_and_stable_support',
+                         'verified_pin_disengagement_and_opening_clearance',
+                         'reviewed_phase_specific_tasks_and_integration'],
+                historical_height_and_goal_reused=False)
+
+
+def report_pending_table74_plan(args, profile):
+    """Describe unavailable stages without manufacturing an executable resume."""
+    start = 0
+    source = None
+    if args.resume:
+        if args.resume.with_name(args.resume.name+'.consumed.json').exists():
+            raise RuntimeError('Este checkpoint ya fue consumido por otra reanudación')
+        source = contract.validate_checkpoint(json.loads(args.resume.read_text()), profile)
+        if source.get('policy', 'ask') != args.policy or contract.execution_profile(source) != args.execution_profile:
+            raise ValueError('Resume cannot change confirmation policy or execution profile')
+        start = contract.STAGES.index(args.from_stage) if args.from_stage else contract.progress_index(source)
+    report = dict(profile=profile, stages=list(contract.STAGES[start:]),
+                  policy=args.policy, execution_profile=args.execution_profile,
+                  table_preparation=table74_preparation_report(profile),
+                  execution_allowed=False, checkpoint_created=False,
+                  automatic_retries=0, continuous_cycle=getattr(args, 'cycle', False),
+                  blocked_at='deposit',
+                  blocked_stages=['deposit', 'verify_released', 'home', 'verify_home'],
+                  resume=(dict(source_profile_matches=True, executable=False,
+                               recovery_and_entry_not_validated=True) if source else None))
+    print('MESA74_PREPARACION: intención registrada; depósito, apertura y HOME no ejecutables.')
+    print('Este informe no autoriza etapas ni crea un checkpoint. Para preparar una recogida, use --stop-after grasp.')
+    print(json.dumps(report, indent=2, ensure_ascii=False))
 
 
 def _main(args, stop=None):
@@ -391,7 +459,14 @@ def _main(args, stop=None):
         raise ValueError('--benchmark-checks sólo permite comprobaciones de lectura')
     stop_after = {'get1': 'navigate_get1', 'grasp': 'verify_held',
                   'put1': 'navigate_put1', 'cycle': 'verify_home'}[args.stop_after]
-    profile = contract.validate_profile(json.loads(args.profile.read_text()), stop_after=stop_after)
+    profile, table74 = selected_profile(args, stop_after)
+    if table74 and stop_after == 'verify_home':
+        if args.plan:
+            report_pending_table74_plan(args, profile)
+            return 0
+        raise Table74PreparationPending('Mesa74: faltan referencia actual y fases de apoyo/desenganche validadas; '
+                                        'sólo se permiten --stop-after get1, grasp o put1. '
+                                        'No se activó ni se enviará el depósito WRC original.')
     checkpoint = contract.new_checkpoint(profile, stop_after=stop_after, policy=policy,
                                          execution_profile=execution_profile)
     sensor_profile = None
@@ -420,7 +495,10 @@ def _main(args, stop=None):
         not checkpoint.get('home_retry_blocked', False) and
         contract.progress_index(checkpoint) <= contract.STAGES.index('home') <=
         contract.STAGES.index(stop_after))
-    print('Geometría: force_escenario1.sh actual; tareas y límites del proveedor conservados.')
+    if table74:
+        print('MESA74_PREPARACION: sólo segmento anterior al depósito; mesa74 no activa una trayectoria de depósito.')
+    else:
+        print('Geometría: force_escenario1.sh actual; tareas y límites del proveedor conservados.')
     print('Confirmación: '+{'ask': 'operador', 'assume': 'sin preguntas; sujeción/liberación asumidas tras éxito técnico',
                           'sensors': 'sin preguntas; ventanas FT y postura con referencias cualificadas'}[policy])
     if execution_profile == 'optimistic_v1':
@@ -441,7 +519,7 @@ def _main(args, stop=None):
     else:
         print('Llegada get1: 2 cm / 2 grados. Ajuste bloqueado: '+correction_status['reason'])
     if args.plan:
-        print(json.dumps(dict(profile=profile, stages=list(contract.STAGES[contract.progress_index(checkpoint):contract.STAGES.index(stop_after)+1]),
+        report = dict(profile=profile, stages=list(contract.STAGES[contract.progress_index(checkpoint):contract.STAGES.index(stop_after)+1]),
             policy=policy, execution_profile=execution_profile,
             continuous_cycle=cycle,
             interstage_health=('live_snapshot_and_fresh_stationary_actuators'
@@ -453,7 +531,10 @@ def _main(args, stop=None):
                             terminal_status=6, code=7104050, desc='MoveToGoalFailed',
                             fresh_health_and_stationary_required=True),
             get1_correction=dict(nav_correction.qualification_report(), policy=dict(nav_correction.POLICY)),
-            resume=resume_plan), indent=2, ensure_ascii=False))
+            resume=resume_plan)
+        if table74:
+            report['table_preparation'] = table74_preparation_report(profile)
+        print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
     if moving:
         subprocess.run(['bash', str(ROOT/'scripts/lib/cruzr_contact_motion_lock.sh'), 'improved-scenario1'], check=True,
@@ -464,6 +545,8 @@ def _main(args, stop=None):
     evidence.mkdir(parents=True, exist_ok=False)
     os.chmod(evidence, 0o700)
     atomic_json(evidence/'profile.json', profile)
+    if table74:
+        atomic_json(evidence/'table-preparation.json', table74_preparation_report(profile))
     if not args.resume:
         atomic_json(evidence/'checkpoint.json', checkpoint)
     payload = make_payload('run' if moving else 'check', profile, checkpoint)
@@ -623,6 +706,10 @@ def entrypoint(argv=None, *, policy='ask', execution_profile='standard_v1'):
     args = parser(policy, execution_profile).parse_args(argv)
     try:
         return run_args(args)
+    except Table74PreparationPending as error:
+        print('MESA74_PREPARACION_PENDIENTE: '+str(error), file=sys.stderr)
+        print('Bloqueado antes de conectar al robot; no se envió ninguna orden.', file=sys.stderr)
+        return 78
     except SensorCalibrationPending:
         print('SENSORES_SIN_CUALIFICAR: faltan referencias de fuerza/par por postura para distinguir sujeción y liberación.', file=sys.stderr)
         print('No se conectó al robot ni se envió movimiento. --check permite inspeccionar la telemetría; '
