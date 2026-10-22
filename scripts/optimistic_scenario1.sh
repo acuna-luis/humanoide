@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # The normal scenario has no prompts. Reuse continuously monitored health instead of reacquiring it
 # between stages; preserve faults, stationary transitions and measured HOME.
+# --table-height-cm 74|90 selects the common runtime and an immutable deposit.
+# New height packages require --height-deposit-trial until physically qualified.
+# --table74-supervised retains the historical multi-phase commissioning path.
 # --cycle repeats in one session. Ctrl+C finishes the current stage and pauses;
 # the printed --resume command continues at the following stage.
 # A confirmed HOME MoveToGoalFailed allows one retry after fresh health/rest;

@@ -238,7 +238,7 @@ class WrapperDispatchTests(unittest.TestCase):
             result=subprocess.run(['bash',str(wrapper),*args(after,complete=False)],capture_output=True,text=True,timeout=15)
             self.assertEqual(result.returncode,0,result.stderr)
             self.assertFalse(json.loads(result.stdout)['operator_reference_complete'])
-        result=subprocess.run(['bash',str(wrapper),'--table-height-cm','74','--stop-after','grasp','--plan'],
+        result=subprocess.run(['bash',str(wrapper),'--table-height-cm','74','--table74-supervised','--stop-after','grasp','--plan'],
                               capture_output=True,text=True,timeout=15)
         self.assertEqual(result.returncode,0,result.stderr)
         report=json.loads(result.stdout[result.stdout.index('{'):])

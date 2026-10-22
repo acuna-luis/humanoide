@@ -1,5 +1,16 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**22-10-2026 — ciclo común por altura implementado, pendiente de ensayo.**
+`optimistic_scenario1.sh --table-height-cm 74|90 --plan` muestra el motor único.
+No cambia la recogida. Para74, aproximación y descenso19 cm se integran en una
+tarea; después pines4 cm y apertura10 cm por lado. Sesión y HOME compartidos.
+`--height-deposit-trial --run` exige elección explícita para probar el nuevo
+paquete; no certifica apoyo/pines ni omite comprobaciones físicas. La receta
+por fases sigue con `--table74-supervised` y conserva checkpoints antiguos.
+No se ha movido ni instalado nada en robot al implementar este cambio.
+[Procedimiento y reversión](../box_handling/OPTIMISTIC_SCENARIO1.md#ciclo-común-por-altura-optimización-implementada--22-10-2026).
+
+
 **22-10-2026 — BOX-TABLE74-OPEN-STALE-20261022: aborto antes de apertura.**
 Toma162111Z1476072: alivio SUCCEED4/1101001, journal sin consumir; apertura
 sin ready, acciones ni trial.json; HOME no iniciado. Health inicial falla en5,860 s

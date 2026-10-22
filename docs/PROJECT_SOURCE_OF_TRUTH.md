@@ -1,5 +1,19 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-SCENARIO1-UNIFIED-FAST-20261022: motor común74/90 implementado; ensayo físico pendiente.**
+Una sesión/monitor/checkpoint para recogida, navegación, depósito y HOME;
+se conserva la tarea original de recogida. Mesa74 integra los descensos14+5 cm
+en uno19 cm dentro de la aproximación12 s y mantiene pines4 cm y apertura
+lateral10 cm separadas; mesa90 conserva su geometría histórica. Perfiles
+inmutables con modelo/HOME fijados, instalación aditiva y rollback fuera del
+robot. Nueva interpolación74 y nuevo empaquetado90 requieren ensayo explícito
+`--height-deposit-trial --run`; plan local y segmentos parciales disponibles.
+Sin movimiento ni cambios en robot en esta intervención. Última toma física
+sigue323,879 s; objetivo hipotético210–240 s, ahorro aún sin medir.
+Vía antigua: `--table74-supervised`; checkpoints74 antiguos no se migran.
+[Comandos, límites y reversión](box_handling/OPTIMISTIC_SCENARIO1.md#ciclo-común-por-altura-optimización-implementada--22-10-2026).
+
+
 **22-10-2026 — BOX-TABLE74-OPEN-STALE-20261022: aborto antes de apertura.**
 Toma162111Z1476072: alivio SUCCEED4/1101001, journal sin consumir; apertura
 sin ready, acciones ni trial.json; HOME no iniciado. Health inicial falla en5,860 s

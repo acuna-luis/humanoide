@@ -116,7 +116,7 @@ class Table74CyclePlanTests(unittest.TestCase):
         with patch.object(cycle,'run',return_value=43)as coordinator, \
                 patch.object(cli,'Connection',side_effect=AssertionError('No direct connection')), \
                 patch.object(contract,'new_checkpoint',side_effect=AssertionError('No full pending checkpoint')):
-            self.assertEqual(cli.main(['--plan','--table-height-cm','74','--box-alignment-attempts','7'],
+            self.assertEqual(cli.main(['--plan','--table-height-cm','74','--table74-supervised','--box-alignment-attempts','7'],
                 policy='assume',execution_profile='optimistic_v1'),43)
         self.assertEqual(coordinator.call_args.args[0].box_alignment_attempts,7)
         self.assertEqual(cycle.PROFILE.read_bytes(),original)

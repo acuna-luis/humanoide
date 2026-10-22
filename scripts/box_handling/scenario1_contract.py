@@ -13,6 +13,11 @@ import json
 import math
 import re
 
+if __package__:
+    from . import scenario1_height_deposit as height_deposit
+else:
+    import scenario1_height_deposit as height_deposit
+
 
 STAGES = (
     'navigate_get1', 'enable_vision', 'grasp', 'verify_held', 'retreat',
@@ -186,9 +191,12 @@ def validate_profile(profile, *, stop_after='verify_home'):
             any(type(v) not in (int, float) for v in size) or
             size != [0.603, 0.397, 0.220]):
         raise ValueError('Profile requires exact box_size_m [0.603, 0.397, 0.220]')
+    height_profile = height_deposit.profile_height(profile)
     for phase, task in _TASKS.items():
         item = profile[phase]
         _keys(item, {'task', 'compatibility'}, phase)
+        if height_profile is not None and phase == 'deposit':
+            continue  # Entire profile matched an immutable height contract above.
         if item['task'] != task:
             raise ValueError('Unsupported ' + phase + ' task')
         if item['compatibility'] not in COMPATIBILITY:

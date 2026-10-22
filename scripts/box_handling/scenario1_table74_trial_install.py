@@ -15,6 +15,7 @@ import subprocess
 import sys
 
 try:
+    from . import scenario1_height_deposit as height_deposit
     from . import scenario1_deposit_install as files
     from . import scenario1_table74_trial as trial
     from . import scenario1_table74_support as support
@@ -22,6 +23,7 @@ try:
     from . import scenario1_table74_current_lower as current_lower
     from . import scenario1_table74_current_release as current_release
 except ImportError:
+    import scenario1_height_deposit as height_deposit
     import scenario1_deposit_install as files
     import scenario1_table74_trial as trial
     import scenario1_table74_support as support
@@ -91,6 +93,8 @@ def _builder(bundle):
     if not isinstance(bundle, dict) or not isinstance(bundle.get('manifest'), dict):
         raise ValueError('Invalid trial phase manifest')
     phase = bundle['manifest'].get('phase')
+    if phase == height_deposit.PHASE:
+        return height_deposit
     if phase == 'approach_only':
         return trial
     if phase == 'support_only':
@@ -119,7 +123,7 @@ def read_live(run, container, bundle):
     """Verify original bytes, binary pin, rebuilt bundle and every destination."""
     _, hashes = _validate(bundle)
     builder = _builder(bundle)
-    sources = [builder.SOURCE_XML_PATH, builder.SOURCE_YAML_PATH]
+    sources = list(getattr(builder, 'TEXT_SOURCES', (builder.SOURCE_XML_PATH, builder.SOURCE_YAML_PATH)))
     raw = run(['docker', 'exec', '-i', container, 'python3', '-c', READ_SOURCE],
               data=json.dumps(dict(dependencies=list(builder.DEPENDENCIES),
                                    text_sources=sources, targets=list(hashes))))
@@ -134,7 +138,7 @@ def read_live(run, container, bundle):
         if path in sources and (type(entry['text']) is not str or files.sha(entry['text']) != expected):
             raise RuntimeError('Live source text/checksum mismatch: '+path)
     rebuilt = builder.build_bundle(bundle['review']['reference'],
-        result['dependencies'][sources[0]]['text'], result['dependencies'][sources[1]]['text'])
+        *(result['dependencies'][path]['text'] for path in sources))
     if files.compact(rebuilt) != files.compact(bundle):
         raise RuntimeError('Bundle differs from the live-source reconstruction')
     observed = result['targets']
@@ -311,7 +315,7 @@ def rollback_bundle(bundle, **kwargs):
 def remote_source(request=None):
     """Embed reviewed modules, including discovery's source, without repo imports."""
     directory = Path(__file__).parent
-    names = ('scenario1_deposit', 'scenario1_deposit_install',
+    names = ('scenario1_height_deposit', 'scenario1_deposit', 'scenario1_deposit_install',
              'scenario1_table74_trial', 'scenario1_table74_support',
              'scenario1_table74_current_trial',
              'scenario1_table74_current_lower',

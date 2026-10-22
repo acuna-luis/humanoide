@@ -19,6 +19,7 @@ import threading
 import time
 
 if __package__:
+    from . import scenario1_height_deposit as height_deposit
     from . import scenario1_contract as contract
     from . import scenario1_sensors as sensors
     from . import scenario1_nav_correction as nav_correction
@@ -28,6 +29,7 @@ if __package__:
     from .scenario1_console import ConsoleReporter, stage_label
     from .front_box_integration import build_bundle, TASK_ROOT, META_ROOT, SNAPSHOT
 else:
+    import scenario1_height_deposit as height_deposit
     import scenario1_contract as contract
     import scenario1_sensors as sensors
     import scenario1_nav_correction as nav_correction
@@ -43,6 +45,7 @@ TABLE74_PREPARATION_PROFILE = HERE/'scenario1_table74_preparation.json'
 TABLE74_PREPARATION_ID = 'scenario1_table74_preparation_v1'
 MODULES = [('cruzr_home_posture_gate', ROOT/'scripts/lib/cruzr_home_posture_gate.py'),
            ('front_sps_session', HERE/'front_sps_session.py'),
+           ('scenario1_height_deposit', HERE/'scenario1_height_deposit.py'),
            ('scenario1_contract', HERE/'scenario1_contract.py'),
            ('scenario1_checks', HERE/'scenario1_checks.py'),
            ('scenario1_live_health', HERE/'scenario1_live_health.py'),
@@ -142,7 +145,11 @@ def report_pause(wrapper, checkpoint_path, checkpoint, cycle, *, args=None, resu
         command = ['./scripts/'+wrapper, *(['--cycle'] if cycle else []), '--resume', str(checkpoint_path.resolve())]
         if args is not None:
             if getattr(args, 'table_height_cm', None) is not None:
-                command += ['--table-height-cm', '74']
+                command += ['--table-height-cm', format(args.table_height_cm, 'g')]
+                if getattr(args, 'table74_supervised', False):
+                    command += ['--table74-supervised']
+                if getattr(args, 'height_deposit_trial', False):
+                    command += ['--height-deposit-trial']
             elif args.profile.resolve() != (HERE/'scenario1_current_geometry.json').resolve():
                 command += ['--profile', str(args.profile.resolve())]
             if hasattr(args, 'box_alignment_attempts'):
@@ -168,6 +175,15 @@ def make_payload(mode, profile, checkpoint):
                      'meta_clamp/wrc/put_cruzr_wrc_low.yaml', 'meta_clamp/wrc/open_arm_cruzr.yaml'):
         prefix, name = relative.split('/', 1)
         extra[(TASK_ROOT if prefix == 'tasks' else META_ROOT)+name] = hashlib.sha256((SNAPSHOT/relative).read_bytes()).hexdigest()
+    deposit_bundle = None
+    height = height_deposit.profile_height(profile)
+    if height is not None:
+        deposit_bundle = height_deposit.build_bundle(height_deposit.RECIPES[height],
+            (SNAPSHOT/'tasks/wrc_cruzr/put_cruzr_wrc_low.xml').read_text(),
+            (SNAPSHOT/'meta_clamp/wrc/put_cruzr_wrc_low.yaml').read_text(),
+            (SNAPSHOT/'meta_clamp/wrc/open_arm_cruzr.yaml').read_text())
+        height_deposit.validate_bundle(deposit_bundle)
+        extra.update(deposit_bundle['manifest']['robot_files'])
     # Reuse reviewed HOME contracts, including user edits; never import shell secrets.
     pins = dict(re.findall(r'^readonly (\w+_SHA)="([a-f0-9]{64})"$',
                           (ROOT/'scripts/cruzr_blue_workbin_cycle.sh').read_text(), re.M))
@@ -197,6 +213,7 @@ def make_payload(mode, profile, checkpoint):
                      ' exec(compile(_source,_name+".py","exec"),_module.__dict__)\n'+
                      (HERE/'scenario1_health_worker.py').read_text())
     return dict(mode=mode, profile=profile, checkpoint=checkpoint, bundle=bundle,
+                deposit_bundle=deposit_bundle,
                 extra_hashes=extra, home_pins=dict(accepted=[pins[n] for n in names],
                     direct=pins['DIRECT_HOME_SHA'], meta=pins['OPEN_HOME_META_SHA']),
                 action_client=action_source,
@@ -205,6 +222,25 @@ def make_payload(mode, profile, checkpoint):
                 health_worker=health_source,
                 resume_worker=(HERE/'scenario1_resume_worker.py').read_text(),
                 modules=[(name, path.read_text()) for name, path in MODULES])
+
+
+def prepare_height_installation(bundle, evidence, moving):
+    """File-only installation once, before the shared runtime takes its lock.
+
+    Check never installs. The same immutable package is reused across cycles;
+    the existing installer rejects conflicts and preserves rollback receipts.
+    """
+    if __package__:
+        from . import scenario1_table74_cycle as installation
+    else:
+        import scenario1_table74_cycle as installation
+    path = evidence/'deposit-bundle.json'
+    receipt = installation.installer_call(path, 'check', evidence, bundle)
+    if not receipt['installed']:
+        if not moving:
+            raise ValueError('HEIGHT_DEPOSIT_NOT_INSTALLED: --check no instala; el ensayo --run instalará sólo archivos aditivos antes de comprobar el robot')
+        installation.installer_call(path, 'install', evidence, bundle)
+    installation.archive_installation(bundle, evidence)
 
 
 def ssh_command(wifi):
@@ -386,11 +422,13 @@ def parser(policy='ask', execution_profile='standard_v1'):
                         '0 conserva la entrada original sin ajuste; no repite movimientos de brazos')
     profile_selection = p.add_mutually_exclusive_group()
     profile_selection.add_argument('--profile', type=Path, default=HERE/'scenario1_current_geometry.json')
-    profile_selection.add_argument('--table-height-cm', type=float, choices=(74.,),
-        help='Mesa de 74 cm: Optimistic usa la receta guardada sin preguntas; '
+    profile_selection.add_argument('--table-height-cm', type=float, choices=(74., 90.),
+        help='Mesa 74/90 cm: motor común y depósito integrado sin preguntas; '
              'get1/grasp/put1 conservan sus pausas. Por defecto sólo --check')
+    p.add_argument('--height-deposit-trial', action='store_true',
+        help='Autoriza el ensayo físico del nuevo depósito integrado; no declara validación ni omite salud/seguridad')
     p.add_argument('--table74-supervised', action='store_true',
-        help='Mesa74: pedir otra vez medidas y confirmaciones por fase; sin esta opción se usa la receta guardada')
+        help='Mesa74: recuperar el coordinador anterior y sus confirmaciones por fase; sin esta opción se usa el motor común')
     if policy == 'sensors':
         p.add_argument('--sensor-profile', type=Path, default=HERE/'scenario1_sensor_profile.json',
                        help='Referencias FT por postura; --run requiere perfil cualificado')
@@ -402,12 +440,21 @@ def is_moving(args):
     return bool(args.run or args.resume or getattr(args, 'cycle', False)) and not (args.check or args.plan)
 
 
+class HeightDepositPending(ValueError):
+    """No movement has been attempted; commissioning requires explicit choice."""
+
+
 class Table74PreparationPending(ValueError):
     """Table selection records intent; it does not authorize a deposit task."""
 
 
 def selected_profile(args, stop_after):
-    table74 = getattr(args, 'table_height_cm', None) == 74.
+    selected_height = getattr(args, 'table_height_cm', None)
+    legacy_resume = bool(args.resume and not getattr(args, 'table74_supervised', False) and
+                         json.loads(args.resume.read_text()).get('profile_id') == TABLE74_PREPARATION_ID)
+    if selected_height is not None and not (selected_height == 74. and (getattr(args, 'table74_supervised', False) or legacy_resume)):
+        return contract.validate_profile(height_deposit.profile(selected_height), stop_after=stop_after), False
+    table74 = selected_height == 74.
     path = TABLE74_PREPARATION_PROFILE if table74 else args.profile
     profile = json.loads(path.read_text())
     if table74:
@@ -503,6 +550,11 @@ def _main(args, stop=None):
         raise Table74PreparationPending('Mesa74: faltan referencia actual y fases de apoyo/desenganche validadas; '
                                         'sólo se permiten --stop-after get1, grasp o put1. '
                                         'No se activó ni se enviará el depósito WRC original.')
+    integrated_height = height_deposit.profile_height(profile)
+    if moving and integrated_height is not None and stop_after == 'verify_home' and not getattr(args, 'height_deposit_trial', False):
+        raise HeightDepositPending('HEIGHT_TRIAL_PENDING: depósito integrado pendiente de prueba física; añada --height-deposit-trial para el primer ensayo supervisado, o use --stop-after put1')
+    if integrated_height is not None and args.wifi:
+        raise ValueError('El instalador de alturas requiere Ethernet directa; quite --wifi')
     checkpoint = contract.new_checkpoint(profile, stop_after=stop_after, policy=policy,
                                          execution_profile=execution_profile)
     sensor_profile = None
@@ -543,6 +595,8 @@ def _main(args, stop=None):
         contract.STAGES.index(stop_after))
     if table74:
         print('MESA74_PREPARACION: sólo segmento anterior al depósito; mesa74 no activa una trayectoria de depósito.')
+    elif integrated_height is not None:
+        print('Geometría: mesa '+str(integrated_height)+' cm; motor común, depósito integrado pendiente de prueba física.')
     else:
         print('Geometría: force_escenario1.sh actual; tareas y límites del proveedor conservados.')
     print('Confirmación: '+{'ask': 'operador', 'assume': 'sin preguntas; sujeción/liberación asumidas tras éxito técnico',
@@ -582,6 +636,10 @@ def _main(args, stop=None):
             resume=resume_plan)
         if table74:
             report['table_preparation'] = table74_preparation_report(profile)
+        if integrated_height is not None:
+            report['height_deposit'] = dict(recipe=height_deposit.RECIPES[integrated_height],
+                sessions=1, pickup_unchanged=True, physical_trial_required=True,
+                current_support_measured=False, current_pins_free_measured=False)
         report['box_alignment'] = alignment_report
         if corrected_pickup_reference is not None:
             report['resume_pickup_reference'] = corrected_pickup_reference
@@ -601,6 +659,10 @@ def _main(args, stop=None):
     if not args.resume:
         atomic_json(evidence/'checkpoint.json', checkpoint)
     payload = make_payload('run' if moving else 'check', profile, checkpoint)
+    payload['height_trial_authorized'] = bool(getattr(args, 'height_deposit_trial', False))
+    if integrated_height is not None:
+        atomic_json(evidence/'deposit-bundle.json', payload['deposit_bundle'])
+        print('Altura '+str(integrated_height)+' cm: sesión única; depósito integrado pendiente de prueba física.', flush=True)
     payload['policy'] = policy
     payload['execution_profile'] = execution_profile
     payload['cycle'] = cycle
@@ -642,6 +704,8 @@ def _main(args, stop=None):
             lock = stack.enter_context(open(name, 'a'))
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         try:
+            if integrated_height is not None:
+                prepare_height_installation(payload['deposit_bundle'], evidence, moving)
             connection = Connection(payload, args.wifi, evidence, console=ConsoleReporter(verbose=args.verbose))
             ready = connection.wait('ready')
             atomic_json(evidence/'context.json', ready['context'])
@@ -764,6 +828,10 @@ def entrypoint(argv=None, *, policy='ask', execution_profile='standard_v1'):
     args = parser(policy, execution_profile).parse_args(argv)
     try:
         return run_args(args)
+    except HeightDepositPending as error:
+        print('PERFIL_ALTURA_PENDIENTE: '+str(error), file=sys.stderr)
+        print('Bloqueado antes de conectar al robot; no se envió ninguna orden.', file=sys.stderr)
+        return 78
     except Table74PreparationPending as error:
         print('MESA74_PREPARACION_PENDIENTE: '+str(error), file=sys.stderr)
         print('Bloqueado antes de conectar al robot; no se envió ninguna orden.', file=sys.stderr)

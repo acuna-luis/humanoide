@@ -59,7 +59,7 @@ class AlignmentCliTests(unittest.TestCase):
 
     def test_table74_full_plan_passes_exact_alignment_count_to_supervised_coordinator(self):
         with patch('scripts.box_handling.scenario1_table74_cycle.run', return_value=0) as coordinator:
-            result = cli.main(['--plan', '--table-height-cm', '74', '--box-alignment-attempts', '4'],
+            result = cli.main(['--plan', '--table-height-cm', '74', '--table74-supervised', '--box-alignment-attempts', '4'],
                               policy='assume', execution_profile='optimistic_v1')
         self.assertEqual(result, 0)
         selected = coordinator.call_args.args[0]

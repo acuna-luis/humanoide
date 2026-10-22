@@ -43,12 +43,12 @@ class Table74PreparationCliTests(unittest.TestCase):
 
     def test_only_74_is_accepted_and_profile_selection_is_exclusive(self):
         parser = cli.parser('assume', 'optimistic_v1')
-        self.assertEqual(parser.parse_args(['--table-height-cm', '74']).table_height_cm, 74.)
+        self.assertEqual(parser.parse_args(['--table-height-cm', '74', '--table74-supervised']).table_height_cm, 74.)
         for args in (['--table-height-cm', value] for value in ('73', '69.5', 'nan', 'inf')):
             with self.subTest(args=args), patch('sys.stderr', io.StringIO()), self.assertRaises(SystemExit):
                 parser.parse_args(args)
         with patch('sys.stderr', io.StringIO()), self.assertRaises(SystemExit):
-            parser.parse_args(['--table-height-cm', '74', '--profile', str(cli.HERE/'scenario1_current_geometry.json')])
+            parser.parse_args(['--table-height-cm', '74', '--table74-supervised', '--profile', str(cli.HERE/'scenario1_current_geometry.json')])
 
     def test_legacy_default_profile_and_plan_remain_unchanged(self):
         report = self.run_plan(['--plan'])
@@ -63,7 +63,7 @@ class Table74PreparationCliTests(unittest.TestCase):
             with patch('scripts.box_handling.scenario1_table74_cycle.run', return_value=43) as coordinator, \
                     patch.object(cli, 'Connection', side_effect=AssertionError('Coordinator owns transport')), \
                     patch.object(contract, 'new_checkpoint', side_effect=AssertionError('No full pending checkpoint')):
-                result = cli.main(['--plan', '--table-height-cm', '74', '--box-alignment-attempts', '7',
+                result = cli.main(['--plan', '--table-height-cm', '74', '--table74-supervised', '--box-alignment-attempts', '7',
                                    '--evidence-dir', str(evidence)],
                                   policy='assume', execution_profile='optimistic_v1')
             self.assertEqual(result, 43)
@@ -79,7 +79,7 @@ class Table74PreparationCliTests(unittest.TestCase):
                 evidence = Path(directory)/'not-created'
                 with patch('scripts.box_handling.scenario1_table74_cycle.run', return_value=0) as coordinator, \
                         patch.object(cli, 'Connection', side_effect=AssertionError('No direct transport')):
-                    result = cli.main([*mode, '--table-height-cm', '74', '--evidence-dir', str(evidence)],
+                    result = cli.main([*mode, '--table-height-cm', '74', '--table74-supervised', '--evidence-dir', str(evidence)],
                                       policy='assume', execution_profile='optimistic_v1')
                 self.assertEqual(result, 0)
                 selected = coordinator.call_args.args[0]
@@ -89,7 +89,7 @@ class Table74PreparationCliTests(unittest.TestCase):
     def test_other_confirmation_policies_do_not_silently_acquire_supervised_route(self):
         with patch.object(cli, 'Connection', side_effect=AssertionError('No network')), \
                 patch('sys.stderr', io.StringIO()) as output:
-            result = cli.entrypoint(['--run', '--table-height-cm', '74'], policy='ask')
+            result = cli.entrypoint(['--run', '--table-height-cm', '74', '--table74-supervised'], policy='ask')
         self.assertEqual(result, 78)
         self.assertIn('MESA74_PREPARACION_PENDIENTE', output.getvalue())
         self.assertIn('antes de conectar', output.getvalue())
@@ -98,7 +98,7 @@ class Table74PreparationCliTests(unittest.TestCase):
     def test_predeposit_plans_keep_pending_profile_and_exact_stage_boundaries(self):
         for flag, last in (('get1', 'navigate_get1'), ('grasp', 'verify_held'), ('put1', 'navigate_put1')):
             with self.subTest(flag=flag):
-                report = self.run_plan(['--plan', '--table-height-cm', '74', '--stop-after', flag])
+                report = self.run_plan(['--plan', '--table-height-cm', '74', '--table74-supervised', '--stop-after', flag])
                 self.assertEqual(report['stages'], list(contract.STAGES[:contract.STAGES.index(last)+1]))
                 self.assertEqual(report['profile'], TABLE74)
                 self.assertEqual(report['profile']['deposit']['compatibility'], 'pending')
@@ -121,7 +121,7 @@ class Table74PreparationCliTests(unittest.TestCase):
             with patch.object(cli, 'TABLE74_PREPARATION_PROFILE', path), \
                     patch.object(cli, 'Connection', side_effect=AssertionError('No network')), \
                     self.assertRaisesRegex(ValueError, 'TABLE74_PREPARATION_PROFILE_CHANGED'):
-                cli.main(['--run', '--table-height-cm', '74', '--stop-after', 'grasp'],
+                cli.main(['--run', '--table-height-cm', '74', '--table74-supervised', '--stop-after', 'grasp'],
                          policy='assume', execution_profile='optimistic_v1')
 
     def test_resume_requires_same_selection_and_profile_hash_without_consuming_source(self):
@@ -129,7 +129,7 @@ class Table74PreparationCliTests(unittest.TestCase):
             source = Path(directory)/'checkpoint.json'
             raw = json.dumps(checkpoint(TABLE74))
             source.write_text(raw)
-            report = self.run_plan(['--plan', '--table-height-cm', '74', '--resume', str(source),
+            report = self.run_plan(['--plan', '--table-height-cm', '74', '--table74-supervised', '--resume', str(source),
                                     '--stop-after', 'put1'])
             self.assertEqual(report['stages'], ['retreat', 'navigate_put1'])
             self.assertEqual(report['resume']['checkpoint']['profile_sha256'], contract._profile_hash(TABLE74))
@@ -143,7 +143,7 @@ class Table74PreparationCliTests(unittest.TestCase):
             altered['profile_sha256'] = 'f'*64
             source.write_text(json.dumps(altered))
             with self.assertRaises(ValueError):
-                self.run_plan(['--plan', '--table-height-cm', '74', '--resume', str(source), '--stop-after', 'put1'])
+                self.run_plan(['--plan', '--table-height-cm', '74', '--table74-supervised', '--resume', str(source), '--stop-after', 'put1'])
 
     def test_legacy_checkpoint_is_not_silently_migrated_into_table74(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -151,7 +151,7 @@ class Table74PreparationCliTests(unittest.TestCase):
             original = json.dumps(checkpoint(LEGACY))
             source.write_text(original)
             with self.assertRaises(ValueError):
-                self.run_plan(['--plan', '--table-height-cm', '74', '--resume', str(source), '--stop-after', 'put1'])
+                self.run_plan(['--plan', '--table-height-cm', '74', '--table74-supervised', '--resume', str(source), '--stop-after', 'put1'])
             self.assertEqual(source.read_text(), original)
             self.assertFalse(source.with_name('checkpoint.json.consumed.json').exists())
 
@@ -161,7 +161,7 @@ class Table74PreparationCliTests(unittest.TestCase):
             raw = json.dumps(checkpoint(TABLE74, at_put1=True))
             source.write_text(raw)
             with patch('scripts.box_handling.scenario1_table74_cycle.run', return_value=0) as coordinator:
-                result = cli.main(['--plan', '--table-height-cm', '74', '--resume', str(source)],
+                result = cli.main(['--plan', '--table-height-cm', '74', '--table74-supervised', '--resume', str(source)],
                                   policy='assume', execution_profile='optimistic_v1')
             self.assertEqual(result, 0)
             self.assertEqual(coordinator.call_args.args[0].resume, source)
@@ -170,7 +170,7 @@ class Table74PreparationCliTests(unittest.TestCase):
 
     def test_pause_command_preserves_explicit_table_selection(self):
         args = cli.parser('assume', 'optimistic_v1').parse_args(
-            ['--table-height-cm', '74', '--stop-after', 'grasp'])
+            ['--table-height-cm', '74', '--table74-supervised', '--stop-after', 'grasp'])
         cp = contract.new_checkpoint(TABLE74, stop_after='verify_held', policy='assume',
                                      execution_profile='optimistic_v1')
         with patch('sys.stdout', io.StringIO()) as output:
@@ -217,7 +217,7 @@ class Table74PreparationCliTests(unittest.TestCase):
                     patch('builtins.input', side_effect=AssertionError('No prompts')), \
                     patch.object(cli, 'open', side_effect=lambda name, mode: open(root/Path(name).name, mode), create=True), \
                     patch('sys.stdout', io.StringIO()):
-                result = cli.main(['--run', '--table-height-cm', '74', '--stop-after', 'grasp',
+                result = cli.main(['--run', '--table-height-cm', '74', '--table74-supervised', '--stop-after', 'grasp',
                                    '--evidence-dir', str(evidence)],
                                   policy='assume', execution_profile='optimistic_v1')
             self.assertEqual(result, 0)

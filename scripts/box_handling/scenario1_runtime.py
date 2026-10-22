@@ -23,6 +23,7 @@ import time
 import urllib.request
 
 if __package__:
+    from . import scenario1_height_deposit as height_deposit
     from . import scenario1_checks as checks, scenario1_contract as contract
     from . import scenario1_sensors as sensors
     from . import scenario1_dependencies as dependencies
@@ -37,6 +38,7 @@ if __package__:
     from .front_sps_session import check_sps_discovery
 else:
     import scenario1_checks as checks
+    import scenario1_height_deposit as height_deposit
     import scenario1_contract as contract
     import scenario1_sensors as sensors
     import scenario1_dependencies as dependencies
@@ -140,6 +142,16 @@ runpy.run_path(root+'/front_sps_native.py',run_name='__main__')
 class Runtime:
     def __init__(self, payload, emit=None):
         self.payload = payload
+        height = height_deposit.profile_height(payload.get('profile'))
+        if height is not None:
+            checked = height_deposit.validate_bundle(payload.get('deposit_bundle'))
+            if checked['task_name'] != payload['profile']['deposit']['task']:
+                raise ValueError('Height task/profile mismatch')
+            if any(payload.get('extra_hashes', {}).get(p) != h for p, h in checked['manifest']['robot_files'].items()):
+                raise ValueError('Height dependencies absent from live checks')
+            if (payload.get('mode') != 'check' and payload['checkpoint']['stop_after'] == 'verify_home'
+                    and payload.get('height_trial_authorized') is not True):
+                raise ValueError('HEIGHT_TRIAL_PENDING: explicit --height-deposit-trial required')
         self.emit = emit or (lambda event, **values: print(json.dumps(
             dict(event=event, time_ns=time.time_ns(), **values), allow_nan=False), flush=True))
         self.commands = queue.Queue()
@@ -1159,6 +1171,8 @@ with socket.socket(socket.AF_UNIX) as conn:
         No watchdog, failed worker or lease is reset to permit the second goal.
         """
         task, timeout = TASKS[stage]
+        if stage == 'deposit' and height_deposit.profile_height(self.payload.get('profile')) is not None:
+            task = self.payload['profile']['deposit']['task']
         goal = {'task_name': task, 'yaml_args': '{}'}
         retry_allowed = (stage == 'home' and self.execution_profile == 'optimistic_v1' and
                          self.policy == 'assume' and contract.home_retry_available(self.checkpoint))

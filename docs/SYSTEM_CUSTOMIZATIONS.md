@@ -1,5 +1,24 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-SCENARIO1-UNIFIED-FAST-20261022
+
+**22-10-2026, Europe/Madrid — implementado en PC/repositorio; no instalado/cargado/probado en robot.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo/autoridad | Usuario autoriza optimizar tiempo de ciclo y compartir motor por altura; implementación offline, sin movimiento autorizado hoy |
+| Destino/fuente | scripts/box_handling/scenario1_height_deposit.py; integración en CLI, contrato, Runtime e instalador aditivo existente; wrapper optimistic conservado |
+| Configuración | Perfiles74/90 y paquetes por contenido; fuente vendor con hashes, modelo/HOME/bibliotecas fijados. Recogida intacta.74: aproximación+descenso19 cm/12 s, pines4 cm/2 s y apertura10 cm/2 s.90: geometría histórica12+2 s |
+| Activación | --table-height-cm 74 o90; plan sin conexión. Para ciclo completo nuevo, --height-deposit-trial --run explícito; no registra validación física. Inicialmente instalación de archivos aditivos, preflight y luego sesión única |
+| Backup/rollback | Copia previa PC en ../Humanoide-vla-evidence/20261022_UNIFIED_FAST_CYCLE_183415/before; instalador remoto /var/tmp/cruzr-table74-trial/id y copia autenticada PC antes de armar. --rollback con bundle exacto retira sólo archivos nuevos propios |
+| Dependencias | Python3 estándar PC/Motion, Ethernet, Docker y stack actual compatible. Invalidar ante cambio de contenedor, modelo/HOME, biblioteca o fuente nativa; nunca restaurar estados transitorios |
+| Verificación/estado | Pruebas locales de perfiles, transformaciones, aislamiento, tampering, instalación/rollback, fallos y motor compartido. No SSH ni movimiento durante implementación; resultados exactos y hashes en verification.json privado y commit |
+| Deuda/reanudación | Ensayo físico74 integrado y90 reempaquetado PENDIENTE; medir contra323,879 s con la instrumentación existente. Hipótesis210–240 s, no medición. No promover validación automáticamente |
+| Compatibilidad | Sustituye propuesta BOX-SCENARIO1-UNIFIED-HEIGHTS-REVIEW-20261022 como implementación. Vía anterior --table74-supervised y checkpoints antiguos siguen sin migración; finalizadores conservados |
+
+[Procedimiento reproducible y alcance](box_handling/OPTIMISTIC_SCENARIO1.md#ciclo-común-por-altura-optimización-implementada--22-10-2026).
+
+
 ## BOX-TABLE74-OPEN-STALE-20261022
 
 **22-10-2026, Europe/Madrid — diagnóstico offline VERIFICADO; código sin modificar.**

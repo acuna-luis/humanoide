@@ -1,5 +1,112 @@
 # Escenario 1 con supervisión continua
 
+### Ciclo común por altura: optimización implementada — 22-10-2026
+
+**BOX-SCENARIO1-UNIFIED-FAST-20261022 — código y pruebas offline; robot sin modificar ni mover.**
+Esta entrada sustituye la propuesta anterior como estado del código. La toma
+323,879 s sigue siendo la última medición física del flujo antiguo: no se ha
+medido todavía el nuevo flujo. No se atribuye al nuevo código un éxito físico.
+
+`optimistic_scenario1.sh --table-height-cm 74|90` selecciona ahora perfiles del
+mismo motor `scenario1_runtime`, con una conexión, un monitor de salud y un
+checkpoint para todo el ciclo. Se eliminan los cinco arranques separados del
+depósito y la sesión HOME independiente. Se conserva el descubrimiento inicial,
+la evaluación de salud fresca entre etapas, identidad de contenedores/archivos,
+llegada y reposo, controles nativos y HOME medido. La tarea de recogida y sus
+constructores no cambian. No se modifican límites de velocidad ni del chasis.
+La interpolación74 sí cambia:19 cm entre las referencias t10 y t12; puede
+aumentar la velocidad efectiva frente a los dos descensos partidos y exige ensayo.
+
+| Perfil | Colocación nativa | Liberación | Estado |
+| --- | --- | --- | --- |
+| 74 cm | Aproximación Z nominal0,94; descenso relativo único19 cm en el tramo final de la misma tarea12 s; torso relativo final0 | Pines:4 cm verticales/2 s; después10 cm laterales por lado/2 s, sin rotación añadida | Nueva interpolación PENDIENTE de ensayo; mismos destinos nominales de la receta anterior, resultado físico sin comprobar |
+| 90 cm | Geometría histórica: Z inicial1,10; manos y torso−20 cm al final de tarea12 s | Apertura original2 s, simultánea lateral/−5 cm y orientación vendor | Geometría conservada; nuevo empaquetado/sesión PENDIENTE de ensayo |
+
+Los perfiles **no son sólo una resta de alturas**: registran por separado el
+movimiento del torso y la liberación. Sólo74 y90 están admitidos. Añadir otra
+altura exige revisar su geometría y ensayarla; no implica copiar otro motor.
+La ventana de fuerzas y demás bytes de control del YAML original se conservan;
+la nueva interpolación74 requiere comprobar contacto y holguras. Éxito nativo
+no mide apoyo ni pines libres. En el modo sin preguntas siguen siendo supuestos
+del montaje conocido; no se crean medidas ni certificados de validación.
+
+**Ahorro buscado, aún no medido:** quitar arranques repetidos y consultas HOME
+externas; colocación/liberación74 pasa de38 a16 s nominales. Como hipótesis
+inicial, aproximadamente210–240 s por ciclo frente a323,879 s, con la misma
+recogida y navegación. No es un compromiso: puede variar con localización,
+ajustes y salud; no sumar los huecos SPS a los arranques que ya los incluyen.
+
+Plan local, sin conexión, instalación ni movimiento:
+
+```bash
+./scripts/optimistic_scenario1.sh --table-height-cm 74 --box-alignment-attempts 7 --plan
+./scripts/optimistic_scenario1.sh --table-height-cm 90 --plan
+```
+
+Preparación opcional fuera de la toma cronometrada, con directorio nuevo:
+
+```bash
+python3 -m scripts.box_handling.scenario1_height_deposit --height-cm 74 \
+  --output ../Humanoide-vla-evidence/altura74-integrada-instalacion
+python3 -B scripts/box_handling/scenario1_table74_trial_install.py \
+  --bundle ../Humanoide-vla-evidence/altura74-integrada-instalacion/bundle.json --install
+./scripts/optimistic_scenario1.sh --table-height-cm 74 --check
+```
+
+El instalador sólo añade archivos de tareas; no publica ROS, no cambia modos,
+no reinicia servicios y no sobrescribe originales. Conserva recibos/rollback en
+`/var/tmp/cruzr-table74-trial/<id>`. Antes de armar, el CLI verifica y copia ese
+paquete al PC. Si falta instalación, `--check` informa y termina sin instalar;
+un futuro `--run` autorizado prepara los archivos antes del preflight físico.
+Ethernet directa requerida para este instalador. Cambiar altura cambia el
+paquete inmutable, no el motor; los paquetes ya presentes se comprueban/reusan.
+
+**Primer ensayo físico, sólo después de comprobar las condiciones actuales:**
+
+```bash
+./scripts/optimistic_scenario1.sh --table-height-cm 74 \
+  --box-alignment-attempts 7 --height-deposit-trial --run
+```
+
+`--height-deposit-trial` declara la elección de ensayar el nuevo paquete; no
+omite paros, fuerza, límites, cargador, salud ni localización, y no convierte el
+perfil en probado. Actualmente es obligatorio para todo ciclo completo con
+estos perfiles. No se autoriza el ensayo por el mero hecho de documentarlo.
+No activar `--cycle` hasta revisar el primer resultado y sus tiempos.
+Para probar sólo recogida/llegada, `--stop-after grasp|put1` conserva las pausas.
+La reanudación de un checkpoint **nuevo** usa la misma altura/perfil y, si
+alcanza depósito/HOME, también `--height-deposit-trial`; nunca repetir el agarre
+con caja sujeta. Ctrl+C guarda la retoma conservando altura y modo de ensayo.
+
+Compatibilidad: `--table-height-cm 74 --table74-supervised` mantiene el flujo
+anterior por fases. Checkpoints antiguos del perfil74 de preparación siguen
+por su coordinador antiguo; no se migran a la trayectoria integrada ni se
+reutilizan checkpoints consumidos. `--continue-deposit` y `--finish-deposit`
+conservan sus protocolos. Ante resultado desconocido no se repite depósito ni
+se envía HOME automáticamente.
+
+Fuentes: `scenario1_height_deposit.py` (perfiles/generador/validador puro),
+`scenario1_cli.py`, `scenario1_runtime.py`, `scenario1_contract.py` y extensión
+del instalador existente. Los hashes del modelo, HOME, bibliotecas y tareas
+originales se comprueban de nuevo antes de las acciones. La validación aislada
+reconstruye el paquete desde fuentes fijadas; recalcular un hash no permite
+cambiar fuerza, trayectorias o tareas arbitrarias.
+
+Verificación offline: regresión1133 pruebas correcta;17 pruebas focalizadas
+del nuevo flujo (incluyen dos casos adicionales posteriores a esa regresión),
+bootstrap aislado de Runtime/instalador, planes74/90 y sintaxis Bash correctos.
+La suite antigua test_scenario1_deposit_install se excluyó por sus17 errores
+de fixtures ya documentados; no se modificó. Ninguna prueba contacta al robot.
+
+Reversión: volver al modo supervisado anterior o revertir sólo el commit de
+esta intervención; para retirar un paquete instalado, usar el instalador con
+el mismo `bundle.json` y `--rollback`, sin tarea activa. Sólo elimina archivos
+aditivos propiedad del paquete con hashes intactos; no toca SDK/originales ni
+registros de ejecución. No cambiar código/perfil con caja sujeta para empezar
+un ciclo nuevo. Evidencia y respaldo local:
+`../Humanoide-vla-evidence/20261022_UNIFIED_FAST_CYCLE_183415/`.
+
+
 **22-10-2026 — BOX-TABLE74-OPEN-STALE-20261022: aborto antes de apertura.**
 Toma162111Z1476072: alivio SUCCEED4/1101001, journal sin consumir; apertura
 sin ready, acciones ni trial.json; HOME no iniciado. Health inicial falla en5,860 s
