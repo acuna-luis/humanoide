@@ -1,5 +1,115 @@
 # Apertura bloqueada al adquirir telemetría — 22-10-2026
 
+## Recuperación HOME autorizada y ejecutada — 22-10-2026
+
+**BOX-TABLE74-EMPTY-HOME-RECOVERY-20261022 — VERIFICADO en telemetría.**
+Esta actualización supera la frontera pendiente descrita en el diagnóstico
+histórico inferior. El usuario informa pines/caja liberados; confirma abrazaderas
+vacías/sin enganches, caja estable fuera del barrido, recorrido brazos/torso/
+elevador libre, cargador fuera, ambos paros liberados, ruedas inmovilizadas,
+ningún otro controlador y persona junto al paro. Autoriza un único HOME y
+advierte brazos aún en postura de agarre y torso inclinado. No se infiere una
+apertura lateral ejecutada ni se fabrica un journal de esa fase.
+
+La rama ya contiene b92d004 (unificación del otro hilo). Esta intervención
+**no modifica programa, perfiles ni tareas instaladas** ni prueba el depósito
+nuevo. Se usa exclusivamente la tarea HOME conocida d9e9462792b41300d352604b53ea2a4890a9382e942321990708f6ded2e26ccb.
+Su XML leído del robot empieza con cuerpo a cero y ajuste/apertura de brazos
+en paralelo, después baja brazos y los recoge: no se describe como torso primero.
+El operador confirma barrido libre también para esta postura.
+
+Preflight de lectura e inmediato: inventario de contenedores/boot coincide con
+la toma; hashes de dependencias y cadena de tareas intactos; controladores
+correctos/acción libre; dos muestras20D habilitadas sin fault, velocidad0,
+consigna–posición máximo0,001558 rad. HOME=0 y posición máxima2,141533 rad,
+consistente con postura de agarre; no acredita clearance. Baterías56,0/56,3 %,
+paros0/0 y cargador0. No reinicio, rearme, navegación ni nueva apertura.
+
+Se ejecutó **una** llamada a `scripts/force_home.sh`, goal
+`b559d0c5-d184-4b2a-b233-e6353abb6d73`, SUCCEED/status4/state1101001.
+Comando16,593907356 s monotónicoPC (incluye transporte/CLI; no duración física
+instrumentada). Postflight: dos muestras20D HOME=1, velocidad0,
+máximo absoluto0,002109 rad, máximo brazos0,000959 rad; habilitados/sin fault.
+SOC55,8/56,1 %, paros0/0, cargador0. Sin reintento ni otra trayectoria.
+**Confirmación visual final del operador PENDIENTE** al registrar esta nota.
+
+El journal de pin-relief conserva siete archivos originales byte a byte y la
+toma original conserva `status=interrupted`. Antes de HOME se añadió sólo
+`pin-relief/physical-run/trial.json.consumed.json`, apuntando al nuevo recibo
+`home-attempt.json`: ya no admite apertura/retoma desde esa frontera después
+de HOME. No borrar consumo ni volver a ejecutar el ciclo interrumpido.
+
+### Receta y evidencia de esta recuperación
+
+Evidencia externa:
+`../Humanoide-vla-evidence/20261022_HOME_RECOVERY_164730Z/`.
+Contiene autorización, inventarios/preflight/consultas inmediatas/postflight,
+HOME instalado leído, recibo de intención único, UUID/resultado nativo,
+consola, hashes, fuentes PC usadas y respaldo documental `before/`.
+`recover_once.py` conserva la invocación exacta y rechaza un recibo preexistente.
+Su contenido queda versionado abajo como receta histórica: **no reutilizar
+su ruta, fuente o autorización** para otro movimiento. Otro ensayo requiere
+nuevo estado/contexto/autorización y evidencia nueva. No autoriza reutilizar
+fuentes de otros hilos sin revisar sus hashes.
+
+```python
+"""One operator-authorized native HOME, no retry or alternate motion."""
+from pathlib import Path
+from contextlib import ExitStack
+import fcntl, hashlib, json, subprocess, time
+from scripts.box_handling import scenario1_table74_home as h
+from scripts.box_handling import scenario1_table74_current_release_run as r
+ROOT=Path(__file__).resolve().parent
+SOURCE=Path('/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261022T162111Z_TABLE74_SUPERVISED_CYCLE_1476072/pin-relief/physical-run')
+RECEIPT=ROOT/'home-attempt.json'
+if RECEIPT.exists(): raise RuntimeError('Existing HOME intent; no repeat allowed')
+profile=json.loads(h.PROFILE_PATH.read_text())
+proof,info,hashes=r.load_predecessor(SOURCE,profile)
+payload=h.cli.make_payload('check',profile,info['source'])
+script=h.cli.ROOT/'scripts/force_home.sh'
+script_hash=hashlib.sha256(script.read_bytes()).hexdigest()
+reader=h.Reader(ROOT,False)
+with ExitStack() as stack:
+ for name in ('/tmp/cruzr_blue_workbin_cycle.lock','/tmp/cruzr-improved-scenario1.lock','/tmp/cruzr-table74-supervised-cycle.lock'):
+  lock=stack.enter_context(open(name,'a'));fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+ found=reader.inventory(info['context'],'immediate-inventory')
+ reader.files(info,payload,found,'immediate-files')
+ health=reader.health(found,'immediate-health')
+ h.cli.atomic_json(ROOT/'immediate-verified.json',health)
+ reader.inventory(info['context'],'immediate-final-inventory')
+ fresh,_,fresh_hashes=r.load_predecessor(SOURCE,profile)
+ if fresh!=proof or fresh_hashes!=hashes or hashlib.sha256(script.read_bytes()).hexdigest()!=script_hash:
+  raise RuntimeError('Source or HOME wrapper changed; no dispatch')
+ receipt=dict(phase='intent',automatic_retry=False,task='cruzr/home',
+  operator_authorization='operator-authorization.json',
+  manual_release_declared=True,opening_action_executed_by_agent=False,
+  source=str(SOURCE),source_hashes=hashes,wrapper_sha256=script_hash,
+  intent_pc_ns=time.time_ns(),result=None,measured_home=False)
+ with RECEIPT.open('x') as stream: json.dump(receipt,stream,indent=2);stream.write('\n')
+ # The previous phase can no longer authorize a subsequent opening after HOME.
+ h.cli.claim_resume(SOURCE/'trial.json',RECEIPT)
+ print('DISPATCH_ONE_HOME',flush=True)
+ started=time.monotonic_ns()
+ try:
+  process=subprocess.run([str(script)],capture_output=True,text=True,timeout=90)
+  h.cli.atomic_json(ROOT/'native-result.json',dict(returncode=process.returncode,stdout=process.stdout,stderr=process.stderr))
+  print(process.stdout,flush=True)
+  result=h.validate_result(process.returncode,process.stdout)
+  receipt.update(phase='native_succeeded',result=result,command_elapsed_s=(time.monotonic_ns()-started)/1e9)
+  h.cli.atomic_json(RECEIPT,receipt)
+  post=reader.health(found,'postflight',require_home=True)
+  reader.inventory(info['context'],'postflight-inventory')
+  h.cli.atomic_json(ROOT/'postflight-verified.json',post)
+  receipt.update(phase='succeeded',measured_home=True,finished_pc_ns=time.time_ns(),classifications=post['classifications'],safety=post['safety'])
+  h.cli.atomic_json(RECEIPT,receipt)
+  print('RECOVERY_SUCCESS '+json.dumps(dict(result=result,classifications=post['classifications'],safety=post['safety'])),flush=True)
+ except BaseException as exc:
+  receipt.update(phase='failed_or_unconfirmed',error=type(exc).__name__+': '+str(exc),finished_pc_ns=time.time_ns())
+  h.cli.atomic_json(RECEIPT,receipt)
+  print('NO_RETRY '+str(exc),flush=True)
+  raise
+```
+
 **BOX-TABLE74-OPEN-STALE-20261022 — VERIFICADO offline / causa temporal concreta PENDIENTE.**
 Zona de registro: Europe/Madrid. Petición del usuario: analizar por qué se detuvo
 el ciclo aunque no cambiaron las condiciones. Sólo lectura local y reproducción

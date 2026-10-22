@@ -1,5 +1,22 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-TABLE74-EMPTY-HOME-RECOVERY-20261022
+
+**22-10-2026, Europe/Madrid — ejecutado; HOME20D VERIFICADO.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo/autoridad | Un único HOME; usuario confirma caja/pines libres, abrazaderas vacías, barrido libre, paros liberados, cargador fuera, ruedas inmovilizadas, otros clientes detenidos y operador al paro. Aclara agarre cerrado/torso inclinado |
+| Destino/fuente | Motion, contenedor descubierto y boot intactos. scripts/force_home.sh SHA3f025a2b…3db2c7, tarea cruzr/home instalada d9e946…e26ccb. Fuentes PC b92d004, HOME y dependencias verificadas por hashes; no instalación/configuración nueva |
+| Preflight | Completo y repetido inmediatamente antes:20D habilitados sin fault/inmóviles, delta consigna máximo0,001558 rad, HOME0; packs56,0/56,3 %, paros/cargador0, controladores/acción libre |
+| Acción/resultado | Un goal b559d0c5-d184-4b2a-b233-e6353abb6d73, SUCCEED4/1101001; comando16,593907356 s. Sin retry, apertura, navegación, reset o cambio de modo |
+| Postflight | Dos muestras20D HOME1, velocidad0, máximo0,002109 rad; brazos0,000959 rad. Sin fault. SOC55,8/56,1 %, paros/cargador0. Confirmación visual final PENDIENTE |
+| Cambio de estado | Robot vuelve a HOME. PC añade recibo nuevo de ejecución y consumo de pin-relief antes del despacho; siete archivos del origen intactos y cycle.json original interrupted. No tocar consumed ni retomar apertura después de HOME |
+| Reproducibilidad/backup | Incidente con receta histórica completa; ../Humanoide-vla-evidence/20261022_HOME_RECOVERY_164730Z/: recover_once.py, operator-authorization.json, home-attempt.json, native-result.json, lecturas, source-inventory.json/source-snapshot/, before/ |
+| Reversión/pendientes | No hay cambio de programa/servicio a revertir. No deshacer postura ni consumo como rollback. Cualquier movimiento posterior requiere nueva autorización/contexto. Nuevo depósito integrado sigue sin ensayo; percepción física final pendiente |
+
+[Resultado y receta](incidents/2026-10-22_APERTURA_BLOQUEADA_TELEMETRIA_CADUCADA.md#recuperación-home-autorizada-y-ejecutada--22-10-2026).
+
 ## BOX-SCENARIO1-UNIFIED-FAST-20261022
 
 **22-10-2026, Europe/Madrid — implementado en PC/repositorio; no instalado/cargado/probado en robot.**

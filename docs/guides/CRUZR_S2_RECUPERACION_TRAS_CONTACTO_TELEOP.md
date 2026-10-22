@@ -1,5 +1,16 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**22-10-2026 — BOX-TABLE74-EMPTY-HOME-RECOVERY-20261022: HOME recuperado.**
+Tras confirmar caja/pines libres, abrazaderas vacías y barrido libre con brazos
+aún en agarre/torso inclinado, el usuario autoriza un único HOME. Lecturas nuevas
+correctas, HOME instalado d9e946 sin cambios. Goal b559d0c5 termina SUCCEED4/
+1101001; comando16,594 s. Dos muestras20D HOME=1, velocidad0, máximo0,002109 rad;
+SOC55,8/56,1 %, paros/cargador0. Sin apertura, navegación, reset ni reintento.
+Pin-relief original consumido antes de HOME mediante marcador nuevo; archivos
+originales y cycle interrupted intactos. No reutilizar esa frontera. Programa
+sin cambios; el nuevo ciclo b92d004 no se ha probado. Confirmación visual final
+PENDIENTE. [Resultado y receta](../incidents/2026-10-22_APERTURA_BLOQUEADA_TELEMETRIA_CADUCADA.md#recuperación-home-autorizada-y-ejecutada--22-10-2026).
+
 **22-10-2026 — BOX-TABLE74-FINISH-20261022: estado comunicado actualizado.**
 Después de ajustar manualmente la caja, el operador confirma apoyo plano,
 completo y estable, sin peso sostenido por brazos. No demuestra la causa de
