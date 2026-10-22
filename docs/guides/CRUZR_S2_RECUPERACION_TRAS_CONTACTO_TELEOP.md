@@ -1,5 +1,22 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**22-10-2026 — BOX-TABLE74-PARTIAL-SUPPORT-20261022: detener antes de liberar.**
+El operador aclara apoyo sólo en la esquina derecha alejada, con unos1cm de
+hueco en las demás zonas. El log nativo demuestra `DectionForceCollision`:
+variación vertical derecha10,5374N frente10N, tres superaciones; el árbol
+lo devuelve como SUCCEED, sin acreditar apoyo completo ni completar el
+centímetro. No se repitió la bajada solicitada después, ni se enviaron alivio,
+apertura o HOME. Lectura posterior:20D habilitados/sin fault, velocidad0 y
+delta consigna–posición máximo0,004203rad. No acredita seguridad mecánica.
+
+La frontera sigue siendo `settle-run/trial.json`, sin consumir pero no apta
+físicamente para liberar. Candidatos de alivio/apertura sólo en PC, sin
+instalar; el perfil normal74 continúa pendiente. Antes de otra trayectoria
+faltan geometría actual de contacto y una nivelación revisada/validada;
+no deducir un pivote o corregir sólo un brazo a partir de un único contacto.
+No cambiar umbrales ni referencias para forzar el descenso.
+[Detalle, evidencia y reanudación](../box_handling/DEPOSITO_WRC_ALTURA_100CM.md).
+
 **22-10-2026 — BOX-NATIVE-ARM-PREPARATION-DIAG-20261022: preparación articular por lado comprobada.**
 Original MetaMove7D3s y retorno medido6s, primero derecho y después izquierdo,
 ambos SUCCEED/status4/1101001. El operador confirma observación normal sin ruido

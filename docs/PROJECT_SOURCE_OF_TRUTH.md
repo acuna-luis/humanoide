@@ -1,5 +1,43 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-TABLE74-PARTIAL-SUPPORT-20261022: detener antes de liberar.**
+El operador aclara apoyo sólo en la esquina derecha alejada, con unos1cm de
+hueco en las demás zonas. El log nativo demuestra `DectionForceCollision`:
+variación vertical derecha10,5374N frente10N, tres superaciones; el árbol
+lo devuelve como SUCCEED, sin acreditar apoyo completo ni completar el
+centímetro. No se repitió la bajada solicitada después, ni se enviaron alivio,
+apertura o HOME. Lectura posterior:20D habilitados/sin fault, velocidad0 y
+delta consigna–posición máximo0,004203rad. No acredita seguridad mecánica.
+
+La frontera sigue siendo `settle-run/trial.json`, sin consumir pero no apta
+físicamente para liberar. Candidatos de alivio/apertura sólo en PC, sin
+instalar; el perfil normal74 continúa pendiente. Antes de otra trayectoria
+faltan geometría actual de contacto y una nivelación revisada/validada;
+no deducir un pivote o corregir sólo un brazo a partir de un único contacto.
+No cambiar umbrales ni referencias para forzar el descenso.
+[Detalle, evidencia y reanudación](box_handling/DEPOSITO_WRC_ALTURA_100CM.md).
+
+**22-10-2026 — BOX-TABLE74-CURRENT-SETTLE-20261022: descenso residual1cm completado; apoyo físico pendiente.**
+Después del support5cm, el operador comunica **1cm igual a ambos lados,
+sin ninguna esquina apoyada**, caja horizontal/estable. No había apoyo
+confirmado. Se añade una fase separada settle .01→0m desde ese support:
+bundle `ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed`,
+instalado/cargado/probado una vez; goal `9565b30d-4753-4627-8238-aeb7a586de27`,
+SUCCEED/status4/state1101001, etapa17,029s; check13,1mm/0,34°,
+entrada run13,4mm/0,34°. El journal sigue support=false. Support trial
+consumido; settle trial nuevo sin consumir. No hubo apertura ni HOME.
+
+La cadena histórica admite ahora approach→precontact→support, máximo3
+antecesores; settle terminado no habilita otro descenso.24 pruebas focales
+settle PASS; total nuevo de regresión PENDIENTE. Se conservan controles
+nativos y los dos bundles previos byte exactos. Apoyo plano/completo y
+holguras/pines actuales PENDIENTES de respuesta del operador. Builder/runner
+`scenario1_table74_current_release*` y helper CLI están sólo preparados en PC,
+sin instalar/activar liberación ni fabricar referencia física. No abrir ni
+enviar HOME. [Detalle y estado](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#descenso-residual-de-1-cm-después-del-support--22-10-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#box-table74-current-settle-20261022).
+Evidencia: `../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/settle-run/`.
+
 **22-10-2026 — BOX-TABLE74-CURRENT-LOWERING-20261022: descensos14cm y5cm completados; apoyo físico por confirmar.**
 Un único tramo precontact desde el approach verificado termina
 SUCCEED/status4/state1101001, goal `3ea53b0c-d306-409d-8602-3f6fea005b16`,

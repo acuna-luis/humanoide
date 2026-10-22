@@ -51,8 +51,8 @@ def entry_context(source, source_hash):
 
 
 def validate_predecessor(proof, profile, *, _depth=0):
-    """Bounded authentic approach -> precontact -> support evidence chain."""
-    if _depth > 1 or not isinstance(proof, dict) or 'bundle.json' not in proof:
+    """Bounded approach -> precontact -> support; no repeated lowering."""
+    if _depth > 2 or not isinstance(proof, dict) or 'bundle.json' not in proof:
         raise ValueError('Lowering predecessor proof is missing or too deep')
     bundle = proof['bundle.json']
     phase = bundle.get('manifest', {}).get('phase') if isinstance(bundle, dict) else None
@@ -65,14 +65,18 @@ def validate_predecessor(proof, profile, *, _depth=0):
             source, planned = current.prepare_entry(source, selected, checked)
             return source, {}, planned
         builder = current.validate_bundle
-    elif phase == 'current_relative_lowering' and _depth == 0:
+    elif phase == 'current_relative_lowering':
         if set(proof) != set(FILES)|{'predecessor.json'}:
             raise ValueError('Precontact predecessor requires its original predecessor proof')
         bundle = lower.validate_bundle(bundle)
-        if bundle['review']['reference']['stage'] != 'precontact':
-            raise ValueError('A completed support phase cannot authorize another lowering')
-        parent = validate_predecessor(proof['predecessor.json'], profile, _depth=1)
+        stage = bundle['review']['reference']['stage']
+        if stage not in ('precontact', 'support'):
+            raise ValueError('A completed settle phase cannot authorize another lowering')
+        parent = validate_predecessor(proof['predecessor.json'], profile, _depth=_depth+1)
         ref = bundle['review']['reference']
+        expected = ('approach' if stage == 'precontact' else 'precontact')
+        if parent['completed_stage'] != expected:
+            raise ValueError('Lowering predecessor phase order differs')
         if (ref['predecessor_bundle_id'] != parent['bundle_id'] or ref['predecessor_goal_id'] != parent['goal_id']):
             raise ValueError('Precontact reference does not identify its original approach')
         def entry(source, selected, checked):
@@ -120,7 +124,8 @@ def validate_predecessor(proof, profile, *, _depth=0):
     if parent is not None and info['context'] != parent['context']:
         raise ValueError('Lowering predecessor changed robot/map/dependency context')
     info.update(predecessor_sha256=digest(proof),bundle_id=bundle['manifest']['id'],goal_id=goal,
-                phase=phase,source=info['source'],
+                phase=phase,completed_stage=(bundle['review']['reference']['stage'] if parent else 'approach'),
+                source=info['source'],
                 chain_bundles=(parent['chain_bundles'] if parent else [])+[bundle])
     info['planned']=entry_context(info['source'],info['predecessor_sha256'])
     return info
@@ -130,8 +135,8 @@ def validate_entry(proof, profile, bundle):
     info = validate_predecessor(proof,profile)
     bundle = lower.validate_bundle(bundle)
     ref = bundle['review']['reference']
-    expected = 'approach_vendor_reference' if ref['stage']=='precontact' else 'current_relative_lowering'
-    if (info['phase']!=expected or ref['predecessor_bundle_id']!=info['bundle_id'] or
+    expected = {'precontact':'approach', 'support':'precontact', 'settle':'support'}[ref['stage']]
+    if (info['completed_stage']!=expected or ref['predecessor_bundle_id']!=info['bundle_id'] or
             ref['predecessor_goal_id']!=info['goal_id']):
         raise ValueError('Lowering stage does not match its authenticated predecessor')
     return info, bundle

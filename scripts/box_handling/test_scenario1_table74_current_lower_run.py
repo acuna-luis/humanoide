@@ -49,7 +49,7 @@ def predecessor():
 
 def lowering_bundle(proof=None, stage='precontact'):
     proof=proof or predecessor()
-    return lower.build_bundle(dict(version=1,stage=stage,gap_above_surface_m=.19 if stage=='precontact' else .05,
+    return lower.build_bundle(dict(version=1,stage=stage,gap_above_surface_m={'precontact':.19,'support':.05,'settle':.01}[stage],
         target_clearance_m=.05 if stage=='precontact' else 0.,surface_height_m=.74,
         predecessor_bundle_id=proof['bundle.json']['manifest']['id'],predecessor_goal_id=proof['trial.json']['result']['goal_id'],
         evidence='Synthetic operator gap confirmation; not sensor measurement',scope='current_post_trial_box_only'),*sources())
@@ -95,7 +95,14 @@ class LowerProofTests(unittest.TestCase):
             with self.subTest(stage=stage),self.assertRaises(ValueError):
                 run.validate_entry(proof,PROFILE,lowering_bundle(proof,stage))
         support=proof_record(lowering_bundle(second,'support'),run.digest(second),parent=second)
-        with self.assertRaises(ValueError):run.validate_predecessor(support,PROFILE)
+        info,_=run.validate_entry(support,PROFILE,lowering_bundle(support,'settle'))
+        self.assertEqual(info['completed_stage'],'support')
+        self.assertEqual(len(info['chain_bundles']),3)
+        for stage in ('precontact','support'):
+            with self.subTest(repeated_stage=stage),self.assertRaises(ValueError):
+                run.validate_entry(support,PROFILE,lowering_bundle(support,stage))
+        settled=proof_record(lowering_bundle(support,'settle'),run.digest(support),parent=support)
+        with self.assertRaises(ValueError):run.validate_predecessor(settled,PROFILE)
 
     def test_parent_mutations_fail_closed_before_runtime(self):
         for change in ('missing_file','context','native_terminal','native_uuid','request_rc','nav_after_dispatch',
@@ -115,6 +122,23 @@ class LowerProofTests(unittest.TestCase):
             else:proof['predecessor.json']['bundle.json']['review']['reference']['evidence']='tampered'
             with self.subTest(change=change),self.assertRaises((ValueError,KeyError)):
                 run.validate_predecessor(proof,PROFILE)
+
+    def test_settle_needs_the_exact_completed_support_chain_and_cannot_replay_a_phase(self):
+        parent=precontact_proof()
+        support=proof_record(lowering_bundle(parent,'support'),run.digest(parent),parent=parent)
+        for mutate in ('inner_error','wrong_parent','changed_context'):
+            damaged=copy.deepcopy(support)
+            if mutate=='inner_error':
+                damaged['predecessor.json']['predecessor.json']['trial.json']['result']['status']=5
+            elif mutate=='wrong_parent':
+                damaged['predecessor.json']=predecessor()
+            else:
+                damaged['context.json']['boot_id']='changed-after-support'
+            with self.subTest(mutate=mutate),self.assertRaises(ValueError):
+                run.validate_entry(damaged,PROFILE,lowering_bundle(support,'settle'))
+        for stage in ('precontact','support'):
+            with self.subTest(stage=stage),self.assertRaises(ValueError):
+                run.validate_entry(support,PROFILE,lowering_bundle(support,stage))
 
     def test_only_complete_known_idle_shutdown_tail_is_accepted(self):
         proof=predecessor()

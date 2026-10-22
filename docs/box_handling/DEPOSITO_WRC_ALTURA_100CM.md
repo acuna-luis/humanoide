@@ -1,5 +1,103 @@
 # Depósito WRC y estantería a 100 cm
 
+**22-10-2026 — BOX-TABLE74-PARTIAL-SUPPORT-20261022: apoyo parcial; no liberar ni repetir el descenso.**
+Tras el settle de 1 cm, el operador identifica contacto sólo en la esquina
+**derecha alejada del robot**, con unos 1 cm de hueco en las demás zonas.
+Esto sustituye cualquier interpretación previa de apoyo completo. La petición
+posterior de otro centímetro **no se ejecutó**; tampoco se envió alivio de
+pines, apertura, HOME, paro, rearme ni cambio de modo.
+
+**VERIFICADO en el registro nativo:** durante la última acción, `right_hand`,
+eje 2, cambió desde referencia −10,9203 N hasta −0,382938 N: variación
++10,5374 N frente a 10 N, con tres superaciones consecutivas. A continuación
+constan `Collision force ... exiting`, `clamp_status: DectionForceCollision`
+y `BTree tick succeeded`. El terminal externo fue SUCCEED/status4/1101001,
+pero fue una finalización por detección de fuerza, no prueba de haber
+completado el centímetro ni de apoyo bilateral. Se conserva el umbral y su
+referencia; no se reintenta para acumular fuerza o saltar esa detección.
+
+La consulta posterior de lectura encuentra 20 actuadores corporales
+habilitados, sin fault/error reportado, velocidad 0 y máximo delta
+consigna–posición 0,004203 rad. No demuestra ausencia de daño ni calibra
+los marcos de fuerza. Los F/T crudos preservan frame y sello temporal;
+no comparar su Fz directamente con el umbral interno de variación. La
+postura no es HOME. No se reinicia ni se usa HOME con la caja y mesa en la
+trayectoria.
+
+**Frontera actual:** caja retenida con apoyo parcial; `settle-run/trial.json`
+exitoso sin consumir, pero físicamente no habilitado para liberar. El
+checkpoint862349 y los journals anteriores permanecen consumidos. Los
+candidatos `scenario1_table74_current_release.py` y su runner/helper sólo
+están en PC, con pruebas locales: **no instalados ni ejecutados**. No se ha
+creado una referencia real que afirme apoyo completo. El perfil normal74
+continúa pendiente. Las cuatro tareas/bundles de aproximación, precontact,
+support y settle siguen instaladas aditivamente, sin originales alterados.
+
+**PENDIENTE para continuar:** medir los huecos en las cuatro esquinas respecto
+al mismo tablero, verificar el plano de la mesa y registrar la relación
+actual útiles–caja antes de diseñar/revisar una nivelación. Un único contacto
+y huecos aproximados no fijan un pivote, eje ni ángulo únicos; no se deduce
+que deba bajarse sólo un brazo. Tampoco se considera que todo hueco bajo
+una base nervada implique falta de apoyo: aquí el operador aclaró expresamente
+que sólo toca una esquina/lado. No hay una tarea de nivelación validada.
+
+Evidencia y reproducción de lectura: `../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/`:
+`partial-support-native-docker-log.json`, `partial-support-readonly/`,
+`settle-offline-telemetry-audit.json`, diarios originales y respaldos.
+
+## Descenso residual de 1 cm después del support — 22-10-2026
+
+**BOX-TABLE74-CURRENT-SETTLE-20261022 — 22-10-2026, Europe/Madrid.
+INSTALADO/CARGADO/PROBADO una vez; apoyo físico y liberación PENDIENTES.**
+Después del descenso nominal5cm, el operador comunica un hueco residual
+**1cm igual a ambos lados, ninguna esquina apoyada**, caja horizontal/estable.
+Por tanto no se confirmó apoyo tras aquel SUCCEED. Se prepara y ejecuta otro
+tramo limitado settle .01→0m, no una repetición de5cm o14cm.
+
+Bundle `ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed`,
+task `local_table74_lower/ID_lower`, goal
+`9565b30d-4753-4627-8238-aeb7a586de27`: SUCCEED/status4/state1101001,
+etapa17,029s; check13,1mm/0,34°, entrada run13,4mm/0,34°.
+`settle-run/trial.json` sigue `physical_support_confirmed=false`.
+Respuesta del operador sobre apoyo plano/completo y holguras/pines actuales
+PENDIENTE. No se ejecutó apertura, alivio de pines, navegación o HOME.
+
+### Fuentes, continuidad y estado instalado
+
+Se extienden únicamente builder/runner actuales para admitir settle gap.01→0,
+con las mismas consignas RELATIVE de los tramos anteriores salvo Z−0,01m.
+Controles nativos intactos y bundles precontact/support anteriores byte
+exactos. La prueba histórica conserva approach→precontact→support, máximo3
+antecesores; settle ya completado no puede preceder otro descenso.
+Support trial consumido antes de armar; settle trial nuevo sin consumir.
+Los checkpoints y journals viejos no se modifican ni se vuelven a usar.
+
+Referencia/bundle reproducibles:
+`config/box_handling/scenario1_table74/current_trial_20261022/settle-reference.json`
+y `settle-bundle/`; builder/runner `scenario1_table74_current_lower.py` /
+`scenario1_table74_current_lower_run.py`, instalador compartido.
+YAML SHA256 `0b46055ce20846fffaddf1576ed8fecf4a8ea93a0017ec7def8b6e2bc832a9e1`,
+XML `ecf5026113b9ec0a217810c201bcd94dbae14742eb9dbd6b7b0fe6d5a1d1087c`.
+Mismo contenedor/imagen y raíces XML/YAML descritos abajo, namespace
+`local_table74_lower/`; dos archivos nuevos, sin originales sobrescritos o
+reinicios. Backup remoto `/var/tmp/cruzr-table74-trial/ID/`, copia externa
+`settle-robot-backup/`. Fuentes previas, checks, run y24 pruebas PASS0,995s en
+la evidencia común `../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/`.
+Total de regresión nuevo PENDIENTE; no sustituye validación física de apoyo.
+
+Las recetas históricas `--after ... --bundle ... --plan/check/run` permiten
+reproducir el mecanismo con origen vigente, pero **no repetir este settle**:
+el support antecesor está consumido. No borrar consumed ni habilitar el
+depósito74 normal. Archivos aditivos siguen instalados; rollback selectivo
+de archivos/hashes con consumidores detenidos no revierte la postura.
+
+Builder `scenario1_table74_current_release.py`, runner `_release_run.py` y
+helper PC `scenario1_table74_current_phase_cli.py` están preparados para fases
+separadas; el instalador admite current_pin_release, pero **no se instaló ni
+activó liberación**. No se crea una referencia que dé por confirmado apoyo,
+holgura o pines libres mientras falte respuesta física del operador.
+No usar el open WRC que mezcla bajada/giro/apertura; no abrir ni enviar HOME.
+
 ## Descenso actual de 14 cm y apoyo separado — 22-10-2026
 
 **BOX-TABLE74-CURRENT-LOWERING-20261022 — 22-10-2026, Europe/Madrid.
@@ -16,7 +114,8 @@ Support ejecutó una sola vez5→0cm: goal
 `a8b7e6b9-f578-4b37-b028-9e2b5e179819`, SUCCEED/status4/state1101001,
 etapa17,626s; check13,7mm/0,27°, entrada run13,8mm/0,28°.
 `support-run/trial.json` conserva succeeded y support=false. Precontact trial
-consumido, support trial todavía libre. **No repetir**: SUCCEED no demuestra
+consumido; support trial fue después consumido por el settle descrito arriba.
+**No repetir**: SUCCEED no demuestra
 transferencia de carga, apoyo completo, nivelación o pines libres.
 Confirmación física del operador PENDIENTE; alivio3cm/apertura sólo en
 preparación, sin instalar. No se abrió ni envió HOME.
@@ -43,8 +142,9 @@ Evidencia `../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/`
 `before-lowering/` y `before-precontact-result-documentation/`.
 125 pruebas PASS5,414s en `combined-tests-final.log`.
 
-La prueba `predecessor.json` se acota a **approach→precontact**; un support
-terminado no habilita otro descenso. Se verifican bundle/UUID/request,
+La prueba inicial `predecessor.json` se acota a **approach→precontact**;
+después sólo se amplía para settle residual con3antecesores, como figura
+arriba. Un settle terminado no habilita otro descenso. Se verifican bundle/UUID/request,
 terminales y orden temporal, contexto/hashes y cierre limpio. Se rechazan
 cancelaciones, errores o actividad posterior desconocida. Approach trial ya
 consumido; precontact trial es la frontera del siguiente run. El checkpoint

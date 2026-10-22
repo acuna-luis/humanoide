@@ -20,12 +20,14 @@ try:
     from . import scenario1_table74_support as support
     from . import scenario1_table74_current_trial as current_trial
     from . import scenario1_table74_current_lower as current_lower
+    from . import scenario1_table74_current_release as current_release
 except ImportError:
     import scenario1_deposit_install as files
     import scenario1_table74_trial as trial
     import scenario1_table74_support as support
     import scenario1_table74_current_trial as current_trial
     import scenario1_table74_current_lower as current_lower
+    import scenario1_table74_current_release as current_release
 
 
 EVIDENCE_ROOT = Path('/var/tmp/cruzr-table74-trial')
@@ -97,6 +99,8 @@ def _builder(bundle):
         return current_trial
     if phase == 'current_relative_lowering':
         return current_lower
+    if phase == 'current_pin_release':
+        return current_release
     raise ValueError('Unknown trial phase; no trusted builder for this phase')
 
 
@@ -311,6 +315,7 @@ def remote_source(request=None):
              'scenario1_table74_trial', 'scenario1_table74_support',
              'scenario1_table74_current_trial',
              'scenario1_table74_current_lower',
+             'scenario1_table74_current_release',
              'scenario1_table74_trial_install')
     sources = {name: (directory/(name+'.py')).read_text() for name in names}
     checks = (directory/'scenario1_checks.py').read_text()

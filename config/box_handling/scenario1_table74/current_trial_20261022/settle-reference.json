@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "stage": "settle",
+  "gap_above_surface_m": 0.01,
+  "target_clearance_m": 0.0,
+  "surface_height_m": 0.74,
+  "predecessor_bundle_id": "9e6622246ed911798c41504ac510b662f9ac0f48deaf8bb30047338258192746",
+  "predecessor_goal_id": "a8b7e6b9-f578-4b37-b028-9e2b5e179819",
+  "scope": "current_post_trial_box_only",
+  "evidence": "2026-10-22 Europe/Madrid: after successful nominal support lowering, operator reports a residual approximately 1 cm gap, confirms equal gap on both sides, horizontal stable box and no corner supported. Vertical/lateral paths remain clear. A single new 1 cm correction is requested from this confirmed successful boundary, never a repeat of the 5 cm motion; support and pin clearance still require physical verification. No opening included."
+}

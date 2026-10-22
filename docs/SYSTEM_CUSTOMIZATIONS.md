@@ -1,5 +1,69 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+**22-10-2026 — BOX-TABLE74-PARTIAL-SUPPORT-20261022: detener antes de liberar.**
+El operador aclara apoyo sólo en la esquina derecha alejada, con unos1cm de
+hueco en las demás zonas. El log nativo demuestra `DectionForceCollision`:
+variación vertical derecha10,5374N frente10N, tres superaciones; el árbol
+lo devuelve como SUCCEED, sin acreditar apoyo completo ni completar el
+centímetro. No se repitió la bajada solicitada después, ni se enviaron alivio,
+apertura o HOME. Lectura posterior:20D habilitados/sin fault, velocidad0 y
+delta consigna–posición máximo0,004203rad. No acredita seguridad mecánica.
+
+La frontera sigue siendo `settle-run/trial.json`, sin consumir pero no apta
+físicamente para liberar. Candidatos de alivio/apertura sólo en PC, sin
+instalar; el perfil normal74 continúa pendiente. Antes de otra trayectoria
+faltan geometría actual de contacto y una nivelación revisada/validada;
+no deducir un pivote o corregir sólo un brazo a partir de un único contacto.
+No cambiar umbrales ni referencias para forzar el descenso.
+[Detalle, evidencia y reanudación](box_handling/DEPOSITO_WRC_ALTURA_100CM.md).
+
+
+## BOX-TABLE74-PARTIAL-SUPPORT-20261022
+
+Diagnóstico de lectura después de la finalización nativa por contacto.
+No cambia robot/PC en ejecución ni tiene rollback de postura. Conservar
+los umbrales, referencias y journals; restaure sólo documentación si procede.
+Contenedor descubierto: `walker-motion.manipulation_robot_app-1`, ID
+`9cd509ff68971dcc88405cda975d761add90bee661b686d8595d9b49edf0bd03`.
+Antes de otra intervención, redescubrir por si hubo un reinicio.
+
+Receta de lectura del intervalo histórico (no publica ni inicia tareas):
+
+```bash
+ssh walker@192.168.11.2 \
+  'docker logs --since 2026-10-22T11:23:30Z --until 2026-10-22T11:25:10Z --tail 3000 walker-motion.manipulation_robot_app-1' \
+  2>&1 | rg 'CheckCollisionForce|DectionForceCollision|BTree tick succeeded'
+```
+
+Las muestras nuevas se obtuvieron con `ROS2CLI_DISABLE_DAEMON=1`,
+`timeout 7 ros2 topic echo --once --no-daemon --qos-durability volatile`
+en el contenedor ROS2 para `/mc/actuator_state` y ambas
+`/mc/ft_states/{L_hand_ft,R_hand_ft}`; sin transformarlas ni publicar.
+Recibos completos y estado resumido en `partial-support-readonly/`.
+Pruebas locales de todas las fases/candidatos: **147 PASS**. La validación
+física de nivelación/apertura sigue pendiente y bloqueada por el apoyo parcial.
+
+## BOX-TABLE74-CURRENT-SETTLE-20261022
+
+**22-10-2026, Europe/Madrid — settle1cm INSTALADO/CARGADO/PROBADO;
+apoyo físico y liberación PENDIENTES. Liberación sólo preparada en PC.**
+
+| Campo | Registro |
+| --- | --- |
+| Motivo/entrada | Tras support5cm, operador comunica hueco1cm igual ambos lados, ninguna esquina apoyada y caja horizontal/estable. Es hueco residual comunicado, no apoyo confirmado ni error causal reconstruido |
+| Fuente reproducible | `scripts/box_handling/scenario1_table74_current_lower.py`, `scenario1_table74_current_lower_run.py`, instalador y pruebas; referencia/bundle inmutables `config/box_handling/scenario1_table74/current_trial_20261022/settle-reference.json` y settle-bundle |
+| Destino/versiones | Mismo Motion/contenedor/imagen de los tramos anteriores; namespace `local_table74_lower/`. Bundle `ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed`, taskID_lower; YAML `0b46055ce20846fffaddf1576ed8fecf4a8ea93a0017ec7def8b6e2bc832a9e1`, XML `ecf5026113b9ec0a217810c201bcd94dbae14742eb9dbd6b7b0fe6d5a1d1087c` |
+| Activación/resultado | Dos archivos nuevos aditivos; check13,1mm/0,34°, run13,4mm/0,34°; UNAacción goal `9565b30d-4753-4627-8238-aeb7a586de27`, SUCCEED/status4/1101001, etapa17,029s. Sin apertura/HOME/retry |
+| Trayectoria/controles | Settle exclusivo gap.01→0, manos RELATIVE finalZ−0,01m, XY0/cuaternión identidad y torso pide0. Controles nativos intactos; originales y bundles precontact/support conservados byte exactos. No nueva calibración absoluta |
+| Continuidad | Cadena probada approach→precontact→support, máximo3 antecesores; consume support trial antes de armar. Settle no autoriza otro descenso. Nuevo settle trial sin consumir; checkpoint862349 y journals previos no se reutilizan |
+| Estado físico | Journal succeeded mantiene `physical_support_confirmed=false`; respuesta del operador sobre apoyo plano/completo y holguras/pines actuales PENDIENTE. No se deriva liberación de SUCCEED |
+| Herramientas de liberación PC | `scenario1_table74_current_release.py`, `_release_run.py` y `scenario1_table74_current_phase_cli.py` preparados; registro de instalador admite current_pin_release. Sin archivos release instalados/cargados/ejecutados ni referencia física inventada |
+| Verificación |24 pruebas settle PASS0,995s; total de regresión nuevo PENDIENTE de cierre. Tests previos125 conservan su alcance histórico |
+| Backup/evidencia | `../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/`: before-settle, settle-check/run, settle-install-result.json, settle-tests.log y settle-robot-backup; backup remoto `/var/tmp/cruzr-table74-trial/ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed/`, copia externa conservada. Documentos previos en before-settle-result-documentation |
+| Reversión/punto de reanudación | Archivos propios aún instalados; rollback selectivo con hashes/identidad intactos y sin consumidores, nunca deshacer postura ni borrar consumed. Esperar confirmación de apoyo/holgura; no abrir, enviar HOME o repetir settle |
+
+[Detalle especializado](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#descenso-residual-de-1-cm-después-del-support--22-10-2026).
+
 ## BOX-TABLE74-CURRENT-LOWERING-20261022
 
 **22-10-2026, Europe/Madrid — precontact14cm y support5cm INSTALADOS/CARGADOS/
@@ -12,11 +76,11 @@ PROBADOS con éxito técnico; apoyo físico plano y pines libres PENDIENTES.**
 | Precontact verificado | Bundle `6dc59fb34ae2fafc9cb4f76524f8ea9f175f255f24cc58afd662bdc97b4d65cc`, taskID_lower; YAML `8fa550607b8d6186004de25249e1ce2e27ab64771518f4e889350af5c7a5c835`, XML `253b8d66debe4b5b4fd0dfd7de93748b2aa73e0fd1a660936abe755eaea5175f`. Check14,2mm/0,23°; goal `3ea53b0c-d306-409d-8602-3f6fea005b16`, SUCCEED/status4/1101001, etapa18,060s, una ejecución |
 | Support probado | Bundle `9e6622246ed911798c41504ac510b662f9ac0f48deaf8bb30047338258192746`, taskID_lower; YAML `f8abff2146acfa0f2b4c2f0c3406aa0e48a01ce18803e6302619cdc4a442b423`, XML `ffcced2c9c83ceb0ad1925a73c255c59f162d17d23c0fb8e671d65d84bad5515`. Check13,7mm/0,27°, entrada run13,8mm/0,28°; goal `a8b7e6b9-f578-4b37-b028-9e2b5e179819`, SUCCEED/status4/1101001, etapa17,626s, una ejecución |
 | Trayectoria/controles | Ambos tramos son RELATIVE: manos0 a6/10s y Z−0,14 o−0,05 a12s, XY0 y cuaternión identidad; torso pide0, sin bloqueo físico garantizado. Conserva controles fuerza/colisión, duración y stack WRC pinados. Sin apertura, alivio pines, navegación, HOME o retry |
-| Frontera/continuidad | Primer tramo consume `physical-run/trial.json` del approach. Para support, `precontact-run/predecessor.json` conserva prueba approach→precontact, UUID/resultados/contexto/hashes válidos; profundidad2, sin continuación desde support. Consume journal inmediatamente anterior antes de armar; checkpoint862349 no se modifica ni reutiliza |
+| Frontera/continuidad | Primer tramo consume `physical-run/trial.json` del approach. Para support, `precontact-run/predecessor.json` conserva prueba approach→precontact, UUID/resultados/contexto/hashes válidos, profundidad2. Después se amplía sólo para settle residual con3antecesores, por ficha superior; no descenso nuevo desde settle. Checkpoint862349 no se modifica ni reutiliza |
 | Observación y límites | Tras precontact, operador confirma≈5cm iguales ambos lados, horizontal/estable y sin contacto. Tras support, journal succeeded mantiene support=false; confirmación de apoyo plano/completo y holguras de pines PENDIENTE. Liberación sólo en preparación, sin instalar; no apertura/HOME |
 | Verificación local |125 pruebas PASS5,414s en `combined-tests-final.log`. No equivale a validación de apoyo/colisión o depósito ordinario74 |
 | Backup/evidencia | `../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/`: precontact/support-check/run, install-result, precontact-robot-backup, support-robot-backup, bundles/proof y respaldos documentales before-precontact-result-documentation/before-support-result-documentation. Backup remoto por ID en `/var/tmp/cruzr-table74-trial/ID/`; copias externas conservadas |
-| Reversión/reanudación | Retirar únicamente archivos propios con identidad/hashes coincidentes y consumidores detenidos; conservar journals/consumed y copias. Approach/precontact consumidos; support journal todavía sin consumir. No repetir un descenso ni borrar consumed. Comprobar apoyo físico antes de cualquier alivio3cm/apertura; sin HOME automático |
+| Reversión/reanudación | Retirar únicamente archivos propios con identidad/hashes coincidentes y consumidores detenidos; conservar journals/consumed y copias. Approach/precontact consumidos; support journal después consumido por settle, cuya frontera figura arriba. No repetir ni borrar consumed. Comprobar apoyo físico antes de alivio3cm/apertura; sin HOME automático |
 
 [Receta y fronteras de los dos tramos](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#descenso-actual-de-14-cm-y-apoyo-separado--22-10-2026).
 

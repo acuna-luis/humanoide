@@ -1,0 +1,144 @@
+{
+  "task_name": "local_table74_lower/ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed_lower",
+  "tasks": {
+    "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/local_table74_lower/ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed_lower.yaml": "meta_name: MetaClamp\n#hqp_params\nvar_damping:\n  [99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99]\nright_hand: [1, 1, 1, 0.3, 0.3, 0.3]\nleft_hand: [1, 1, 1, 0.3, 0.3, 0.3]\ntorso: [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]\ncom_constrain: []\n# com: [0, 0, 0]\nleft_hand_manipulability: [0.001]\nright_hand_manipulability: [0.001]\n#task_request\nrequest:\n  duration: 12.0\n  frequency: 500\n  urdf_name: \"cruzr_s2\"\n  biped_quit: true\n  collision_detect: true\n  collision_data:\n    - body_name: \"left_hand\"\n      data:\n        - time: [10.0, 10.0, 12.0] #记录力时间，开始检测碰撞时间，结束检测碰撞时间\n          collision_force: [0.0, 0.0, 10.0, 0.0, 0.0, 0.0]\n    - body_name: \"right_hand\"\n      data:\n        - time: [10.0, 10.0, 12.0] #记录力时间，开始检测碰撞时间，结束检测碰撞时间\n          collision_force: [0.0, 0.0, 10.0, 0.0, 0.0, 0.0]\n  box_size: [0.6, 0.4, 0.28]\n  position_rotation_limit_data:\n    - position_rotation_limit_low: [0.2, -0.1, -0.1, -0.5, -0.5, -0.4]\n      position_rotation_limit_up: [0.2, -0.1, -0.1, 0.5, 0.5, 0.4]\n\n  component_disable_time:\n    - [0.0, 0.0]\n  task_type: \"clamp_box\"\n  task_stack: task_stack_cruzr_clamp_manipulability.yaml\n  robot_trajectory_data:\n    - body_name: \"left_hand\"\n      data:\n        - timestamp: 6.0\n          position: [0.0, 0.0, 0.0] # x y z\n          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z\n          tranform_mode: \"RELATIVE\"\n        - timestamp: 10.0\n          position: [0.0, 0.0, 0.0] # x y z\n          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z\n          tranform_mode: \"RELATIVE\"\n        - timestamp: 12.0\n          position: [0.0, 0.0, -0.01] # x y z\n          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z\n          tranform_mode: \"RELATIVE\"\n    - body_name: \"right_hand\"\n      data:\n        - timestamp: 6.0\n          position: [0.0, 0.0, 0.0] # x y z\n          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z\n          tranform_mode: \"RELATIVE\"\n        - timestamp: 10.0\n          position: [0.0, 0.0, 0.0] # x y z\n          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z\n          tranform_mode: \"RELATIVE\"\n        - timestamp: 12.0\n          position: [0.0, 0.0, -0.01] # x y z\n          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z\n          tranform_mode: \"RELATIVE\"\n    - body_name: \"torso\"\n      data:\n        - timestamp: 6.0\n          position: [0.0, 0.0, 0.0] # x y z\n          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z\n          tranform_mode: \"RELATIVE\"\n        - timestamp: 10.0\n          position: [0.0, 0.0, 0.0] # x y z\n          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z\n          tranform_mode: \"RELATIVE\"\n        - timestamp: 12.0\n          position: [0.0, 0.0, 0.0] # x y z\n          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z\n          tranform_mode: \"RELATIVE\"\n  admit_param:\n    enable_admit: true\n    use_first_as_init_force: false\n    use_base_coordinate: base #base, body or hand\n    use_fence_force: true\n    select_series: time_series # time_series or traj_series\n    avg_filt_times: 100\n    Init_left_force_sensor_point: [6]\n    Init_right_force_sensor_point: [6]\n    left_admit_enable_time_series: #vector. use in time_series\n      - [6.0, 12.0]\n    right_admit_enable_time_series: #vector. use in time_series\n      - [6.0, 12.0]\n    left_force_mask: #must as long as arm pointlist\n      [\n        [0, 3, 0, 0, 0, 0], #x y z r p y\n      ]\n    # pos:0  imped:1  pimped:2  fimped:3\n    right_force_mask: #must as long as arm pointlist\n      [\n        [0, 3, 0, 0, 0, 0], #x y z r p y\n      ]\n    # pos:0  imped:1  pimped:2  fimped:3\n    left_desire_force: #must as long as arm pointlist\n      [\n        [1.0, 20.0, 3.0, 0, 0, 0], #x y z r p y\n      ]\n    right_desire_force: #must as long as arm pointlist\n      [\n        [1.0, -20.0, 3.0, 0, 0, 0], #x y z r p y\n      ]\n\n    vel_limit: [0.1, 0.1, 0.1, 0.3, 0.3, 0.3] #x y z r p y  单位：m/s rad/s\n    ft_dz_set: [1, 1, 1, 0.1, 0.1, 0.1] #x y z r p y     单位：N Nm\n\n    k_fence: [1000, 1000, 1000]\n    fence_radius: [1.3, 0.37, 1]\n    center_point: [0, 0, 0] #base\n    fence_force_threshold: [45, 45, 45]\n\n    ImpedanceParam: # m b k\n      [\n        [5, 750, 200], #x y z r p y\n        [5, 750, 200],\n        [5, 750, 200],\n        [0.08, 1.2, 5],\n        [0.08, 1.2, 5],\n        [0.08, 1.2, 5],\n      ]\n    forceTrackingParam: # kp ki kd\n      [\n        [0.1, 1, 0.01], #x y z r p y\n        [0.1, 1, 0.01],\n        [0.1, 1, 0.01],\n        [0.1, 1, 0.01],\n        [0.1, 1, 0.01],\n        [0.1, 1, 0.01],\n      ]\n\n  dual_admit_param:\n    enable_admit: false\n    avg_filt_times: 100\n    select_series: time_series # traj_series or time_series\n    Init_force_sensor_point: [8]\n    admit_enable_time_series: #vector. use in time_series\n      - [8.0, 10.0]\n    ext_force_mask: [[0, 0, 0, 0, 0, 0]] #x y z r p y\n    int_force_mask: #must as long as arm pointlist\n      [\n        [0, 3, 0, 0, 0, 0], #x y z r p y\n      ]\n    ext_desire_force: #must as long as arm pointlist\n      [\n        [0.0, 0.0, 0.0, 0, 0, 0], #x y z r p y\n      ]\n    int_desire_force: #must as long as arm pointlist\n      [\n        [1.0, -40.0, 10.0, 0, 0, 0], #x y z r p y\n      ]\n\n    vel_limit: [0.1, 0.1, 0.01, 0.1, 0.1, 0.1] #x y z r p y  单位：m/s rad/s\n    ext_ft_dz_set: [0.5, 0.5, 0.5, 0.05, 0.05, 0.05] #x y z r p y     单位：N Nm\n    int_ft_dz_set: [1, 1, 1, 0.05, 0.05, 0.05] #x y z r p y     单位：N Nm\n\n    ExtImpedanceParam: # m b k\n      [\n        [5, 150, 0], #x y z r p y\n        [5, 150, 0],\n        [5, 150, 0],\n        [0.08, 1.2, 5],\n        [0.08, 1.2, 5],\n        [0.08, 1.2, 5],\n      ]\n    ExtForceTrackingParam: # kp ki kd\n      [\n        [0.1, 1, 0.01], #x y z r p y\n        [0.1, 1, 0.01],\n        [0.1, 1, 0.01],\n        [0.1, 1, 0.01],\n        [0.1, 1, 0.01],\n        [0.1, 1, 0.01],\n      ]\n    IntImpedanceParam: # m b k\n      [\n        [5, 750, 100], #x y z r p y\n        [5, 750, 100],\n        [5, 750, 100],\n        [0.08, 1.2, 5],\n        [0.08, 1.2, 5],\n        [0.08, 1.2, 5],\n      ]\n    IntForceTrackingParam: # kp ki kd\n      [\n        [0.1, 1, 0.01], #x y z r p y\n        [0.1, 1, 0.01],\n        [0.1, 1, 0.01],\n        [0.1, 1, 0.01],\n        [0.1, 1, 0.01],\n        [0.1, 1, 0.01],\n      ]\n",
+    "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/local_table74_lower/ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed_lower.xml": "<root main_tree_to_execute=\"MainTree\">\n    <BehaviorTree ID=\"MainTree\">\n        <Sequence name=\"root_sequence\">\n            <Action ID=\"MetaClamp\" name=\"local_table74_lower/ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed_lower\" />\n        </Sequence>\n    </BehaviorTree>\n</root>"
+  },
+  "dependencies": {
+    "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/wrc_cruzr/put_cruzr_wrc_low.xml": "579b862962e0ee07a423c92517c29b5ecad80b4929961aac2fae6a0240fa0f78",
+    "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/put_cruzr_wrc_low.yaml": "8aeb0a24a3149c7676f481219299ec85bb872d6b17ad93605a6e461776909ff5",
+    "/opt/walker/manipulation_meta_tasks/lib/libmeta_clamp.so": "d6bc61a493f7d790150fdbd673108121f46589fef56620de4a9023dcc2ba520a"
+  },
+  "manifest": {
+    "version": 1,
+    "builder_version": 1,
+    "id": "ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed",
+    "phase": "current_relative_lowering",
+    "task_name": "local_table74_lower/ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed_lower",
+    "reference_sha256": "cd4fed3d5f56689ce3b3584ce8f92f941cb5040196d946ee5a9ed36b917945ef",
+    "content_template_sha256": {
+      "yaml": "0b46055ce20846fffaddf1576ed8fecf4a8ea93a0017ec7def8b6e2bc832a9e1",
+      "xml_template": "9970d2b3dff2ca25c7eff57b6f07749badc0d7f8b1b0461b0884c4f96c57770b"
+    },
+    "dependencies": {
+      "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/wrc_cruzr/put_cruzr_wrc_low.xml": "579b862962e0ee07a423c92517c29b5ecad80b4929961aac2fae6a0240fa0f78",
+      "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/put_cruzr_wrc_low.yaml": "8aeb0a24a3149c7676f481219299ec85bb872d6b17ad93605a6e461776909ff5",
+      "/opt/walker/manipulation_meta_tasks/lib/libmeta_clamp.so": "d6bc61a493f7d790150fdbd673108121f46589fef56620de4a9023dcc2ba520a"
+    },
+    "robot_files": {
+      "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/wrc_cruzr/put_cruzr_wrc_low.xml": "579b862962e0ee07a423c92517c29b5ecad80b4929961aac2fae6a0240fa0f78",
+      "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/put_cruzr_wrc_low.yaml": "8aeb0a24a3149c7676f481219299ec85bb872d6b17ad93605a6e461776909ff5",
+      "/opt/walker/manipulation_meta_tasks/lib/libmeta_clamp.so": "d6bc61a493f7d790150fdbd673108121f46589fef56620de4a9023dcc2ba520a",
+      "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/local_table74_lower/ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed_lower.yaml": "0b46055ce20846fffaddf1576ed8fecf4a8ea93a0017ec7def8b6e2bc832a9e1",
+      "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/local_table74_lower/ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed_lower.xml": "ecf5026113b9ec0a217810c201bcd94dbae14742eb9dbd6b7b0fe6d5a1d1087c"
+    },
+    "physical_validation": "pending",
+    "automatic_execution_authorized": false
+  },
+  "review": {
+    "phase": "current_relative_lowering",
+    "reference": {
+      "version": 1,
+      "stage": "settle",
+      "gap_above_surface_m": 0.01,
+      "target_clearance_m": 0.0,
+      "surface_height_m": 0.74,
+      "predecessor_bundle_id": "9e6622246ed911798c41504ac510b662f9ac0f48deaf8bb30047338258192746",
+      "predecessor_goal_id": "a8b7e6b9-f578-4b37-b028-9e2b5e179819",
+      "scope": "current_post_trial_box_only",
+      "evidence": "2026-10-22 Europe/Madrid: after successful nominal support lowering, operator reports a residual approximately 1 cm gap, confirms equal gap on both sides, horizontal stable box and no corner supported. Vertical/lateral paths remain clear. A single new 1 cm correction is requested from this confirmed successful boundary, never a repeat of the 5 cm motion; support and pin clearance still require physical verification. No opening included."
+    },
+    "reference_kind": "operator_reported_current_gap_not_absolute_hand_calibration",
+    "physical_validation": "pending",
+    "kinematic_validation": "pending",
+    "automatic_execution_authorized": false,
+    "installed": false,
+    "integrated_in_optimistic": false,
+    "measured_absolute_calibration_created": false,
+    "physical_support_confirmed": false,
+    "pin_disengagement_confirmed": false,
+    "lower_delta_z_m": -0.01,
+    "nominal_target_clearance_m": 0.0,
+    "hand_mode": "RELATIVE",
+    "hand_delta_at_6s_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "hand_delta_at_10s_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "final_hand_delta_m": [
+      0.0,
+      0.0,
+      -0.01
+    ],
+    "hand_delta_xy_m": [
+      0.0,
+      0.0
+    ],
+    "relative_quaternion_wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "torso_delta_at_each_point_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "nominal_duration_s": 12.0,
+    "nominal_lowering_waypoint_interval_s": [
+      10.0,
+      12.0
+    ],
+    "source_box_size_unchanged_m": [
+      0.6,
+      0.4,
+      0.28
+    ],
+    "native_controls_preserved": true,
+    "contact_window_s": [
+      10.0,
+      12.0
+    ],
+    "contact_reference_time_s": 10.0,
+    "configured_collision_force_each_hand": [
+      0.0,
+      0.0,
+      10.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "excluded_phases": [
+      "approach",
+      "pin_release",
+      "opening",
+      "navigation",
+      "home"
+    ],
+    "assumptions_not_verified": [
+      "The same held box, hand attachment and pose are unchanged from the genuine successful predecessor.",
+      "The current gap report applies to both sides of the horizontal box over the stable table.",
+      "Motion relative Z is parallel to physical vertical and the box remains rigid relative to its tools.",
+      "The complete lowering and native force/IK adjustments clear the actual table and surroundings."
+    ],
+    "limitations": [
+      "A runner must verify the exact predecessor bundle, native UUID, terminal result and unchanged source context.",
+      "The reported gap has no bounded measurement uncertainty; the subtraction is a requested nominal trial.",
+      "The 6 and 10 second points request zero displacement; native force/IK can still adjust posture.",
+      "The final hand waypoint requests lowering between nominal times 10 and 12; exact physical interpolation and peak velocity are not certified here.",
+      "Torso translation requests remain zero, which does not mechanically lock the torso.",
+      "Action SUCCEED neither proves table support nor authorizes release, opening or HOME.",
+      "Precontact must be followed by a new gap/position confirmation; support requires its own genuine successful predecessor.",
+      "No pin relief or lateral opening is included; support must be physically confirmed before any later release task.",
+      "Repeating this relative phase would lower the hands again; no automatic retry is authorized.",
+      "Settle is a new 1 cm residual-gap correction after successful support and a new uniform-gap report; it is not repetition of the 5 cm support phase."
+    ],
+    "stage": "settle"
+  }
+}

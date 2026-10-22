@@ -1,5 +1,39 @@
 # Escenario 1 con supervisión continua
 
+**22-10-2026 — BOX-TABLE74-PARTIAL-SUPPORT-20261022: detener antes de liberar.**
+El operador aclara apoyo sólo en la esquina derecha alejada, con unos1cm de
+hueco en las demás zonas. El log nativo demuestra `DectionForceCollision`:
+variación vertical derecha10,5374N frente10N, tres superaciones; el árbol
+lo devuelve como SUCCEED, sin acreditar apoyo completo ni completar el
+centímetro. No se repitió la bajada solicitada después, ni se enviaron alivio,
+apertura o HOME. Lectura posterior:20D habilitados/sin fault, velocidad0 y
+delta consigna–posición máximo0,004203rad. No acredita seguridad mecánica.
+
+La frontera sigue siendo `settle-run/trial.json`, sin consumir pero no apta
+físicamente para liberar. Candidatos de alivio/apertura sólo en PC, sin
+instalar; el perfil normal74 continúa pendiente. Antes de otra trayectoria
+faltan geometría actual de contacto y una nivelación revisada/validada;
+no deducir un pivote o corregir sólo un brazo a partir de un único contacto.
+No cambiar umbrales ni referencias para forzar el descenso.
+[Detalle, evidencia y reanudación](DEPOSITO_WRC_ALTURA_100CM.md).
+
+## Settle1cm completado; apoyo y pines pendientes — 22-10-2026
+
+**BOX-TABLE74-CURRENT-SETTLE-20261022.** Tras support, el operador comunica
+1cm igual ambos lados, caja horizontal/estable y ninguna esquina apoyada.
+Se ejecutó una sola fase adicional settle .01→0m: goal
+`9565b30d-4753-4627-8238-aeb7a586de27`, SUCCEED/status4/state1101001,
+etapa17,029s; check13,1mm/0,34°. Support trial consumido, nueva frontera
+`settle-run/trial.json` todavía sin consumir, con support=false.
+No repetir support, precontact, approach ni settle, ni reanudar el depósito
+completo desde un checkpoint antiguo. La cadena histórica se limita a3
+antecesores; no hay descenso nuevo desde settle.
+
+Apoyo plano/completo y holguras/pines actuales aún requieren respuesta del
+operador. Liberación sólo preparada en PC, sin instalar o ejecutar; no abrir
+ni enviar HOME.24 pruebas focales settle PASS, total nuevo pendiente.
+[Resultados y fuentes](DEPOSITO_WRC_ALTURA_100CM.md#descenso-residual-de-1-cm-después-del-support--22-10-2026).
+
 ## Descensos14cm y5cm completados; apoyo físico pendiente — 22-10-2026
 
 **BOX-TABLE74-CURRENT-LOWERING-20261022.** El descenso precontact19→5cm
@@ -13,7 +47,8 @@ de `precontact-run`, no el checkpoint862349 ni una nueva recogida.
 Support5→0 es otro bundle aditivo9e662224…92746, instalado/cargado/probado:
 check13,7mm/0,27°, una acción SUCCEED/status4/state1101001, goal
 `a8b7e6b9-f578-4b37-b028-9e2b5e179819`, etapa17,626s. Precontact trial
-queda consumido; support trial es la frontera sin consumir. El runner usa `--after DIRECTORIO`
+queda consumido; support trial fue después consumido por settle, descrito
+arriba. El runner usa `--after DIRECTORIO`
 y valida la cadena histórica de dos fases, contexto y mediciones actuales;
 consume el journal anterior al armar. No se reanuda el ciclo completo de
 Optimistic ni se cambia el perfil74 pendiente. Conjunto125 pruebas PASS.

@@ -1,7 +1,8 @@
 """Immutable relative lowering phases after a genuine current table74 trial.
 
-The operator reports a current gap: precontact .19 -> .05 m, or support .05
--> 0 m. Neither nominal subtraction nor native action success proves support.
+The operator reports a current gap: precontact .19 -> .05 m, support .05
+-> 0 m, or a separately confirmed residual-gap settle .01 -> 0 m.
+Neither nominal subtraction nor native action success proves support.
 Builders are pure. The CLI writes local artifacts only, without robot access,
 installation, mode changes, opening, HOME or automatic retries.
 """
@@ -37,7 +38,7 @@ DEPENDENCIES = {
 _REFERENCE_KEYS = {'version', 'stage', 'gap_above_surface_m', 'target_clearance_m',
                    'surface_height_m', 'predecessor_bundle_id', 'predecessor_goal_id',
                    'evidence', 'scope'}
-_PAIRS = {'precontact': (.19, .05), 'support': (.05, 0.)}
+_PAIRS = {'precontact': (.19, .05), 'support': (.05, 0.), 'settle': (.01, 0.)}
 _IDENTITY_Q = '[1.0, 0.0, 0.0, 0.0]'
 _VENDOR_Q = '[0.5, 0.5, 0.5, -0.5]'
 _ZERO = '[0.0, 0.0, 0.0]'
@@ -53,7 +54,7 @@ def canonical(value):
 
 
 def validate_reference(reference):
-    """Pin one of two reviewed relative phases and its actual predecessor.
+    """Pin one reviewed relative phase and its actual predecessor.
 
     This parser cannot authenticate the operator measurement or predecessor
     journal. A runner must verify both identities, continuity of current pose,
@@ -65,7 +66,7 @@ def validate_reference(reference):
         raise ValueError('Unsupported current lowering reference version')
     stage = reference['stage']
     if type(stage) is not str or stage not in _PAIRS or reference['scope'] != 'current_post_trial_box_only':
-        raise ValueError('Current lowering requires an explicit precontact/support stage and current-post-trial scope')
+        raise ValueError('Current lowering requires an explicit precontact/support/settle stage and current-post-trial scope')
     if (type(reference['predecessor_bundle_id']) is not str or
             re.fullmatch('[0-9a-f]{64}', reference['predecessor_bundle_id']) is None):
         raise ValueError('Current lowering predecessor bundle ID is invalid')
@@ -137,7 +138,7 @@ def build_bundle(reference, source_xml, source_yaml):
         if type(source) is not str or sha256(source) != DEPENDENCIES[path]:
             raise ValueError('Current lowering source checksum mismatch: '+path)
     delta = float(Decimal(str(config['target_clearance_m']))-Decimal(str(config['gap_above_surface_m'])))
-    expected_delta = -.14 if config['stage'] == 'precontact' else -.05
+    expected_delta = {'precontact': -.14, 'support': -.05, 'settle': -.01}[config['stage']]
     if delta != expected_delta:
         raise ValueError('Current lowering nominal subtraction changed')
     changed_yaml = _replace_once(source_yaml, _trajectory(lowering=False),
@@ -183,6 +184,9 @@ def build_bundle(reference, source_xml, source_yaml):
             'No pin relief or lateral opening is included; support must be physically confirmed before any later release task.',
             'Repeating this relative phase would lower the hands again; no automatic retry is authorized.',
         ])
+    if config['stage'] == 'settle':
+        review['stage'] = 'settle'
+        review['limitations'].append('Settle is a new 1 cm residual-gap correction after successful support and a new uniform-gap report; it is not repetition of the 5 cm support phase.')
     manifest = dict(version=1, builder_version=BUILDER_VERSION, id=identity, phase=PHASE,
         task_name=task_name, reference_sha256=sha256(canonical(config)),
         content_template_sha256=template_hashes, dependencies=dict(DEPENDENCIES),

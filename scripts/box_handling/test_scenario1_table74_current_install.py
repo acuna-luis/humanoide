@@ -9,6 +9,7 @@ import unittest
 
 from scripts.box_handling import scenario1_table74_current_trial as current
 from scripts.box_handling import scenario1_table74_current_lower as lower
+from scripts.box_handling import scenario1_table74_current_release as release
 from scripts.box_handling import scenario1_table74_trial_install as installer
 from scripts.box_handling.test_scenario1_table74_trial_install import FakeDocker, sources
 
@@ -26,6 +27,8 @@ class CurrentInstallationTests(unittest.TestCase):
 
     def test_live_check_install_rollback_preserve_vendor_and_use_exact_task_pair(self):
         value, docker = self.factory(), FakeDocker()
+        docker.files[release.SOURCE_YAML_PATH] = (Path(__file__).resolve().parents[2]/
+            'vendor/ubtech/cruzr_s2/snapshot_20260916/motion/meta_clamp/wrc/open_arm_cruzr.yaml').read_text()
         before = copy.deepcopy(docker.files)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -79,6 +82,22 @@ def lower_bundle():
 
 class LowerInstallationTests(CurrentInstallationTests):
     factory = staticmethod(lower_bundle)
+
+
+def release_bundle():
+    original = sources()
+    opening = (Path(__file__).resolve().parents[2]/
+        'vendor/ubtech/cruzr_s2/snapshot_20260916/motion/meta_clamp/wrc/open_arm_cruzr.yaml').read_text()
+    return release.build_bundle(dict(version=1, stage='pin_relief', surface_height_m=.74,
+        predecessor_bundle_id='c'*64, predecessor_goal_id='a8b7e6b9-f578-4b37-b028-9e2b5e179819',
+        operator_support_confirmed=True, tool_table_clearance_m=.04, required_pin_exit_m=.03,
+        operator_pins_free=False, lateral_path_clear=True, scope='current_supported_box_only',
+        evidence='SYNTHETIC test of operator support declarations, not physical evidence'),
+        original[release.SOURCE_XML_PATH], opening)
+
+
+class ReleaseInstallationTests(CurrentInstallationTests):
+    factory = staticmethod(release_bundle)
 
 
 if __name__ == '__main__':

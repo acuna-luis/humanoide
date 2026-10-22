@@ -1,4 +1,4 @@
-"""Two pinned lowering phases: no ROS, network, native loads or execution."""
+"""Pinned lowering phases: no ROS, network, native loads or execution."""
 import contextlib
 import copy
 import io
@@ -17,7 +17,7 @@ from scripts.box_handling.test_scenario1_table74_current_trial import sources
 
 
 def reference(stage='precontact'):
-    gap, target = (.19, .05) if stage == 'precontact' else (.05, 0.)
+    gap, target = {'precontact': (.19, .05), 'support': (.05, 0.), 'settle': (.01, 0.)}[stage]
     return dict(version=1, stage=stage, gap_above_surface_m=gap, target_clearance_m=target,
         surface_height_m=.74, predecessor_bundle_id='a'*64,
         predecessor_goal_id='80974a9d-f9b2-4322-a2d7-2db41f28766e',
@@ -31,7 +31,7 @@ def bundle(stage='precontact'):
 
 class CurrentRelativeLoweringTests(unittest.TestCase):
     def test_both_exact_pairs_delta_and_no_support_claim(self):
-        for stage, delta, target in (('precontact', -.14, .05), ('support', -.05, 0.)):
+        for stage, delta, target in (('precontact', -.14, .05), ('support', -.05, 0.), ('settle', -.01, 0.)):
             with self.subTest(stage=stage):
                 b = bundle(stage); review = b['review']
                 self.assertEqual(lower.validate_bundle(b), b)
@@ -53,7 +53,7 @@ class CurrentRelativeLoweringTests(unittest.TestCase):
 
     def test_only_trajectory_and_xml_opening_change_all_controls_unchanged(self):
         xml, yaml = sources()
-        for stage, delta in (('precontact', -.14), ('support', -.05)):
+        for stage, delta in (('precontact', -.14), ('support', -.05), ('settle', -.01)):
             b = bundle(stage); name = b['task_name']; candidate = b['tasks'][lower.META_ROOT+name+'.yaml']
             expected = yaml.replace(legacy._trajectory(support=False), lower._trajectory(lowering=True, delta_z=delta), 1)
             self.assertEqual(candidate, expected)
@@ -76,6 +76,22 @@ class CurrentRelativeLoweringTests(unittest.TestCase):
             r = copy.deepcopy(original); r[field] = value
             self.assertNotEqual(lower.build_bundle(r, *sources())['task_name'], first['task_name'])
         self.assertNotEqual(bundle('support')['task_name'], first['task_name'])
+
+    def test_settle_is_distinct_residual_gap_correction_and_keeps_all_other_source_controls(self):
+        support = bundle('support'); settle = bundle('settle')
+        self.assertNotEqual(support['task_name'], settle['task_name'])
+        self.assertEqual(settle['review']['stage'], 'settle')
+        self.assertEqual(settle['review']['reference']['gap_above_surface_m'], .01)
+        self.assertEqual(settle['review']['lower_delta_z_m'], -.01)
+        self.assertIs(settle['review']['physical_support_confirmed'], False)
+        self.assertEqual(settle['tasks'][lower.META_ROOT+settle['task_name']+'.yaml'],
+            support['tasks'][lower.META_ROOT+support['task_name']+'.yaml'].replace(
+                'position: [0.0, 0.0, -0.05]', 'position: [0.0, 0.0, -0.01]'))
+        for gap in (.05, 0., .011):
+            r = reference('settle'); r['gap_above_surface_m'] = gap
+            with self.subTest(gap=gap), self.assertRaises(ValueError): lower.build_bundle(r, *sources())
+        r = reference('settle'); r['target_clearance_m'] = -.01
+        with self.assertRaises(ValueError): lower.build_bundle(r, *sources())
 
     def test_no_arbitrary_gap_stage_or_malformed_provenance(self):
         for key, value in (('version', True), ('stage', 'release'), ('gap_above_surface_m', .18),
