@@ -1,5 +1,50 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-TABLE74-CURRENT-LOWERING-20261022
+
+**22-10-2026, Europe/Madrid — precontact14cm y support5cm INSTALADOS/CARGADOS/
+PROBADOS con éxito técnico; apoyo físico plano y pines libres PENDIENTES.**
+
+| Campo | Registro |
+| --- | --- |
+| Motivo/fuente | Separar descenso19→5cm del apoyo5→0. Builder `scripts/box_handling/scenario1_table74_current_lower.py`, runner `scenario1_table74_current_lower_run.py`, instalador compartido y pruebas; referencias/bundles en `config/box_handling/scenario1_table74/current_trial_20261022/` |
+| Destino/activación | Motion192.168.11.2, contenedor9cd509ff…0bd03/imagen9f7acf4b…7e75, dos archivos por bundle en namespace `local_table74_lower/` bajo TASK_ROOT/META_ROOT ya documentados. Instalación aditiva sin sobrescribir originales ni reinicios; todos siguen instalados |
+| Precontact verificado | Bundle `6dc59fb34ae2fafc9cb4f76524f8ea9f175f255f24cc58afd662bdc97b4d65cc`, taskID_lower; YAML `8fa550607b8d6186004de25249e1ce2e27ab64771518f4e889350af5c7a5c835`, XML `253b8d66debe4b5b4fd0dfd7de93748b2aa73e0fd1a660936abe755eaea5175f`. Check14,2mm/0,23°; goal `3ea53b0c-d306-409d-8602-3f6fea005b16`, SUCCEED/status4/1101001, etapa18,060s, una ejecución |
+| Support probado | Bundle `9e6622246ed911798c41504ac510b662f9ac0f48deaf8bb30047338258192746`, taskID_lower; YAML `f8abff2146acfa0f2b4c2f0c3406aa0e48a01ce18803e6302619cdc4a442b423`, XML `ffcced2c9c83ceb0ad1925a73c255c59f162d17d23c0fb8e671d65d84bad5515`. Check13,7mm/0,27°, entrada run13,8mm/0,28°; goal `a8b7e6b9-f578-4b37-b028-9e2b5e179819`, SUCCEED/status4/1101001, etapa17,626s, una ejecución |
+| Trayectoria/controles | Ambos tramos son RELATIVE: manos0 a6/10s y Z−0,14 o−0,05 a12s, XY0 y cuaternión identidad; torso pide0, sin bloqueo físico garantizado. Conserva controles fuerza/colisión, duración y stack WRC pinados. Sin apertura, alivio pines, navegación, HOME o retry |
+| Frontera/continuidad | Primer tramo consume `physical-run/trial.json` del approach. Para support, `precontact-run/predecessor.json` conserva prueba approach→precontact, UUID/resultados/contexto/hashes válidos; profundidad2, sin continuación desde support. Consume journal inmediatamente anterior antes de armar; checkpoint862349 no se modifica ni reutiliza |
+| Observación y límites | Tras precontact, operador confirma≈5cm iguales ambos lados, horizontal/estable y sin contacto. Tras support, journal succeeded mantiene support=false; confirmación de apoyo plano/completo y holguras de pines PENDIENTE. Liberación sólo en preparación, sin instalar; no apertura/HOME |
+| Verificación local |125 pruebas PASS5,414s en `combined-tests-final.log`. No equivale a validación de apoyo/colisión o depósito ordinario74 |
+| Backup/evidencia | `../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/`: precontact/support-check/run, install-result, precontact-robot-backup, support-robot-backup, bundles/proof y respaldos documentales before-precontact-result-documentation/before-support-result-documentation. Backup remoto por ID en `/var/tmp/cruzr-table74-trial/ID/`; copias externas conservadas |
+| Reversión/reanudación | Retirar únicamente archivos propios con identidad/hashes coincidentes y consumidores detenidos; conservar journals/consumed y copias. Approach/precontact consumidos; support journal todavía sin consumir. No repetir un descenso ni borrar consumed. Comprobar apoyo físico antes de cualquier alivio3cm/apertura; sin HOME automático |
+
+[Receta y fronteras de los dos tramos](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#descenso-actual-de-14-cm-y-apoyo-separado--22-10-2026).
+
+## BOX-TABLE74-CURRENT-APPROACH-20261022
+
+**22-10-2026, Europe/Madrid — aproximación INSTALADA/CARGADA/PROBADA con éxito
+técnico; hueco19cm OBSERVADO por operador. Descenso14cm completado después
+por la ficha superior; apoyo físico PENDIENTE.**
+
+| Campo | Registro |
+| --- | --- |
+| Motivo/autoridad | Petición explícita del usuario de adaptar74cm asumiendo los mismos valores de feriabarcelona; no se presenta como nueva calibración medida |
+| Entrada real | `20261022T105614Z_OPTIMISTIC_SCENARIO1_862349/checkpoint.json`: v3, perfil scenario1_table74_preparation_v1, retreat/navigate_put1 completos, held, sin fallo/in_flight; llegadas18,451/17,789mm y0,444/0,325°. No hubo depósito/apertura/HOME |
+| Diseño nominal | Referencia vendor45cm: Z aproximación0,65+(0,74−0,45)=0,94m; descenso final0 en los tres cuerpos del YAML y retirada de apertura del XML. Hueco nominal20cm sin medición actual; no se importan1,10m/−31cm/5cm de septiembre |
+| Fuentes reproducibles | `scripts/box_handling/scenario1_table74_current_trial.py`, `scenario1_table74_current_trial_run.py` e instalador compartido `scenario1_table74_trial_install.py`; receta enlazada. Artefacto exacto en `config/box_handling/scenario1_table74/current_trial_20261022/` y copia bundle de physical-run |
+| Destino instalado | Motion192.168.11.2, `walker-motion.manipulation_robot_app-1`, ID9cd509ff…0bd03, imagen9f7acf4b…7e75; XML bajo manipulation_task_manager/config/local_table74_current/ y YAML bajo manipulation_meta_tasks/config/meta_clamp/local_table74_current/, prefijo /opt/walker/.../share/ correspondiente |
+| Identidad/hashes | Bundle/taskID `3cfbf9fd452edd82ef4a9d609393fbacbe1ace90b2dc36d12767a55b8e8cd027`, nombre ID_approach; XML `4218dc8d802337cef00f5caa5de323fb3a7e4b6b6101d1928557ac01923e2d75`, YAML `65037c89a317fe5b17408ba898e8aab316cd38e7f7d26e7d910a5b6b5254ee30`. Recibo conserva rutas/identidades completas |
+| Dependencias y límites | Misma geometría/agarre/orientación asumidos de la referencia vendor; revisar fuentes nativas y configuración actual antes de activar. Mantener salud, paros, cargador, control exclusivo y contexto actual. No modificar SDK, WRC original ni perfil74 pendiente para habilitar el ciclo completo |
+| Aplicación/activación | Dos archivos antes ausentes instalados aditivamente, sin sobrescribir WRC, ROS de control o reinicios. Check real correcto, entrada14,484mm/0,189°. Un run explícito tras condiciones confirmadas; origen862349 conserva bytes pero tiene marcador consumed |
+| Verificación | 92 pruebas PASS. Goal `80974a9d-f9b2-4322-a2d7-2db41f28766e`, SUCCEED/status4/state1101001, etapa18,026s; journal succeeded y physical_support_confirmed=false. No descenso final, apoyo, apertura, navegación o HOME |
+| Observación/continuación | Operador corrige hueco a19cm, iguales ambos lados, caja horizontal/estable, base entera sobre tablero y sin contacto/paro/otro mando. Los descensos posteriores de 14 cm y 5 cm ya finalizaron con éxito técnico según la ficha superior. La continuación consumió el trial exitoso de approach, sin reutilizar el checkpoint862349; apoyo físico plano y liberación aún pendientes de confirmación |
+| Backup/evidencia | `../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/`: before/, before-sha256.json, source-checkpoint/context/events, install-result.json, live-check y physical-run/trial.json. Backup remoto `/var/tmp/cruzr-table74-trial/3cfbf9fd452edd82ef4a9d609393fbacbe1ace90b2dc36d12767a55b8e8cd027/`; copia externa robot-backup conservada. Respaldos documentales adicionales conservados |
+| Reversión/reanudación | Retirar sólo los dos archivos nuevos con hashes/identidad coincidentes cuando ninguna tarea los use; no revierte postura ni permite borrar consumed. No repetir recogida o aproximación desde un origen consumido. Apoyo, desenganche, apertura, HOME e integración normal74 PENDIENTES |
+
+[Diseño y límites reproducibles](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#aproximación-actual-a-74-cm-con-referencia-asumida--22-10-2026).
+Este ensayo no convierte el perfil74 pendiente en un depósito completo válido;
+la autorización de valores asumidos no constituye una medición física.
+
 ## BOX-ALIGNED-PICKUP-RESUME-20261022
 
 **22-10-2026, Europe/Madrid — CORREGIDO en PC; 98 pruebas y check real de lectura

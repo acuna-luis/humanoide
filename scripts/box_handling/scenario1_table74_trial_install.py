@@ -18,10 +18,14 @@ try:
     from . import scenario1_deposit_install as files
     from . import scenario1_table74_trial as trial
     from . import scenario1_table74_support as support
+    from . import scenario1_table74_current_trial as current_trial
+    from . import scenario1_table74_current_lower as current_lower
 except ImportError:
     import scenario1_deposit_install as files
     import scenario1_table74_trial as trial
     import scenario1_table74_support as support
+    import scenario1_table74_current_trial as current_trial
+    import scenario1_table74_current_lower as current_lower
 
 
 EVIDENCE_ROOT = Path('/var/tmp/cruzr-table74-trial')
@@ -89,7 +93,11 @@ def _builder(bundle):
         return trial
     if phase == 'support_only':
         return support
-    raise ValueError('Unknown trial phase; only approach_only/support_only are supported')
+    if phase == 'approach_vendor_reference':
+        return current_trial
+    if phase == 'current_relative_lowering':
+        return current_lower
+    raise ValueError('Unknown trial phase; no trusted builder for this phase')
 
 
 def _validate(bundle):
@@ -301,6 +309,8 @@ def remote_source(request=None):
     directory = Path(__file__).parent
     names = ('scenario1_deposit', 'scenario1_deposit_install',
              'scenario1_table74_trial', 'scenario1_table74_support',
+             'scenario1_table74_current_trial',
+             'scenario1_table74_current_lower',
              'scenario1_table74_trial_install')
     sources = {name: (directory/(name+'.py')).read_text() for name in names}
     checks = (directory/'scenario1_checks.py').read_text()

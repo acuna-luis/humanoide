@@ -1,0 +1,7 @@
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence name="root_sequence">
+            <Action ID="MetaClamp" name="local_table74_lower/9e6622246ed911798c41504ac510b662f9ac0f48deaf8bb30047338258192746_lower" />
+        </Sequence>
+    </BehaviorTree>
+</root>

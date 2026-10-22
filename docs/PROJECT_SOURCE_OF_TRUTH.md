@@ -1,5 +1,61 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-TABLE74-CURRENT-LOWERING-20261022: descensos14cm y5cm completados; apoyo físico por confirmar.**
+Un único tramo precontact desde el approach verificado termina
+SUCCEED/status4/state1101001, goal `3ea53b0c-d306-409d-8602-3f6fea005b16`,
+etapa18,060s; bundle `6dc59fb34ae2fafc9cb4f76524f8ea9f175f255f24cc58afd662bdc97b4d65cc`.
+Check previo14,2mm/0,23°,125 pruebas PASS. El operador confirma después
+≈5cm en ambos lados, horizontal/estable y sin contacto, persona junto al
+paro. La caja sigue sujeta, `physical_support_confirmed=false`.
+Approach y precontact trials consumidos; el journal support es la frontera actual.
+
+Se instaló aditivamente el candidato de apoyo separado5→0cm, bundle
+`9e6622246ed911798c41504ac510b662f9ac0f48deaf8bb30047338258192746`;
+Su check terminó correcto (13,7mm/0,27°); una sola ejecución termina
+SUCCEED/status4/state1101001, goal `a8b7e6b9-f578-4b37-b028-9e2b5e179819`,
+etapa17,626s. No abrió ni ejecutó HOME. El runner valida
+`approach → precontact` mediante prueba histórica acotada y contexto actual,
+consume el journal anterior antes del único goal y nunca reutiliza el
+checkpoint862349 consumido. No habilita depósito completo74 ni confirma
+apoyo por resultado de acción: journal support sigue `physical_support_confirmed=false`.
+Confirmación del operador de apoyo plano/completo y holguras de pines
+PENDIENTE. Pines, apertura y HOME siguen bloqueados; candidato de liberación
+sólo en preparación, sin instalar. [Receta y resultados](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#descenso-actual-de-14-cm-y-apoyo-separado--22-10-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#box-table74-current-lowering-20261022).
+Evidencia: `../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/`.
+
+**22-10-2026 — BOX-TABLE74-CURRENT-APPROACH-20261022: aproximación completada; hueco comunicado de 19 cm.**
+El operador ejecutó la retoma con referencia alineada: diario/checkpoint
+`20261022T105614Z_OPTIMISTIC_SCENARIO1_862349`, `retreat` y `navigate_put1`
+completados, `held`, sin fallo o acción en curso. Llegadas put1
+18,451/17,789mm y0,444/0,325°. No hubo depósito, apertura ni HOME; la
+sujeción sigue declarada, no convertida en evidencia de sensor. Este resultado
+supera el pendiente de ejecución de la retoma de las notas inferiores.
+
+Por petición explícita de adaptar asumiendo los mismos valores que
+`feriabarcelona`, se ejecutó un ensayo separado `approach_vendor_reference`:
+Z nativo nominal0,65+(0,74−0,45)=**0,94m**, desplazamiento final de descenso
+cero en los tres cuerpos del YAML y sin apertura XML. El hueco de20cm es
+**nominal bajo esa hipótesis**. Instalación aditiva y check real correctos;
+una aproximación nativa termina SUCCEED/status4/state1101001, goal
+`80974a9d-f9b2-4322-a2d7-2db41f28766e`, etapa18,026s. Bundle
+`3cfbf9fd452edd82ef4a9d609393fbacbe1ace90b2dc36d12767a55b8e8cd027`,
+92 pruebas PASS. Origen862349 byte intacto pero consumido: no repetir.
+Sin descenso final, apoyo, apertura, navegación o HOME durante esta fase.
+
+Después el operador corrige su lectura a **19 cm**, iguales a ambos lados,
+caja horizontal/estable y toda su base sobre el tablero, sin contacto,
+paro ni otro mando. Es medida comunicada, no verificación independiente de
+apoyo: `physical_support_confirmed=false`. Se prepara descenso nominal
+**14 cm para dejar 5 cm de hueco**, desde el journal exitoso de aproximación;
+ese tramo ya terminó como indica la nota superior. Apoyo posterior
+5→0 exige medida nueva y otra decisión; no está autorizado por este registro.
+Perfil normal74, desenganche, apertura y HOME siguen pendientes. No se usan
+1,10m/−31cm/5cm de septiembre como medidas actuales.
+[Diseño y estado](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#aproximación-actual-a-74-cm-con-referencia-asumida--22-10-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#box-table74-current-approach-20261022).
+Evidencia y respaldos: `../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/`.
+
 **22-10-2026 — BOX-ALIGNED-PICKUP-RESUME-20261022: referencia correcta para retomar con caja sujeta.**
 La retoma 832193 del origen limpio 807763 rechazó la entrada por comparar la
 pose actual con get1 nominal: distancia 50,824 mm, aunque estaba a ≈2,77 mm de
@@ -19,8 +75,9 @@ Carga en memoria VERIFICADA mediante `--check` real, sin instalación persistent
 movimiento, HOME, nuevo agarre o depósito en esta corrección. Las 98 pruebas
 focales pasan. El check final mide 2,2 mm / 0,26° respecto a la referencia
 alineada y termina `RESUME_CHECK_OK`, sin consumir ni modificar el origen.
-Retoma prevista `retreat → navigate_put1`, detenida por `--stop-after put1`;
-depósito de 74 cm y ejecución física del arreglo PENDIENTES. [Receta y estado](box_handling/OPTIMISTIC_SCENARIO1.md#referencia-de-retoma-tras-la-alineación-visual--22-10-2026),
+La retoma posterior `retreat → navigate_put1` fue ejecutada por el operador
+y terminó en862349, como documenta la nota superior; depósito74 sigue
+PENDIENTE. [Receta y estado](box_handling/OPTIMISTIC_SCENARIO1.md#referencia-de-retoma-tras-la-alineación-visual--22-10-2026),
 [ficha](SYSTEM_CUSTOMIZATIONS.md#box-aligned-pickup-resume-20261022).
 Backup y evidencia: `../Humanoide-vla-evidence/20261022T104831Z_ALIGNED_PICKUP_RESUME_FIX/`.
 

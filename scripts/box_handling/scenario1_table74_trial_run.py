@@ -219,7 +219,7 @@ def make_payload(mode, profile, source, bundle):
     return payload
 
 
-def connection_class(cli):
+def connection_class(cli, *, bootstrap=BOOTSTRAP):
     class TrialConnection(cli.Connection):
         def __init__(self, payload, wifi, evidence, *, console=None):
             self.evidence = evidence
@@ -233,7 +233,7 @@ def connection_class(cli):
                 SSH_ASKPASS=str(cli.ROOT/'scripts/cruzr_recover_to_home.sh'),
                 SSH_ASKPASS_REQUIRE='force', DISPLAY=os.environ.get('DISPLAY', ':0'))
             command = cli.ssh_command(wifi)
-            code = 'import base64;exec(base64.b64decode(%r))' % base64.b64encode(BOOTSTRAP.encode()).decode()
+            code = 'import base64;exec(base64.b64decode(%r))' % base64.b64encode(bootstrap.encode()).decode()
             command[-1] = shlex.join(['python3', '-u', '-B', '-c', code])
             self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE, text=True, env=env, start_new_session=True, bufsize=1)

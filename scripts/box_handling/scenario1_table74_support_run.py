@@ -78,21 +78,24 @@ def validate_shutdown_tail(events):
         raise ValueError('Approach shutdown evidence is incomplete')
 
 
-def validate_predecessor(proof, profile):
+def validate_predecessor(proof, profile, *, bundle_validator=approach.validate_bundle,
+                         entry_builder=None, pinned_bundle_id=support.PINNED_APPROACH_BUNDLE_ID,
+                         pinned_goal_id=support.PINNED_APPROACH_GOAL_ID):
     """Verify the exact successful approach and its non-executable context."""
     if not isinstance(proof, dict) or set(proof) != set(FILES):
         raise ValueError('Incomplete approach predecessor evidence')
-    bundle = approach.validate_bundle(proof['bundle.json'])
-    if bundle['manifest']['id'] != support.PINNED_APPROACH_BUNDLE_ID:
+    bundle = bundle_validator(proof['bundle.json'])
+    if bundle['manifest']['id'] != pinned_bundle_id:
         raise ValueError('Support trial requires the pinned approach bundle')
     source_record = proof['source-context.json']
-    source, options, planned = approach.prepare_entry(source_record.get('checkpoint'), profile)
+    source, options, planned = (approach.prepare_entry(source_record.get('checkpoint'), profile)
+        if entry_builder is None else entry_builder(source_record.get('checkpoint'), profile, bundle))
     if source_record != approach.context_record(source):
         raise ValueError('Malformed approach source context')
     if proof['context-checkpoint.json'] != approach.context_record(planned['checkpoint']):
         raise ValueError('Approach technical checkpoint does not match its source')
     journal = approach.validate_journal(proof['trial.json'], bundle['manifest']['id'], planned['source_sha256'])
-    if journal['phase'] != 'succeeded' or journal['result']['goal_id'] != support.PINNED_APPROACH_GOAL_ID:
+    if journal['phase'] != 'succeeded' or journal['result']['goal_id'] != pinned_goal_id:
         raise ValueError('The pinned approach must have a confirmed successful result')
     context = proof['context.json']
     if (not isinstance(context, dict) or set(context) != {'boot_id', 'containers', 'dependencies', 'points', 'execution_profile'}

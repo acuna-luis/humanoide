@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "mode": "operator_assumed_vendor45",
+  "source_checkpoint_sha256": "cb528527f3ee14bb71014e7059f8014b4fe4ae88d0d2d4592d6b4f619da3b379",
+  "surface_height_m": 0.74,
+  "reference_surface_height_m": 0.45,
+  "scope": "current_held_put1_only",
+  "evidence": "2026-10-22 Europe/Madrid: operator confirms current 74 cm table, box held stable at put1, all physical conditions checked and explicitly requests adapting with the same known values from feriabarcelona. This is an operator-authorized assumption of the existing 45 cm vendor reference, not a current box-height or hand-Z measurement. Source checkpoint 20261022T105614Z_OPTIMISTIC_SCENARIO1_862349. Approach only; measured support and release are not authorized by this reference."
+}

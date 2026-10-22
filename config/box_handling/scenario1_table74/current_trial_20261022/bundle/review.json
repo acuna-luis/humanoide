@@ -1,0 +1,76 @@
+{
+  "phase": "approach_vendor_reference",
+  "reference": {
+    "version": 1,
+    "mode": "operator_assumed_vendor45",
+    "source_checkpoint_sha256": "cb528527f3ee14bb71014e7059f8014b4fe4ae88d0d2d4592d6b4f619da3b379",
+    "surface_height_m": 0.74,
+    "reference_surface_height_m": 0.45,
+    "scope": "current_held_put1_only",
+    "evidence": "2026-10-22 Europe/Madrid: operator confirms current 74 cm table, box held stable at put1, all physical conditions checked and explicitly requests adapting with the same known values from feriabarcelona. This is an operator-authorized assumption of the existing 45 cm vendor reference, not a current box-height or hand-Z measurement. Source checkpoint 20261022T105614Z_OPTIMISTIC_SCENARIO1_862349. Approach only; measured support and release are not authorized by this reference."
+  },
+  "reference_kind": "operator_assumption_not_measurement",
+  "source_vendor45_assumed": true,
+  "physical_validation": "pending",
+  "kinematic_validation": "pending",
+  "automatic_execution_authorized": false,
+  "installed": false,
+  "integrated_in_optimistic": false,
+  "measured_calibration_created": false,
+  "support_confirmed": false,
+  "pin_disengagement_confirmed": false,
+  "nominal_height_translation_m": 0.29,
+  "first_hand_absolute_z_m": 0.94,
+  "first_hand_absolute_x_m": 0.75,
+  "first_hand_absolute_y_m": {
+    "left": 0.285,
+    "right": -0.285
+  },
+  "first_hand_quaternion_wxyz": [
+    0.5,
+    0.5,
+    0.5,
+    -0.5
+  ],
+  "first_hand_mode": "ABSOLUTE",
+  "following_hand_delta_x_m": 0.2,
+  "final_hand_delta_z_m": 0.0,
+  "final_torso_delta_z_m": 0.0,
+  "nominal_precontact_clearance_m": 0.2,
+  "nominal_target_box_bottom_above_floor_m": 0.94,
+  "nominal_duration_s": 12.0,
+  "source_box_size_unchanged_m": [
+    0.6,
+    0.4,
+    0.28
+  ],
+  "native_controls_preserved": true,
+  "original_contact_window_s": [
+    10.0,
+    12.0
+  ],
+  "excluded_phases": [
+    "final_20cm_lowering",
+    "table_support",
+    "pin_release",
+    "opening",
+    "navigation",
+    "home"
+  ],
+  "assumptions_not_verified": [
+    "The vendor45 reference remains applicable to this same physical box, clamps, grasp and horizontal layout.",
+    "The unchanged absolute hand XY/orientations, earlier torso motion and 20 cm forward segment clear the actual table and surroundings.",
+    "The internal hand Z translation produces the same physical height translation of the rigidly held box.",
+    "The nominal 20 cm clearance describes an assumed recipe, not a measured current gap or a guaranteed clearance."
+  ],
+  "limitations": [
+    "The source checkpoint hash must match the genuine clean held-put1 source in a separately checked runner.",
+    "No complete deposit profile is enabled or physically qualified by this candidate.",
+    "The first absolute waypoint can change hand XYZ and orientation; zero final descent does not make the earlier path stationary.",
+    "Native IK and retained force/admittance control can adjust posture despite zero final translation requests.",
+    "The original contact window only covers nominal times 10 to 12 seconds; earlier table contact is not covered by that window.",
+    "Successful action completion would not establish table support, pin clearance or safe release.",
+    "A later support trial requires a new measured or explicitly reviewed gap and a genuine successful predecessor.",
+    "No automatic retry, opening or HOME is part of this phase."
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "stage": "precontact",
+  "gap_above_surface_m": 0.19,
+  "target_clearance_m": 0.05,
+  "surface_height_m": 0.74,
+  "predecessor_bundle_id": "3cfbf9fd452edd82ef4a9d609393fbacbe1ace90b2dc36d12767a55b8e8cd027",
+  "predecessor_goal_id": "80974a9d-f9b2-4322-a2d7-2db41f28766e",
+  "scope": "current_post_trial_box_only",
+  "evidence": "2026-10-22 Europe/Madrid: after the successful current approach, the operator corrects the gap to approximately 19 cm (not 10 cm), equal on both sides, box horizontal and stable, its entire base above the table, no contact and no estop or control intervention. This authorizes a single 14 cm lowering to leave nominal 5 cm, without support or opening. The reported gap is approximate, not a bounded calibration."
+}

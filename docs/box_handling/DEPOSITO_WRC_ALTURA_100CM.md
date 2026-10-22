@@ -1,5 +1,286 @@
 # Depósito WRC y estantería a 100 cm
 
+## Descenso actual de 14 cm y apoyo separado — 22-10-2026
+
+**BOX-TABLE74-CURRENT-LOWERING-20261022 — 22-10-2026, Europe/Madrid.
+Precontact14cm y support5cm INSTALADOS/CARGADOS/PROBADOS;
+apoyo físico plano/completo PENDIENTE de confirmación.** Desde el approach con hueco comunicado
+19cm, una sola acción baja nominalmente14cm: goal
+`3ea53b0c-d306-409d-8602-3f6fea005b16`, SUCCEED/status4/state1101001,
+etapa18,060s. Check previo14,2mm/0,23°. Después el operador confirma
+aproximadamente **5cm en ambos lados**, horizontal/estable, sin contacto y
+persona junto al paro. `precontact-run/trial.json` conserva succeeded y
+`physical_support_confirmed=false`. No hubo apertura, alivio, navegación o HOME.
+
+Support ejecutó una sola vez5→0cm: goal
+`a8b7e6b9-f578-4b37-b028-9e2b5e179819`, SUCCEED/status4/state1101001,
+etapa17,626s; check13,7mm/0,27°, entrada run13,8mm/0,28°.
+`support-run/trial.json` conserva succeeded y support=false. Precontact trial
+consumido, support trial todavía libre. **No repetir**: SUCCEED no demuestra
+transferencia de carga, apoyo completo, nivelación o pines libres.
+Confirmación física del operador PENDIENTE; alivio3cm/apertura sólo en
+preparación, sin instalar. No se abrió ni envió HOME.
+
+### Fuentes, contratos y verificación
+
+Builder `scripts/box_handling/scenario1_table74_current_lower.py`, runner
+`scenario1_table74_current_lower_run.py` e instalador compartido. Modos
+cerrados precontact .19→.05m y support .05→0m: manos RELATIVE con cero
+a6/10s y Z−0,14/−0,05m a12s, XY0 y cuaternión identidad; torso pide cero.
+Conservan controles WRC/stack/tiempos pinados. Cero no implica torso
+físicamente bloqueado ni interpolación cartesiana exacta bajo fuerza/IK.
+
+| Tramo | Bundle/taskID (local_table74_lower/ID_lower) | SHA256 YAML | SHA256 XML |
+| --- | --- | --- | --- |
+| Precontact probado | `6dc59fb34ae2fafc9cb4f76524f8ea9f175f255f24cc58afd662bdc97b4d65cc` | `8fa550607b8d6186004de25249e1ce2e27ab64771518f4e889350af5c7a5c835` | `253b8d66debe4b5b4fd0dfd7de93748b2aa73e0fd1a660936abe755eaea5175f` |
+| Support probado | `9e6622246ed911798c41504ac510b662f9ac0f48deaf8bb30047338258192746` | `f8abff2146acfa0f2b4c2f0c3406aa0e48a01ce18803e6302619cdc4a442b423` | `ffcced2c9c83ceb0ad1925a73c255c59f162d17d23c0fb8e671d65d84bad5515` |
+
+Mismo contenedor/imagen y raíces XML/YAML del approach, ahora namespace
+`local_table74_lower/`; dos archivos nuevos por fase, sin sobrescribir
+originales ni reiniciar. Backups remotos `/var/tmp/cruzr-table74-trial/ID/`.
+Evidencia `../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/`:
+`precontact-robot-backup/`, `support-robot-backup/`, install-result/check/run de cada fase,
+`before-lowering/` y `before-precontact-result-documentation/`.
+125 pruebas PASS5,414s en `combined-tests-final.log`.
+
+La prueba `predecessor.json` se acota a **approach→precontact**; un support
+terminado no habilita otro descenso. Se verifican bundle/UUID/request,
+terminales y orden temporal, contexto/hashes y cierre limpio. Se rechazan
+cancelaciones, errores o actividad posterior desconocida. Approach trial ya
+consumido; precontact trial es la frontera del siguiente run. El checkpoint
+862349 consumido sólo permanece como contexto histórico, sin editar.
+Después del support ejecutado, tampoco se reutiliza el precontact consumido;
+el siguiente tramo requerirá otro contrato desde el journal support y la
+confirmación de apoyo físico. El candidato de liberación no está instalado.
+
+### Receta por journal, sin reanudar el depósito ordinario
+
+**Receta histórica: precontact y support ya completados; no repetir.**
+El antecesor precontact ya está consumido, por lo que estos comandos no son
+una orden para la postura actual. Describe support desde `precontact-run`;
+sólo plan es local. Para construir de nuevo
+los archivos PC, usar salida nueva y la referencia versionada:
+
+```bash
+python3 -B scripts/box_handling/scenario1_table74_current_lower.py \
+  --reference config/box_handling/scenario1_table74/current_trial_20261022/support-reference.json \
+  --output /ruta/nueva/support74
+table74_after="/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/precontact-run"
+table74_lower_bundle="config/box_handling/scenario1_table74/current_trial_20261022/support-bundle/bundle.json"
+python3 -B scripts/box_handling/scenario1_table74_current_lower_run.py \
+  --after "$table74_after" --bundle "$table74_lower_bundle" --plan
+python3 -B scripts/box_handling/scenario1_table74_current_lower_run.py \
+  --after "$table74_after" --bundle "$table74_lower_bundle" --check
+```
+
+El run mueve caja/brazos y requiere check correcto, hueco actual5cm ambos
+lados, horizontalidad/estabilidad, superficie completa debajo, recorrido libre,
+paros liberados, cargador desconectado, ruedas en navegación, modo automático,
+otros mandos detenidos y persona junto al paro. Exige TTY y `BAJAR74`:
+
+```bash
+python3 -B scripts/box_handling/scenario1_table74_current_lower_run.py \
+  --after "$table74_after" --bundle "$table74_lower_bundle" --run
+```
+
+Consume el journal anterior antes de armar y guarda intención; check/plan no
+lo consumen. El nuevo journal conserva support=false y contexto no ejecutable;
+no crea checkpoint ordinario ni habilita el perfil74 pendiente. Después se
+comprueba apoyo real antes de otra fase. Ante interrupción no repetir, abrir
+o mandar HOME. Rollback: instalador compartido `--bundle BUNDLE --rollback`,
+sólo archivos propios/hashes intactos sin consumidores; conserva consumed y
+no revierte postura. Todos los archivos aditivos siguen instalados.
+
+## Aproximación actual a 74 cm con referencia asumida — 22-10-2026
+
+**BOX-TABLE74-CURRENT-APPROACH-20261022 — 22-10-2026, Europe/Madrid.
+INSTALADO/CARGADO/PROBADO: aproximación con éxito técnico; nuevo descenso
+PENDIENTE.** El usuario pide explícitamente adaptar «asumiendo mismos
+valores» de feriabarcelona. Es una hipótesis autorizada de geometría y
+calibración, no una nueva medición de la mesa, mano o base de la caja.
+
+La recogida y el traslado actuales ya superaron el rechazo de preparación
+descrito en la revisión anterior: diario
+`20261022T105614Z_OPTIMISTIC_SCENARIO1_862349`, checkpoint v3 limpio,
+`retreat/navigate_put1` completados, `box_state=held`, sin fallo o in_flight.
+Llegada put1 en dos muestras:18,451/17,789mm y0,444/0,325°.
+Held conserva procedencia declarada; no se reetiqueta como sensor.
+No hubo depósito, apoyo, apertura o HOME. Este origen se conserva sin editar
+para una única aproximación separada, si continúan válidos estado y contexto.
+
+### Resultado de la aproximación actual y medida comunicada
+
+Instalación aditiva verificada en Motion, contenedor
+`walker-motion.manipulation_robot_app-1`, ID
+`9cd509ff68971dcc88405cda975d761add90bee661b686d8595d9b49edf0bd03`,
+imagen `sha256:9f7acf4bdefde90d330f13cdc249d169865b1777bbcf31fca3642827f5be7e75`.
+Dos destinos antes ausentes, sin originales sobrescritos, ROS de control ni
+reinicios durante la instalación. Check real correcto:14,484mm/0,189°,
+mismo contexto. Conjunto de92 pruebas PASS.
+
+Task `local_table74_current/3cfbf9fd452edd82ef4a9d609393fbacbe1ace90b2dc36d12767a55b8e8cd027_approach`:
+**una ejecución**, goal `80974a9d-f9b2-4322-a2d7-2db41f28766e`,
+SUCCEED/status4/state1101001, etapa18,026s. `physical-run/trial.json`
+conserva phase=succeeded y `physical_support_confirmed=false`. No se enviaron
+descenso final, apoyo, apertura, navegación o HOME. El checkpoint862349
+mantiene sus bytes pero queda consumido; **no repetir approach ni reutilizar
+ese origen**.
+
+El operador corrige el hueco a **19cm**, iguales a ambos lados; comunica caja
+horizontal y estable, base entera sobre el tablero, sin contacto, paro u otro
+mando. Es observación del operador, no metrología independiente ni apoyo.
+Su interrupción fue de la respuesta del agente, no un nuevo paro físico.
+
+Se prepara otro tramo separado: **19→5cm**, descenso nominal14cm, manteniendo
+la caja sujeta. Fuentes previstas `scenario1_table74_current_lower.py` y
+`scenario1_table74_current_lower_run.py`; instalación/check/ensayo PENDIENTES.
+Debe validar como antecesor el trial de approach con el goal anterior y
+contexto intacto, y consumir ese trial antes del único despacho. No vuelve a
+usar el checkpoint862349 consumido ni reanuda el depósito ordinario. El apoyo
+posterior5→0 necesita medida nueva y decisión separada; no se ha enviado ni
+queda autorizado como consecuencia automática. Apertura y HOME siguen fuera.
+
+Instalación reproducida por bundle en `physical-run/bundle.json`; hashes:
+XML `4218dc8d802337cef00f5caa5de323fb3a7e4b6b6101d1928557ac01923e2d75`,
+YAML `65037c89a317fe5b17408ba898e8aab316cd38e7f7d26e7d910a5b6b5254ee30`.
+Se ubican respectivamente bajo
+`/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/local_table74_current/`
+y `/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/local_table74_current/`,
+nombre base ID_approach anterior. Backup remoto
+`/var/tmp/cruzr-table74-trial/3cfbf9fd452edd82ef4a9d609393fbacbe1ace90b2dc36d12767a55b8e8cd027/`;
+recibo/originales externos conservados en `robot-backup/`. Los archivos propios
+siguen instalados; rollback sólo con consumidores detenidos y hashes intactos.
+
+### Parámetros y alcance del candidato
+
+Se traslada la referencia vendor45cm con la misma regla usada en
+feriabarcelona:
+
+```text
+Z_aproximación_nativo = 0,65 + (0,74 − 0,45) = 0,94 m
+```
+
+0,94m es una coordenada objetivo nativa, **no la altura medida de la base de
+la caja sobre el suelo**. El candidato conserva el resto del recorrido
+correspondiente, pone a cero el desplazamiento final de descenso en los tres
+cuerpos del YAML y retira la apertura del XML. Termina sólo la aproximación,
+con caja sujeta. Los20cm de hueco son nominales bajo la referencia asumida;
+no se declara apoyo, espacio libre real, alcance o ausencia de colisión.
+No es una trayectoria puramente vertical ni una calibración automática.
+
+Fuentes: `scripts/box_handling/scenario1_table74_current_trial.py`,
+`scenario1_table74_current_trial_run.py` e instalador compartido
+`scenario1_table74_trial_install.py`; namespace aditivo `local_table74_current/`,
+fase `approach_vendor_reference`. El builder conserva XY absoluto de manos
+[0,75;±0,285]m, cuaternión [0,5;0,5;0,5;−0,5], avance posterior0,20m,
+torso previo, tiempos, task stack, controles nativos y box_size vendor
+[0,6;0,4;0,28]m; no son dimensiones actuales medidas. Fuerza/admitancia e
+IK pueden ajustar postura; cero desplazamiento final no bloquea físicamente
+el torso. La ventana de contacto original10–12s no acredita protección de
+un contacto anterior. No ejecutar runners de septiembre ni sustituir sus
+JSON por esta referencia.
+
+El perfil ordinario74 sigue pendiente. No se habilita depósito completo por
+`--resume`, no se modifica su checkpoint ni se elimina su bloqueo. La fase
+aditiva debe comprobar identidad/contexto/dependencias vigentes, origen
+put1held limpio/no consumido y condiciones físicas actuales antes del único
+despacho. Después hay que observar y medir el resultado antes de diseñar
+apoyo, alivio de pines o apertura; no se programa descenso posterior ni HOME.
+
+Las referencias históricas1,10m, descenso−31cm y hueco5cm de septiembre
+permanecen abajo como historia y no son medidas actuales. El candidato
+medido con referencias `null` del22Oct también se conserva pendiente; esta
+prueba asumida no rellena sus campos ni convierte sus verificaciones en true.
+Backup de estos cuatro documentos y hashes antes de editar:
+`../Humanoide-vla-evidence/TABLE74_CURRENT_APPROACH_DOCUMENTATION_BEFORE_20261022/`.
+Evidencia definitiva, copia de origen y respaldo de fuentes/documentos:
+`../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/`.
+Activación y resultado de la aproximación constan arriba; reversión no
+ejecutada. El operador confirmó condiciones y aceptó la hipótesis; la medida
+posterior comunicada de19cm no convierte la referencia nativa en una
+calibración universal ni omite los checks del siguiente tramo.
+
+### Receta reproducible del candidato actual
+
+**Receta de reproducción, no orden para repetir el ensayo ya consumido.**
+Desde la raíz del repositorio, con un directorio de salida **nuevo**. Sólo el
+primer bloque construye archivos PC y no conecta al robot. No reutilizar un
+origen consumido o cuya caja/contexto ya hayan cambiado:
+
+```bash
+table74_source="/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261022T105614Z_OPTIMISTIC_SCENARIO1_862349/checkpoint.json"
+table74_candidate="/ruta/nueva/table74_actual"
+python3 -B - "$table74_source" "$table74_candidate" <<'PY'
+import hashlib, json, sys
+from pathlib import Path
+from scripts.box_handling import scenario1_table74_current_trial as trial
+
+source = json.loads(Path(sys.argv[1]).read_text())
+source_hash = hashlib.sha256(json.dumps(source, sort_keys=True,
+    separators=(',', ':'), allow_nan=False).encode()).hexdigest()
+reference = dict(version=1, mode='operator_assumed_vendor45',
+    source_checkpoint_sha256=source_hash, surface_height_m=.74,
+    reference_surface_height_m=.45, scope='current_held_put1_only',
+    evidence='BOX-TABLE74-CURRENT-APPROACH-20261022: hipótesis vendor45 aceptada por el operador; no medida')
+snapshot = Path('vendor/ubtech/cruzr_s2/snapshot_20260916/motion')
+bundle = trial.build_bundle(reference,
+    (snapshot/'tasks/wrc_cruzr/put_cruzr_wrc_low.xml').read_text(),
+    (snapshot/'meta_clamp/wrc/put_cruzr_wrc_low.yaml').read_text())
+trial.validate_bundle(bundle)
+destination = Path(sys.argv[2])
+destination.mkdir(parents=True, exist_ok=False)
+for name, value in [('reference', reference), ('bundle', bundle),
+                    ('manifest', bundle['manifest']), ('review', bundle['review'])]:
+    (destination/(name+'.json')).write_text(json.dumps(value, indent=2,
+        ensure_ascii=False, allow_nan=False)+'\n')
+PY
+python3 -B scripts/box_handling/scenario1_table74_current_trial_run.py \
+  --resume "$table74_source" --bundle "$table74_candidate/bundle.json" --plan
+```
+
+El instalador redescubre el contenedor, compara fuentes WRC/biblioteca pinadas,
+reconstruye el bundle y sólo crea los dos destinos nuevos. Primero consulta;
+la instalación cambia archivos pero no ejecuta movimiento:
+
+```bash
+python3 -B scripts/box_handling/scenario1_table74_trial_install.py \
+  --bundle "$table74_candidate/bundle.json" --check
+python3 -B scripts/box_handling/scenario1_table74_trial_install.py \
+  --bundle "$table74_candidate/bundle.json" --install
+python3 -B scripts/box_handling/scenario1_table74_current_trial_run.py \
+  --resume "$table74_source" --bundle "$table74_candidate/bundle.json" --check
+```
+
+El run siguiente mueve brazos/torso/caja y exige operador/TTY con
+`APROXIMAR74`. Sólo después de check correcto y confirmación actual de caja
+held estable, recorrido completo incluido avance20cm libre, cargador fuera,
+paros liberados, ruedas en navegación, modo automático, otros mandos parados
+y persona junto al paro:
+
+```bash
+python3 -B scripts/box_handling/scenario1_table74_current_trial_run.py \
+  --resume "$table74_source" --bundle "$table74_candidate/bundle.json" --run
+```
+
+Verifica entrada actual en put1 y contexto/boot/dependencias; consume el origen
+antes de armar, registra intención y admite un único goal, sin retry. Guarda
+`trial.json` y contexto `executable=false`, sin crear un checkpoint ordinario
+que permita ejecutar otro descenso. Check/plan no consumen el origen. Tras
+éxito técnico y reposo se observa/mide el hueco antes de diseñar otra fase.
+Ante fallo o estado desconocido no repetir, abrir ni enviar HOME.
+
+Reversión exclusiva de archivos, con tareas consumidoras detenidas:
+
+```bash
+python3 -B scripts/box_handling/scenario1_table74_trial_install.py \
+  --bundle "$table74_candidate/bundle.json" --rollback
+```
+
+Sólo retira los dos destinos propios con hashes/identidad originales
+coincidentes; conserva recibo y backups. No revierte el movimiento ni autoriza
+reutilizar el checkpoint consumido. No se cambian WRC original, SDK, límites
+o perfil normal74; tras actualizaciones verificar nuevamente dependencias.
+
 ## Revisión del 22-10-2026: destino de 74 cm y referencia actual pendiente
 
 **BOX-01-TABLE74-REFERENCE-20261022 — PREPARADO LOCALMENTE; calibración,

@@ -1,5 +1,66 @@
 # Escenario 1 con supervisión continua
 
+## Descensos14cm y5cm completados; apoyo físico pendiente — 22-10-2026
+
+**BOX-TABLE74-CURRENT-LOWERING-20261022.** El descenso precontact19→5cm
+se ejecutó una sola vez: goal `3ea53b0c-d306-409d-8602-3f6fea005b16`,
+SUCCEED/status4/state1101001, etapa18,060s; bundle6dc59fb3…d65cc.
+El operador confirma después≈5cm en ambos lados, horizontal/estable y sin
+contacto, con persona junto al paro. No equivale a apoyo; journal support=false.
+El trial del approach queda consumido y la frontera actual es el trial limpio
+de `precontact-run`, no el checkpoint862349 ni una nueva recogida.
+
+Support5→0 es otro bundle aditivo9e662224…92746, instalado/cargado/probado:
+check13,7mm/0,27°, una acción SUCCEED/status4/state1101001, goal
+`a8b7e6b9-f578-4b37-b028-9e2b5e179819`, etapa17,626s. Precontact trial
+queda consumido; support trial es la frontera sin consumir. El runner usa `--after DIRECTORIO`
+y valida la cadena histórica de dos fases, contexto y mediciones actuales;
+consume el journal anterior al armar. No se reanuda el ciclo completo de
+Optimistic ni se cambia el perfil74 pendiente. Conjunto125 pruebas PASS.
+
+No repetir los comandos de approach/precontact ni el support ya ejecutado.
+Journal `support-run/trial.json` mantiene `physical_support_confirmed=false`:
+el operador aún debe confirmar apoyo plano/completo y holguras. Liberación
+sólo en preparación, sin instalar; apertura y HOME no están incluidos.
+[Recetas y evidencias](DEPOSITO_WRC_ALTURA_100CM.md#descenso-actual-de-14-cm-y-apoyo-separado--22-10-2026).
+
+## Put1 alcanzado y aproximación separada a 74 cm — 22-10-2026
+
+**BOX-TABLE74-CURRENT-APPROACH-20261022.** La retoma posterior al arreglo de
+referencia ya fue ejecutada por el operador: diario/checkpoint
+`20261022T105614Z_OPTIMISTIC_SCENARIO1_862349`, con `retreat` y
+`navigate_put1` completos, held limpio y sin acción en curso. Las dos muestras
+de llegada put1 son18,451/17,789mm y0,444/0,325°. No hubo depósito, apertura
+o HOME. Los pendientes de retoma física en las secciones anteriores del
+historial quedan superados por este resultado; no reutilizar807763 si ya se
+consumió. La entrada de la siguiente fase es el nuevo origen862349.
+
+El usuario pide adaptar asumiendo los mismos valores de feriabarcelona.
+Se preparó y probó un candidato separado `approach_vendor_reference` de referencia
+vendor45: Z nominal0,65+(0,74−0,45)=0,94m y sin el descenso final ni apertura.
+Los20cm restantes eran hipótesis nominal. Instalación aditiva y check real
+correctos; una única aproximación termina SUCCEED/status4/state1101001,
+goal `80974a9d-f9b2-4322-a2d7-2db41f28766e`, etapa18,026s. El origen862349
+queda byte intacto pero consumido. No repetir el comando de aproximación
+ni la retoma anterior. No hubo descenso final, apoyo, apertura o HOME.
+
+La lectura corregida del operador es **19cm**, iguales en ambos lados,
+horizontal/estable, base entera sobre el tablero y sin contacto, paro u otro
+mando. No equivale a apoyo: la caja sigue sujeta y el journal conserva
+`physical_support_confirmed=false`. El siguiente tramo en preparación baja
+nominalmente14cm para dejar5cm; instalación/check/ensayo PENDIENTES. Debe
+continuar desde el journal exitoso de approach, no desde862349 consumido.
+El apoyo5→0 sólo se considerará tras observar y medir ese nuevo resultado.
+
+**No continuar con la reanudación completa de Optimistic desde put1:** el
+perfil74 normal sigue pendiente y no se modifica para saltar el bloqueo.
+La aproximación termina con caja aún sujeta; apoyo, desenganche, apertura y
+HOME requieren decisiones posteriores según el resultado real. No se aplican
+los1,10m/−31cm/5cm históricos sin nueva medición. No cambiar checkpoint,
+evidencia de held o marcadores consumed para forzar la entrada.
+[Diseño de la fase y estado vigente](DEPOSITO_WRC_ALTURA_100CM.md#aproximación-actual-a-74-cm-con-referencia-asumida--22-10-2026),
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#box-table74-current-approach-20261022).
+
 ## Referencia de retoma tras la alineación visual — 22-10-2026
 
 **BOX-ALIGNED-PICKUP-RESUME-20261022. Corrección y check real de lectura

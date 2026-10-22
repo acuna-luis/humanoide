@@ -1,0 +1,104 @@
+{
+  "phase": "current_relative_lowering",
+  "reference": {
+    "version": 1,
+    "stage": "precontact",
+    "gap_above_surface_m": 0.19,
+    "target_clearance_m": 0.05,
+    "surface_height_m": 0.74,
+    "predecessor_bundle_id": "3cfbf9fd452edd82ef4a9d609393fbacbe1ace90b2dc36d12767a55b8e8cd027",
+    "predecessor_goal_id": "80974a9d-f9b2-4322-a2d7-2db41f28766e",
+    "scope": "current_post_trial_box_only",
+    "evidence": "2026-10-22 Europe/Madrid: after the successful current approach, the operator corrects the gap to approximately 19 cm (not 10 cm), equal on both sides, box horizontal and stable, its entire base above the table, no contact and no estop or control intervention. This authorizes a single 14 cm lowering to leave nominal 5 cm, without support or opening. The reported gap is approximate, not a bounded calibration."
+  },
+  "reference_kind": "operator_reported_current_gap_not_absolute_hand_calibration",
+  "physical_validation": "pending",
+  "kinematic_validation": "pending",
+  "automatic_execution_authorized": false,
+  "installed": false,
+  "integrated_in_optimistic": false,
+  "measured_absolute_calibration_created": false,
+  "physical_support_confirmed": false,
+  "pin_disengagement_confirmed": false,
+  "lower_delta_z_m": -0.14,
+  "nominal_target_clearance_m": 0.05,
+  "hand_mode": "RELATIVE",
+  "hand_delta_at_6s_m": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "hand_delta_at_10s_m": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "final_hand_delta_m": [
+    0.0,
+    0.0,
+    -0.14
+  ],
+  "hand_delta_xy_m": [
+    0.0,
+    0.0
+  ],
+  "relative_quaternion_wxyz": [
+    1.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "torso_delta_at_each_point_m": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "nominal_duration_s": 12.0,
+  "nominal_lowering_waypoint_interval_s": [
+    10.0,
+    12.0
+  ],
+  "source_box_size_unchanged_m": [
+    0.6,
+    0.4,
+    0.28
+  ],
+  "native_controls_preserved": true,
+  "contact_window_s": [
+    10.0,
+    12.0
+  ],
+  "contact_reference_time_s": 10.0,
+  "configured_collision_force_each_hand": [
+    0.0,
+    0.0,
+    10.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "excluded_phases": [
+    "approach",
+    "pin_release",
+    "opening",
+    "navigation",
+    "home"
+  ],
+  "assumptions_not_verified": [
+    "The same held box, hand attachment and pose are unchanged from the genuine successful predecessor.",
+    "The current gap report applies to both sides of the horizontal box over the stable table.",
+    "Motion relative Z is parallel to physical vertical and the box remains rigid relative to its tools.",
+    "The complete lowering and native force/IK adjustments clear the actual table and surroundings."
+  ],
+  "limitations": [
+    "A runner must verify the exact predecessor bundle, native UUID, terminal result and unchanged source context.",
+    "The reported gap has no bounded measurement uncertainty; the subtraction is a requested nominal trial.",
+    "The 6 and 10 second points request zero displacement; native force/IK can still adjust posture.",
+    "The final hand waypoint requests lowering between nominal times 10 and 12; exact physical interpolation and peak velocity are not certified here.",
+    "Torso translation requests remain zero, which does not mechanically lock the torso.",
+    "Action SUCCEED neither proves table support nor authorizes release, opening or HOME.",
+    "Precontact must be followed by a new gap/position confirmation; support requires its own genuine successful predecessor.",
+    "No pin relief or lateral opening is included; support must be physically confirmed before any later release task.",
+    "Repeating this relative phase would lower the hands again; no automatic retry is authorized."
+  ]
+}

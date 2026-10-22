@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "stage": "support",
+  "gap_above_surface_m": 0.05,
+  "target_clearance_m": 0.0,
+  "surface_height_m": 0.74,
+  "predecessor_bundle_id": "6dc59fb34ae2fafc9cb4f76524f8ea9f175f255f24cc58afd662bdc97b4d65cc",
+  "predecessor_goal_id": "3ea53b0c-d306-409d-8602-3f6fea005b16",
+  "scope": "current_post_trial_box_only",
+  "evidence": "2026-10-22 Europe/Madrid: after successful 14 cm precontact lowering, operator answers yes to the current approximately 5 cm gap on both sides, horizontal stable box without contact/resistance, clear path and person at estop. Authorizes the separate final 5 cm support lowering. Action success must not be treated as confirmation of physical support or pin clearance; no opening included."
+}
