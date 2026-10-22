@@ -1,5 +1,22 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**22-10-2026 — BOX-TABLE74-BASELINE-CONTINUOUS-20261022: referencia actual medida.**
+Un run completo de Optimistic mesa74 en74-jacob/f18a2bf, sin optimizaciones
+nuevas ni interrupción, termina en **323,879 s (5 min23,9 s)** de comando;
+journal323,798 s. El check independiente14,031 s queda fuera; comprobaciones
+del run incluidas. Un ajuste visual de7 permitidos. HOME2bf38328 termina
+SUCCEED/status4/1101001, dos muestras20D HOME, velocidad0, máximo0,002493 rad.
+El operador confirma caja estable, útiles libres y depósito/HOME sin incidencias.
+Última SOC61,4/61,3 %, paros/cargador0; recomprobar en la próxima intervención.
+
+Se conserva el agarre y las trayectorias actuales. Observador local de tiempos,
+sin consultas adicionales;155 hashes de fuentes de control iguales antes/después.
+El run reutiliza aproximación existente y añade cuatro bundles de lowering/release
+por su instalador actual, con copia externa previa, sin sustituir originales.
+Esta medición continua sustituye la suma histórica partida como referencia,
+sin declarar variación estadística o ahorro de una propuesta pendiente.
+[Tabla y evidencia reproducible](../box_handling/OPTIMISTIC_SCENARIO1.md#medición-continua-de-la-versión-actual--22-10-2026).
+
 **22-10-2026 — BOX-TABLE74-TIMING-20261022: retoma terminada según registros.**
 La continuación153114Z1354458 completó los descensos 14+5 cm, alivio 4 cm,
 apertura y HOME medido, sin preguntas. HOME 8ab357b5 termina SUCCEED/status4,

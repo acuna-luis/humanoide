@@ -1,5 +1,24 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-TABLE74-BASELINE-CONTINUOUS-20261022
+
+**22-10-2026, Europe/Madrid, 18:06:23–18:11:47 — ejecutado y medido; operador confirma resultado físico correcto.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo/autoridad | Usuario pide repetir el ciclo actual para medirlo antes de valorar optimización; confirma abrazaderas vacías/HOME, caja/get1/mesa74/put1 y holguras del montaje previo, recorrido libre, cargador fuera, paros liberados, ruedas en navegación, otros mandos detenidos y persona al paro |
+| Fuentes/versión | Rama74-jacob, commitf18a2bfe9a43c71e6329bd4854297cdaa49ecc99. Wrapper Optimistic actual, mesa74, máximo7 ajustes, un run.155 hashes de fuentes de control iguales antes/después; propuestas no implementadas |
+| Contexto observado | Motion walker-motion.manipulation_robot_app-1/9cd509ff, ROS walker-ros.ros2-1/f5d805c6, boot069a60e8-ffbb-4cd2-ae5f-de9efdead0af; utars_nav_map/FSM_WAITNAVIGATE. Identidades completas, dependencias y destinos en preflight/pickup-check/context.json |
+| Preparación | Check independiente CHECK_OK sin movimiento, journal14,031298111 s excluido del run. Packs62,4/62,3 %, paros/cargador0. La comprobación fresca interna del run se conserva y se incluye en el cronometraje |
+| Medición | Comando323,879012206 s monotónicoPC; journal323,798353316 s, siete fases+coordinación con residual0. Observador local10 ms usa updated_ns auténticos del journal;16 snapshots, entradas y finales capturados. No añade consultas al robot. CSV por fases y operaciones en timing-analysis/ |
+| Resultado técnico/físico | Succeeded/measured_home. HOME2bf38328-f981-470c-a405-3a7ea8a04220, SUCCEED4/1101001; dos muestras20D HOME, velocidad0, máximo0,002493 rad. Operador confirma caja estable, útiles libres/HOME y sin incidencias. Final61,4/61,3 %, cargador/paros0; estado histórico, recomprobar antes de otro movimiento |
+| Cambio persistente Motion | Aproximación acb7e54a…c4a9830 reutilizada. Instalados/cargados lowering7a8638a5…72ff39 y0958506d…8b211b, release67533062…8b21cf y a8fa9714…a88ee2; cada tarea se ejecutó una vez. XML en manipulation_task_manager/config/local_table74_lower y local_table74_release; YAML homólogos en manipulation_meta_tasks/config/meta_clamp. Nombres exactos, SHA, dependencias y recibos en installation-index.json y cycle/*/bundle.json. Originales WRC/librería conservados. Se sincronizó utars_nav_map y destinos del planificador, sin editar mapa/puntos |
+| Backup/reversión | Cada fase conserva instalación y copia externa robot-installation-backup antes del despacho; release usa *-staging. Recibos originales del instalador versionado permiten reversión selectiva de archivos aditivos. No restaurar estado transitorio, postura ni consumed. before/ conserva los documentos anteriores; before.json la versión y hashes de fuentes |
+| Evidencia reproducible | `../Humanoide-vla-evidence/20261022T160455Z_TABLE74_CURRENT_BASELINE/`: run_baseline.py, command-result.json, console/log temporal, cycle-observer.jsonl, cycle/, operator-final-observation.json, analyze_baseline.py, export_operations.py, timing-analysis/, installation-index.json. Receta exacta en manual |
+| Límites/punto de reanudación | Flujo actual completo sin interrupción sustituye la referencia histórica partida; sólo una toma, sin media/variabilidad ni nueva optimización. Apoyo/pines siguen supuestos de receta durante el control; confirmación final es del operador. HOME nativo sin marcas accepted/result, no inventar su duración física. Siguiente trabajo: valorar objetivos desde323,879 s; ningún otro ciclo iniciado |
+
+[Resultados y receta de análisis](box_handling/OPTIMISTIC_SCENARIO1.md#medición-continua-de-la-versión-actual--22-10-2026).
+
 ## BOX-TABLE74-TIMING-20261022
 
 **22-10-2026, Europe/Madrid — análisis histórico verificado offline; sin cambios operativos.**

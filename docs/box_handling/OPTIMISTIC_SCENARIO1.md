@@ -2,6 +2,141 @@
 
 ## Ciclo completo supervisado para mesa de 74 cm
 
+### Medición continua de la versión actual — 22-10-2026
+
+**BOX-TABLE74-BASELINE-CONTINUOUS-20261022 — VERIFICADO/OBSERVADO.**
+Nueva referencia de tiempo: **323,879012206 s — 5 min 23,9 s**, desde lanzar
+el comando hasta su salida, reloj monotónico del PC. Un único ciclo completo,
+sin reanudación ni interrupciones, en rama `74-jacob`, commit
+`f18a2bfe9a43c71e6329bd4854297cdaa49ecc99`.
+Se ejecutó el flujo actual, sin implementar las optimizaciones propuestas;
+los **155 hashes de fuentes de control** del inventario inicial permanecen iguales.
+
+Comando ejecutado una sola vez, después de confirmar las condiciones físicas
+actuales y obtener CHECK_OK:
+
+```bash
+./scripts/optimistic_scenario1.sh --table-height-cm 74 \
+  --box-alignment-attempts 7 --run \
+  --evidence-dir /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261022T160455Z_TABLE74_CURRENT_BASELINE/cycle
+```
+
+La captura externa sólo registra stdout y cambios del journal en el PC;
+no añade consultas al robot ni modifica el código de control.
+El preflight de lectura independiente duró14,031 s según su journal y queda
+**fuera del total anterior**. El preflight interno del propio run sí está incluido.
+
+#### Resultado y estado final registrado
+
+- `cycle.json`: succeeded, measured_home, sin fase pendiente.
+- HOME `2bf38328-f981-470c-a405-3a7ea8a04220`: SUCCEED/status4/state1101001.
+- Dos muestras nuevas20D: MEASURED_HOME=1, velocidad0, máximo absoluto0,002493 rad.
+- Operador confirma al terminar: depósito/HOME correctos, caja estable,
+  abrazaderas libres y ninguna incidencia ni resistencia inesperada.
+- Batería inicial62,4 %/62,3 %, final61,4 %/61,3 %; paros y cargador0 en
+  las lecturas de inicio/final. Son estados registrados, no una garantía futura.
+- Máximo permitido7 ajustes visuales; se ejecutó **uno**, de16,030 mm solicitados.
+- Se mantuvieron la receta de mesa74, el agarre y todas las comprobaciones;
+  ninguna optimización de la propuesta se aplicó para esta medición.
+
+El resultado visual procede del operador. El script mantiene apoyo/pines
+como supuestos de receta; no se transforman en mediciones sensoriales.
+
+#### Tabla de referencia actual
+
+| Operación | Total, s |
+| --- | ---: |
+| Ir a get1 | 28,273 |
+| Activar visión | 1,537 |
+| Alineación y recogida | 56,777 |
+| Retirada con caja | 5,208 |
+| Ir a put1 | 17,982 |
+| Aproximación a mesa | 34,554 |
+| Descenso previo14 cm | 34,055 |
+| Apoyo5 cm | 34,124 |
+| Desenganche4 cm | 25,533 |
+| Apertura lateral | 24,761 |
+| HOME y verificación final20D | 42,514 |
+| Preparación, coordinación, confirmación asumida y cierres restantes | 18,561 |
+| **Total del comando** | **323,879** |
+
+Cada fase de depósito incluye instalación/preparación, consultas, ejecución,
+registro y cierre. Las subetapas de recogida usan elapsed monotónico,
+redondeado a milisegundos; los bloques posteriores usan ventanas PC entre
+inicios de fase y final del journal. La fila restante es un saldo contable,
+incluyendo la confirmación asumida de sujeción de0,009 s; no es una consulta
+individual de18,561 s. No sumar otra vez los tiempos internos.
+
+El journal del ciclo mide **323,798353316 s**. Las siete ventanas PC de fase,
+más coordinación inicial, suman exactamente ese valor, residual0.
+La diferencia respecto al comando completo corresponde al lanzamiento/cierre:
+0,056924402 s antes del journal y0,023735151 s después, usando reloj PC de pared.
+El total monotónico y el de pared del comando difieren menos de un microsegundo.
+El observador capturó las siete entradas y sus siete terminaciones; se usan
+los updated_ns del journal, no la hora posterior de observación.
+
+Acciones SDK principales accepted→result, siempre con `detail.time_ns`
+interno del mismo reloj Motion: get1 20,383 s; agarre30,770 s; retirada4,941 s;
+put1 16,691 s; aproximación12,385 s; precontact12,389 s; apoyo11,799 s;
+alivio2,397 s y apertura2,381 s. Son duraciones de acción, no una medida
+independiente de inicio/fin físico. HOME sigue sin timestamps individuales de
+aceptación/resultado; sólo su bloque total queda medido.
+
+Las seis sesiones hasta ready suman83,885 s, ya incluidos en el total.
+El intervalo atribuible por orden de código al descubrimiento SPS suma
+45,986 s; es una atribución inferida, no cronómetro individual del descubrimiento.
+Se conserva como dato para estudiar después, sin desactivar comprobaciones.
+La consulta Docker siguió inconcluyente; no hubo rechazo del ciclo por ello.
+
+Esta toma **sustituye la suma histórica329,415 s como referencia actual**.
+Una repetición no mide variación estadística. Todavía no se atribuye ahorro a
+la propuesta ni se cambia el objetivo: primero se conserva este resultado medido.
+
+#### Evidencia, reproducción y efectos del run
+
+Directorio: `../Humanoide-vla-evidence/20261022T160455Z_TABLE74_CURRENT_BASELINE/`.
+
+- `before.json`: rama/commit, condiciones confirmadas y hashes de fuentes;
+  `before/`: documentos anteriores a esta intervención.
+- `preflight/`: consulta independiente CHECK_OK.
+- `run_baseline.py`: invocación única del script actual, captura local y
+  reloj monotónico; `command-result.json`, `console.log`,
+  `console-timestamps.jsonl`, `cycle-observer.jsonl`.
+- `cycle/`: evidencia original completa, journals y copias autenticadas
+  de instalación/reversión antes del despacho.
+- `operator-final-observation.json`: confirmación física final del operador.
+- `analyze_baseline.py`, `export_operations.py`, `timing-analysis/`:
+  análisis reproducible, summary.json, pc-phases.csv y operations.csv/JSON.
+- `installation-index.json`: cinco bundles usados, rutas, recibos y backups.
+  Aproximación ya instalada; se añadieron los otros cuatro bundles derivados.
+
+Sólo para reproducir el análisis local, sin movimiento ni conexión:
+
+```bash
+python3 ../Humanoide-vla-evidence/20261022T160455Z_TABLE74_CURRENT_BASELINE/analyze_baseline.py \
+  --evidence ../Humanoide-vla-evidence/20261022T160455Z_TABLE74_CURRENT_BASELINE/cycle \
+  --observer ../Humanoide-vla-evidence/20261022T160455Z_TABLE74_CURRENT_BASELINE/cycle-observer.jsonl \
+  --output ../Humanoide-vla-evidence/20261022T160455Z_TABLE74_CURRENT_BASELINE/timing-analysis
+python3 ../Humanoide-vla-evidence/20261022T160455Z_TABLE74_CURRENT_BASELINE/export_operations.py
+```
+
+El run usó la aproximación existente acb7e54a…c4a9830 y añadió lowering
+7a8638a5…72ff39 /0958506d…8b211b y liberación67533062…8b21cf /
+a8fa9714…a88ee2. Destinos Motion: XML bajo config/local_table74_current,
+local_table74_lower, local_table74_release en manipulation_task_manager y
+YAML homólogos bajo config/meta_clamp en manipulation_meta_tasks. Los originales
+WRC y librería se validaron por sus hashes, sin sustituirlos.
+Las copias de reversión están en cada fase o carpeta *-staging y fuera del
+robot antes de la acción; usar sus recibos con el instalador versionado si
+procede retirar esa adaptación. No reutilizar journals consumidos ni restaurar
+postura mediante archivos. El flujo sincronizó utars_nav_map y sus destinos
+en el planificador, sin editar el mapa ni los puntos get1/put1. No se
+reiniciaron servicios ni se cambió firmware, red, efectores, límites o velocidades.
+
+**Referencia histórica anterior:** la sección siguiente explica la interrupción y
+su reanudación. La referencia continua vigente es la medición anterior.
+
+
 ### Estudio del tiempo del último ciclo — 22-10-2026
 
 **BOX-TABLE74-TIMING-20261022 — OBSERVADO/VERIFICADO offline.** Último ciclo

@@ -1,5 +1,32 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-TABLE74-BASELINE-CONTINUOUS-20261022: ciclo actual medido sin interrupciones.**
+Rama `74-jacob`, fuentes de control de commitf18a2bf sin modificar (155 hashes).
+Preflight CHECK_OK y condiciones físicas actuales confirmadas; un único run
+de Optimistic mesa74, máximo7 ajustes y uno ejecutado. **323,879012206 s
+(5 min23,9 s)** de comando, reloj monotónico PC; journal323,798353316 s,
+sumado exactamente por fases. Se excluyen14,031 s del check independiente;
+el preflight interno del run queda incluido. No se aplicó la propuesta de optimización.
+
+Resultado succeeded/measured_home. HOME2bf38328-f981-470c-a405-3a7ea8a04220,
+SUCCEED/status4/1101001, dos muestras20D HOME, velocidad0, máximo0,002493 rad.
+Operador confirma depósito/HOME correctos, caja estable y abrazaderas libres,
+sin contacto/resistencia inesperados. SOC final61,4 %/61,3 %, paros/cargador0.
+Es el estado al cerrar esta prueba, no una autorización futura de movimiento.
+
+Nueva referencia por operación: get1 28,273 s, visión1,537 s, recogida56,777 s,
+retirada5,208 s, put1 17,982 s, aproximación34,554 s, precontact34,055 s,
+apoyo34,124 s, alivio25,533 s, apertura24,761 s, HOME42,514 s, resto18,561 s.
+Sustituye la suma histórica partida329,415 s como referencia actual; una toma
+no establece variación ni ahorro de una mejora todavía no implementada.
+El run conservó la aproximación acb7e54a y añadió cuatro bundles aditivos
+con backups verificados: dos lowering y dos release; sin cambiar originales,
+geometría, límites, firmware, mapa o servicios. Diarios de esta toma consumidos
+según cada fase: no volver a ejecutarlos.
+[Medición, CSV y método](box_handling/OPTIMISTIC_SCENARIO1.md#medición-continua-de-la-versión-actual--22-10-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#box-table74-baseline-continuous-20261022).
+Evidencia: `../Humanoide-vla-evidence/20261022T160455Z_TABLE74_CURRENT_BASELINE/`.
+
 **22-10-2026 — BOX-TABLE74-TIMING-20261022: último ciclo reconstruido y retoma terminada.**
 **OBSERVADO en registros locales:** la retoma 153114Z1354458 terminó
 precontact 14 cm, support 5 cm, alivio 4 cm, apertura y HOME sin preguntas;
