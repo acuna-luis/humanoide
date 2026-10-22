@@ -100,7 +100,7 @@ def make_payload(mode, profile, source, bundle):
                    resume_plan=planned, trial_bundle=validate_bundle(bundle))
     here = Path(__file__).resolve().parent
     payload['modules'] += [(name, (here/(name+'.py')).read_text()) for name in
-        ('scenario1_deposit', 'scenario1_table74_trial', 'scenario1_table74_trial_run',
+        ('scenario1_deposit', 'scenario1_table74_recipe', 'scenario1_table74_native_completion', 'scenario1_table74_trial', 'scenario1_table74_trial_run',
          'scenario1_table74_current_trial', 'scenario1_table74_current_trial_run')]
     return payload
 
@@ -123,7 +123,10 @@ def parser():
     return result
 
 
-def cli_main(argv=None):
+def cli_main(argv=None, *, execution_policy=None):
+    if execution_policy is not None:
+        from .scenario1_table74_recipe import assert_policy
+        assert_policy(execution_policy)
     cli = approach.local_cli()
     args = parser().parse_args(argv)
     source_bytes = args.resume.read_bytes()
@@ -138,11 +141,13 @@ def cli_main(argv=None):
             commands_sent=0, source_consumed=False, automatic_retries=0,
             ordinary_deposit_authorized=False), indent=2, ensure_ascii=False))
         return 0
-    if args.run and not sys.stdin.isatty():
+    if args.run and execution_policy is None and not sys.stdin.isatty():
         raise RuntimeError('A physical operator and TTY confirmation are required')
     source_context_bytes = (args.resume.parent/'context.json').read_bytes()
     context = json.loads(source_context_bytes)
     payload = make_payload('run' if args.run else 'check', profile, source, bundle)
+    if execution_policy is not None:
+        payload['recipe_provenance'] = execution_policy.as_dict()
     payload['resume_context'] = context
     evidence = args.evidence_dir or cli.ROOT.parent/'Humanoide-vla-evidence'/(
         time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())+'_TABLE74_CURRENT_APPROACH_'+str(os.getpid()))
@@ -170,7 +175,10 @@ def cli_main(argv=None):
                     raise RuntimeError('Current approach technical check failed')
                 print('CURRENT_TRIAL_CHECK_OK; source unchanged, no motion sent.')
                 return 0
-            cli.confirm('Ensayo único mesa74 desde la caja actualmente sujeta en put1. '
+            if execution_policy is not None:
+                execution_policy.authorize('APROXIMAR74', evidence)
+            else:
+                cli.confirm('Ensayo único mesa74 desde la caja actualmente sujeta en put1. '
                 'Se usa la referencia vendor45 asumida por el operador, sin calibración medida de manos. '
                 'Compruebe estabilidad, trayectoria completa de brazos/torso/caja y avance de20cm despejados; '
                 'cargador desconectado, paros liberados, ruedas en navegación, modo automático, '

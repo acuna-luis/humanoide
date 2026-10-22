@@ -387,8 +387,10 @@ def parser(policy='ask', execution_profile='standard_v1'):
     profile_selection = p.add_mutually_exclusive_group()
     profile_selection.add_argument('--profile', type=Path, default=HERE/'scenario1_current_geometry.json')
     profile_selection.add_argument('--table-height-cm', type=float, choices=(74.,),
-        help='Mesa de 74 cm: Optimistic integra un ciclo supervisado con comprobaciones '
-             'de apoyo/pines; get1/grasp/put1 conservan sus pausas. Por defecto sólo --check')
+        help='Mesa de 74 cm: Optimistic usa la receta guardada sin preguntas; '
+             'get1/grasp/put1 conservan sus pausas. Por defecto sólo --check')
+    p.add_argument('--table74-supervised', action='store_true',
+        help='Mesa74: pedir otra vez medidas y confirmaciones por fase; sin esta opción se usa la receta guardada')
     if policy == 'sensors':
         p.add_argument('--sensor-profile', type=Path, default=HERE/'scenario1_sensor_profile.json',
                        help='Referencias FT por postura; --run requiere perfil cualificado')

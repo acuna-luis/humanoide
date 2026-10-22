@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "id": "table74-recorded-20261022-v1",
+  "source_evidence": "20261022T142922Z_TABLE74_SUPERVISED_CYCLE_1198976",
+  "source_cycle_sha256": "7dc8c5a047d7aacb80ab9db67176babfd3ddda4fd3dd219aad23db4bfe222b7c",
+  "robot_serial": "WAE001UBT60000669",
+  "surface_height_cm": 74.0,
+  "effector": "clamp",
+  "box_dimensions_m": [
+    0.603,
+    0.397,
+    0.22
+  ],
+  "sequence": [
+    "approach",
+    "precontact",
+    "support",
+    "pin_relief",
+    "lateral_open",
+    "home"
+  ],
+  "facts": {
+    "gap_after_approach_cm": 19.0,
+    "gap_after_precontact_cm": 5.0,
+    "support_assumed": true,
+    "tool_clearance_before_relief_cm": 8.0,
+    "required_pin_exit_cm": 2.0,
+    "tool_clearance_after_relief_cm": 5.0,
+    "pins_free_assumed": true,
+    "lateral_path_assumed_clear": true,
+    "empty_tools_after_open_assumed": true
+  },
+  "physical_state_of_new_cycle_measured": false,
+  "automatic_settle": false,
+  "automatic_retry": false
+}

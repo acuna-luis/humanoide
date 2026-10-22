@@ -1,15 +1,52 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
-**22-10-2026 — BOX-TABLE74-SUPERVISED-CYCLE-20261022: ciclo74 integrado en Optimistic.**
-Después de la liberación y HOME comprobados en fases separadas, la entrada
-completa74 enlaza ahora recogida original, traslado, depósito por fases y
-HOME medido con confirmaciones actuales de apoyo/pines/holguras. Check real
-de lectura correcto y407 casos locales PASS; ensayo del coordinador físico
-completo PENDIENTE. Un ciclo por Ethernet, plan offline/check por defecto,
-`--run` explícito; el apoyo manual anterior no se convierte en autonomía.
+**22-10-2026 — BOX-TABLE74-RECORDED-RECIPE-20261022: receta74 guardada, sin
+preguntas al ejecutar el ciclo completo.** La toma supervisada
+`20261022T142922Z_TABLE74_SUPERVISED_CYCLE_1198976` completó recogida,
+traslado, depósito, liberación y HOME medido; `cycle.json` terminó
+`status=succeeded`, sin settle. HOME goal
+`f3de6794-1497-496f-85d6-a06068f6a8bd`, SUCCEED/status4/1101001 y
+`measured_home=true`. El ensayo físico pendiente de aquella integración
+queda superado; la **nueva automatización sin preguntas aún no está probada
+físicamente** y no se ha conectado al robot para este cambio.
+
+Con el mismo montaje de mesa74, caja y abrazaderas, y condiciones físicas
+actuales comprobadas antes de iniciar:
+
+```bash
+./scripts/optimistic_scenario1.sh --table-height-cm 74 \
+  --box-alignment-attempts 7 --run
+```
+
+`--plan` muestra la receta offline; sin modo explícito sólo comprueba.
+`--table74-supervised --run` restaura las preguntas por fase. La receta v1
+conserva huecos19/5 cm, apoyo declarado, holguras8 cm antes y5 cm después del
+alivio, salida de pin2 cm y estados de pines/liberación/HOME como **supuestos
+del mismo montaje**. No se reutilizan como observaciones o mediciones
+actuales; se registran `recorded_recipe_assumption` y
+`current_physical_measurement=false`. La prueba asistida anterior con ajuste
+manual permanece separada y no se reetiqueta como autónoma.
+
+La recogida original y las trayectorias no cambian: aproximación,14 cm,
+apoyo5 cm, alivio4 cm, apertura10 cm por lado y HOME medido, sin settle
+automático. Se suprimen cinco checks completos duplicados, que sumaban78,4 s
+en la toma fuente, y un preflight HOME repetido; se conservan el preflight
+fresco de cada run, salud continua, paros, cargador, batería, mapa/localización,
+fuerza y límites. La nueva auditoría de la transacción nativa exacta y su
+duración rechaza `DectionForceCollision` incluso con SUCCEED. Un fallo o
+evidencia incierta detienen sin otra fase ni HOME de recuperación. No hay
+retry de brazos ni repetición `--cycle`. El tiempo total nuevo queda pendiente
+de medir. La entrada completa usa Ethernet y rechaza `--wifi`.
+
+Receta reproducible v1 e identidad de la toma:
+[`scenario1_table74_recipe.py`](../../scripts/box_handling/scenario1_table74_recipe.py).
+Backup/evidencia de esta revisión:
+`../Humanoide-vla-evidence/20261022T144742Z_TABLE74_RECORDED_RECIPE/`.
 [Comandos y límites](../box_handling/OPTIMISTIC_SCENARIO1.md#ciclo-completo-supervisado-para-mesa-de-74-cm).
 
-**22-10-2026 — BOX-TABLE74-RELEASE4-20261022: alivio de pines4 cm, sólo PC.**
+## Historial de preparación anterior
+
+**Registro histórico22-10-2026 — BOX-TABLE74-RELEASE4-20261022: alivio de pines4 cm, entonces sólo PC.**
 La continuación explícita de Optimistic usa referencias v2: baja4 cm tras
 confirmar apoyo completo y≥5 cm libres bajo ambas abrazaderas. Apertura
 separada Y±10 cm/Z0, con pines libres y holgura actual≥4 cm. Sin instalación
@@ -1360,7 +1397,10 @@ La puesta en servicio debe realizarse en este orden:
    resultados
    consistentes.
 
-Durante todas las pruebas de movimiento deben permanecer desconectados el
-cargador y Ethernet, debe haber espacio libre para robot y caja, y una segunda
+Durante todas las pruebas de movimiento debe permanecer desconectado el
+cargador, debe haber espacio libre para robot y caja, y una segunda
 persona debe mantener preparado el paro físico. El detector, ROS 2 y estos
 scripts no sustituyen una función de seguridad certificada.
+La conexión preferida actual PC–Motion/Vision es Ethernet directa; comprobar
+el recorrido del cable. La antigua indicación de desconectarla no corresponde
+al ciclo74 actual, que requiere ese enlace.

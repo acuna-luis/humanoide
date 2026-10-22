@@ -121,7 +121,7 @@ def validate_predecessor(proof,profile,*,_depth=0):
 
 def validate_entry(proof,profile,bundle):
     info=validate_predecessor(proof,profile);bundle=release.validate_bundle(bundle)
-    if bundle['manifest']['builder_version'] != release.BUILDER_VERSION:
+    if bundle['manifest']['builder_version'] not in (release.BUILDER_VERSION, release.RECIPE_BUILDER_VERSION):
         raise ValueError('Historical 3 cm release bundle is proof/rollback only; regenerate a version2 reference with current clearance for the 4 cm release')
     ref=bundle['review']['reference']
     expected=('support','settle') if ref['stage']=='pin_relief' else ('pin_relief',)
@@ -147,6 +147,17 @@ def load_predecessor(directory,profile):
 class ReleaseRuntime(lowering.LowerRuntime):
     def __init__(self,payload,emit=None):
         self.predecessor,self.trial_bundle=validate_entry(payload['predecessor'],payload['profile'],payload['trial_bundle'])
+        recorded = self.trial_bundle['manifest']['builder_version'] == release.RECIPE_BUILDER_VERSION
+        if recorded != ('recipe_provenance' in payload):
+            raise ValueError('Release runtime recipe/reference authorization mismatch')
+        if recorded:
+            if __package__:
+                from .scenario1_table74_recipe import validate_record
+            else:
+                from scenario1_table74_recipe import validate_record
+            record = validate_record(payload['recipe_provenance'])
+            if record != self.trial_bundle['review']['reference']['assumption_provenance']:
+                raise ValueError('Release runtime recipe differs from immutable reference')
         info=self.predecessor
         if (payload.get('checkpoint')!=info['source'] or payload.get('resume_source_checkpoint')!=info['source'] or
                 payload.get('resume_plan')!=info['planned'] or payload.get('resume_context')!=info['context'] or
@@ -168,7 +179,7 @@ def make_payload(mode,profile,proof,bundle):
         predecessor=copy.deepcopy(proof),trial_bundle=bundle)
     here=Path(__file__).resolve().parent
     payload['modules'] += [(name,(here/(name+'.py')).read_text()) for name in
-        ('scenario1_deposit','scenario1_table74_trial','scenario1_table74_trial_run',
+        ('scenario1_deposit','scenario1_table74_recipe','scenario1_table74_native_completion','scenario1_table74_trial','scenario1_table74_trial_run',
          'scenario1_table74_current_trial','scenario1_table74_current_trial_run',
          'scenario1_table74_support','scenario1_table74_support_run','scenario1_table74_current_lower',
          'scenario1_table74_current_lower_run','scenario1_table74_current_release','scenario1_table74_current_release_run')]
@@ -187,11 +198,17 @@ def parser():
     return p
 
 
-def cli_main(argv=None):
+def cli_main(argv=None, *, execution_policy=None):
+    if execution_policy is not None:
+        from .scenario1_table74_recipe import assert_policy
+        assert_policy(execution_policy)
     from . import scenario1_table74_current_phase_cli as phase_cli
     args=parser().parse_args(argv);profile=json.loads(args.profile.read_text())
     proof,info,hashes=load_predecessor(args.after,profile)
     bundle=release.validate_bundle(json.loads(args.bundle.read_text()));info,bundle=validate_entry(proof,profile,bundle)
+    recorded=bundle['manifest']['builder_version']==release.RECIPE_BUILDER_VERSION
+    if args.run and recorded != (execution_policy is not None):
+        raise ValueError('Recorded-recipe release requires its explicit execution policy; current operator references use supervised execution')
     ref=bundle['review']['reference']
     clearance_cm=release.minimum_tool_clearance_m(ref['version'],ref['stage'])*100
     relief_cm=release.pin_relief_distance_m(ref['version'])*100
@@ -204,7 +221,7 @@ def cli_main(argv=None):
     return phase_cli.execute(args,profile,proof,info,hashes,bundle,make_payload=make_payload,
         load_predecessor=load_predecessor,validate_bundle=release.validate_bundle,connection_class=connection_class,
         confirmation_text=text,confirmation_token='LIBERAR74',evidence_tag='TABLE74_CURRENT_RELEASE',
-        status_prefix='RELEASE',lock_reason='table74-current-release')
+        status_prefix='RELEASE',lock_reason='table74-current-release',execution_policy=execution_policy)
 
 
 if __name__=='__main__':raise SystemExit(cli_main())

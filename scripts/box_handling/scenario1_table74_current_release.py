@@ -19,6 +19,7 @@ else:
 
 
 BUILDER_VERSION = 2
+RECIPE_BUILDER_VERSION = 3
 PHASE = 'current_pin_release'
 NAMESPACE = 'local_table74_release/'
 TASK_ROOT = deposit.TASK_ROOT
@@ -74,14 +75,38 @@ def canonical(value):
 
 def pin_relief_distance_m(version):
     """Keep v1 immutable for historical proofs/rollback; new references use v2."""
-    if type(version) is not int or version not in (1, BUILDER_VERSION):
+    if type(version) is not int or version not in (1, BUILDER_VERSION, RECIPE_BUILDER_VERSION):
         raise ValueError('Unsupported current release reference version')
     return .03 if version == 1 else .04
 
 
 def minimum_tool_clearance_m(version, stage):
     pin_relief_distance_m(version)
-    return .05 if version == 2 and stage == 'pin_relief' else .04
+    return .05 if version in (2, RECIPE_BUILDER_VERSION) and stage == 'pin_relief' else .04
+
+
+def _validate_recipe_reference(reference, stage):
+    """Check fixed historical assumptions without upgrading them to observations."""
+    if __package__:
+        from . import scenario1_table74_recipe as recipe
+    else:
+        import scenario1_table74_recipe as recipe
+    recipe.validate_record(reference['assumption_provenance'])
+    facts = reference['assumption_provenance']['recipe']['facts']
+    if (reference['operator_support_confirmed'] is not False or
+            reference['operator_pins_free'] is not False or
+            reference['lateral_path_clear'] is not False or
+            facts['support_assumed'] is not True or
+            facts['lateral_path_assumed_clear'] is not True or
+            stage == 'lateral_open' and facts['pins_free_assumed'] is not True):
+        raise ValueError('Recipe assumptions must remain distinct from current operator declarations')
+    expected_clearance = facts['tool_clearance_before_relief_cm' if stage == 'pin_relief'
+                               else 'tool_clearance_after_relief_cm'] / 100.
+    if (type(reference['tool_table_clearance_m']) not in (int, float) or
+            reference['tool_table_clearance_m'] != expected_clearance or
+            type(reference['required_pin_exit_m']) not in (int, float) or
+            reference['required_pin_exit_m'] != facts['required_pin_exit_cm'] / 100.):
+        raise ValueError('Release dimensions differ from the pinned historical recipe')
 
 
 def validate_reference(reference):
@@ -90,14 +115,22 @@ def validate_reference(reference):
     Authentic predecessor journals, unchanged robot context and the truth of
     operator declarations must be checked separately by the supervised runner.
     """
-    if not isinstance(reference, dict) or set(reference) != _REFERENCE_KEYS:
+    if not isinstance(reference, dict):
+        raise ValueError('Current release reference: missing or unknown fields')
+    version = reference.get('version')
+    expected_keys = _REFERENCE_KEYS | ({'assumption_provenance'} if version == RECIPE_BUILDER_VERSION else set())
+    if set(reference) != expected_keys:
         raise ValueError('Current release reference: missing or unknown fields')
     relief_distance = pin_relief_distance_m(reference['version'])
     stage = reference['stage']
+    expected_scope = ('recorded_recipe_supported_box_assumption_only'
+                      if version == RECIPE_BUILDER_VERSION else 'current_supported_box_only')
     if (type(stage) is not str or stage not in ('pin_relief', 'lateral_open') or
-            reference['scope'] != 'current_supported_box_only'):
+            reference['scope'] != expected_scope):
         raise ValueError('Current release requires one explicit supported-box phase')
-    if (reference['operator_support_confirmed'] is not True or
+    if version == RECIPE_BUILDER_VERSION:
+        _validate_recipe_reference(reference, stage)
+    elif (reference['operator_support_confirmed'] is not True or
             reference['lateral_path_clear'] is not True or
             reference['operator_pins_free'] is not (stage == 'lateral_open')):
         raise ValueError('Current release support/path/pin declarations do not admit this stage')
@@ -205,6 +238,23 @@ def build_bundle(reference, source_xml, source_yaml):
             'SUCCEED does not prove pin disengagement, stable support, release or authorization for HOME.',
             'A repeated relative task repeats its displacement; no automatic retry or next phase is authorized.',
         ])
+    if version == RECIPE_BUILDER_VERSION:
+        review.update(
+            reference_kind='recorded_recipe_assumptions_not_current_physical_measurements',
+            assumption_provenance=copy.deepcopy(config['assumption_provenance']),
+            current_operator_support_confirmed=False, current_operator_pins_free=False,
+            support_assumed=True, pins_free_assumed=stage == 'lateral_open',
+            lateral_path_assumed_clear=True, current_physical_measurement=False,
+            assumptions_not_verified=[
+                'The fixed historical recipe assumes full stable support; there is no current support observation.',
+                'Tool clearance, pin exit and lateral clearance are values recorded in the successful take, not new measurements.',
+                'The same box, table, effectors and placement are assumed; native health and motion checks remain required.',
+                'After nominal relief the recipe assumes free pins; SUCCEED alone does not measure pin disengagement.',
+            ],
+        )
+        review['limitations'][1] = (
+            'Pin relief requires genuine completed support and lateral opening genuine completed pin relief; '
+            'support and free pins remain fixed recipe assumptions, not fresh physical confirmations.')
     manifest = dict(version=1, builder_version=version, id=identity, phase=PHASE,
         task_name=task_name, reference_sha256=sha256(canonical(config)),
         content_template_sha256=templates, dependencies=dict(DEPENDENCIES),

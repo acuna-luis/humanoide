@@ -24,7 +24,7 @@ ANSWERS = ['CONTINUAR74','HUECO19','HUECO5','APOYADA','5','4',
 
 
 def args(*flags):
-    return cli.parser('assume','optimistic_v1').parse_args(['--table-height-cm','74',*flags])
+    return cli.parser('assume','optimistic_v1').parse_args(['--table-height-cm','74','--table74-supervised',*flags])
 
 
 def checkpoint(root, *, held_only=False):

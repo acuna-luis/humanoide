@@ -1,5 +1,51 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+
+**22-10-2026 — BOX-TABLE74-RECORDED-RECIPE-20261022: ciclo74 sin preguntas y checks duplicados retirados.**
+**OBSERVADO:** la toma completa `20261022T142922Z_TABLE74_SUPERVISED_CYCLE_1198976`
+terminó recogida, aproximación, descensos14+5 cm, alivio4 cm, apertura10 cm
+por lado y HOME; no usó settle. La cadena auténtica y sus cinco terminales
+SUCCEED/status4 se han revalidado offline. HOME
+`f3de6794-1497-496f-85d6-a06068f6a8bd`: dos muestras20D nuevas, velocidad0,
+máximo absoluto0,002493 rad. Operador declaró apoyo plano, holgura8 cm,
+salida de pin2 cm y holgura posterior5 cm. Esto supera el pendiente del
+ensayo integrado de la entrada anterior; no modifica la historia del ensayo
+asistido anterior con ajuste manual.
+
+Por petición expresa, `optimistic_scenario1.sh --table-height-cm 74
+--box-alignment-attempts 7 --run` usa ahora la receta versionada de esa toma
+sin preguntas y termina en HOME medido. **Sin modo explícito sigue sólo check**;
+`--plan` es offline y `--table74-supervised` recupera las observaciones y
+confirmaciones por fase. La recogida y las trayectorias permanecen iguales;
+no añade settle, reintentos de brazos ni repetición continua. Requiere conservar
+el montaje de mesa/caja/abrazaderas, recorridos libres y supervisión junto al paro.
+
+**VERIFICADO en código y pruebas locales:** las respuestas se guardan como
+`recorded_recipe_assumption`, con origen/hash, no como observaciones físicas
+nuevas ni sensores de apoyo/pines. El runner conserva su preflight fresco,
+salud continua, límites y consumos de origen. Se quitan cinco sesiones check
+externas repetidas (78,4 s sumados en la toma) y el preflight HOME que precedía
+la espera de teclado; quedan el check inmediato y la comprobación20D final.
+Nueva barrera nativa exige transacción MetaClamp completa de la tarea exacta,
+duración compatible y ausencia de fault de fuerza/IK, incluso ante SUCCEED.
+Incertidumbre, fallo o interrupción detienen el avance, sin HOME de recuperación.
+
+Verificación de esta intervención: **1071 casos PASS** en la suite de escenario1
+excluyendo el módulo histórico `test_scenario1_deposit_install` (23 casos;
+17 errores de fixture reproducidos con archivos idénticos a HEAD anterior).
+La nueva receta, la carga remota aislada, los errores sin avance y el modo
+supervisado están incluidos en los casos correctos. La suite global no se
+declara totalmente verde; no se ha cambiado ese instalador anterior.
+
+**PENDIENTE:** ensayo físico de esta nueva automatización y medida de su tiempo
+total. La receta no detecta por sí sola una caja mal apoyada o pines enganchados
+si no aparecen señales de fallo. No se ha conectado ni movido el robot durante
+esta modificación. [Comandos y alcance](box_handling/OPTIMISTIC_SCENARIO1.md),
+[ficha reproducible](SYSTEM_CUSTOMIZATIONS.md#box-table74-recorded-recipe-20261022).
+Evidencia de desarrollo y backup anterior:
+`../Humanoide-vla-evidence/20261022T144742Z_TABLE74_RECORDED_RECIPE/`.
+
+
 **22-10-2026 — BOX-TABLE74-SUPERVISED-CYCLE-20261022: integración del ciclo74 en Optimistic.**
 El selector completo `--table-height-cm 74` de Optimistic enlaza recogida/
 traslado existentes, aproximación74, descenso por fases, alivio4 cm,
@@ -13,11 +59,11 @@ libres/holguras actuales y barrido de HOME. Un apoyo parcial o una geometría
 distinta detienen el avance, sin asumir éxito físico, retry o HOME automático.
 El perfil base pendiente se conserva como identidad histórica, no como un
 depósito WRC original habilitado. La ejecución asistida anterior no se
-reetiqueta como calibración autónoma; ensayo de la nueva integración PENDIENTE.
+reetiqueta como calibración autónoma; el ensayo integrado se completó después en la toma142922, descrita arriba.
 Check real de la nueva entrada: **CHECK_OK**, mapa utars_nav_map/FSM_WAITNAVIGATE,
 HOME20D inmóvil y batería72,7 %/72,5 %, cargador/paros0. Sólo consultas de mapa/
 estado, sin armar ni enviar movimiento o instalar tareas.407 pruebas locales
-correctas; el ciclo físico integrado sigue pendiente. Se usa Ethernet;
+correctas en esa revisión; el ciclo físico integrado se completó después en la toma142922. Se usa Ethernet;
 `--wifi` y la repetición `--cycle` se rechazan para esta entrada completa.
 [Comandos y límites](box_handling/OPTIMISTIC_SCENARIO1.md#ciclo-completo-supervisado-para-mesa-de-74-cm),
 [ficha](SYSTEM_CUSTOMIZATIONS.md#box-table74-supervised-cycle-20261022).

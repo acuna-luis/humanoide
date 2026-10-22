@@ -26,6 +26,7 @@ from . import scenario1_cli as cli
 from . import scenario1_table74_current_release as release
 from . import scenario1_table74_current_release_run as runner
 from . import scenario1_table74_trial_install as installer
+from . import scenario1_table74_recipe as recipe
 
 
 HERE=Path(__file__).resolve().parent
@@ -55,7 +56,7 @@ def parser():
     return p
 
 
-def reference_for(args,info):
+def reference_for(args,info,execution_policy=None):
     """Keep missing declarations false; no actionable reference is fabricated."""
     stage=PHASES[args.phase]
     expected=('support','settle') if stage=='pin_relief' else ('pin_relief',)
@@ -65,6 +66,29 @@ def reference_for(args,info):
         raise ValueError('--pins-free belongs only to --phase open; no pin-relief replay or skip is inferred')
     if args.operator_note is not None and (not args.operator_note.strip() or len(args.operator_note)>1500):
         raise ValueError('--operator-note must contain nonblank text and at most1500characters')
+    if execution_policy is not None:
+        recipe.assert_policy(execution_policy)
+        if args.supported or args.pins_free or args.path_clear or args.operator_note is not None:
+            raise ValueError('Recipe mode cannot claim fresh operator support, pin or path declarations')
+        fixed=execution_policy.facts()
+        clearance=fixed['tool_clearance_before_relief_cm'if stage=='pin_relief'else'tool_clearance_after_relief_cm']
+        pin_exit=fixed['required_pin_exit_cm']
+        if (args.tool_clearance_cm is not None and args.tool_clearance_cm!=clearance or
+                args.pin_exit_cm is not None and args.pin_exit_cm!=pin_exit):
+            raise ValueError('Release dimensions differ from the fixed recorded recipe')
+        provenance=execution_policy.as_dict()
+        facts=dict(supported=False,tool_clearance_cm=clearance,pin_exit_cm=pin_exit,
+            path_clear=False,pins_free=False,support_assumed=fixed['support_assumed'],
+            lateral_path_assumed_clear=fixed['lateral_path_assumed_clear'],
+            pins_free_assumed=stage=='lateral_open'and fixed['pins_free_assumed'],
+            current_physical_measurement=False,assumption_provenance=provenance)
+        reference=dict(version=release.RECIPE_BUILDER_VERSION,stage=stage,surface_height_m=.74,
+            predecessor_bundle_id=info['bundle_id'],predecessor_goal_id=info['goal_id'],
+            operator_support_confirmed=False,tool_table_clearance_m=clearance/100.,
+            required_pin_exit_m=pin_exit/100.,operator_pins_free=False,lateral_path_clear=False,
+            evidence='optimistic table74; historical recipe assumptions, no new physical observation; predecessor_sha256='+info['predecessor_sha256'],
+            scope='recorded_recipe_supported_box_assumption_only',assumption_provenance=provenance)
+        return release.validate_reference(reference),[],facts
     missing=[]
     if not args.supported:missing.append('--supported')
     if args.tool_clearance_cm is None:missing.append('--tool-clearance-cm')
@@ -111,11 +135,12 @@ def installer_call(bundle_path,operation,evidence,bundle):
     return receipt
 
 
-def main(argv=None):
+def main(argv=None,*,execution_policy=None):
+    if execution_policy is not None:recipe.assert_policy(execution_policy)
     args=parser().parse_args(argv)
     profile=json.loads(PROFILE.read_text())
     proof,info,hashes=runner.load_predecessor(args.after,profile)
-    reference,missing,facts=reference_for(args,info)
+    reference,missing,facts=reference_for(args,info,execution_policy)
     candidate=build_bundle(reference)if reference is not None else None
     if candidate is not None:runner.validate_entry(proof,profile,candidate)
     report=dict(mode='run'if args.run else'check'if args.check else'plan',phase=args.phase,
@@ -126,12 +151,17 @@ def main(argv=None):
         ordinary_deposit_authorized=False,automatic_retries=0,next_phase_automatic=False,
         task_name=candidate['task_name']if candidate else None,
         bundle_id=candidate['manifest']['id']if candidate else None)
+    if execution_policy is not None:
+        report.update(operator_reference_complete=False,recipe_reference_complete=not missing,
+            assumption_provenance=execution_policy.as_dict(),current_physical_measurement=False,
+            duplicate_standalone_live_check_omitted=True,
+            live_preflight_performed_by='physical_phase_runner')
     if not args.run and not args.check:
         print(json.dumps(report,indent=2,ensure_ascii=False,allow_nan=False));return 0
     if missing:
         print(json.dumps(dict(report,status='CURRENT_PHYSICAL_DECLARATIONS_REQUIRED'),indent=2,ensure_ascii=False))
         return 78
-    if args.run and not sys.stdin.isatty():raise RuntimeError('A physical operator and TTY confirmation are required')
+    if args.run and execution_policy is None and not sys.stdin.isatty():raise RuntimeError('A physical operator and TTY confirmation are required')
     # Re-read before writing or contacting the robot. A previous action may
     # have consumed this source between argument parsing and artifact creation.
     current,_,current_hashes=runner.load_predecessor(args.after,profile)
@@ -147,6 +177,9 @@ def main(argv=None):
         created_ns=recorded_ns,declarations_recorded_ns=recorded_ns,
         recording_timestamp_verifies_physical_state=False,
         original_checkpoint_modified=False,source_journal_consumed=False)
+    if execution_policy is not None:
+        report.update(declarations_kind='historical_recipe_assumptions_not_current_operator_state',
+            declarations_recorded_ns=None,recipe_recorded_ns=recorded_ns)
     cli.atomic_json(evidence/'supervisor.json',report)
     cli.atomic_json(evidence/'source-sha256.json',dict(finish=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         optimistic_wrapper=hashlib.sha256((ROOT/'scripts/optimistic_scenario1.sh').read_bytes()).hexdigest(),
@@ -164,18 +197,24 @@ def main(argv=None):
         report.update(status='installed',installed=True)
         cli.atomic_json(evidence/'supervisor.json',report)
         common=['--after',str(args.after),'--bundle',str(bundle_path)]
-        check_args=['--check',*common,'--evidence-dir',str(evidence/'technical-check')]
-        if runner.cli_main(check_args)!=0:raise RuntimeError('FINISH_LIVE_CHECK_FAILED')
-        report.update(status='live_check_passed',health_ready=True)
-        cli.atomic_json(evidence/'supervisor.json',report)
-        result=runner.cli_main(['--run',*common,'--evidence-dir',str(evidence/'physical-run')])
+        if execution_policy is None:
+            check_args=['--check',*common,'--evidence-dir',str(evidence/'technical-check')]
+            if runner.cli_main(check_args)!=0:raise RuntimeError('FINISH_LIVE_CHECK_FAILED')
+            report.update(status='live_check_passed',health_ready=True)
+            cli.atomic_json(evidence/'supervisor.json',report)
+            result=runner.cli_main(['--run',*common,'--evidence-dir',str(evidence/'physical-run')])
+        else:
+            # --run performs the same fresh Runtime.ready gate immediately
+            # before dispatch. Do not create a second read-only session first.
+            result=runner.cli_main(['--run',*common,'--evidence-dir',str(evidence/'physical-run')],
+                execution_policy=execution_policy)
         if result!=0:raise RuntimeError('FINISH_PHASE_FAILED: rc='+str(result))
         report.update(status='phase_completed',source_journal_consumed=True,
             physical_result=str((evidence/'physical-run').resolve()),physical_release_measured=False,
-            movement_commands_sent=1)
+            movement_commands_sent=1,health_ready=True)
         cli.atomic_json(evidence/'supervisor.json',report)
-        print('Fase '+args.phase+' terminada. Compruebe el estado físico; no se ejecutó HOME ni otra fase.')
-        if args.phase=='pin-relief':
+        print('Fase '+args.phase+' terminada. '+('Se conserva la hipótesis de la receta registrada.'if execution_policy is not None else'Compruebe el estado físico; no se ejecutó HOME ni otra fase.'))
+        if args.phase=='pin-relief'and execution_policy is None:
             print('Para abrir use otra invocación con --phase open --after '+shlex.quote(str(evidence/'physical-run'))+
                   ' y nuevas declaraciones actuales, incluyendo --pins-free.')
         return 0

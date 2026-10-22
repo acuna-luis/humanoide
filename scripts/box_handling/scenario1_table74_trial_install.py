@@ -315,7 +315,7 @@ def remote_source(request=None):
              'scenario1_table74_trial', 'scenario1_table74_support',
              'scenario1_table74_current_trial',
              'scenario1_table74_current_lower',
-             'scenario1_table74_current_release',
+             'scenario1_table74_recipe', 'scenario1_table74_current_release',
              'scenario1_table74_trial_install')
     sources = {name: (directory/(name+'.py')).read_text() for name in names}
     checks = (directory/'scenario1_checks.py').read_text()

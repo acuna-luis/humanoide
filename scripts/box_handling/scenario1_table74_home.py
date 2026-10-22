@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""One supervised HOME after an authenticated completed table74 lateral opening.
+"""One HOME after an authenticated completed table74 lateral opening.
 
 The source opening journal is durably consumed before one force_home.sh call.
 No retry, reset, navigation, mode change or alternate HOME command is offered.
 Success requires its native terminal AND two new measured complete 20D HOME
 samples; it never follows from the opening result alone.
+The default remains supervised. A caller may instead supply the exact pinned
+recorded-recipe policy; that assumption never replaces live technical gates.
 """
 import ast
 import concurrent.futures
@@ -264,11 +266,16 @@ def validate_result(returncode, stdout):
     return dict(goal_id=str(uid), status=status, result=result)
 
 
-def run(after: Path, evidence: Path, wifi=False):
+def run(after: Path, evidence: Path, wifi=False, execution_policy=None):
     """Authorize exactly one HOME after complete opening and current checks."""
     if type(wifi) is not bool:
         raise ValueError('wifi must be an explicit boolean')
-    if not sys.stdin.isatty():
+    if execution_policy is not None:
+        # This utility runs on the PC. Keep recipe imports out of embedded
+        # remote Runtime modules, and admit no arbitrary authorize-like object.
+        from .scenario1_table74_recipe import assert_policy
+        assert_policy(execution_policy)
+    elif not sys.stdin.isatty():
         raise RuntimeError('HOME74 requires a physical operator and TTY confirmation')
     after, evidence = Path(after), Path(evidence)
     profile = json.loads(PROFILE_PATH.read_text())
@@ -286,17 +293,24 @@ def run(after: Path, evidence: Path, wifi=False):
         source_sha256=info['predecessor_sha256'], source_goal_id=info['goal_id'],
         intent_ns=None, finished_ns=None, result=None, measured_home=False,
         automatic_retry=False, error=None)
+    if execution_policy is not None:
+        record.update(execution_authorization_kind='recorded_recipe_assumption',
+            authorization_current_physical_measurement=False,
+            operator_confirmation_obtained=False, execution_policy=execution_policy.as_dict())
     journal = evidence/'home.json'
     with ExitStack() as stack:
         for path in ('/tmp/cruzr_blue_workbin_cycle.lock', '/tmp/cruzr-improved-scenario1.lock'):
             lock = stack.enter_context(open(path, 'a'))
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         try:
-            reader.check(info, payload, 'preflight')
-            cli.confirm('Confirme ambas abrazaderas VACÍAS y pines libres, caja completamente apoyada y estable, '
-                'recorrido completo de HOME despejado sin caja/mesa/personas/cables, efector correcto, robot estable '
-                'y ruedas inmovilizadas, cargador desconectado, ambos paros liberados, otros mandos detenidos '
-                'y una persona junto al paro. HOME74 envía una sola tarea nativa y no reintenta.', 'HOME74')
+            if execution_policy is None:
+                reader.check(info, payload, 'preflight')
+                cli.confirm('Confirme ambas abrazaderas VACÍAS y pines libres, caja completamente apoyada y estable, '
+                    'recorrido completo de HOME despejado sin caja/mesa/personas/cables, efector correcto, robot estable '
+                    'y ruedas inmovilizadas, cargador desconectado, ambos paros liberados, otros mandos detenidos '
+                    'y una persona junto al paro. HOME74 envía una sola tarea nativa y no reintenta.', 'HOME74')
+            else:
+                execution_policy.authorize('HOME74', evidence)
             def unchanged():
                 fresh, _, fresh_hashes = load_open(after, profile)
                 if fresh != proof or fresh_hashes != hashes or hashlib.sha256(home_script.read_bytes()).hexdigest() != script_hash:

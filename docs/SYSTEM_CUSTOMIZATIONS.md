@@ -1,9 +1,37 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+
+## BOX-TABLE74-RECORDED-RECIPE-20261022
+
+**22-10-2026, Europe/Madrid — instalado en fuentes del PC/verificado offline;
+activación física de la nueva receta PENDIENTE.**
+
+| Campo | Registro |
+| --- | --- |
+| Motivo/autoridad | Tras completar la toma integrada1198976, el usuario solicita recordar sus respuestas, no preguntar y retirar validaciones repetidas. Cambios exclusivos en PC/repositorio; ninguna conexión, instalación o movimiento del robot en esta intervención |
+| Fuentes reproducibles | `scripts/box_handling/scenario1_table74_recipe.py` y JSON homónimo: receta `table74-recorded-20261022-v1`; coordinador `_cycle.py`, CLI, runners, `_finish.py`, `_home.py` e instalador compartido. Guardia pura `_native_completion.py`, integrada en `TrialRuntime.stage` |
+| Procedencia | Toma `20261022T142922Z_TABLE74_SUPERVISED_CYCLE_1198976`; SHA256 de cycle.json `7dc8c5a047d7aacb80ab9db67176babfd3ddda4fd3dd219aad23db4bfe222b7c`. Cadena auténtica de cinco fases y HOME revalidada offline en `successful-source-replay.json` |
+| Secuencia/valores | Recogida/traslado intactos; aproximación Z0,94 m; precontact14 cm; support5 cm; alivio4 cm; apertura10 cm por lado; HOME. Supuestos guardados: huecos19/5 cm, apoyo completo, holguras8/5 cm, salida necesaria de pin2 cm, pines libres, corredores y útiles vacíos. Sin settle automático |
+| Transparencia | Cada autorización guarda `recorded_recipe_assumption` y origen/hash. Referencias de liberación v3 tienen los campos de observación del operador en false y procedencia de supuestos explícita. Los journals físicos conservan support_confirmed=false. No se afirma sensor, nueva inspección o geometría medida |
+| Aplicación/activación | Plan offline: `./scripts/optimistic_scenario1.sh --table-height-cm 74 --box-alignment-attempts 7 --plan`; mismo comando sin modo sólo check; `--run` ejecuta UN ciclo sin preguntas desde HOME/vacías o retoma limpia admitida. Conservar preparación física, montaje y supervisión junto al paro. `--table74-supervised` recupera las preguntas por fase |
+| Rendimiento | Retiradas cinco sesiones externas `runner --check` anteriores al `runner --run` que ya hace el mismo preflight; 78,4 s sumados en la toma de referencia. HOME sin espera humana usa sólo check inmediato completo y postflight20D; se conservan ambos preflights en modo supervisado. No se acortan duraciones ni cambian trayectorias; tiempo total nuevo PENDIENTE |
+| Protecciones conservadas | Preflight fresco de cada runner, salud continua y leases, paros, cargador, batería mínima20 %, localización/llegada, reposo/actuadores/errores, límites/IK/fuerza, locks compartidos y consumo durable antes del despacho. Incertidumbre detiene sin retry, otra fase o HOME de recuperación |
+| Guardia nativa adicional | Ventana docker logs delimitada con reloj del host Motion antes/después de la acción, contenedor descubierto/pinado y UUID enlazado al resultado. Exige Start/End MetaClamp de tarea exacta, summary SUCCESS, duración nominal compatible (tolerancia0,5 s) y ningún fault observado. Rechaza el caso histórico DectionForceCollision→SUCCEED; ausencia/log ambiguo/fallo de consulta detienen. Verificar ejecución nativa no prueba apoyo ni pines |
+| Dependencias/compatibilidad | Perfil de preparación y su SHA se conservan; no se promueve el depósito WRC original. Liberación v1/v2 histórica inalterada; v3 conserva los mismos waypoints de v2, con distinta procedencia. Receta incluida en payload e instalador remotos aislados. Completo74 sigue Ethernet y UN ciclo por invocación |
+| Verificación física anterior | Toma1198976: cinco fases correctas sin settle; HOME `f3de6794-1497-496f-85d6-a06068f6a8bd`, dos muestras20D nuevas, velocidad0 y máximo0,002493 rad. Éxito supervisado de esa toma, no ensayo de la nueva automatización. Ensayo anterior con ajuste manual conserva esa condición |
+| Backup/evidencia | `../Humanoide-vla-evidence/20261022T144742Z_TABLE74_RECORDED_RECIPE/`: snapshot completo anterior y hashes/commit base, replay fuente y planes/tests/resultados. Las futuras fases mantienen copia autenticada del paquete aditivo fuera del robot antes del despacho |
+| Pruebas locales |1071 casos PASS de escenario1 excluyendo el módulo histórico test_scenario1_deposit_install (23 casos,17 errores previos reproducidos con fuentes/config/test idénticos a HEADbc0e84a). Incluye receta sin input, validación remota aislada v3, fallo nativo tras SUCCEED sin avance, fuentes consumidas, modo supervisado y HOME20D. Plan real del wrapper y sintaxis correctos. Suite global con esa deuda anterior abierta |
+| Reversión | Inmediata por invocación: añadir `--table74-supervised`. Para revertir código restaurar selectivamente fuentes del backup/commit anterior; no reusar ni borrar marcadores consumed. Los nuevos bundles son aditivos y mantienen el rollback del instalador; no restaurar posturas o estados transitorios |
+| Deuda abierta | Probar nuevo modo sin preguntas con el mismo montaje y medir tiempo. La receta no detecta todos los apoyos parciales ni pines enganchados: continúan siendo supuestos atendidos, no validación de autonomía o seguridad funcional |
+
+[Manual y comandos](box_handling/OPTIMISTIC_SCENARIO1.md).
+
+
 ## BOX-TABLE74-SUPERVISED-CYCLE-20261022
 
-**22-10-2026, Europe/Madrid — integración local de las fases probadas;
-ensayo del coordinador completo PENDIENTE.**
+**Histórico de integración inicial — 22-10-2026, Europe/Madrid.**
+El ensayo completo supervisado se realizó posteriormente en la toma1198976;
+la entrada vigente de receta sin preguntas figura arriba.
 
 | Campo | Registro |
 | --- | --- |

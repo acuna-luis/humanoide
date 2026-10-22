@@ -15,7 +15,10 @@ import time
 
 def execute(args, profile, proof, info, hashes, bundle, *, make_payload,
             load_predecessor, validate_bundle, connection_class, confirmation_text,
-            confirmation_token, evidence_tag, status_prefix, lock_reason):
+            confirmation_token, evidence_tag, status_prefix, lock_reason, execution_policy=None):
+    if execution_policy is not None:
+        from .scenario1_table74_recipe import assert_policy
+        assert_policy(execution_policy)
     from . import scenario1_table74_trial_run as approach
     cli=approach.local_cli()
     if not args.run and not args.check:
@@ -24,9 +27,10 @@ def execute(args, profile, proof, info, hashes, bundle, *, make_payload,
             commands_sent=0,predecessor_consumed=False,automatic_retries=0,ordinary_deposit_authorized=False),
             indent=2,ensure_ascii=False))
         return 0
-    if args.run and not sys.stdin.isatty():
+    if args.run and execution_policy is None and not sys.stdin.isatty():
         raise RuntimeError('A physical operator and TTY confirmation are required')
     payload=make_payload('run' if args.run else 'check',profile,proof,bundle)
+    if execution_policy is not None:payload['recipe_provenance']=execution_policy.as_dict()
     evidence=args.evidence_dir or cli.ROOT.parent/'Humanoide-vla-evidence'/(
         time.strftime('%Y%m%dT%H%M%SZ',time.gmtime())+'_'+evidence_tag+'_'+str(os.getpid()))
     evidence.mkdir(parents=True,exist_ok=False);os.chmod(evidence,0o700)
@@ -52,7 +56,10 @@ def execute(args, profile, proof, info, hashes, bundle, *, make_payload,
                     raise RuntimeError(status_prefix+' technical check failed')
                 print(status_prefix+'_CHECK_OK; predecessor unchanged, no motion sent.')
                 return 0
-            cli.confirm(confirmation_text,confirmation_token)
+            if execution_policy is not None:
+                execution_policy.authorize(confirmation_token, evidence)
+            else:
+                cli.confirm(confirmation_text,confirmation_token)
             def unchanged():
                 new,_,fresh=load_predecessor(args.after,profile)
                 if new!=proof or fresh!=hashes or validate_bundle(json.loads(args.bundle.read_text()))!=bundle:

@@ -209,6 +209,62 @@ class ReaderTests(unittest.TestCase):
 
 
 class HomeRunTests(unittest.TestCase):
+    def test_recorded_recipe_authorizes_without_tty_or_question_and_keeps_immediate_and_measured_postflight(self):
+        from scripts.box_handling.scenario1_table74_recipe import RecipePolicy
+        policy=RecipePolicy.from_default()
+        with tempfile.TemporaryDirectory()as directory:
+            root=Path(directory);after,profile=source_files(root);evidence=root/'automatic';reader=Mock()
+            def process(command,**kwargs):
+                if command[0]=='bash':return subprocess.CompletedProcess(command,0,'','')
+                self.assertTrue((after/'trial.json.consumed.json').exists())
+                self.assertEqual(json.loads((evidence/'home.json').read_text())['phase'],'pending')
+                return subprocess.CompletedProcess(command,0,SUCCESS,'')
+            with patch.object(home,'PROFILE_PATH',profile),patch.object(home.sys.stdin,'isatty',return_value=False), \
+                    patch.object(home,'Reader',return_value=reader), \
+                    patch.object(home.cli,'confirm',side_effect=AssertionError('No human question for exact recipe')), \
+                    patch.object(home.subprocess,'run',side_effect=process)as commands, \
+                    patch.object(home,'open',side_effect=lambda p,m:open(root/Path(p).name,m),create=True):
+                result=home.run(after,evidence,execution_policy=policy)
+            self.assertEqual([call.args[2]for call in reader.check.call_args_list],['immediate','postflight'])
+            self.assertEqual(reader.check.call_args.kwargs,{'require_home':True})
+            self.assertEqual(sum(call.args[0][0]!='bash'for call in commands.call_args_list),1)
+            self.assertEqual(result['execution_authorization_kind'],'recorded_recipe_assumption')
+            self.assertIs(result['authorization_current_physical_measurement'],False)
+            self.assertIs(result['operator_confirmation_obtained'],False)
+            self.assertIs(result['measured_home'],True)
+            receipt=json.loads((evidence/'recipe-HOME74.json').read_text())
+            self.assertEqual(receipt['authorization_kind'],'recorded_recipe_assumption')
+            self.assertIs(receipt['current_physical_measurement'],False)
+
+    def test_recorded_recipe_never_skips_fresh_gates_or_postflight_home_confirmation(self):
+        from scripts.box_handling.scenario1_table74_recipe import RecipePolicy
+        for failure in ('immediate','postflight'):
+            with self.subTest(failure=failure),tempfile.TemporaryDirectory()as directory:
+                root=Path(directory);after,profile=source_files(root);reader=Mock()
+                reader.check.side_effect=RuntimeError('fresh health failed')if failure=='immediate'else[{},RuntimeError('HOME_NOT_MEASURED')]
+                def process(command,**kwargs):return subprocess.CompletedProcess(command,0,''if command[0]=='bash'else SUCCESS,'')
+                with patch.object(home,'PROFILE_PATH',profile),patch.object(home.sys.stdin,'isatty',return_value=False), \
+                        patch.object(home,'Reader',return_value=reader),patch.object(home.cli,'confirm',side_effect=AssertionError('No question')), \
+                        patch.object(home.subprocess,'run',side_effect=process)as commands, \
+                        patch.object(home,'open',side_effect=lambda p,m:open(root/Path(p).name,m),create=True):
+                    with self.assertRaises(RuntimeError):home.run(after,root/'automatic',execution_policy=RecipePolicy.from_default())
+                self.assertEqual(commands.call_count,0 if failure=='immediate'else 2)
+                self.assertEqual((after/'trial.json.consumed.json').exists(),failure=='postflight')
+                record=json.loads((root/'automatic/home.json').read_text())
+                self.assertEqual(record['phase'],'failed');self.assertIs(record['measured_home'],False)
+
+    def test_fake_or_tampered_recipe_never_reaches_evidence_or_transport(self):
+        from scripts.box_handling.scenario1_table74_recipe import RecipePolicy
+        with patch.object(home,'load_open',side_effect=AssertionError('No source access')), \
+                patch.object(home,'Reader',side_effect=AssertionError('No transport')), \
+                self.assertRaises((ValueError,TypeError)):
+            home.run(Path('/absent'),Path('/absent2'),execution_policy=Mock())
+        policy=RecipePolicy.from_default();changed=copy.deepcopy(policy.as_dict());changed['unexpected']='tampered'
+        with patch.object(RecipePolicy,'as_dict',return_value=changed), \
+                patch.object(home,'load_open',side_effect=AssertionError('No source access')), \
+                self.assertRaises((ValueError,TypeError)):
+            home.run(Path('/absent'),Path('/absent2'),execution_policy=policy)
+
     def test_durable_consumption_before_exactly_one_home_then_measured_confirmation(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory); after, profile = source_files(root); evidence = root/'home'

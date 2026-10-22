@@ -30,6 +30,7 @@ from . import scenario1_table74_current_release_run as release_run
 from . import scenario1_table74_finish as finish
 from . import scenario1_table74_home as home
 from . import scenario1_table74_trial_install as installer
+from . import scenario1_table74_recipe as recipe
 
 HERE = Path(__file__).resolve().parent
 PROFILE = HERE/'scenario1_table74_preparation.json'
@@ -97,18 +98,22 @@ def validate_args(args):
 
 
 def plan(args):
-    return dict(mode='plan', application='table74_supervised_cycle', cycles=1,
+    automatic = not getattr(args, 'table74_supervised', True)
+    return dict(mode='plan', application='table74_recorded_recipe' if automatic else 'table74_supervised_cycle', cycles=1,
         pickup_stop_after='navigate_put1', pickup_and_alignment_unchanged=True,
         box_alignment_attempts=args.box_alignment_attempts, arm_task_unchanged=True,
         stages=['pickup_to_put1', 'approach_absolute_z_0.94', 'precontact_14cm',
-                'support_5cm', 'optional_single_settle_1cm', 'pin_relief_4cm',
+                'support_5cm', *([] if automatic else ['optional_single_settle_1cm']), 'pin_relief_4cm',
                 'lateral_open_10cm_per_side', 'empty_measured_home'],
-        operator_gates=['CONTINUAR74', 'HUECO19', 'HUECO5', 'APOYADA|HUECO1|PARCIAL',
+        operator_gates=[] if automatic else ['CONTINUAR74', 'HUECO19', 'HUECO5', 'APOYADA|HUECO1|PARCIAL',
                         'actual_clearance_at_least_5cm_and_pin_exit_at_most_4cm',
                         'fresh_free_pins_and_clearance_at_least_4cm', 'LIBRE', 'HOME74'],
-        phase_runner_tokens_preserved=True, automatic_retries=0,
+        phase_runner_tokens_preserved=not automatic, automatic_retries=0,
+        input_required=not automatic,
+        recorded_recipe=recipe.RecipePolicy.from_default().as_dict() if automatic else None,
+        duplicate_standalone_checks=not automatic,
         ordinary_deposit_profile_qualified=False, support_measured_by_sensors=False,
-        qualification='supervised; manual assistance must be recorded explicitly',
+        qualification='recorded assumptions; attended operation' if automatic else 'supervised; manual assistance must be recorded explicitly',
         native_success_does_not_prove_support=True, commands_sent=0, files_created=0,
         resume_source=str(args.resume) if args.resume else None,
         resume_source_validated=False, default_action='read_only_check')
@@ -146,13 +151,14 @@ def pickup(args, stop, evidence):
     return evidence/'checkpoint.json'
 
 
-def build_approach(source):
+def build_approach(source, *, execution_policy=None):
     reference = dict(version=1, mode='operator_assumed_vendor45',
         source_checkpoint_sha256=hashlib.sha256(json.dumps(source, sort_keys=True,
             separators=(',', ':'), allow_nan=False).encode()).hexdigest(),
         surface_height_m=.74, reference_surface_height_m=.45,
         scope='current_held_put1_only',
-        evidence='Supervised table74; explicit nominal vendor45 assumption; actual geometry remains subject to phase checks')
+        evidence=('Recorded recipe assumptions, not a new geometry measurement; '+recipe.canonical(execution_policy.as_dict())
+                  if execution_policy else 'Supervised table74; explicit nominal vendor45 assumption; actual geometry remains subject to phase checks'))
     return approach.build_bundle(reference,
         (SNAPSHOT/'tasks/wrc_cruzr/put_cruzr_wrc_low.xml').read_text(),
         (SNAPSHOT/'meta_clamp/wrc/put_cruzr_wrc_low.yaml').read_text())
@@ -229,14 +235,14 @@ print(json.dumps(r))
         verified=True, location='PC; outside robot', movement_commands_sent=0))
 
 
-def execute_phase(kind, after, source, evidence, wifi=False, *, check_only=False):
+def execute_phase(kind, after, source, evidence, wifi=False, *, check_only=False, execution_policy=None):
     """Use existing authenticators, installer, live checks and one-shot runners."""
     profile = json.loads(PROFILE.read_text())
     evidence.mkdir(parents=True, exist_ok=False)
     os.chmod(evidence, 0o700)
     if kind == 'approach':
         checkpoint = clean_source(source, profile, at_put1=True)
-        bundle = build_approach(checkpoint)
+        bundle = build_approach(checkpoint, **(dict(execution_policy=execution_policy) if execution_policy else {}))
         approach_run.prepare_entry(checkpoint, profile, bundle)
         runner, common = approach_run, ['--resume', str(source)]
     else:
@@ -245,7 +251,9 @@ def execute_phase(kind, after, source, evidence, wifi=False, *, check_only=False
         reference = dict(version=1, stage=kind, gap_above_surface_m=gap,
             target_clearance_m=clearance, surface_height_m=.74,
             predecessor_bundle_id=info['bundle_id'], predecessor_goal_id=info['goal_id'],
-            scope='current_post_trial_box_only', evidence='Supervised cycle; new explicit geometry observation before '+kind)
+            scope='current_post_trial_box_only', evidence=(
+                'Recorded recipe assumptions, not new geometry measurements; '+recipe.canonical(execution_policy.as_dict())
+                if execution_policy else 'Supervised cycle; new explicit geometry observation before '+kind))
         bundle = lower.build_bundle(reference,
             (SNAPSHOT/'tasks/wrc_cruzr/put_cruzr_wrc_low.xml').read_text(),
             (SNAPSHOT/'meta_clamp/wrc/put_cruzr_wrc_low.yaml').read_text())
@@ -266,25 +274,30 @@ def execute_phase(kind, after, source, evidence, wifi=False, *, check_only=False
         archive_installation(bundle, evidence)
     common += ['--bundle', str(bundle_path)] + (['--wifi'] if wifi else [])
     with interruptible():
-        result = runner.cli_main(['--check', *common, '--evidence-dir', str(evidence/'technical-check')])
-        if result:
-            raise RuntimeError('TABLE74_PHASE_CHECK_FAILED: '+kind+' rc='+str(result))
+        if check_only or execution_policy is None:
+            result = runner.cli_main(['--check', *common, '--evidence-dir', str(evidence/'technical-check')])
+            if result:
+                raise RuntimeError('TABLE74_PHASE_CHECK_FAILED: '+kind+' rc='+str(result))
         if check_only:
             return 0
-        result = runner.cli_main(['--run', *common, '--evidence-dir', str(evidence/'physical-run')])
+        options = dict(execution_policy=execution_policy) if execution_policy else {}
+        result = runner.cli_main(['--run', *common, '--evidence-dir', str(evidence/'physical-run')], **options)
         if result:
             raise RuntimeError('TABLE74_PHASE_FAILED: '+kind+' rc='+str(result))
     output = evidence/'physical-run'
     completed(output, profile, kind)
+    if execution_policy:
+        execution_policy.validate_completion(output, evidence)
     return output
 
 
-def stage_release(arguments, evidence):
+def stage_release(arguments, evidence, *, execution_policy=None):
     """Keep a PC rollback package before finish.main can dispatch its action."""
     args = finish.parser().parse_args(arguments)
     profile = json.loads(PROFILE.read_text())
     proof, info, _ = release_run.load_predecessor(args.after, profile)
-    reference, missing, _ = finish.reference_for(args, info)
+    options = dict(execution_policy=execution_policy) if execution_policy else {}
+    reference, missing, _ = finish.reference_for(args, info, **options)
     if missing:
         raise ValueError('Current release declarations are incomplete')
     bundle = finish.build_bundle(reference)
@@ -300,21 +313,28 @@ def stage_release(arguments, evidence):
     archive_installation(bundle, evidence)
 
 
-def release_phase(after, evidence, stage, clearance, pin_exit, pins_free=False):
+def release_phase(after, evidence, stage, clearance, pin_exit, pins_free=False, *, execution_policy=None):
     arguments = ['--finish-deposit', '--table-height-cm', '74', '--phase', stage,
-        '--after', str(after), '--run', '--supported', '--tool-clearance-cm', str(clearance),
-        '--pin-exit-cm', str(pin_exit), '--path-clear', '--evidence-dir', str(evidence),
-        '--operator-note', 'Fresh supervised-cycle physical declarations; support and clearance are operator observations, not inferred from native success']
-    if pins_free:
+        '--after', str(after), '--run', '--tool-clearance-cm', str(clearance),
+        '--pin-exit-cm', str(pin_exit), '--evidence-dir', str(evidence)]
+    if execution_policy is None:
+        arguments += ['--supported', '--path-clear', '--operator-note',
+            'Fresh supervised-cycle physical declarations; support and clearance are operator observations, not inferred from native success']
+    if pins_free and execution_policy is None:
         arguments += ['--pins-free']
     with interruptible():
         if evidence.exists():
             raise ValueError('La evidencia de liberación debe ser nueva')
-        stage_release(arguments, evidence.with_name(evidence.name+'-staging'))
-        code = finish.main(arguments)
+        # The staging reference must retain exactly the same provenance as run.
+        stage_release(arguments, evidence.with_name(evidence.name+'-staging'), execution_policy=execution_policy)
+        options = dict(execution_policy=execution_policy) if execution_policy else {}
+        code = finish.main(arguments, **options)
     if code:
         raise RuntimeError('TABLE74_RELEASE_FAILED: '+stage+' rc='+str(code))
-    return evidence/'physical-run'
+    output = evidence/'physical-run'
+    if execution_policy:
+        execution_policy.validate_completion(output, evidence)
+    return output
 
 
 def run(args, stop):
@@ -323,9 +343,12 @@ def run(args, stop):
         print(json.dumps(plan(args), indent=2, ensure_ascii=False))
         return 0
     moving = not args.check and bool(args.run or args.resume)
-    if moving and not sys.stdin.isatty():
+    policy = None if getattr(args, 'table74_supervised', True) else recipe.RecipePolicy.from_default()
+    if moving and policy is None and not sys.stdin.isatty():
         raise RuntimeError('El ciclo supervisado requiere operador presencial y terminal TTY')
-    print('MESA74_CICLO_SUPERVISADO: '+('UN ciclo con confirmaciones de apoyo, pines y HOME' if moving
+    print(('MESA74_RECETA_GUARDADA: ' if policy else 'MESA74_CICLO_SUPERVISADO: ')+(
+          'UN ciclo sin preguntas; geometría/apoyo/pines asumidos según receta; operador supervisa junto al paro' if moving and policy else
+          'UN ciclo con confirmaciones de apoyo, pines y HOME' if moving
           else 'comprobación de lectura; sin movimiento'), flush=True)
     profile = json.loads(PROFILE.read_text())
     source = clean_source(args.resume, profile) if args.resume else None
@@ -336,6 +359,11 @@ def run(args, stop):
         qualification='supervised; operator support observations; manual assistance requires a new recorded observation',
         ordinary_profile_qualified=False, automatic_retry=False, created_ns=time.time_ns(),
         phase_boundary=None, in_flight=None, after=None, physical_support_measured=False)
+    if policy:
+        journal.update(artifact='table74_recorded_recipe_cycle', recipe_policy=policy.as_dict(),
+            qualification='recorded recipe assumptions; new support/pins are not measured; attended operation',
+            operator_support_confirmed=False, input_required=False,
+            redundant_standalone_checks=False)
     created = False
     try:
         evidence.mkdir(parents=True, exist_ok=False)
@@ -345,6 +373,13 @@ def run(args, stop):
             journal.update(values, updated_ns=time.time_ns())
             cli.atomic_json(evidence/'cycle.json', journal)
         record()
+        def gate(message, token):
+            guard(stop)
+            if policy:
+                policy.authorize(token, evidence)
+            else:
+                confirm(message, token, stop)
+            guard(stop)
         if not moving:
             if source is not None and contract.progress_index(source) == 6:
                 code = execute_phase('approach', None, args.resume, evidence/'approach-check',
@@ -359,11 +394,11 @@ def run(args, stop):
             record(status='checked', health_scope='pickup_to_put1_only', movement_commands_sent=0)
             print('MESA74_CHECK_OK: segmento de recogida comprobado; apoyo, pines y fases posteriores requieren nuevas comprobaciones; sin movimiento')
             return 0
-        confirm(('Reanudación con caja sujeta estable; no se repetirá el agarre. ' if source else
+        gate(('Reanudación con caja sujeta estable; no se repetirá el agarre. ' if source else
                  'Abrazaderas vacías, HOME y pila estable. ')+
             'Confirme mesa74, recorrido libre, batería suficiente, cargador fuera, paros liberados, '
             'ruedas en navegación, otros mandos detenidos y persona junto al paro. '
-            'Acepta aproximación nominal desde referencia vendor45, con pausas de medida y apoyo.', 'CONTINUAR74', stop)
+            'Acepta aproximación nominal desde referencia vendor45, con pausas de medida y apoyo.', 'CONTINUAR74')
         if source is not None and contract.progress_index(source) == 6:
             source_path = args.resume
         else:
@@ -374,50 +409,61 @@ def run(args, stop):
         def phase(kind, after=None):
             guard(stop)
             record(in_flight=kind)
-            output = execute_phase(kind, after, source_path, evidence/kind, args.wifi)
+            options = dict(execution_policy=policy) if policy else {}
+            output = execute_phase(kind, after, source_path, evidence/kind, args.wifi, **options)
             record(phase_boundary=kind, in_flight=None, after=str(output))
             guard(stop)
             return output
         after = phase('approach')
-        confirm('Mida ambos lados: hueco19cm igual, caja estable y ningún punto en contacto. '
-                'Si difiere, pare para revisar geometría.', 'HUECO19', stop)
+        gate('Mida ambos lados: hueco19cm igual, caja estable y ningún punto en contacto. '
+                'Si difiere, pare para revisar geometría.', 'HUECO19')
         after = phase('precontact', after)
-        confirm('Mida ambos lados: hueco5cm igual, caja estable y ningún punto en contacto.', 'HUECO5', stop)
+        gate('Mida ambos lados: hueco5cm igual, caja estable y ningún punto en contacto.', 'HUECO5')
         after = phase('support', after)
-        state = observe('Inspeccione toda la base: APOYADA = apoyo plano completo, estable y sin peso en brazos; '
-                        'HUECO1 = hueco1cm uniforme en ambos lados sin contacto en esquinas; '
-                        'PARCIAL = contacto parcial o cualquier otro estado.', stop)
-        record(operator_support_observation=state, observation_recorded_ns=time.time_ns())
+        if policy:
+            state = 'APOYADA'
+            gate('', state)
+            record(support_assumed=True, assumption_provenance=policy.as_dict())
+        else:
+            state = observe('Inspeccione toda la base: APOYADA = apoyo plano completo, estable y sin peso en brazos; '
+                            'HUECO1 = hueco1cm uniforme en ambos lados sin contacto en esquinas; '
+                            'PARCIAL = contacto parcial o cualquier otro estado.', stop)
+            record(operator_support_observation=state, observation_recorded_ns=time.time_ns())
         if state == 'HUECO1':
             after = phase('settle', after)
-            confirm('Compruebe apoyo plano completo de toda la caja, estable y sin peso en brazos. '
-                    'Un apoyo parcial exige parar; no se bajará otra vez.', 'APOYADA', stop)
+            gate('Compruebe apoyo plano completo de toda la caja, estable y sin peso en brazos. '
+                    'Un apoyo parcial exige parar; no se bajará otra vez.', 'APOYADA')
         elif state != 'APOYADA':
             raise SafePause('Apoyo completo no confirmado; se conserva la postura, sin apertura ni HOME')
-        record(operator_support_confirmed=True, support_recorded_ns=time.time_ns())
-        clearance = number('Holgura ACTUAL mínima entre todo el útil y la mesa, en cm (mínimo5):', 5., 100., stop)
-        pin_exit = number('Salida de pin necesaria ACTUAL, en cm (positiva y como máximo4):', 0.000001, 4., stop)
-        confirm('Recorrido lateral completo10cm por lado libre; caja sigue totalmente apoyada.', 'DESPEJADO10', stop)
+        if policy:
+            facts = policy.facts()
+            clearance, pin_exit = facts['tool_clearance_before_relief_cm'], facts['required_pin_exit_cm']
+        else:
+            record(operator_support_confirmed=True, support_recorded_ns=time.time_ns())
+            clearance = number('Holgura ACTUAL mínima entre todo el útil y la mesa, en cm (mínimo5):', 5., 100., stop)
+            pin_exit = number('Salida de pin necesaria ACTUAL, en cm (positiva y como máximo4):', 0.000001, 4., stop)
+        gate('Recorrido lateral completo10cm por lado libre; caja sigue totalmente apoyada.', 'DESPEJADO10')
         guard(stop)
-        record(in_flight='pin_relief', current_clearance_cm=clearance, required_pin_exit_cm=pin_exit)
-        after = release_phase(after, evidence/'pin-relief', 'pin-relief', clearance, pin_exit)
+        record(in_flight='pin_relief', **{('assumed_clearance_cm' if policy else 'current_clearance_cm'):clearance}, required_pin_exit_cm=pin_exit)
+        options = dict(execution_policy=policy) if policy else {}
+        after = release_phase(after, evidence/'pin-relief', 'pin-relief', clearance, pin_exit, **options)
         record(phase_boundary='pin_relief', in_flight=None, after=str(after))
         guard(stop)
-        confirm('Inspeccione ambos pines tras alivio: completamente fuera; caja plana, apoyada y estable.', 'PINES_LIBRES', stop)
-        clearance = number('Holgura ACTUAL tras alivio de todo el útil a la mesa, en cm (mínimo4):', 4., 100., stop)
-        confirm('Compruebe de nuevo todo el recorrido lateral10cm por lado libre.', 'DESPEJADO10', stop)
-        record(in_flight='lateral_open', current_clearance_cm=clearance)
-        after = release_phase(after, evidence/'open', 'open', clearance, pin_exit, pins_free=True)
+        gate('Inspeccione ambos pines tras alivio: completamente fuera; caja plana, apoyada y estable.', 'PINES_LIBRES')
+        clearance = facts['tool_clearance_after_relief_cm'] if policy else number('Holgura ACTUAL tras alivio de todo el útil a la mesa, en cm (mínimo4):', 4., 100., stop)
+        gate('Compruebe de nuevo todo el recorrido lateral10cm por lado libre.', 'DESPEJADO10')
+        record(in_flight='lateral_open', **{('assumed_clearance_cm' if policy else 'current_clearance_cm'):clearance})
+        after = release_phase(after, evidence/'open', 'open', clearance, pin_exit, pins_free=True, **options)
         record(phase_boundary='lateral_open', in_flight=None, after=str(after))
         guard(stop)
-        confirm('Caja apoyada y estable; ambos útiles vacíos, pines libres y trayectoria HOME completa despejada.', 'LIBRE', stop)
+        gate('Caja apoyada y estable; ambos útiles vacíos, pines libres y trayectoria HOME completa despejada.', 'LIBRE')
         record(in_flight='home')
         with interruptible():
-            result = home.run(after=after, evidence=evidence/'home', wifi=args.wifi)
+            result = home.run(after=after, evidence=evidence/'home', wifi=args.wifi, **options)
         if not isinstance(result, dict) or result.get('phase') != 'succeeded' or result.get('measured_home') is not True:
             raise RuntimeError('HOME no tiene confirmación terminal y postura medida')
         record(status='succeeded', phase_boundary='measured_home', in_flight=None, home=result)
-        print('Ciclo74 supervisado terminado; HOME medido. Evidencia: '+str(evidence))
+        print('Ciclo74 terminado; HOME medido. Evidencia: '+str(evidence))
         return 0
     except (Exception, KeyboardInterrupt) as exc:
         journal.update(status='paused' if isinstance(exc, SafePause) else 'interrupted',

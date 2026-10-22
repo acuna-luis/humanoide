@@ -174,6 +174,16 @@ print(json.dumps({p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest() for
             self.timed('trial_stationary', self.quick_health)
             self.verify_trial_files()
             self.connected()
+            recipe_enabled = 'recipe_provenance' in self.payload
+            if recipe_enabled:
+                if __package__:
+                    from .scenario1_table74_recipe import validate_record
+                else:
+                    from scenario1_table74_recipe import validate_record
+                validate_record(self.payload['recipe_provenance'])
+                if self.trial_bundle['review']['reference'].get('stage') == 'settle':
+                    raise RuntimeError('The recorded recipe never adds an automatic settle')
+            native_start_ns = time.time_ns()
             self._trial_dispatch = True
             try:
                 result = self.action('motion', {'task_name': self.trial_bundle['task_name'], 'yaml_args': '{}'}, TIMEOUT)
@@ -182,6 +192,8 @@ print(json.dumps({p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest() for
             self.trial_record['result'] = copy.deepcopy(result)
             contract.validate_motion_result(result)
             self.connected()
+            if recipe_enabled:
+                self.audit_native_completion(native_start_ns, result)
             self.timed('trial_post_stationary', self.quick_health)
             self.trial_record.update(phase='succeeded', finished_ns=time.time_ns())
             self.save_trial()
@@ -192,6 +204,31 @@ print(json.dumps({p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest() for
             self.trial_record.update(phase='failed', finished_ns=time.time_ns(), error=str(exc) or type(exc).__name__)
             self.save_trial()
             raise
+
+    def audit_native_completion(self, start_ns, result):
+        """A vendor SUCCEED may conceal force termination; never chain it blindly."""
+        if __package__:
+            from .scenario1_table74_native_completion import validate_native_log
+        else:
+            from scenario1_table74_native_completion import validate_native_log
+        end_ns = time.time_ns()
+        since = str(start_ns//10**9)+'.'+format(start_ns%10**9, '09d')
+        until = str(end_ns//10**9)+'.'+format(end_ns%10**9, '09d')
+        # Docker timestamps and these bounds use Motion's host clock. Neither
+        # the PC's journal timestamps nor the vendor's differently zoned text
+        # clock are used to select a log window.
+        process = subprocess.run(['docker', 'logs', '--timestamps', '--since', since,
+            '--until', until, self.native_container], stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, text=True, timeout=8)
+        log = process.stdout
+        if process.returncode or len(log.encode()) > 512*1024:
+            raise RuntimeError('TABLE74_NATIVE_LOG_UNAVAILABLE_OR_UNBOUNDED; no automatic continuation')
+        report = validate_native_log(log, self.trial_bundle)
+        report.update(goal_id=result['goal_id'], bundle_id=self.trial_bundle['manifest']['id'],
+            host_start_ns=start_ns, host_finished_ns=end_ns)
+        atomic_json(self.session/'native-completion.json', dict(report=report, log=log))
+        self.emit('table74_native_completion', **report)
+        self.connected()
 
 
 def main(payload):

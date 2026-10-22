@@ -200,7 +200,7 @@ def make_payload(mode,profile,proof,bundle):
         predecessor=copy.deepcopy(proof),trial_bundle=bundle)
     here=Path(__file__).resolve().parent
     payload['modules'] += [(name,(here/(name+'.py')).read_text()) for name in
-        ('scenario1_deposit','scenario1_table74_trial','scenario1_table74_trial_run',
+        ('scenario1_deposit','scenario1_table74_recipe','scenario1_table74_native_completion','scenario1_table74_trial','scenario1_table74_trial_run',
          'scenario1_table74_current_trial','scenario1_table74_current_trial_run',
          'scenario1_table74_support','scenario1_table74_support_run',
          'scenario1_table74_current_lower','scenario1_table74_current_lower_run')]
@@ -219,7 +219,10 @@ def parser():
     return p
 
 
-def cli_main(argv=None):
+def cli_main(argv=None, *, execution_policy=None):
+    if execution_policy is not None:
+        from .scenario1_table74_recipe import assert_policy
+        assert_policy(execution_policy)
     cli=approach.local_cli();args=parser().parse_args(argv)
     profile=json.loads(args.profile.read_text())
     proof,info,hashes=load_predecessor(args.after,profile)
@@ -230,8 +233,9 @@ def cli_main(argv=None):
             review=bundle['review'],predecessor_sha256=info['predecessor_sha256'],commands_sent=0,
             predecessor_consumed=False,automatic_retries=0,ordinary_deposit_authorized=False),indent=2,ensure_ascii=False))
         return 0
-    if args.run and not sys.stdin.isatty(): raise RuntimeError('A physical operator and TTY confirmation are required')
+    if args.run and execution_policy is None and not sys.stdin.isatty(): raise RuntimeError('A physical operator and TTY confirmation are required')
     payload=make_payload('run' if args.run else 'check',profile,proof,bundle)
+    if execution_policy is not None:payload['recipe_provenance']=execution_policy.as_dict()
     evidence=args.evidence_dir or cli.ROOT.parent/'Humanoide-vla-evidence'/(
         time.strftime('%Y%m%dT%H%M%SZ',time.gmtime())+'_TABLE74_CURRENT_LOWER_'+str(os.getpid()))
     evidence.mkdir(parents=True,exist_ok=False);os.chmod(evidence,0o700)
@@ -255,7 +259,10 @@ def cli_main(argv=None):
                 if connection.process.wait(timeout=15)!=0: raise RuntimeError('Lowering technical check failed')
                 print('LOWER_CHECK_OK; predecessor unchanged, no motion sent.');return 0
             ref=bundle['review']['reference']
-            cli.confirm('Descenso único '+str(round((ref['gap_above_surface_m']-ref['target_clearance_m'])*100))+
+            if execution_policy is not None:
+                execution_policy.authorize('BAJAR74', evidence)
+            else:
+                cli.confirm('Descenso único '+str(round((ref['gap_above_surface_m']-ref['target_clearance_m'])*100))+
                 'cm; misma caja y agarre estables, hueco actual comprobado en ambos lados, caja entera sobre tablero. '
                 'Manos/cinta fuera, recorrido libre, cargador desconectado, paros liberados, ruedas en navegación, '
                 'otros mandos detenidos y persona junto al paro. No abre ni desengancha; SUCCEED no confirma apoyo.', 'BAJAR74')

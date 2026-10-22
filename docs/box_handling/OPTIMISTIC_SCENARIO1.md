@@ -2,12 +2,13 @@
 
 ## Ciclo completo supervisado para mesa de 74 cm
 
-**BOX-TABLE74-SUPERVISED-CYCLE-20261022 — integración local; ensayo físico
-de esta entrada completa PENDIENTE.** La selección74 de Optimistic ya no
-solicita el depósito WRC original del perfil de preparación. Enlaza los
-runners de aproximación, descenso, alivio4 cm y apertura por separado, y un
-HOME final autenticado/medido. La recogida original, sus trayectorias de
-brazos, límites y alineación configurable quedan intactos.
+**22-10-2026 — BOX-TABLE74-RECORDED-RECIPE-20261022: receta guardada y avance
+sin preguntas al ejecutar el ciclo completo.** Por petición expresa del
+usuario, `--table-height-cm 74 --run` utiliza ahora la receta de la toma
+supervisada correcta `20261022T142922Z_TABLE74_SUPERVISED_CYCLE_1198976`.
+La nueva automatización está implementada en PC y comprobada con pruebas
+locales; **su ensayo físico sin preguntas sigue PENDIENTE**. La toma fuente
+sí completó recogida, traslado, depósito, liberación y HOME medido.
 
 Para inspeccionar la secuencia sin conectar ni crear una sesión:
 
@@ -24,39 +25,79 @@ movimiento ni instalación de tareas de depósito:
   --box-alignment-attempts 7
 ```
 
-Para ejecutar **un ciclo** desde HOME, con abrazaderas vacías, montaje de
-recogida y mesa74 preparados, cargador desconectado, paros liberados, ruedas
-en navegación, zona despejada, otros mandos detenidos y persona junto al paro:
+Para ejecutar **un ciclo sin preguntas** desde HOME, comprobar antes las
+condiciones actuales: mismas abrazaderas, caja de0,603×0,397×0,22 m y montaje
+de mesa74 de la toma fuente; efectores vacíos, caja preparada, trayectorias
+incluido HOME despejadas, cargador desconectado, paros liberados, ruedas en
+navegación, otros mandos detenidos y persona observando junto al paro:
 
 ```bash
 ./scripts/optimistic_scenario1.sh --table-height-cm 74 \
   --box-alignment-attempts 7 --run
 ```
 
-La terminal exige comprobación presencial antes de empezar. Después de
-put1 mantiene la caja sujeta y ejecuta la aproximación nominal que se probó:
-Z de manos0,94 m derivado de la referencia vendor45, sin apertura. Esa
-hipótesis no se convierte en una calibración medida por haber llegado a put1.
-El operador confirma los huecos actuales antes de cada descenso:19 cm
-uniformes para bajar14 y dejar5;5 cm uniformes para el tramo de apoyo5 cm.
-Un residual1 cm uniforme/sin ningún apoyo admite sólo el settle1 cm separado.
-Si hay apoyo parcial, inclinación o una medida diferente, la secuencia se
-detiene y conserva su frontera; no añade descensos o una nivelación improvisada.
+La receta conserva los movimientos probados: aproximación con Z nominal de
+manos0,94 m, descenso14 cm, apoyo5 cm, alivio4 cm sin giro, apertura10 cm por
+lado sin bajada y una única tarea HOME con comprobación posterior20D. **No
+incluye settle** ni otra bajada automática. Los valores guardados son19 cm
+después de aproximar,5 cm antes de apoyar,8 cm de holgura antes del alivio,
+salida de pin necesaria2 cm y5 cm de holgura después del alivio.
 
-Sólo con apoyo completo/estable y holgura actual≥5 cm se permite el alivio4 cm.
-Después se comprueban de nuevo pines libres, holgura actual≥4 cm y corredor
-de10 cm por lado antes de la apertura. La confirmación de caja liberada no
-se obtiene del SUCCEED. Para HOME se confirma además su barrido completo,
-con efectores vacíos y mesa/caja fuera; una sola tarea nativa y dos muestras
-20D deben confirmar HOME. No hay reset, navegación de recuperación ni retry.
+Estos valores y los estados «apoyada», «pines libres» y «útiles vacíos» son
+**supuestos de la receta para repetir el mismo montaje**, no observaciones
+actuales ni medidas de sensores. La procedencia se registra como
+`recorded_recipe_assumption`, con `current_physical_measurement=false`;
+las referencias de liberación v3 mantienen falsas las confirmaciones del
+operador actual. No se editan los journals fuente para convertirlos en
+mediciones ni se reutiliza su checkpoint consumido. Cambiar caja, mesa,
+efector, ubicación o geometría exige revisar el montaje y usar el modo
+supervisado; la receta no detecta por sí sola todas esas diferencias.
 
-Esta entrada no habilita `--cycle`: primero se ensaya un ciclo completo con
-confirmaciones por fase. Esta revisión completa usa Ethernet y rechaza
-`--wifi` antes de conectar; las pausas parciales anteriores no cambian.
+Para recuperar las preguntas y las observaciones actuales por fase:
+
+```bash
+./scripts/optimistic_scenario1.sh --table-height-cm 74 \
+  --box-alignment-attempts 7 --table74-supervised --run
+```
+
+Ese modo admite un único settle1 cm sólo si el operador comunica hueco1 cm
+uniforme, sin ningún apoyo. Apoyo parcial o geometría diferente detienen el
+avance; no se improvisa una nivelación ni se abre. El modo automático sigue
+sin settle, reset, navegación de recuperación o reintentos de brazos.
+
+Verificación de esta intervención: **1071 casos PASS** en la suite de escenario1
+excluyendo el módulo histórico `test_scenario1_deposit_install` (23 casos;
+17 errores de fixture reproducidos con archivos idénticos a HEAD anterior).
+La nueva receta, la carga remota aislada, los errores sin avance y el modo
+supervisado están incluidos en los casos correctos. La suite global no se
+declara totalmente verde; no se ha cambiado ese instalador anterior.
+
+### Qué se acelera y qué sigue comprobándose
+
+Se eliminan cinco sesiones completas de `--check` que precedían a otro
+`--run` con el mismo preflight; en la toma fuente sumaban **78,4 s**. Cada
+runner conserva su preflight fresco al ejecutar. HOME mantiene una
+comprobación inmediata completa antes del único goal y la medición posterior,
+sin repetir además otra comprobación antes de una pregunta que ya no existe.
+No se acortan duraciones de trayectorias ni se amplían tolerancias. El ahorro
+total real de la nueva ruta, incluida su auditoría adicional, está pendiente
+de medir;78,4 s es el coste medido de las sesiones retiradas.
+
+Continúan las comprobaciones de contexto, dependencias, salud, reposo,
+llegada/mapa/localización, cargador, batería, paros y supervisión continua de
+los runners. Fuerza, límites y controles nativos quedan intactos. La nueva
+barrera automática exige además el log nativo acotado de la **tarea exacta**,
+su duración y resultado; rechaza `DectionForceCollision`, otros fallos o una
+transacción incompleta aunque ROS devuelva SUCCEED. Ante fallo o evidencia
+incierta detiene el ciclo, sin apertura siguiente, retry ni HOME de
+recuperación. Un log nativo normal tampoco mide apoyo o pines libres.
+
+Esta entrada permite un solo ciclo y rechaza `--cycle` y `--wifi` antes de
+conectar; las pausas parciales anteriores no cambian. Se usa Ethernet.
 El perfil histórico de preparación mantiene
 `deposit.compatibility=pending` para preservar checkpoints y sus hashes;
-no es el ejecutor del depósito supervisado. Tampoco se reetiqueta la anterior
-prueba con ajuste manual como validación de autonomía.
+no despacha el depósito WRC original. Tampoco se reetiqueta la prueba
+anterior con ajuste manual como validación de autonomía.
 `--stop-after get1`, `grasp` o `put1` mantienen el comportamiento anterior;
 `--finish-deposit` sigue permitiendo la liberación separada desde un origen
 auténtico. No copiar referencias consumidas de las pruebas anteriores.
@@ -72,17 +113,33 @@ Después de una fase de depósito, `cycle.json` es un resumen **no ejecutable**;
 se conserva el journal de la última frontera para los runners específicos.
 No pasarlo como si fuera un checkpoint de recogida.
 
-Verificación local: **407 casos distintos correctos**, incluido flujo nominal,
-fallos/Ctrl+C sin avance, apoyo parcial, pines/holguras, retoma y backup externo
-antes del movimiento. El comando real de lectura terminó CHECK_OK:20D en
-HOME e inmóviles, batería72,7 %/72,5 %, cargador/paros0 y mapa correcto.
-Se mantuvieron las dos consultas de mapa/estado de lectura del runtime;
-ningún movimiento, instalación o nuevo ensayo físico. Evidencia:
-`../Humanoide-vla-evidence/20261022T135743Z_TABLE74_SUPERVISED_CYCLE_INTEGRATION/`.
-La utilidad HOME independiente exige `--run` además de su confirmaciónTTY;
-el coordinador la llama sólo después de apertura y liberación comprobadas.
+### Toma supervisada fuente y verificación del cambio
 
-**22-10-2026 — BOX-TABLE74-FINISH-EXECUTED-20261022: liberación y HOME completados.**
+**OBSERVADO/VERIFICADO:** el ciclo fuente1198976 terminó `status=succeeded`,
+frontera `measured_home`, sin settle ni acción pendiente. Las respuestas
+guardadas fueron HUECO19, HUECO5, APOYADA,8 cm/2 cm, PINES_LIBRES,5 cm,
+LIBRE y HOME74. HOME goal `f3de6794-1497-496f-85d6-a06068f6a8bd` terminó
+SUCCEED/status4/1101001 y `measured_home=true`. Son declaraciones físicas
+del operador más evidencia técnica; no se elevan a medición de apoyo.
+Fuente privada: `../Humanoide-vla-evidence/20261022T142922Z_TABLE74_SUPERVISED_CYCLE_1198976/`.
+
+Receta reproducible v1:
+[`scenario1_table74_recipe.py`](../../scripts/box_handling/scenario1_table74_recipe.py).
+Incluye ID, hash del cycle fuente, valores y política sin retry/settle.
+Backup, pruebas y evidencia de esta revisión:
+`../Humanoide-vla-evidence/20261022T144742Z_TABLE74_RECORDED_RECIPE/`.
+No se ha conectado ni movido el robot para habilitar esta nueva ruta.
+
+**Registro histórico BOX-TABLE74-SUPERVISED-CYCLE-20261022:** antes de la toma
+fuente se comprobaron407 casos locales y un check real de lectura, con
+20D HOME inmóviles, batería72,7 %/72,5 %, cargador/paros0 y mapa correcto.
+Su «ensayo integrado pendiente» queda superado por1198976, no por una
+prueba física de la nueva automatización. Evidencia anterior:
+`../Humanoide-vla-evidence/20261022T135743Z_TABLE74_SUPERVISED_CYCLE_INTEGRATION/`.
+La utilidad HOME independiente conserva `--run` y confirmaciónTTY; sólo el
+coordinador automático utiliza su política explícita de receta.
+
+**Registro histórico22-10-2026 — BOX-TABLE74-FINISH-EXECUTED-20261022: liberación y HOME completados.**
 Alivio4 cm y apertura10 cm por lado se ejecutaron una vez por fase con check
 real correcto y SUCCEED/status4/1101001. Entre ambas, operador confirma
 pines libres y holguras actuales; al finalizar confirma caja estable y
@@ -90,8 +147,9 @@ abrazaderas libres. Tras nueva confirmación específica del barrido de HOME,
 una orden `force_home.sh` termina correcta; dos muestras20D muestran HOME=1,
 velocidad0 y máximo absoluto0,002589 rad. Operador confirma HOME y caja estable.
 No se repiten etapas ni se envía navegación. Fuentes anteriores de settle/
-alivio consumidas; no retomar el open después de HOME. El depósito74 normal
-sigue pendiente: hubo ajuste manual previo y confirmaciones por fase.
+alivio consumidas; no retomar el open después de HOME. En aquella prueba hubo
+ajuste manual previo y confirmaciones por fase: no acredita la automatización
+posterior descrita arriba.
 [Resultados, referencias y evidencia](DEPOSITO_WRC_ALTURA_100CM.md#cierre-real-del-depósito-y-home--22-10-2026).
 
 ## Continuar una liberación de mesa74 ya apoyada — 22-10-2026
@@ -104,12 +162,12 @@ con nueva declaración de pines libres. Plan offline; run instala aditivamente,
 comprueba salud y exige `LIBERAR74`. No cambia la recogida ni activa el
 depósito ordinario74 pendiente, navegación o HOME.
 
-El cambio4 cm es local, no instalado ni ensayado en el robot; no afirma una
-nueva holgura5 cm. El paquete v1 de3 cm queda para historia/rollback,
+El cambio4 cm se ejecutó después en las tomas descritas arriba. Su preparación
+local no afirmaba por sí sola una nueva holgura5 cm. El paquete v1 de3 cm queda para historia/rollback,
 rechazado como nuevo despacho. La apertura mantiene su holgura actual≥4 cm,
 Z0 y confirmación separada de pines libres.
 
-Último estado comunicado: tras ajuste manual, operador declara apoyo plano y completo.
+Estado histórico anterior a la recarga y a las tomas completas: tras ajuste manual, operador declara apoyo plano y completo.
 Alivio concreto **v1 de3 cm** instalado pero check bloqueado por batería17,6 %/18,6 %
 frente al mínimo20 %; no se movió ni consumió el journal de settle.
 Operador recargará y avisará. Revalidar postura/condiciones/contexto después,
