@@ -1,6 +1,38 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
 
+**22-10-2026 — BOX-TABLE74-CONTINUE-LOG-FAILURE-20261022: retoma específica desde la aproximación.**
+Nueva entrada `optimistic_scenario1.sh --continue-deposit --table-height-cm 74
+--after DIR --recovery-confirmed --run`. Para la toma150133Z1280135 omite
+recogida, navegación y aproximación; empieza por precontact14 cm y conserva
+support5 cm, alivio4 cm, apertura10 cm y HOME medido. No necesita reinicio.
+El operador debe conservar la caja sujeta/estable, misma postura y montaje,
+caja sobre el tablero y recorrido completo libre, sin reinicio/movimiento
+manual/otro mando desde la interrupción; cargador fuera, paros liberados,
+ruedas en navegación y persona junto al paro. El flag declara esas condiciones;
+no se guardan como mediciones ni se vuelven a preguntar durante la receta.
+
+**VERIFICADO offline:** origen original revalidado con un único
+SUCCEED/status4/1101001, request_complete0 y error EXACTO de identidad del log
+posterior; cierres de lectores inactivos y sin error/cancelación previos.
+Se conservan seis archivos originales y journal failed; una copia nueva añade
+un recibo tipado con hashes/procedencia/supuesto de postura conservada.
+No se fabrica stage_complete ni se cambia failed por succeeded. El origen
+original se consume una sola vez después del preflight fresco, antes de armar
+el primer descenso; también se consume la copia. Cambios de contexto,
+reinicio, archivos, consumo o resultado real fallido bloquean sin movimiento.
+
+**396 pruebas correctas** en módulos pertinentes, payload remoto aislado y
+cadena sintética completa hasta la entrada de HOME. Replay del origen real
+admitido conservando bytes, failed y sin consumo. Default plan offline;
+check sólo consulta, sin instalar ni mover (55 si falta la tarea de precontact).
+**PENDIENTE:** ejecución física de esta retoma. Ninguna conexión ni movimiento
+del robot durante esta implementación. [Comando de esta toma](box_handling/OPTIMISTIC_SCENARIO1.md),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#box-table74-continue-log-failure-20261022).
+Backup/evidencia: `../Humanoide-vla-evidence/20261022T152158Z_TABLE74_CONTINUE_AFTER_LOG_FAILURE/`.
+
+
+
 **22-10-2026 — BOX-TABLE74-FERIA-COORDINATION-20261022: fallo de diagnóstico separado del resultado nativo.**
 **OBSERVADO:** intento `20261022T150133Z_TABLE74_SUPERVISED_CYCLE_1280135`,
 aproximación `48339049-920e-4c9b-9762-7774f92c3621`, SUCCEED/status4/1101001

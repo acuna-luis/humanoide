@@ -56,6 +56,12 @@ def validate_predecessor(proof, profile, *, _depth=0):
         raise ValueError('Lowering predecessor proof is missing or too deep')
     bundle = proof['bundle.json']
     phase = bundle.get('manifest', {}).get('phase') if isinstance(bundle, dict) else None
+    if phase == 'approach_vendor_reference' and 'recovery-authorization.json' in proof:
+        if __package__:
+            from .scenario1_table74_log_recovery import validate_proof
+        else:
+            from scenario1_table74_log_recovery import validate_proof
+        return validate_proof(proof, profile)
     parent = None
     if phase == 'approach_vendor_reference':
         if set(proof) != set(FILES):
@@ -147,13 +153,41 @@ def load_predecessor(directory, profile):
     if (directory/'trial.json.consumed.json').exists():
         raise RuntimeError('Predecessor journal already consumed; no lowering retry')
     names=list(FILES)+(['predecessor.json'] if (directory/'predecessor.json').exists() else [])
+    if (directory/'recovery-authorization.json').exists():
+        names.append('recovery-authorization.json')
     raw={name:(directory/name).read_bytes() for name in names}
     if any(len(value)>16*1024*1024 for value in raw.values()) or sum(map(len,raw.values()))>32*1024*1024:
         raise ValueError('Predecessor files exceed proof bounds')
     proof={name:([json.loads(line) for line in value.decode().splitlines() if line.strip()]
                  if name=='events.jsonl' else json.loads(value)) for name,value in raw.items()}
     info=validate_predecessor(proof,profile)
+    if 'recovery-authorization.json' in proof:
+        validate_recovery_source(proof)
     return proof,info,{name:hashlib.sha256(value).hexdigest() for name,value in raw.items()}
+
+
+def validate_recovery_source(proof):
+    """On the PC, bind the recovered copy to original, unconsumed evidence."""
+    receipt = proof['recovery-authorization.json']
+    directory = Path(receipt['source_directory'])
+    if (directory/'trial.json.consumed.json').exists():
+        raise RuntimeError('Original diagnostic-failure source already consumed; no replay')
+    observed = {}
+    for name in FILES:
+        path = directory/name
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 16*1024*1024:
+            raise ValueError('Unsafe or oversized original recovery source')
+        observed[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    if observed != receipt['source_sha256']:
+        raise RuntimeError('Original recovery evidence changed; no continuation')
+
+
+def claim_recovery_source(proof, destination):
+    """Consume the original once after current preflight, before dispatch."""
+    if 'recovery-authorization.json' in proof:
+        validate_recovery_source(proof)
+        cli = approach.local_cli()
+        cli.claim_resume(Path(proof['recovery-authorization.json']['source_directory'])/'trial.json', destination)
 
 
 class LowerRuntime(current.CurrentTrialRuntime):
@@ -203,7 +237,7 @@ def make_payload(mode,profile,proof,bundle):
         ('scenario1_deposit','scenario1_table74_recipe','scenario1_table74_native_completion','scenario1_table74_trial','scenario1_table74_trial_run',
          'scenario1_table74_current_trial','scenario1_table74_current_trial_run',
          'scenario1_table74_support','scenario1_table74_support_run',
-         'scenario1_table74_current_lower','scenario1_table74_current_lower_run')]
+         'scenario1_table74_log_recovery','scenario1_table74_current_lower','scenario1_table74_current_lower_run')]
     return payload
 
 
@@ -278,6 +312,7 @@ def cli_main(argv=None, *, execution_policy=None):
             cli.atomic_json(evidence/'trial-intent.json',dict(artifact='table74_current_lower_intent',
                 predecessor_sha256=info['predecessor_sha256'],bundle_id=bundle['manifest']['id'],
                 phase='pending',automatic_retry=False,time_ns=time.time_ns()))
+            claim_recovery_source(proof,evidence/'trial.json')
             cli.claim_resume(args.after/'trial.json',evidence/'trial.json')
             connection.send({'command':'arm'});connection.wait('armed')
             connection.send({'command':'stage','stage':STAGE})

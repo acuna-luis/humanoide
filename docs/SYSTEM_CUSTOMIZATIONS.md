@@ -1,6 +1,30 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
 
+## BOX-TABLE74-CONTINUE-LOG-FAILURE-20261022
+
+**22-10-2026, Europe/Madrid — implementado/verificado en PC; ejecución física PENDIENTE.**
+
+| Campo | Registro |
+| --- | --- |
+| Motivo/estado | Usuario necesita terminar desde la caja SUJETA tras approachSDKSUCCEED y rechazo diagnóstico. Origen toma150133Z1280135/approach/physical-run; goal48339049-920e-4c9b-9762-7774f92c3621. No repetir recogida/aproximación ni enviar HOME desde caja sujeta |
+| Fuentes/destino | PC: wrapper `scripts/optimistic_scenario1.sh`, nuevo `scenario1_table74_continue.py`, validador puro `_log_recovery.py`, coordinador `_cycle.py` y runners de lowering/release para transportar la cadena. Sin archivos/configuración/servicios modificados en el robot durante desarrollo |
+| Admisión precisa | Sólo approach_vendor_reference de este perfil74 y journal failed por el error exacto TABLE74_NATIVE_IDENTITY posterior al único accepted/resultSUCCEED4/1101001/request_complete0. Dos journals pending→failed, contexto/hashes coherentes y tres cierres idle conocidos. Rechaza cancelación, error físico, otro error/UUID/estado o actividad adicional |
+| Evidencia honesta | Copia byte a byte de seis archivos originales; recibo separado recovery-authorization.json con SHA de cada raw, digest canónico del proof y source_directory. Declara operator_state_assumed_unchanged=true y current_physical_measurement=false. Journal original/copia permanecen failed; no crea stage_complete ficticio ni borra consumed |
+| Activación | `./scripts/optimistic_scenario1.sh --continue-deposit --table-height-cm 74 --after DIR --recovery-confirmed --run`; comando completo en manual. Flag exige caja aún sujeta y estable, misma postura/montaje desde interrupción, sin reinicio/manual/otro mando, tablero/recorridos libres, cargador fuera, paros liberados, ruedas en navegación y observador al paro |
+| Modos | Sin modo: plan offline sin leer origen ni crear archivos; --check con confirmación prepara sólo evidencia local y consulta precontact sin instalar/mover. Devuelve55 si falta esa tarea; --run instala con backup y hace su preflight antes del movimiento. No preguntas nuevas de la receta |
+| Secuencia | Omite pickup/get1/visión/retirada/navput1/aproximación ya realizadas. Empieza14 cm, luego5 cm de apoyo,4 cm de alivio,10 cm laterales y HOME20D. No cambia waypoints/duraciones/recogida ni admite settle o retry |
+| Controles actuales | El runner de precontact exige contexto original, hashes de toda la cadena, salud, reposo, llegada put1 y locks actuales; no exige HOME estando sujeto. La última lectura estacionaria antigua era previa a approach: no se reutiliza como reposo posterior |
+| Consumo único | PC verifica raw/hash y origen sin consumir; tras ready/resume y validaciones actuales crea marcador durable en trial ORIGINAL antes de claim de copia/arm/primer stage. Dos copias de recuperación no permiten despachar dos veces. Tras ese consumo se conserva la nueva frontera, sin repetir origen ante fallos |
+| Pruebas |396 casos PASS pertinentes;13 casos de continuación y9 del validador incluidos. Carga aislada remota del precontact con proof failed intacto; orden ready/resume→claimoriginal→claimcopia→arm→stage; prueba de cambios/consumo/fault sin avance. Cadena sintética support→relief→open→HOME acepta ese antecedente sin transformarlo |
+| Backup/evidencia | `../Humanoide-vla-evidence/20261022T152158Z_TABLE74_CONTINUE_AFTER_LOG_FAILURE/`: before/hashes/commit, offline-source-replay (original real intacto y no consumido), synthetic-full-continuation-chain, tests, plan y snapshots posteriores. El replay es validación offline, no autorización física actual |
+| Reversión | Restaurar selectivamente wrapper/CLI/validators/runners desde HEAD7ae32a7/backup de esta ficha; retirar entrada nueva sin consumidores. No editar la historia ni deshacer consumed, restaurar posturas o repetir aproximación. Conserva tareas aditivas/paquetes de backup previos |
+| Deuda | Ejecución y tiempo físicos de esta retoma pendientes. Log nativo original no disponible; se conserva deuda explícita, no native_log_verified=true. Si cambió postura/mando o se reinició, esta retoma no aplica sin recuperación evaluada de nuevo |
+
+[Comando exacto y condiciones](box_handling/OPTIMISTIC_SCENARIO1.md).
+
+
+
 ## BOX-TABLE74-FERIA-COORDINATION-20261022
 
 **22-10-2026, Europe/Madrid — fuentes PC modificadas y verificadas offline;

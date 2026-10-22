@@ -351,6 +351,15 @@ def run(args, stop):
           'UN ciclo con confirmaciones de apoyo, pines y HOME' if moving
           else 'comprobación de lectura; sin movimiento'), flush=True)
     profile = json.loads(PROFILE.read_text())
+    continuation = getattr(args, 'table74_after', None)
+    continuation_info = None
+    if continuation is not None:
+        if args.resume or args.from_stage or args.cycle:
+            raise ValueError('A deposit continuation cannot also resume or repeat pickup')
+        _, continuation_info, _ = lower_run.load_predecessor(continuation, profile)
+        if (continuation_info['completed_stage'] != 'approach' or
+                'recovery_authorization' not in continuation_info):
+            raise ValueError('Deposit continuation requires authenticated log-only approach recovery')
     source = clean_source(args.resume, profile) if args.resume else None
     evidence = args.evidence_dir or cli.ROOT.parent/'Humanoide-vla-evidence'/(
         time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())+'_TABLE74_SUPERVISED_CYCLE_'+str(os.getpid()))
@@ -364,6 +373,11 @@ def run(args, stop):
             qualification='recorded recipe assumptions; new support/pins are not measured; attended operation',
             operator_support_confirmed=False, input_required=False,
             redundant_standalone_checks=False)
+    if continuation is not None:
+        journal.update(continuing_after=str(continuation),
+            original_approach_journal_phase='failed', native_approach_terminal='SUCCEED',
+            skipped_stages=['pickup_to_put1', 'approach'],
+            recovery_authorization=continuation_info['recovery_authorization'])
     created = False
     try:
         evidence.mkdir(parents=True, exist_ok=False)
@@ -381,6 +395,13 @@ def run(args, stop):
                 confirm(message, token, stop)
             guard(stop)
         if not moving:
+            if continuation is not None:
+                code = execute_phase('precontact', continuation, None, evidence/'precontact-check',
+                    args.wifi, check_only=True, execution_policy=policy)
+                record(status='installation_pending' if code == 55 else 'checked',
+                    health_ready=code == 0, health_scope='current_post_approach_precontact_only',
+                    movement_commands_sent=0)
+                return code
             if source is not None and contract.progress_index(source) == 6:
                 code = execute_phase('approach', None, args.resume, evidence/'approach-check',
                     args.wifi, check_only=True)
@@ -394,18 +415,22 @@ def run(args, stop):
             record(status='checked', health_scope='pickup_to_put1_only', movement_commands_sent=0)
             print('MESA74_CHECK_OK: segmento de recogida comprobado; apoyo, pines y fases posteriores requieren nuevas comprobaciones; sin movimiento')
             return 0
-        gate(('Reanudación con caja sujeta estable; no se repetirá el agarre. ' if source else
+        gate(('Continuación de aproximación con caja sujeta; no se repite recogida ni aproximación. ' if continuation else
+                 'Reanudación con caja sujeta estable; no se repetirá el agarre. ' if source else
                  'Abrazaderas vacías, HOME y pila estable. ')+
             'Confirme mesa74, recorrido libre, batería suficiente, cargador fuera, paros liberados, '
             'ruedas en navegación, otros mandos detenidos y persona junto al paro. '
             'Acepta aproximación nominal desde referencia vendor45, con pausas de medida y apoyo.', 'CONTINUAR74')
-        if source is not None and contract.progress_index(source) == 6:
+        if continuation is not None:
+            source_path = None
+        elif source is not None and contract.progress_index(source) == 6:
             source_path = args.resume
         else:
             record(in_flight='pickup_to_put1')
             source_path = pickup(args, stop, evidence/'pickup')
-        clean_source(source_path, profile, at_put1=True)
-        record(phase_boundary='held_put1', in_flight=None, after=str(source_path))
+        if continuation is None:
+            clean_source(source_path, profile, at_put1=True)
+            record(phase_boundary='held_put1', in_flight=None, after=str(source_path))
         def phase(kind, after=None):
             guard(stop)
             record(in_flight=kind)
@@ -414,7 +439,11 @@ def run(args, stop):
             record(phase_boundary=kind, in_flight=None, after=str(output))
             guard(stop)
             return output
-        after = phase('approach')
+        if continuation is not None:
+            after = Path(continuation)
+            record(phase_boundary='native_approach_recovered', in_flight=None, after=str(after))
+        else:
+            after = phase('approach')
         gate('Mida ambos lados: hueco19cm igual, caja estable y ningún punto en contacto. '
                 'Si difiere, pare para revisar geometría.', 'HUECO19')
         after = phase('precontact', after)

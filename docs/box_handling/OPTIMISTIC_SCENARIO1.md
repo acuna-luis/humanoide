@@ -2,6 +2,58 @@
 
 ## Ciclo completo supervisado para mesa de 74 cm
 
+### Continuar la toma1280135 después del fallo de lectura de logs
+
+**22-10-2026 — BOX-TABLE74-CONTINUE-LOG-FAILURE-20261022.** Entrada específica
+para la aproximación que terminó correctamente y después quedó registrada
+como fallida por `TABLE74_NATIVE_IDENTITY`. La caja sigue **SUJETA** según
+el usuario. Esta continuación omite recogida, navegación y aproximación:
+su primer movimiento es **precontact14 cm**, seguido de apoyo5 cm,
+alivio4 cm, apertura10 cm por lado y HOME con medición20D. Usa la receta
+guardada, sin nuevas preguntas.
+
+`--recovery-confirmed` declara el estado **actual**: caja aún sujeta y estable,
+con toda su base sobre la mesa74; misma postura y montaje desde la parada,
+sin reinicio, movimiento manual u otro control; recorridos14+5 cm, alivio,
+apertura y HOME despejados, cargador fuera, ambos paros libres, ruedas en
+navegación, demás mandos detenidos y observador junto al paro. Si cambió
+alguna condición, este origen no sirve para continuar. El flag no transforma
+estos supuestos en una medida física ni omite comprobaciones técnicas.
+
+Con esas condiciones comprobadas, el comando completo de continuación es:
+
+```bash
+./scripts/optimistic_scenario1.sh --continue-deposit --table-height-cm 74 \
+  --after /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261022T150133Z_TABLE74_SUPERVISED_CYCLE_1280135/approach/physical-run \
+  --recovery-confirmed --run
+```
+
+Para inspección offline, sustituir `--recovery-confirmed --run` por `--plan`.
+El plan es el modo predeterminado de esta entrada: requiere `--after`, pero
+no lo lee, no conecta ni crea archivos. Para comprobar antes de mover,
+sustituir sólo `--run` por `--check`, manteniendo `--recovery-confirmed`:
+crea evidencia local y comprueba precontact sin instalar ni mover; puede
+devolver55 si falta su tarea. No confundir ese resultado con permiso para
+reiniciar el ciclo completo.
+
+La entrada autentica los seis archivos originales, una única acción SDK
+aceptada con terminal4/SUCCEED y el error diagnóstico **exacto posterior**,
+además del cierre de sus workers inactivos. En un directorio nuevo añade un
+recibo tipado `table74_log_only_recovery`, con hashes y
+`current_physical_measurement=false`. El journal original **sigue failed**;
+no se cambia a succeeded ni se borra ningún marcador consumido. Tras el
+preflight actual correcto, el primer precontact consume el trial original
+y su copia antes de armar: esa frontera no puede repetirse.
+
+Se revalidan hashes, boot/contenedores, contexto, mapa/put1, salud, batería,
+cargador y paros. Un reinicio o cambio de control/postura invalida la retoma;
+no se reajustan límites para admitirlo. Fuentes:
+[`entrada`](../../scripts/box_handling/scenario1_table74_continue.py) y
+[`prueba de recuperación`](../../scripts/box_handling/scenario1_table74_log_recovery.py).
+Preparación local, sin movimiento para crear esta entrada; **ensayo físico
+PENDIENTE**. Backup/evidencia:
+`../Humanoide-vla-evidence/20261022T152158Z_TABLE74_CONTINUE_AFTER_LOG_FAILURE/`.
+
 **22-10-2026 — BOX-TABLE74-FERIA-COORDINATION-20261022: coordinación rápida
 sin convertir los logs de Docker en un requisito de movimiento.** El intento
 `20261022T150133Z_TABLE74_SUPERVISED_CYCLE_1280135` completó la aproximación:

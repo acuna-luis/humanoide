@@ -11,6 +11,9 @@ export PYTHONDONTWRITEBYTECODE=1
 # Separate explicit final-release mode: one supervised phase per invocation.
 # It never enables the pending ordinary table74 deposit profile.
 for argument in "$@"; do
+  if [[ "$argument" == "--continue-deposit" ]]; then
+    exec python3 -B "$SCRIPT_DIR/box_handling/scenario1_table74_continue.py" "$@"
+  fi
   if [[ "$argument" == "--finish-deposit" ]]; then
     exec python3 -B "$SCRIPT_DIR/box_handling/scenario1_table74_finish.py" "$@"
   fi

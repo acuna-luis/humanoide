@@ -181,7 +181,7 @@ def make_payload(mode,profile,proof,bundle):
     payload['modules'] += [(name,(here/(name+'.py')).read_text()) for name in
         ('scenario1_deposit','scenario1_table74_recipe','scenario1_table74_native_completion','scenario1_table74_trial','scenario1_table74_trial_run',
          'scenario1_table74_current_trial','scenario1_table74_current_trial_run',
-         'scenario1_table74_support','scenario1_table74_support_run','scenario1_table74_current_lower',
+         'scenario1_table74_support','scenario1_table74_support_run','scenario1_table74_log_recovery','scenario1_table74_current_lower',
          'scenario1_table74_current_lower_run','scenario1_table74_current_release','scenario1_table74_current_release_run')]
     return payload
 
