@@ -1,5 +1,84 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-ALIGN-BASE-UNSTABLE-20261022
+
+**22-10-2026, Europe/Madrid — HALLAZGO de una ejecución del operador;
+diagnóstico posterior de lectura, sin adaptación de software ni nuevo movimiento.**
+
+| Campo | Registro |
+| --- | --- |
+| Motivo/alcance | Explicar `BOX_ALIGNMENT_BASE_UNSTABLE` del ensayo772739 sin aumentar tolerancias o reintentar el agarre |
+| Fuente/destino | PC, diario privado `20261022T101928Z_OPTIMISTIC_SCENARIO1_772739/events.jsonl`; lectura posterior SSH a Motion rechazó conexión, sin ejecutar consulta remota |
+| Hallazgo verificado | Segundo ajuste terminal status4 y settled; pareja posterior en mapa difiere5,9303950105mm/90,029824ms frente5mm. Residuales10,219183/16,133301mm frente12mm; falla primero `pose_references.stable_base` |
+| Datos que no prueban causa | Cuatro adquisiciones odom válidas; dos publicadores mapa esperados del proveedor no acreditan conflicto. Textos auxiliares LOCATION_LOST junto a terminal de éxito no demuestran pérdida fresca. Lease errors posteriores son cierre |
+| Alcance físico del ensayo | Visión/cabeza y correcciones de chasis; no se despachó agarre nativo, separación, bodyback, retirada, depósito o HOME. Checkpoint `unknown` preservado |
+| Estado comunicado | SSH código255/Connection refused; operador confirma «Sí, está reiniciándose». Final de arranque, HOME y estado físico actual no verificados |
+| Cambios/activación/reversión | Ningún código, configuración, firmware, entorno, límite5/12mm o control cambiado por este análisis; nada nuevo instalado/cargado que revertir. No hubo retry/HOME automático |
+| Evidencia/backup | `../Humanoide-vla-evidence/20261022T093744Z_EMPTY_ARM_CONTROL_DIAGNOSTIC/alignment-failure-772739-readonly/`: `failure-analysis.json`, stderr SSH, respaldo previo de estos tres documentos en `before-documentation/` y hashes; diario original conservado |
+| Reanudación | Comprobar arranque y condiciones actuales, después estudiar pareja mapa/odom y precisión de llegada. Causa del cambio de pose PENDIENTE; éxito de preparación vacía no valida agarre ni depósito74cm |
+
+[Detalle especializado](box_handling/BOX_AXIS_REPOSITION_20261002.md#22-10-2026-inestabilidad-de-pose-después-del-segundo-ajuste).
+Hallazgo estático separado, **sin activación**: MetaClamp reconoce
+`sim_box_position`3 y `sim_box_orientation`4(w,x,y,z), dependientes del
+entorno global de proceso `CLAMP_SIM`; no se demuestra selector por goal.
+En la rama inspeccionada también cambia la fuente de geometría de colisión
+de nube real a `obstacles` YAML. No se ha activado, instalado o probado ese
+modo; no se infiere ausencia de otras protecciones. Antes de cualquier ensayo
+faltan revisar routing, marcos6D y todos los efectos. Fuentes y hashes:
+`native-clamp-simulation-contract.json` en la misma evidencia raíz; ELF
+`d6bc61a493f7d790150fdbd673108121f46589fef56620de4a9023dcc2ba520a`.
+
+## BOX-NATIVE-ARM-PREPARATION-DIAG-20261022
+
+**22-10-2026, Europe/Madrid — INSTALADO/CARGADO/PROBADO en alcance acotado;
+XML y soporte temporal RETIRADOS. Sin adaptación nativa persistente nueva.**
+
+| Campo | Registro |
+| --- | --- |
+| Motivo/alcance | Comprobar en vacío la preparación nativa completa de cada brazo por separado, tras los2°; original MetaMove7D3s y retorno nuevo6s a referencia medida. No incluye MetaClamp, visión, fuerza, separación, agarre, carga, otro brazo en Parallel o HOME global |
+| Fuentes reproducibles | `scripts/box_handling/prepare_native_arm_preparation.py`, `run_native_arm_preparation_remote.py`, pruebas y helpers de diagnóstico; guía enlazada abajo. Manifiestos privados `native-right-final/` y `native-left-final/` conservan XML, muestra canónica, parámetros/hashes y builder exactos |
+| Destino | Motion192.168.11.2, contenedor redescubierto `walker-motion.manipulation_robot_app-1`, árbol `manipulation_task_manager/config/diagnostics/`; soporte `/tmp/empty_arm_nativeprep_20261022T093744Z`, ruta compartida host/contenedor verificada |
+| Versiones/hashes | XML derecho `1f1b5137f17f4730ef64fc86a9b9c6ae96e4685bb32423b71292510fda293ece`; izquierdo `0ba73acf597577678b243adbe280844ca2d6b4b51ccfb34b620b308c9d916d9c`. Fuente original `4ba2515b…45e0b`, MetaMove `bfeab1c7a295b58cd96fddd20916fc3f7fe16bd8c8ad1e77720f48aad34ccc69`; contratos SDK/URDF/soporte completos en runner y recibos |
+| Aplicación/activación | Archivos nuevos con destino antes ausente, sin sobrescribir original, editar task_list ni reiniciar servicios; check por defecto y run explícito, un goal por lado. Primero derecho y después izquierdo bajo la petición del usuario; ningún retry automático |
+| Verificación | UUID derecho `d72380ba-6b8e-4ad5-abaf-a15491471afc`; izquierdo `d3c883ea-b790-4906-b930-5805ecff466b`; ambos `SUCCEED/status4/state1101001`. Operador observó ambos normales/sin contacto ni ruido. Capturas: yaw109,324951°/109,308472°, error pico1,263546°/1,227138°, sin fault/paro activo/errores de validación en muestras32Hz. Postflight final all_pass=true;42 pruebas locales PASS7,687s |
+| Restauración | Cleanup rc0 retira ambos XML nuevos, diagnostics creado aquí y vacío, siete archivos de soporte y directorio compartido.13 originales nativos/SDK/SPS conservan hashes; no configuración/firmware nuevo, reinicio o HOME para limpiar. Archivos privados y manifiestos conservados |
+| Backup/evidencia | `../Humanoide-vla-evidence/20261022T093744Z_EMPTY_ARM_CONTROL_DIAGNOSTIC/`: checks/runs, `native-tests-summary.json`, trazas/análisis, `final-postflight-checks.json`, `native-all-cleanup-receipt.json`, `original-contract-after-cleanup.json` y `before-native-preparation-documentation/` con cuatro documentos previos |
+| Reanudación/límites | Rutas históricas retiradas: se requiere otro staging, referencia actual y autorización aplicable para cualquier check/run nuevo. No demuestra causa resuelta, salud bajo carga ni seguridad de agarre. MetaClamp completo en vacío queda pendiente de validar contrato6D y efectos de CLAMP_SIM descritos arriba; no se activa ese modo ni se fabrica éxito SPS |
+
+[Receta versionada de construcción, staging, check/run y limpieza](box_handling/EMPTY_ARM_DIAGNOSTIC_20261022.md#preparación-nativa-completa-de-un-brazo).
+El retorno6s pertenece al recorrido normal y no es recuperación garantizada
+si se interrumpe la ida. Telemetría pasiva; no se ensayó E-stop ni distancia
+de parada. Las comprobaciones de límites medios/extremos no certifican el
+interpolador o colisión. Restaurar archivos no recupera una postura física.
+
+## BOX-EMPTY-ARM-CONTROL-DIAG-20261022
+
+**22-10-2026, Europe/Madrid — PROBADOS dos recorridos pequeños en vacío;
+staging temporal RETIRADO. Preparación nativa completa cerrada por ficha superior.**
+
+| Campo | Registro |
+| --- | --- |
+| Motivo/alcance | Diagnosticar derecho y después izquierdo sin caja, antes de decidir otra prueba. Preparación escalada a máximo2° por eje; no equivale a postura completa, separación, fuerza, agarre o validación bajo carga |
+| Fuentes PC | `scripts/box_handling/prepare_empty_arm_diagnostic.py`, `run_empty_arm_diagnostic_remote.py`, `collect_empty_arm_trace_readonly.py`, `analyze_empty_arm_trace.py` y pruebas. SHA256 exactos en `basic-test-documentation-source-hashes.json` de la evidencia |
+| Destino/activación | Motion192.168.11.2, contenedor redescubierto `walker-motion.manipulation_robot_app-1`; nuevos `/tmp/empty_arm_diag_20261022T093744Z_right.motion` y `_left.motion`, cargados sólo para sus ensayos y retirados después. Sin instalar tareas/firmware, cambiar SDK/parámetros, servicios, fuerza o protecciones |
+| Hash candidatos | Derecho `41c914b2ee5365a15b20a4376c07c2f59a79954336acd0c997b02c0c22fcb2b3`; izquierdo `329ac9e6a9ae431daca6516ac21e93e66a4148c4463e0dd9a1ef25d588589f28`; reviews preservan entradas canónicas por nombre y URDF/hash |
+| Dependencias | Player nativo `8744a30e…ddf0d`, orden SDK `7f9d7975…1f39c`, URDF `c01acb40…1760`; hashes completos y rutas en el runner y guía.20D/5grupos,7ejes elegidos y13referencias constantes; ruedas/dedos excluidos |
+| Receta/controles | Builder local, staging nuevo/hash, check por defecto, `--run` explícito por lado.22s nominales/500Hz:2+8+2+8+2s; una reproducción sin `--loop`, sin HOME/retry. Preflight repetido, SDK/control ociosos y salud/reposo/HOME/paros/cargador comprobados. Telemetría pasiva, sin guard activo |
+| Verificación local |23 pruebas de builder/runner correctas; URDF cubre18ejes y conserva cabeza fija sin límites inventados. Captura/análisis versionados, datos/limitaciones separados |
+| Resultado técnico | Derecho09:51:57UTC,23,111726s; izquierdo09:54:55UTC,23,109012s. Ambos rc0 y texto SDK de finalización correcta. Picos muestreados de seguimiento0,065010°/0,070507°; sin fault/paro activo en capturas. Postflights correctos en reposo, máximo absoluto20D0,002972088/0,004410195rad |
+| Límites de evidencia | Operador no observó visualmente el derecho; no atribuir suavidad/contacto libre por telemetría. No prueba mecánica global, preparación completa, carga o causa del fallo. Primer check bloqueado por cargador: recibo `blocked-charger-check-receipt.json`; raw inicial sobrescrito por el posterior, declarado explícitamente |
+| Backup/evidencia | `../Humanoide-vla-evidence/20261022T093744Z_EMPTY_ARM_CONTROL_DIAGNOSTIC/`: requests, contratos, reviews, checks/runs, `basic-tests-summary.json`, trazas/análisis, postflights, recibos de staging/cleanup y fuentes/hashes. `before-basic-results-documentation/` respalda los cuatro documentos previos |
+| Cierre/reversión | Ambos archivos temporales retirados con rc0; candidatos privados conservados. No se envió HOME para recuperar postura. No hay SDK/configuración nueva que reaplicar; retirar selectivamente herramientas PC sólo con consumidores detenidos y preservando evidencias. Restaurar documentos no mueve ni recupera el robot |
+
+El último agarre524935 fue detenido preventivamente por el operador ante posible
+choque izquierdo; reporta sin contacto y caja apenas movida. El diario registra
+cancelación propia ack0/status5, sin parada física demostrada por software.
+No trasladar a ese intento contactos reportados en otras ejecuciones.
+La solicitud posterior de preparación nativa completa7D, ida MetaMove3s y
+retorno6s por lado, se completó por la ficha superior. No deriva un permiso
+automático del éxito2° ni valida el agarre; MetaClamp completo sigue pendiente.
+[Receta completa y estado](box_handling/EMPTY_ARM_DIAGNOSTIC_20261022.md).
+
 ## BOX-01-ALIGN-HEALTH-RETURN-20261022
 
 **22-10-2026, Europe/Madrid — CORREGIDO en PC; nueva carga y ensayo físico

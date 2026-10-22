@@ -1,5 +1,40 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**22-10-2026 — BOX-NATIVE-ARM-PREPARATION-DIAG-20261022: preparación articular por lado comprobada.**
+Original MetaMove7D3s y retorno medido6s, primero derecho y después izquierdo,
+ambos SUCCEED/status4/1101001. El operador confirma observación normal sin ruido
+ni contacto en ambos. No se ejecutó MetaClamp, separación, fuerza, agarre o
+HOME; este recorrido por lado no valida la fase bimanual ni el fallo con caja.
+Postflight final correcto, sin fault/paro activo en las muestras. Archivos
+XML aditivos/soporte temporal retirados con rc0 y13 originales intactos.
+No reutilizar rutas o checks históricos después de su limpieza; otra prueba
+necesita staging nuevo, postura/estado físicos y autorización actuales.
+La causa y el contrato para probar MetaClamp completo en vacío siguen pendientes;
+no falsear SPS ni interpretar este éxito como permiso de repetir el agarre.
+[Receta, límites y recibos](../box_handling/EMPTY_ARM_DIAGNOSTIC_20261022.md#preparación-nativa-completa-de-un-brazo).
+Evidencia/backups: `../Humanoide-vla-evidence/20261022T093744Z_EMPTY_ARM_CONTROL_DIAGNOSTIC/`,
+`native-tests-summary.json`, cleanup/contrato final y `before-native-preparation-documentation/`.
+
+**22-10-2026 — dos pruebas pequeñas de brazos en vacío, sin diagnóstico causal cerrado.**
+BOX-EMPTY-ARM-CONTROL-DIAG-20261022: una ejecución por lado de vector de
+preparación escalado a2°, con retorno y player SDK correcto; capturas/postflights
+en reposo sin fault/paro activo. Archivos temporales retirados; sin HOME, reset,
+rearme o cambio de protecciones. No se acredita inspección visual del derecho:
+el operador indicó que no estuvo pendiente. No valida carga, preparación
+completa, trayectoria de agarre o recuperación universal.
+
+Sobre el último agarre524935, el operador aclara paro preventivo por prever un
+choque del izquierdo, sin contacto y caja apenas desplazada según su relato.
+Es distinto de los contactos reportados en otros ensayos; el terminal cancelado5
+y ack0 no acreditan por sí mismos parada física ni avería. Ante una nueva
+interrupción, clasificar caja sujeta/apoyada/retirada y comprobar postura actual;
+no repetir agarre/HOME automáticamente. La preparación nativa completa7D
+solicitada después se completó por separado y se retiró, según nota superior;
+MetaClamp/agarre siguen sin validar.
+[Receta, resultados y límites](../box_handling/EMPTY_ARM_DIAGNOSTIC_20261022.md).
+Evidencia/backups: `../Humanoide-vla-evidence/20261022T093744Z_EMPTY_ARM_CONTROL_DIAGNOSTIC/`,
+`basic-tests-summary.json`, recibos cleanup y `before-basic-results-documentation/`.
+
 **30-09-2026 — BOX-01-TABLE74-PAUSE-01: apagado confirmado por el operador.**
 «Ya apagado y todo asegurado y estable»: caja, brazos y cuerpo asegurados;
 sin verificación física independiente del agente. Última prueba support_only

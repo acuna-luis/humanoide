@@ -1,5 +1,86 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-ALIGN-BASE-UNSTABLE-20261022: segundo ajuste detenido antes del agarre.**
+El diario `20261022T101928Z_OPTIMISTIC_SCENARIO1_772739` registra terminal
+correcto y reposo del segundo ajuste de chasis; después falla
+`pose_references.stable_base`: dos poses en mapa difieren **5,930395 mm en
+90,029824 ms**, por encima de 5 mm. Sus residuales al objetivo son
+10,219183/16,133301 mm frente a 12 mm: la segunda tampoco acredita llegada.
+Hay cuatro adquisiciones válidas de odometría; los dos publicadores de mapa
+son esperados del proveedor y no demuestran conflicto. Los textos auxiliares
+`LOCATION_LOST` junto al terminal de éxito no prueban una pérdida fresca de
+localización. Los errores de lease aparecen después, durante el cierre.
+No se despachó el agarre nativo: hubo visión/cabeza y ajustes de chasis,
+sin separación, retirada, depósito o HOME; checkpoint `unknown` preservado.
+
+La consulta posterior SSH devolvió `Connection refused`; el operador confirma
+«Sí, está reiniciándose». Es estado comunicado, sin arranque final, postura o
+HOME verificados. Este diagnóstico no cambia código, límites de 5/12 mm,
+configuración ni controles, y no reintenta el ciclo. La causa del cambio de
+pose en mapa sigue PENDIENTE. [Detalle y reanudación](box_handling/BOX_AXIS_REPOSITION_20261002.md#22-10-2026-inestabilidad-de-pose-después-del-segundo-ajuste),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#box-align-base-unstable-20261022).
+Evidencia: diario original y
+`../Humanoide-vla-evidence/20261022T093744Z_EMPTY_ARM_CONTROL_DIAGNOSTIC/alignment-failure-772739-readonly/`.
+
+**Hallazgo estático separado:** MetaClamp reconoce `sim_box_position` de tres
+valores y `sim_box_orientation` de cuatro (w,x,y,z), condicionado por
+`CLAMP_SIM` del proceso, no por una activación demostrada por goal. Esa rama
+también cambia la fuente de geometría de colisión de nube real a obstáculos
+YAML en el código inspeccionado. **No se activó**; marcos, routing completo y
+efectos deben revisarse antes de plantear separación completa en vacío.
+No implica ausencia de todas las protecciones. Fuente y hashes:
+`native-clamp-simulation-contract.json` en la evidencia anterior.
+
+**22-10-2026 — BOX-NATIVE-ARM-PREPARATION-DIAG-20261022: preparación nativa por lado completada.**
+Una tarea aditiva derecha y otra izquierda copian únicamente el MetaMove7D de
+preparación original3s y añaden retorno6s a referencia medida. Ambos goals
+terminan `SUCCEED/status4/state1101001`; el operador confirma haber observado
+ambos normales, sin contacto ni ruidos. La muestra32Hz da recorridos yaw
+109,324951°/109,308472° y picos de error1,263546°/1,227138°; sin fault, paro
+activo o error de validación observado. Postflight final `all_pass=true`.
+No hubo MetaClamp, visión, fuerza, separación, agarre, carga, HOME o retry.
+
+Las dos tareas se instalaron/cargaron/probaron y después se retiraron junto con
+el soporte compartido temporal; cleanup rc0,13 archivos originales nativos,
+SDK/SPS verificados intactos.42 pruebas locales PASS. Las rutas históricas ya
+no existen: otro check exige staging nuevo y condiciones actuales, sin reutilizar
+órdenes del chat. Es éxito acotado de preparación por separado, no resolución
+del problema ni validación del Parallel bimanual o del agarre. MetaClamp completo
+en vacío sigue PENDIENTE de validar el contrato6D y los efectos de `CLAMP_SIM`
+documentados arriba, sin falsear SPS ni activar la simulación.
+El último intento524935 sí había completado un ajuste de chasis solicitado de
+21,2mm, llegada≈10,389mm y selección SPS X≈0,763m; eso no acredita su agarre.
+XML/YAML temporizan separación derecha/entrada izquierda, sin condición
+explícita de hueco medido en esos archivos; no se generaliza esa lectura a C++.
+[Receta, hashes, resultados y reversión](box_handling/EMPTY_ARM_DIAGNOSTIC_20261022.md#preparación-nativa-completa-de-un-brazo),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#box-native-arm-preparation-diag-20261022).
+Evidencia `../Humanoide-vla-evidence/20261022T093744Z_EMPTY_ARM_CONTROL_DIAGNOSTIC/`,
+`native-tests-summary.json`, postflight/cleanup/contrato final y backups.
+
+**22-10-2026 — BOX-EMPTY-ARM-CONTROL-DIAG-20261022: dos ensayos pequeños en vacío.**
+Tras bloqueo inicial por cargador, desconexión física comunicada y checks nuevos
+correctos, una reproducción SDK derecha y otra izquierda completan rc0/texto
+`is_finished=true`,23,112/23,109s, sin loop, retry ni HOME. Cada archivo escala
+la preparación a un máximo2° por eje del brazo elegido; otros13ejes permanecen
+como referencias mandadas, no aislados. Las capturas/postflights no muestran
+fault, paro activo ni pérdida de reposo final; errores máximos de seguimiento
+muestreados0,065010°/0,070507°. Archivos temporales retirados, recibos rc0.
+No se acredita observación visual de suavidad/contacto: el operador indicó que
+no estuvo pendiente del derecho. No valida preparación completa, fuerza/carga,
+agarre o salud mecánica general, ni resuelve el antecedente izquierdo.
+
+Sobre el último agarre524935, el usuario aclara paro preventivo al prever choque
+izquierdo, **sin contacto y caja apenas movida según su relato**; no confundirlo
+con contactos de otras ejecuciones. El diario conserva cancelación ack0/status5,
+no prueba de parada física. Después pide movimientos más representativos:
+preparación nativa completa7D por un brazo, MetaMove3s y retorno medido6s.
+Ese ensayo posterior ya se completó y retiró como se documenta arriba;
+sin visión, fuerza o agarre. La afirmación previa de pendiente queda superada.
+[Receta, datos y limitaciones](box_handling/EMPTY_ARM_DIAGNOSTIC_20261022.md),
+[ficha global](SYSTEM_CUSTOMIZATIONS.md#box-empty-arm-control-diag-20261022).
+Evidencia `../Humanoide-vla-evidence/20261022T093744Z_EMPTY_ARM_CONTROL_DIAGNOSTIC/`;
+fuentes/hashes y backups actuales en `before-basic-results-documentation/`.
+
 **22-10-2026 — BOX-01-ALIGN-HEALTH-RETURN-20261022: retorno de salud corregido.**
 El operador probó `e04a7fa` con mesa 74, cinco ajustes y pausa tras recogida.
 Llegó a get1 (7,1 mm / 0,26°) y activó visión; la fase de recogida falló con

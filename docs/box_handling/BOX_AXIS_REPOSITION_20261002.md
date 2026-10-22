@@ -1,5 +1,65 @@
 # Corrección visual del chasis antes de recoger
 
+## 22-10-2026: inestabilidad de pose después del segundo ajuste
+
+**BOX-ALIGN-BASE-UNSTABLE-20261022 — 22-10-2026, Europe/Madrid.
+VERIFICADO en el diario; causa y estado físico actual PENDIENTES.**
+El ensayo `20261022T101928Z_OPTIMISTIC_SCENARIO1_772739` llega al segundo
+ajuste de chasis. Su acción termina con status4 y el guard registra reposo
+(`settled=true`, sin fallo); esto no sustituye la validación posterior de
+llegada. La pareja nueva de poses en mapa cambia **5,9303950105 mm en
+90,029824 ms** y dispara `pose_references.stable_base` /
+`BOX_ALIGNMENT_BASE_UNSTABLE`, cuyo máximo es 5 mm. Los residuales al objetivo
+de ambas poses son **10,219183/16,133301 mm**: la segunda excede también la
+tolerancia de llegada de 12 mm. El primer rechazo efectivo es estabilidad,
+no agotamiento de reintentos ni un error del brazo.
+
+El diario conserva cuatro `base_result` válidos de odometría. Los dos
+publicadores de mapa observados corresponden al funcionamiento esperado del
+proveedor; su número no demuestra conflicto. `LOCATION_LOST` /
+`VSLAM_LOCATION_LOST` aparecen como textos auxiliares junto a un terminal
+`navigation_start SUCCEEDED`: sin estado fresco adicional no permiten
+concluir que la localización se perdió. Los mensajes de lease son posteriores
+al rechazo y pertenecen al cierre; no se amplían leases o tolerancias.
+
+No se despachó `grasp` nativo. Antes del rechazo sólo se ejecutaron visión,
+cabeza y navegación; no hubo separación de caja, bodyback, retirada, depósito
+o HOME. Se conserva el checkpoint fallido con `box_state=unknown`. Este
+análisis sólo lee evidencias y no introduce cambios de software, objetivos o
+parámetros. No se vuelve a lanzar el ciclo desde ese estado.
+
+La consulta posterior por SSH devolvió código255 / `Connection refused`.
+El operador confirma «Sí, está reiniciándose»; no se ha comprobado el final
+del arranque, HOME, paros ni la situación actual de la caja. La reanudación
+requiere redescubrir servicios y estados, comprobar las condiciones físicas
+actuales y estudiar la estabilidad mapa/odom conservando los límites de
+5 mm y 12 mm. No se prescribe HOME ni repetición automática.
+
+Evidencia privada: diario original
+`../Humanoide-vla-evidence/20261022T101928Z_OPTIMISTIC_SCENARIO1_772739/`,
+`events.jsonl` (terminal/reposo1444–1448, poses1449–1451, rechazo1452–1453,
+cierre1454–1461); análisis y backup documental en
+`../Humanoide-vla-evidence/20261022T093744Z_EMPTY_ARM_CONTROL_DIAGNOSTIC/alignment-failure-772739-readonly/`.
+
+### Separación completa en vacío: hallazgo estático, sin activar
+
+La revisión local de MetaClamp identifica los campos nativos
+`sim_box_position` (3 valores) y `sim_box_orientation` (4, orden w,x,y,z).
+Se consumen bajo `CLAMP_SIM`, leído del entorno por el constructor y con
+alcance de proceso; no se ha demostrado una activación por goal, y cambiar
+el entorno del cliente no cambia el servidor existente. Además, en la rama
+inspeccionada cambia la geometría de colisión: nube real con el flag falso,
+lectura de `obstacles` YAML con el flag verdadero. No equivale a desactivar
+todas las protecciones, pero impide afirmar que sólo sustituye la pose.
+
+**No activado, no instalado ni probado físicamente.** Falta confirmar marcos
+Base/Body, routing de `separate_box`, contrato6D y efectos completos. Se
+conservan SPS, fuerzas, límites y entorno del servidor. La preparación nativa
+por separado completada anteriormente no valida esta separación.
+`native-clamp-simulation-contract.json` conserva fuentes, hashes y referencias
+de la revisión estática; el ELF inspeccionado tiene SHA256
+`d6bc61a493f7d790150fdbd673108121f46589fef56620de4a9023dcc2ba520a`.
+
 ## Corrección del retorno de salud tras la primera prueba real
 
 **BOX-01-ALIGN-HEALTH-RETURN-20261022 — 22-10-2026, Europe/Madrid.** El operador
