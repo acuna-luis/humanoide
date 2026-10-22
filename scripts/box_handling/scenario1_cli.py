@@ -387,8 +387,8 @@ def parser(policy='ask', execution_profile='standard_v1'):
     profile_selection = p.add_mutually_exclusive_group()
     profile_selection.add_argument('--profile', type=Path, default=HERE/'scenario1_current_geometry.json')
     profile_selection.add_argument('--table-height-cm', type=float, choices=(74.,),
-        help='Preparación explícita para mesa de 74 cm; permite sólo get1/grasp/put1. '
-             'El depósito sigue pendiente y no se activa por indicar la altura')
+        help='Mesa de 74 cm: Optimistic integra un ciclo supervisado con comprobaciones '
+             'de apoyo/pines; get1/grasp/put1 conservan sus pausas. Por defecto sólo --check')
     if policy == 'sensors':
         p.add_argument('--sensor-profile', type=Path, default=HERE/'scenario1_sensor_profile.json',
                        help='Referencias FT por postura; --run requiere perfil cualificado')
@@ -486,6 +486,15 @@ def _main(args, stop=None):
                   'put1': 'navigate_put1', 'cycle': 'verify_home'}[args.stop_after]
     profile, table74 = selected_profile(args, stop_after)
     if table74 and stop_after == 'verify_home':
+        if policy == 'assume' and execution_profile == 'optimistic_v1':
+            # Keep the pending historical profile unchanged for the pickup and
+            # proof chain. Only the bounded supervised coordinator may connect
+            # its separately authenticated deposit phases and empty HOME.
+            if __package__:
+                from . import scenario1_table74_cycle
+            else:
+                import scenario1_table74_cycle
+            return scenario1_table74_cycle.run(args, stop)
         if args.plan:
             report_pending_table74_plan(args, profile)
             return 0

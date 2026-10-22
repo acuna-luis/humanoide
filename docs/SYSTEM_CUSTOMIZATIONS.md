@@ -1,5 +1,28 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-TABLE74-SUPERVISED-CYCLE-20261022
+
+**22-10-2026, Europe/Madrid — integración local de las fases probadas;
+ensayo del coordinador completo PENDIENTE.**
+
+| Campo | Registro |
+| --- | --- |
+| Motivo/fuente | El selector74 completo seguía bloqueado por el perfil de preparación después de probar fases separadas. `scenario1_cli.py` delega sólo el full74 Optimistic al nuevo `scenario1_table74_cycle.py`; HOME autenticado en `scenario1_table74_home.py`. No se cambia el perfil ni el código de agarre |
+| Receta | `optimistic_scenario1.sh --table-height-cm 74 --box-alignment-attempts 7 --plan`, después check sin movimiento y `--run` para UN ciclo supervisado. Pausas get1/grasp/put1 y finish-deposit conservadas; no se habilita repetición continua |
+| Secuencia | Recogida/traslado original hasta put1; aproximación nominal Z0,94 desde referencia vendor45 asumida; confirmaciones nuevas de hueco19 cm→precontact14 cm, hueco5 cm→support5 cm. Settle1 cm sólo con hueco uniforme1 cm/sin apoyo. Apoyo parcial bloquea alivio/apertura/HOME |
+| Liberación | Apoyo completo confirmado, holgura actual≥5 cm y pines salen≤4 cm antes del alivio4 cm; confirmación nueva de pines libres y holgura actual≥4 cm/corredores10 cm antes de abrir. No se convierten respuestas en datos de sensor ni se asume apoyo desde SUCCEED |
+| HOME | Sólo después de apertura autenticada, caja liberada/efectores vacíos y confirmación del barrido completo libre. Contexto/archivos/estado se vuelven a comprobar; consume el antecedente antes de UNA `force_home.sh`, exige terminal correcto y dos muestras20D HOME nuevas. Sin navegación, reset o retry |
+| Estado/destino | Fuentes nuevos sólo en PC; check real por SSH de lectura, sin instalación/cambio persistente del robot ni movimiento durante desarrollo. Al ejecutar, cada fase instala su tarea aditiva por el instalador existente y copia/verifica el paquete de rollback fuera del robot ANTES del despacho; no sustituye originales ni bundles de sesiones anteriores |
+| Continuidad | Nuevos checkpoints de recogida y journals por fase, identidad del perfil pendiente preservada; consumo durable antes del despacho y cierre sin avance tras fallo/interrupción. Una referencia histórica no es una nueva medida física |
+| Dependencias | Builders/runners/instalador pinados de aproximación, lowering y release v2; script nativo HOME y gate20D. Se mantienen batería mínima20 %, cargador/paros/actuadores/localización y controles de fuerza |
+| Verificación |197 pruebas table74 y209 compartidas PASS, más nuevo caso del HOME standalone exigiendo `--run` (12 pruebas de ese módulo PASS tras añadirlo):407 casos distintos. Plan real del wrapper offline correcto. Check real: CHECK_OK, HOME=1/velocidad0/máximo0,002301 rad, batería72,7 %/72,5 %, cargador/paros0 y mapa utars_nav_map/FSM_WAITNAVIGATE. Dos consultas de navegación de lectura (`get_map_name`, `check_state`), ningún arm/movement goal. Avisos lease posteriores al cierre de lectores preservados |
+| Alcance de transporte | Ciclo completo de esta revisión sólo por Ethernet; rechaza `--wifi` antes de conectar en lugar de ignorarlo en una fase. El modo parcial anterior conserva su soporte de transporte. `--cycle` también se rechaza: un ciclo completo supervisado por invocación |
+| Backup/evidencia | `../Humanoide-vla-evidence/20261022T135743Z_TABLE74_SUPERVISED_CYCLE_INTEGRATION/`: `before/`, hashes/commit base en `before.json`, table74-regression/common-regression/home-explicit-run-tests, integrated-readonly-check y readonly-validation-summary. Replays locales de journals/paquetes reales anteriores validan autenticadores sin conectar. Ensayo físico de esta entrada PENDIENTE |
+| Reversión | Restaurar selectivamente CLI y retirar coordinador/HOME nuevos sin consumidores; volver al flujo de preparación más runners separados. No cambia estado físico ni revive checkpoints consumidos. Conservar historial y paquetes instalados en las intervenciones anteriores |
+| Alcance de validación | Se enlazan los movimientos ensayados con comprobaciones presenciales. El apoyo anterior incluyó ajuste manual; no se declara validado un ciclo74 autónomo sin observación/confirmación |
+
+[Uso y límites](box_handling/OPTIMISTIC_SCENARIO1.md#ciclo-completo-supervisado-para-mesa-de-74-cm).
+
 ## BOX-TABLE74-FINISH-EXECUTED-20261022
 
 **22-10-2026, Europe/Madrid — alivio4 cm y apertura INSTALADOS/CARGADOS/

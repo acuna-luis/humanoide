@@ -57,12 +57,17 @@ class AlignmentCliTests(unittest.TestCase):
                 self.assertEqual(report['profile']['grasp']['task'], 'local_front_box/separate_right_cruzr')
                 self.assertFalse(path.exists())
 
-    def test_pending_table74_full_plan_also_exposes_policy_without_activating_deposit(self):
-        report = self.plan(['--table-height-cm', '74', '--box-alignment-attempts', '4'])
-        self.assertEqual(report['box_alignment']['policy'], dict(alignment.make_policy(4)))
-        self.assertFalse(report['execution_allowed'])
-        self.assertFalse(report['table_preparation']['deposit_executable'])
-        self.assertEqual(report['profile']['deposit']['compatibility'], 'pending')
+    def test_table74_full_plan_passes_exact_alignment_count_to_supervised_coordinator(self):
+        with patch('scripts.box_handling.scenario1_table74_cycle.run', return_value=0) as coordinator:
+            result = cli.main(['--plan', '--table-height-cm', '74', '--box-alignment-attempts', '4'],
+                              policy='assume', execution_profile='optimistic_v1')
+        self.assertEqual(result, 0)
+        selected = coordinator.call_args.args[0]
+        self.assertTrue(selected.plan)
+        self.assertEqual(selected.box_alignment_attempts, 4)
+        profile = json.loads(cli.TABLE74_PREPARATION_PROFILE.read_text())
+        self.assertEqual(profile['deposit']['compatibility'], 'pending')
+        self.assertEqual(profile['grasp']['task'], 'local_front_box/separate_right_cruzr')
 
     def test_pause_resume_command_keeps_selected_count_including_zero(self):
         checkpoint = contract.new_checkpoint(PROFILE, stop_after='verify_held', policy='assume',

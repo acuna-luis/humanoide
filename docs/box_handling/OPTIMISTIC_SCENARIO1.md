@@ -1,5 +1,87 @@
 # Escenario 1 con supervisión continua
 
+## Ciclo completo supervisado para mesa de 74 cm
+
+**BOX-TABLE74-SUPERVISED-CYCLE-20261022 — integración local; ensayo físico
+de esta entrada completa PENDIENTE.** La selección74 de Optimistic ya no
+solicita el depósito WRC original del perfil de preparación. Enlaza los
+runners de aproximación, descenso, alivio4 cm y apertura por separado, y un
+HOME final autenticado/medido. La recogida original, sus trayectorias de
+brazos, límites y alineación configurable quedan intactos.
+
+Para inspeccionar la secuencia sin conectar ni crear una sesión:
+
+```bash
+./scripts/optimistic_scenario1.sh --table-height-cm 74 \
+  --box-alignment-attempts 7 --plan
+```
+
+El comando que no incluye modo explícito sigue siendo **sólo check**, sin
+movimiento ni instalación de tareas de depósito:
+
+```bash
+./scripts/optimistic_scenario1.sh --table-height-cm 74 \
+  --box-alignment-attempts 7
+```
+
+Para ejecutar **un ciclo** desde HOME, con abrazaderas vacías, montaje de
+recogida y mesa74 preparados, cargador desconectado, paros liberados, ruedas
+en navegación, zona despejada, otros mandos detenidos y persona junto al paro:
+
+```bash
+./scripts/optimistic_scenario1.sh --table-height-cm 74 \
+  --box-alignment-attempts 7 --run
+```
+
+La terminal exige comprobación presencial antes de empezar. Después de
+put1 mantiene la caja sujeta y ejecuta la aproximación nominal que se probó:
+Z de manos0,94 m derivado de la referencia vendor45, sin apertura. Esa
+hipótesis no se convierte en una calibración medida por haber llegado a put1.
+El operador confirma los huecos actuales antes de cada descenso:19 cm
+uniformes para bajar14 y dejar5;5 cm uniformes para el tramo de apoyo5 cm.
+Un residual1 cm uniforme/sin ningún apoyo admite sólo el settle1 cm separado.
+Si hay apoyo parcial, inclinación o una medida diferente, la secuencia se
+detiene y conserva su frontera; no añade descensos o una nivelación improvisada.
+
+Sólo con apoyo completo/estable y holgura actual≥5 cm se permite el alivio4 cm.
+Después se comprueban de nuevo pines libres, holgura actual≥4 cm y corredor
+de10 cm por lado antes de la apertura. La confirmación de caja liberada no
+se obtiene del SUCCEED. Para HOME se confirma además su barrido completo,
+con efectores vacíos y mesa/caja fuera; una sola tarea nativa y dos muestras
+20D deben confirmar HOME. No hay reset, navegación de recuperación ni retry.
+
+Esta entrada no habilita `--cycle`: primero se ensaya un ciclo completo con
+confirmaciones por fase. Esta revisión completa usa Ethernet y rechaza
+`--wifi` antes de conectar; las pausas parciales anteriores no cambian.
+El perfil histórico de preparación mantiene
+`deposit.compatibility=pending` para preservar checkpoints y sus hashes;
+no es el ejecutor del depósito supervisado. Tampoco se reetiqueta la anterior
+prueba con ajuste manual como validación de autonomía.
+`--stop-after get1`, `grasp` o `put1` mantienen el comportamiento anterior;
+`--finish-deposit` sigue permitiendo la liberación separada desde un origen
+auténtico. No copiar referencias consumidas de las pruebas anteriores.
+
+Se puede continuar desde un checkpoint limpio con caja sujeta de ESTA
+selección74 (`verify_held`, retirada o llegada put1), sin repetir el agarre:
+añadir `--resume /ruta/actual/checkpoint.json --box-state held --run` al
+comando completo. No admite saltos de etapa ni recuperación de un estado
+fallido/desconocido. El check de una retoma ya en put1 no exige HOME: consulta
+la instalación de su aproximación y devuelve55 si falta, sin instalar ni
+afirmar salud comprobada; `--run` instalará y hará el check real antes de mover.
+Después de una fase de depósito, `cycle.json` es un resumen **no ejecutable**;
+se conserva el journal de la última frontera para los runners específicos.
+No pasarlo como si fuera un checkpoint de recogida.
+
+Verificación local: **407 casos distintos correctos**, incluido flujo nominal,
+fallos/Ctrl+C sin avance, apoyo parcial, pines/holguras, retoma y backup externo
+antes del movimiento. El comando real de lectura terminó CHECK_OK:20D en
+HOME e inmóviles, batería72,7 %/72,5 %, cargador/paros0 y mapa correcto.
+Se mantuvieron las dos consultas de mapa/estado de lectura del runtime;
+ningún movimiento, instalación o nuevo ensayo físico. Evidencia:
+`../Humanoide-vla-evidence/20261022T135743Z_TABLE74_SUPERVISED_CYCLE_INTEGRATION/`.
+La utilidad HOME independiente exige `--run` además de su confirmaciónTTY;
+el coordinador la llama sólo después de apertura y liberación comprobadas.
+
 **22-10-2026 — BOX-TABLE74-FINISH-EXECUTED-20261022: liberación y HOME completados.**
 Alivio4 cm y apertura10 cm por lado se ejecutaron una vez por fase con check
 real correcto y SUCCEED/status4/1101001. Entre ambas, operador confirma

@@ -57,39 +57,39 @@ class Table74PreparationCliTests(unittest.TestCase):
         self.assertNotIn('table_preparation', report)
         self.assertEqual(report['profile']['deposit']['compatibility'], 'operator_assumed_existing')
 
-    def test_full_plan_reports_unavailable_deposit_without_checkpoint_or_network(self):
+    def test_full_plan_routes_to_supervised_coordinator_without_promoting_pending_profile(self):
         with tempfile.TemporaryDirectory() as directory:
             evidence = Path(directory)/'not-created'
-            report = self.run_plan(['--plan', '--table-height-cm', '74', '--evidence-dir', str(evidence)])
+            with patch('scripts.box_handling.scenario1_table74_cycle.run', return_value=43) as coordinator, \
+                    patch.object(cli, 'Connection', side_effect=AssertionError('Coordinator owns transport')), \
+                    patch.object(contract, 'new_checkpoint', side_effect=AssertionError('No full pending checkpoint')):
+                result = cli.main(['--plan', '--table-height-cm', '74', '--box-alignment-attempts', '7',
+                                   '--evidence-dir', str(evidence)],
+                                  policy='assume', execution_profile='optimistic_v1')
+            self.assertEqual(result, 43)
+            self.assertTrue(coordinator.call_args.args[0].plan)
+            self.assertEqual(coordinator.call_args.args[0].box_alignment_attempts, 7)
             self.assertFalse(evidence.exists())
-        self.assertEqual(report['profile'], TABLE74)
-        self.assertEqual(report['stages'], list(contract.STAGES))
-        self.assertFalse(report['execution_allowed'])
-        self.assertFalse(report['checkpoint_created'])
-        self.assertEqual(report['blocked_at'], 'deposit')
-        intent = report['table_preparation']
-        self.assertEqual(intent['surface_height_cm'], 74.)
-        self.assertFalse(intent['deposit_executable'])
-        self.assertFalse(intent['historical_height_and_goal_reused'])
-        self.assertEqual(intent['profile_sha256'], contract._profile_hash(TABLE74))
+        self.assertEqual(json.loads(cli.TABLE74_PREPARATION_PROFILE.read_text()), TABLE74)
+        self.assertEqual(TABLE74['deposit']['compatibility'], 'pending')
 
-    def test_full_run_check_and_implicit_check_fail_before_transport_or_files(self):
+    def test_full_run_check_and_implicit_check_delegate_explicit_mode_unchanged(self):
         for mode in (['--run'], ['--check'], [], ['--cycle']):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
                 evidence = Path(directory)/'not-created'
-                with patch.object(cli, 'Connection', side_effect=AssertionError('No network')), \
-                        patch.object(cli.subprocess, 'run', side_effect=AssertionError('No commands')), \
-                        patch.object(cli.subprocess, 'Popen', side_effect=AssertionError('No processes')), \
-                        self.assertRaises(cli.Table74PreparationPending):
-                    cli.main([*mode, '--table-height-cm', '74', '--evidence-dir', str(evidence)],
-                             policy='assume', execution_profile='optimistic_v1')
+                with patch('scripts.box_handling.scenario1_table74_cycle.run', return_value=0) as coordinator, \
+                        patch.object(cli, 'Connection', side_effect=AssertionError('No direct transport')):
+                    result = cli.main([*mode, '--table-height-cm', '74', '--evidence-dir', str(evidence)],
+                                      policy='assume', execution_profile='optimistic_v1')
+                self.assertEqual(result, 0)
+                selected = coordinator.call_args.args[0]
+                self.assertEqual(cli.is_moving(selected), '--run' in mode or '--cycle' in mode)
                 self.assertFalse(evidence.exists())
 
-    def test_blocked_run_message_does_not_claim_an_interrupted_robot_motion(self):
+    def test_other_confirmation_policies_do_not_silently_acquire_supervised_route(self):
         with patch.object(cli, 'Connection', side_effect=AssertionError('No network')), \
                 patch('sys.stderr', io.StringIO()) as output:
-            result = cli.entrypoint(['--run', '--table-height-cm', '74'],
-                                    policy='assume', execution_profile='optimistic_v1')
+            result = cli.entrypoint(['--run', '--table-height-cm', '74'], policy='ask')
         self.assertEqual(result, 78)
         self.assertIn('MESA74_PREPARACION_PENDIENTE', output.getvalue())
         self.assertIn('antes de conectar', output.getvalue())
@@ -155,16 +155,16 @@ class Table74PreparationCliTests(unittest.TestCase):
             self.assertEqual(source.read_text(), original)
             self.assertFalse(source.with_name('checkpoint.json.consumed.json').exists())
 
-    def test_full_resume_plan_is_unavailable_and_does_not_consume_put1_checkpoint(self):
+    def test_full_resume_routes_genuine_source_without_modifying_or_consuming_it(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory)/'checkpoint.json'
             raw = json.dumps(checkpoint(TABLE74, at_put1=True))
             source.write_text(raw)
-            report = self.run_plan(['--plan', '--table-height-cm', '74', '--resume', str(source)])
-            self.assertEqual(report['stages'][0], 'deposit')
-            self.assertFalse(report['execution_allowed'])
-            self.assertFalse(report['resume']['executable'])
-            self.assertTrue(report['resume']['source_profile_matches'])
+            with patch('scripts.box_handling.scenario1_table74_cycle.run', return_value=0) as coordinator:
+                result = cli.main(['--plan', '--table-height-cm', '74', '--resume', str(source)],
+                                  policy='assume', execution_profile='optimistic_v1')
+            self.assertEqual(result, 0)
+            self.assertEqual(coordinator.call_args.args[0].resume, source)
             self.assertEqual(source.read_text(), raw)
             self.assertFalse(source.with_name('checkpoint.json.consumed.json').exists())
 

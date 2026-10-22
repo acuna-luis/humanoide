@@ -1,5 +1,27 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-TABLE74-SUPERVISED-CYCLE-20261022: integración del ciclo74 en Optimistic.**
+El selector completo `--table-height-cm 74` de Optimistic enlaza recogida/
+traslado existentes, aproximación74, descenso por fases, alivio4 cm,
+apertura10 cm por lado y HOME medido. Conserva intactos el agarre, sus límites
+y el número de ajustes configurado con `--box-alignment-attempts`.
+Sin `--run` sólo comprueba; `--plan` es offline. Las pausas get1/grasp/put1
+y el modo `--finish-deposit` siguen disponibles.
+
+La entrada completa es **supervisada**: confirma huecos, apoyo real, pines
+libres/holguras actuales y barrido de HOME. Un apoyo parcial o una geometría
+distinta detienen el avance, sin asumir éxito físico, retry o HOME automático.
+El perfil base pendiente se conserva como identidad histórica, no como un
+depósito WRC original habilitado. La ejecución asistida anterior no se
+reetiqueta como calibración autónoma; ensayo de la nueva integración PENDIENTE.
+Check real de la nueva entrada: **CHECK_OK**, mapa utars_nav_map/FSM_WAITNAVIGATE,
+HOME20D inmóvil y batería72,7 %/72,5 %, cargador/paros0. Sólo consultas de mapa/
+estado, sin armar ni enviar movimiento o instalar tareas.407 pruebas locales
+correctas; el ciclo físico integrado sigue pendiente. Se usa Ethernet;
+`--wifi` y la repetición `--cycle` se rechazan para esta entrada completa.
+[Comandos y límites](box_handling/OPTIMISTIC_SCENARIO1.md#ciclo-completo-supervisado-para-mesa-de-74-cm),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#box-table74-supervised-cycle-20261022).
+
 **22-10-2026 — BOX-TABLE74-FINISH-EXECUTED-20261022: liberación completada y HOME verificado.**
 Tras recargar, lectura inicial23,0 %/23,6 %, cargador0 y ambos paros0.
 El operador confirma apoyo completo, nueva holgura≥5 cm y condiciones actuales.

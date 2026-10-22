@@ -1,5 +1,15 @@
 # Depósito WRC y estantería a 100 cm
 
+**22-10-2026 — BOX-TABLE74-SUPERVISED-CYCLE-20261022: entrada completa integrada en Optimistic.**
+El selector74 completo enlaza ahora las fases separadas de esta prueba,
+con recogida original intacta y confirmaciones actuales de hueco, apoyo,
+pines, holguras y recorrido HOME. Check por omisión, plan offline y run
+explícito para un ciclo. No ejecuta el depósito WRC original ni declara una
+calibración autónoma a partir del apoyo ajustado manualmente. Desarrollo
+local, sin nuevas órdenes al robot; ensayo integrado PENDIENTE.
+[Comandos y comportamiento](OPTIMISTIC_SCENARIO1.md#ciclo-completo-supervisado-para-mesa-de-74-cm),
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#box-table74-supervised-cycle-20261022).
+
 ## Cierre real del depósito y HOME — 22-10-2026
 
 **BOX-TABLE74-FINISH-EXECUTED-20261022 — dos fases v2 completadas;

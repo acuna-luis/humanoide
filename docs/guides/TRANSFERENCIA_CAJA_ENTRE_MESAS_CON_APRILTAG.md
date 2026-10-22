@@ -1,5 +1,14 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**22-10-2026 — BOX-TABLE74-SUPERVISED-CYCLE-20261022: ciclo74 integrado en Optimistic.**
+Después de la liberación y HOME comprobados en fases separadas, la entrada
+completa74 enlaza ahora recogida original, traslado, depósito por fases y
+HOME medido con confirmaciones actuales de apoyo/pines/holguras. Check real
+de lectura correcto y407 casos locales PASS; ensayo del coordinador físico
+completo PENDIENTE. Un ciclo por Ethernet, plan offline/check por defecto,
+`--run` explícito; el apoyo manual anterior no se convierte en autonomía.
+[Comandos y límites](../box_handling/OPTIMISTIC_SCENARIO1.md#ciclo-completo-supervisado-para-mesa-de-74-cm).
+
 **22-10-2026 — BOX-TABLE74-RELEASE4-20261022: alivio de pines4 cm, sólo PC.**
 La continuación explícita de Optimistic usa referencias v2: baja4 cm tras
 confirmar apoyo completo y≥5 cm libres bajo ambas abrazaderas. Apertura
