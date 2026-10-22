@@ -1,5 +1,29 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-TABLE74-FINISH-20261022
+
+**22-10-2026, Europe/Madrid — alivio INSTALADO, no ejecutado;
+continuación bloqueada por batería.**
+
+| Campo | Registro |
+| --- | --- |
+| Motivo/estado declarado | Después de ajustar manualmente la caja, el operador confirma apoyo plano, estable y sin peso sostenido por brazos; ≥4 cm bajo cada útil, salida de pines ≤3 cm y 10 cm laterales por lado. Declaración actual, no medición de sensores ni causa probada de la detección histórica |
+| Fuente reproducible | `scripts/optimistic_scenario1.sh --finish-deposit`, supervisor `scripts/box_handling/scenario1_table74_finish.py`, builder/runner `scenario1_table74_current_release*` e instalador compartido. Referencia concreta en `config/box_handling/scenario1_table74/current_trial_20261022/pin-relief-reference.json`; bundle en `pin-relief-bundle/` |
+| Destino exacto | Motion `192.168.11.2`, contenedor `walker-motion.manipulation_robot_app-1`, ID `9cd509ff68971dcc88405cda975d761add90bee661b686d8595d9b49edf0bd03`, imagen `sha256:9f7acf4bdefde90d330f13cdc249d169865b1777bbcf31fca3642827f5be7e75`; dos destinos bajo raíces TASK_ROOT/META_ROOT ya documentadas, namespace `local_table74_release/ID_release.xml|yaml` |
+| Versión/hashes instalados | Bundle `9621edaa01540251414915ada2781d194e7fffa277a028163c244b3348d30f04`; YAML `61862483755c48f07c79968bfef8d62f77a2b0f6546178a5609e101938a40716`, XML `a83347349e86a3d8f9bdffe260b38845078f524b84acd6dddf615608f9b078b3`; builder v1 |
+| Dependencias | XML WRC `579b8629…fa0f78`, open YAML `c41bd1d8…e37b`, libmeta_clamp `d6bc61a4…20a`; hashes completos en manifest/recibo. Originales intactos; conserva fuerzas, watchdogs y límites |
+| Aplicación/activación | Instalador `--check` y `--install`: dos archivos nuevos, cero reinicios/órdenes de movimiento; no se cargó una tarea de liberación. Alivio nominal: manos Z−3 cm, XY0/rotación identidad, torso pide0, waypoint2 s. Apertura sería otra tarea independiente, no instalada |
+| Verificación actual | Runner `--check` falla con `LIVE_HEALTH_BATTERY`: packs17,6 %/18,6 %, mínimo20 %. Lecturas separadas: cargador0, ambos paros0. Sin goal, consumo de origen, apertura o HOME. Carga posterior PENDIENTE de aviso del operador |
+| Supervisor PC | Plan offline sin archivos/red; check sólo archivos y devuelve55 si faltan, siempre `health_ready=false`. Run instala aditivamente, hace check de salud y luego pide `LIBERAR74` en TTY para UNA fase. No permite combinar ciclo/resume ni encadena apertura. Hechos físicos explícitos; no los hereda del SUCCEED |
+| Trazabilidad/pruebas | `--operator-note` conserva la nota literal ≤1500 caracteres; fecha en recibo separada, sin acreditar estado físico. 147 pruebas base y15 del supervisor PASS; sintaxis Bash/diff correctos. Ensayo físico de liberación PENDIENTE |
+| Backup/evidencia | `../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/`: `before-finish-release/`, `current-support-operator-confirmation.json`, `pin-relief-check/`, `finish-battery-readonly.json`, `pin-relief-robot-backup/`. Backup remoto `/var/tmp/cruzr-table74-trial/9621edaa01540251414915ada2781d194e7fffa277a028163c244b3348d30f04/`; copia externa de bundle, manifest, originales y recibo |
+| Reversión | `scenario1_table74_trial_install.py --bundle …/pin-relief-bundle/bundle.json --rollback`, sólo archivos propios/hash/identidad coincidentes y sin consumidores. No borra journals/consumed ni revierte postura; no retirar tareas antecesoras mientras se use su cadena |
+| Reanudación/deuda | `settle-run/trial.json` sigue sin consumir. Esperar recarga, cargador desconectado y confirmación física actual; repetir check, nunca bajar umbral. Reboot/mapa/postura cambiados requieren nueva evaluación. Apoyo declarado no equivale a liberación; ensayo de alivio/apertura y depósito74 ordinario PENDIENTES |
+
+[Receta y alcance](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#finalización-por-fases-y-bloqueo-de-batería--22-10-2026).
+Las secciones siguientes conservan el historial; su apoyo parcial fue
+sustituido por el nuevo estado comunicado, no por una prueba causal.
+
 **22-10-2026 — BOX-TABLE74-PARTIAL-SUPPORT-20261022: detener antes de liberar.**
 El operador aclara apoyo sólo en la esquina derecha alejada, con unos1cm de
 hueco en las demás zonas. El log nativo demuestra `DectionForceCollision`:

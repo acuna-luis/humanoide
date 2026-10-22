@@ -1,5 +1,16 @@
 # Cruzr S2 — recuperación tras contacto, paro y fault durante teleoperación
 
+**22-10-2026 — BOX-TABLE74-FINISH-20261022: estado comunicado actualizado.**
+Después de ajustar manualmente la caja, el operador confirma apoyo plano,
+completo y estable, sin peso sostenido por brazos. No demuestra la causa de
+la detección histórica, que se conserva debajo. El alivio3 cm se instaló,
+pero el check bloqueó por batería17,6 %/18,6 % frente20 %: sin movimiento,
+apertura, HOME ni consumo del journal de settle. Recarga pendiente de aviso;
+revalidar contexto y condiciones antes de continuar por fases.
+[Receta y punto de reanudación](../box_handling/DEPOSITO_WRC_ALTURA_100CM.md#finalización-por-fases-y-bloqueo-de-batería--22-10-2026).
+
+## Historial de contacto y recuperación
+
 **22-10-2026 — BOX-TABLE74-PARTIAL-SUPPORT-20261022: detener antes de liberar.**
 El operador aclara apoyo sólo en la esquina derecha alejada, con unos1cm de
 hueco en las demás zonas. El log nativo demuestra `DectionForceCollision`:

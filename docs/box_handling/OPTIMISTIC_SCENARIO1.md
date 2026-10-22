@@ -1,5 +1,23 @@
 # Escenario 1 con supervisión continua
 
+## Continuar una liberación de mesa74 ya apoyada — 22-10-2026
+
+**BOX-TABLE74-FINISH-20261022.** Nueva entrada exclusiva
+`--finish-deposit --table-height-cm 74 --phase pin-relief|open --after DIR`.
+Una fase por invocación: alivio3 cm y después apertura lateral10 cm por lado,
+con nueva declaración de pines libres. Plan offline; run instala aditivamente,
+comprueba salud y exige `LIBERAR74`. No cambia la recogida ni activa el
+depósito ordinario74 pendiente, navegación o HOME.
+
+Estado actual: tras ajuste manual, operador declara apoyo plano y completo.
+Alivio concreto instalado pero **check bloqueado por batería17,6 %/18,6 %**
+frente al mínimo20 %; no se movió ni consumió el journal de settle.
+Operador recargará y avisará. Revalidar postura/condiciones/contexto después,
+sin reutilizar los4 cm de holgura tras un descenso ni derivar pines libres
+del SUCCEED. [Comandos completos, evidencia y límites](DEPOSITO_WRC_ALTURA_100CM.md#finalización-por-fases-y-bloqueo-de-batería--22-10-2026).
+
+## Historial anterior de depósito74
+
 **22-10-2026 — BOX-TABLE74-PARTIAL-SUPPORT-20261022: detener antes de liberar.**
 El operador aclara apoyo sólo en la esquina derecha alejada, con unos1cm de
 hueco en las demás zonas. El log nativo demuestra `DectionForceCollision`:

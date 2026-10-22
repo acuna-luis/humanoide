@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "stage": "pin_relief",
+  "surface_height_m": 0.74,
+  "predecessor_bundle_id": "ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed",
+  "predecessor_goal_id": "9565b30d-4753-4627-8238-aeb7a586de27",
+  "operator_support_confirmed": true,
+  "tool_table_clearance_m": 0.04,
+  "required_pin_exit_m": 0.03,
+  "operator_pins_free": false,
+  "lateral_path_clear": true,
+  "evidence": "2026-10-22T11:44:09.731797+00:00: current operator report after manually adjusting the box: fully flat and stable on the table, arms no longer support its weight; at least 4 cm tool/table clearance on both sides (reported minimum, not exact measurement), pins extract by at most 3 cm down (reported maximum), 10 cm outward clearance per side; robot stationary, charger disconnected, both stops released, other controls stopped, nobody touching box or robot and observer at E-stop. Manual adjustment is not proven to explain the historical native force detection, which remains preserved. Same robot pose and completed settle source; one supervised pin-relief phase only.",
+  "scope": "current_supported_box_only"
+}

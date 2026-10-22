@@ -1,5 +1,121 @@
 # Depósito WRC y estantería a 100 cm
 
+## Finalización por fases y bloqueo de batería — 22-10-2026
+
+**BOX-TABLE74-FINISH-20261022 — estado actual: apoyo completo declarado;
+alivio instalado, no ejecutado.** El operador aclara que ajustó manualmente
+la caja y ahora la confirma **plana, estable, apoyada en la mesa y sin peso
+sostenido por los brazos**. Confirma además ≥4 cm bajo ambos útiles, salida
+de los pines bajando como máximo3 cm y corredor lateral de10 cm por lado,
+robot inmóvil, cargador desconectado, ambos paros liberados, otros mandos
+detenidos, nadie tocando caja/robot y persona junto al paro. Es una nueva
+declaración física; no se editan los journals históricos ni se atribuye
+como hecho probado la detección de fuerza al ajuste manual.
+
+Se preparó e instaló sólo el alivio3 cm, bundle
+`9621edaa01540251414915ada2781d194e7fffa277a028163c244b3348d30f04`.
+La instalación añade dos archivos sin sustituir originales ni reiniciar.
+El **check técnico posterior bloqueó antes de armar o enviar un goal**:
+`LIVE_HEALTH_BATTERY`, packs **17,6 % y18,6 %**, umbral conservado **20 %**.
+Lecturas independientes confirmaron cargador0 y ambos paros0.
+No se ejecutó alivio, apertura ni HOME; `settle-run/trial.json` sigue
+sin consumir. El operador confirma que recargará y avisará al terminar.
+No se ha verificado todavía esa carga ni se reutilizan estas condiciones
+físicas como confirmación posterior a ella.
+
+### Entrada del script habitual
+
+`optimistic_scenario1.sh --finish-deposit` selecciona un supervisor exclusivo.
+No admite `--cycle`, `--resume`, `--from-stage`, `--stop-after` ni `--box-state`.
+Sólo mesa74 y **una fase por invocación**, con cadena histórica auténtica:
+support/settle → pin-relief → open. No repite recogida, navegación, descenso
+de apoyo ni HOME, ni habilita el perfil ordinario de depósito74 pendiente.
+El flujo normal del script conserva su entrada anterior.
+
+Las fases son:
+
+1. `pin-relief`: ambas manos piden Z−3 cm, sin desplazamiento lateral ni giro.
+2. `open`: sólo después de confirmar físicamente ambos pines libres; pide
+   izquierda Y+10 cm y derecha Y−10 cm, Z0 y giro identidad.
+
+Cada waypoint es de2 s; la interpolación y el resultado físico dependen del
+control nativo. Un terminal SUCCEED no demuestra desenganche, apoyo o
+ausencia de contacto. La apertura no se encadena automáticamente.
+Se conservan parámetros de fuerza/colisión y límites del open vendor,
+incluido su vector superior de cinco elementos; no se usa su trayectoria
+original que combina descenso, giro y separación.
+
+### Uso y comprobaciones
+
+Plan offline sin crear referencias, instalar ni conectar; las declaraciones
+omitidas aparecen como requisitos pendientes, nunca como `true` inventado:
+
+```bash
+./scripts/optimistic_scenario1.sh --finish-deposit --table-height-cm 74 \
+  --phase pin-relief \
+  --after /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/settle-run \
+  --plan
+```
+
+**Después de recargar**, con contexto/postura todavía válidos y confirmaciones
+físicas renovadas, declarar sólo las holguras actuales reales. `4` es el
+mínimo comunicado en esta intervención, no una medida transferible a otra
+postura; `3` es la salida máxima de pines declarada:
+
+```bash
+./scripts/optimistic_scenario1.sh --finish-deposit --table-height-cm 74 \
+  --phase pin-relief \
+  --after /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/settle-run \
+  --supported --tool-clearance-cm 4 --pin-exit-cm 3 --path-clear \
+  --operator-note 'Caja ajustada manualmente; apoyo completo y holguras vueltos a comprobar tras recargar, sin mover el robot.' \
+  --run
+```
+
+Este `--run` instala su bundle inmutable, ejecuta el check real de salud,
+reposo, contexto, put1 y archivos; sólo después pide `LIBERAR74` en TTY y
+permite una acción. **Con la batería observada actualmente no moverá.**
+La evidencia nueva incluye `physical-run/`; el journal anterior se consume
+antes de armar, nunca durante plan/check. Una interrupción no se reintenta.
+La referencia concreta ya instalada y sus recibos conservan la declaración
+del ajuste manual en `pin-relief-reference.json`; una nueva invocación del
+supervisor crea otra referencia a partir de los hechos explícitos actuales.
+`--operator-note` preserva literalmente la nota del operador, hasta1500
+caracteres; en este caso debe dejar constancia del ajuste manual. La fecha
+de registro se guarda aparte y no acredita por sí sola que el estado siga
+siendo válido. No copiar la frase de nueva comprobación antes de realizarla.
+
+`--check` en este supervisor consulta sólo la instalación: devuelve55
+`INSTALLATION_PENDING` si faltan archivos y nunca afirma `health_ready`.
+No instala ni mueve. El check de salud siempre se repite en `--run` antes
+de pedir el token; para el bundle concreto se puede consultar directamente
+`scenario1_table74_current_release_run.py --after DIR --bundle JSON --check`.
+
+Tras el alivio correcto, detenerse y comprobar apoyo/estabilidad, pines libres
+y holguras **nuevas**. Los4 cm anteriores no se arrastran después de bajar3 cm.
+Sólo si siguen cumpliéndose los requisitos de apertura:
+
+```bash
+./scripts/optimistic_scenario1.sh --finish-deposit --table-height-cm 74 \
+  --phase open --after /ruta/impresa/por/el/alivio/physical-run \
+  --supported --tool-clearance-cm 4 --pin-exit-cm 3 --path-clear --pins-free --run
+```
+
+`--pins-free` es una confirmación física nueva; el script rechaza abrir desde
+el journal de settle o repetir desde una fuente consumida. Después de abrir
+hay que confirmar caja liberada y útiles fuera; no se manda HOME con la mesa
+o la caja aún en su trayectoria. Si hubo reboot, mapa distinto, movimiento
+manual del robot, otro mando o cambio de carga/efector, no forzar el origen.
+
+Evidencia: `../Humanoide-vla-evidence/20261022T110221Z_TABLE74_CURRENT_APPROACH/`:
+`current-support-operator-confirmation.json`, `pin-relief-check/`,
+`finish-battery-readonly.json`, `pin-relief-robot-backup/` y
+`before-finish-release/`. [Ficha de destinos, hashes y rollback](../SYSTEM_CUSTOMIZATIONS.md#box-table74-finish-20261022).
+Verificación local: **147 pruebas** de builders, runners, instalador y
+preparación74, más **15 pruebas** del supervisor, correctas. Bash y diff
+sin errores. Esto no sustituye el ensayo físico de las dos fases pendientes.
+
+## Historial anterior: apoyo parcial y detección nativa
+
 **22-10-2026 — BOX-TABLE74-PARTIAL-SUPPORT-20261022: apoyo parcial; no liberar ni repetir el descenso.**
 Tras el settle de 1 cm, el operador identifica contacto sólo en la esquina
 **derecha alejada del robot**, con unos 1 cm de hueco en las demás zonas.

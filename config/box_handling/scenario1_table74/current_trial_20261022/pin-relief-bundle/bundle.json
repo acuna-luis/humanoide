@@ -1,0 +1,126 @@
+{
+  "task_name": "local_table74_release/9621edaa01540251414915ada2781d194e7fffa277a028163c244b3348d30f04_release",
+  "tasks": {
+    "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/local_table74_release/9621edaa01540251414915ada2781d194e7fffa277a028163c244b3348d30f04_release.yaml": "meta_name: MetaClamp\n#hqp_params\nvar_damping:\n  [99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99]\nright_hand: [1, 1, 1, 0.3, 0.3, 0.3]\nleft_hand: [1, 1, 1, 0.3, 0.3, 0.3]\ntorso: [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]\ncom_constrain: []\n# com: [0, 0, 0]\nleft_hand_manipulability: [0.001]\nright_hand_manipulability: [0.001]\n#task_request\nrequest:\n  duration: 2.0\n  frequency: 500\n  urdf_name: \"cruzr_s2\"\n  biped_quit: true\n  box_size: [0.6, 0.4, 0.28]\n  position_rotation_limit_data:\n    - position_rotation_limit_low: [0.2, -0.1, -0.1, -0.5, -0.5, -0.4]\n      position_rotation_limit_up: [1.0, 0.1, 0.0, 0.5, 0.4]\n\n  component_disable_time:\n    - [0.0, 0.0]\n  task_type: \"clamp_box\"\n  task_stack: task_stack_cruzr_clamp_manipulability.yaml\n  robot_trajectory_data:\n    - body_name: \"left_hand\"\n      data:\n        - timestamp: 2.0\n          position: [0.0, 0.0, -0.03] # x y z\n          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z\n          tranform_mode: \"RELATIVE\"\n    - body_name: \"right_hand\"\n      data:\n        - timestamp: 2.0\n          position: [0.0, 0.0, -0.03] # x y z\n          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z\n          tranform_mode: \"RELATIVE\"\n    - body_name: \"torso\"\n      data:\n        - timestamp: 2.0\n          position: [0.0, 0.0, 0.0] # x y z\n          orientation: [1.0, 0.0, 0.0, 0.0] # w x y z\n          tranform_mode: \"RELATIVE\"\n",
+    "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/local_table74_release/9621edaa01540251414915ada2781d194e7fffa277a028163c244b3348d30f04_release.xml": "<root main_tree_to_execute=\"MainTree\">\n    <BehaviorTree ID=\"MainTree\">\n        <Sequence name=\"root_sequence\">\n            <Action ID=\"MetaClamp\" name=\"local_table74_release/9621edaa01540251414915ada2781d194e7fffa277a028163c244b3348d30f04_release\" />\n        </Sequence>\n    </BehaviorTree>\n</root>"
+  },
+  "dependencies": {
+    "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/wrc_cruzr/put_cruzr_wrc_low.xml": "579b862962e0ee07a423c92517c29b5ecad80b4929961aac2fae6a0240fa0f78",
+    "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/open_arm_cruzr.yaml": "c41bd1d88379c2012ee44639142fb5b55c1d58decd6a75851c8e17763778e37b",
+    "/opt/walker/manipulation_meta_tasks/lib/libmeta_clamp.so": "d6bc61a493f7d790150fdbd673108121f46589fef56620de4a9023dcc2ba520a"
+  },
+  "manifest": {
+    "version": 1,
+    "builder_version": 1,
+    "id": "9621edaa01540251414915ada2781d194e7fffa277a028163c244b3348d30f04",
+    "phase": "current_pin_release",
+    "task_name": "local_table74_release/9621edaa01540251414915ada2781d194e7fffa277a028163c244b3348d30f04_release",
+    "reference_sha256": "39f8a07c0d1ccf7785c753aa8972013c549da6c50aa387cf283035e40fab483a",
+    "content_template_sha256": {
+      "yaml": "61862483755c48f07c79968bfef8d62f77a2b0f6546178a5609e101938a40716",
+      "xml_template": "3f492dec905f2bd6dcffa42f68a921d7a0bd5f39eefcb4a5bcea8661f2fb00b0"
+    },
+    "dependencies": {
+      "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/wrc_cruzr/put_cruzr_wrc_low.xml": "579b862962e0ee07a423c92517c29b5ecad80b4929961aac2fae6a0240fa0f78",
+      "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/open_arm_cruzr.yaml": "c41bd1d88379c2012ee44639142fb5b55c1d58decd6a75851c8e17763778e37b",
+      "/opt/walker/manipulation_meta_tasks/lib/libmeta_clamp.so": "d6bc61a493f7d790150fdbd673108121f46589fef56620de4a9023dcc2ba520a"
+    },
+    "robot_files": {
+      "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/wrc_cruzr/put_cruzr_wrc_low.xml": "579b862962e0ee07a423c92517c29b5ecad80b4929961aac2fae6a0240fa0f78",
+      "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/open_arm_cruzr.yaml": "c41bd1d88379c2012ee44639142fb5b55c1d58decd6a75851c8e17763778e37b",
+      "/opt/walker/manipulation_meta_tasks/lib/libmeta_clamp.so": "d6bc61a493f7d790150fdbd673108121f46589fef56620de4a9023dcc2ba520a",
+      "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/local_table74_release/9621edaa01540251414915ada2781d194e7fffa277a028163c244b3348d30f04_release.yaml": "61862483755c48f07c79968bfef8d62f77a2b0f6546178a5609e101938a40716",
+      "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/local_table74_release/9621edaa01540251414915ada2781d194e7fffa277a028163c244b3348d30f04_release.xml": "a83347349e86a3d8f9bdffe260b38845078f524b84acd6dddf615608f9b078b3"
+    },
+    "physical_validation": "pending",
+    "automatic_execution_authorized": false
+  },
+  "review": {
+    "phase": "current_pin_release",
+    "stage": "pin_relief",
+    "reference": {
+      "version": 1,
+      "stage": "pin_relief",
+      "surface_height_m": 0.74,
+      "predecessor_bundle_id": "ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed",
+      "predecessor_goal_id": "9565b30d-4753-4627-8238-aeb7a586de27",
+      "operator_support_confirmed": true,
+      "tool_table_clearance_m": 0.04,
+      "required_pin_exit_m": 0.03,
+      "operator_pins_free": false,
+      "lateral_path_clear": true,
+      "evidence": "2026-10-22T11:44:09.731797+00:00: current operator report after manually adjusting the box: fully flat and stable on the table, arms no longer support its weight; at least 4 cm tool/table clearance on both sides (reported minimum, not exact measurement), pins extract by at most 3 cm down (reported maximum), 10 cm outward clearance per side; robot stationary, charger disconnected, both stops released, other controls stopped, nobody touching box or robot and observer at E-stop. Manual adjustment is not proven to explain the historical native force detection, which remains preserved. Same robot pose and completed settle source; one supervised pin-relief phase only.",
+      "scope": "current_supported_box_only"
+    },
+    "reference_kind": "operator_confirmed_current_support_clearance_and_pin_state_not_sensor_measurement",
+    "physical_validation": "pending",
+    "kinematic_validation": "pending",
+    "automatic_execution_authorized": false,
+    "installed": false,
+    "integrated_in_optimistic": false,
+    "measured_absolute_calibration_created": false,
+    "physical_support_sensor_verified": false,
+    "pin_disengagement_sensor_verified": false,
+    "release_physically_qualified": false,
+    "nominal_duration_s": 2.0,
+    "hand_mode": "RELATIVE",
+    "relative_quaternion_wxyz": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "left_hand_delta_m": [
+      0.0,
+      0.0,
+      -0.03
+    ],
+    "right_hand_delta_m": [
+      0.0,
+      0.0,
+      -0.03
+    ],
+    "torso_delta_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "source_box_size_unchanged_m": [
+      0.6,
+      0.4,
+      0.28
+    ],
+    "native_controls_preserved": true,
+    "vendor_position_rotation_limit_up_unchanged": [
+      1.0,
+      0.1,
+      0.0,
+      0.5,
+      0.4
+    ],
+    "excluded_phases": [
+      "approach",
+      "support_lowering",
+      "rotation",
+      "navigation",
+      "home",
+      "lateral_open"
+    ],
+    "assumptions_not_verified": [
+      "The operator confirms the same box is fully supported and stable over the table.",
+      "The stated tool/table clearance and required pin exit apply to both actual effectors.",
+      "The box, robot pose and surrounding clearance are unchanged from the authenticated predecessor.",
+      "Relative Z is the required physical pin extraction direction and hand Y opens away from the box."
+    ],
+    "limitations": [
+      "The runner must authenticate the exact predecessor bundle, UUID, terminal result and unchanged source context.",
+      "Pin relief requires the genuine support task; lateral opening requires genuine pin relief and a fresh pins-free confirmation.",
+      "No sensor measurement, certified reachability, swept-volume clearance or pin extraction proof is created.",
+      "Native force/IK may adjust posture; zero torso waypoints are not a physical torso lock.",
+      "All source opening parameters outside the trajectory remain unchanged, including the five-value upper limit vector.",
+      "Exact interpolation, peak velocity and the physical result are not certified by the two-second waypoint.",
+      "SUCCEED does not prove pin disengagement, stable support, release or authorization for HOME.",
+      "A repeated relative task repeats its displacement; no automatic retry or next phase is authorized."
+    ]
+  }
+}

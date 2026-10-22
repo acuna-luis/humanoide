@@ -1,5 +1,27 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-TABLE74-FINISH-20261022: apoyo declarado tras ajuste manual;
+liberación bloqueada por batería.** El operador informa ahora caja plana,
+estable y descargada sobre la mesa, con ≥4 cm bajo ambas abrazaderas,
+salida de pines ≤3 cm y corredor lateral de 10 cm por lado. Este nuevo
+estado comunicado sustituye el apoyo parcial como observación actual; no
+borra la detección nativa anterior ni demuestra que la manipulación la causara.
+
+Se instaló aditivamente el alivio separado de 3 cm, bundle `9621edaa…30f04`,
+sin abrir ni mover. Su **check real falló antes del despacho**:
+packs **17,6 % / 18,6 %**, mínimo conservado **20 %**. `settle-run/trial.json`
+sigue sin consumir; no hay goal de liberación ni HOME. El operador anuncia
+recarga y avisará al terminar. Revalidar condiciones y contexto después;
+un reinicio o cambio de postura puede invalidar esta continuación.
+
+Optimistic incorpora una entrada exclusiva `--finish-deposit` para una fase
+supervisada por invocación: alivio y después apertura, con nueva confirmación
+de pines libres. No activa el perfil ordinario de depósito74, aún pendiente.
+[Estado, receta y límites](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#finalización-por-fases-y-bloqueo-de-batería--22-10-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#box-table74-finish-20261022).
+
+## Historial anterior de la intervención de depósito74
+
 **22-10-2026 — BOX-TABLE74-PARTIAL-SUPPORT-20261022: detener antes de liberar.**
 El operador aclara apoyo sólo en la esquina derecha alejada, con unos1cm de
 hueco en las demás zonas. El log nativo demuestra `DectionForceCollision`:
