@@ -1,4 +1,4 @@
-"""Bounded GET1 correction telemetry checks; no command transport.
+"""Bounded GET1 and visual pickup correction telemetry checks; no command transport.
 
 These are detection/abort limits, not a proof of physical stopping distance.
 Map and odometry are evaluated in their own frames, never subtracted.
@@ -7,6 +7,9 @@ import copy
 import json
 import math
 from types import MappingProxyType
+
+
+BOX_PICKUP_MAX_CORRECTIONS = 7  # Independent of the existing GET1 two-goal budget.
 
 
 POLICY = MappingProxyType({
@@ -89,10 +92,16 @@ def _travel_heading_error(pose, target):
     return min(abs(delta), abs(_angle(delta + math.pi)))
 
 
+def distance_tolerance(spec):
+    # Pickup corrections are smaller than GET1 arrival tolerance. This tighter
+    # window only governs telemetry/turn monitoring, never the native box gate.
+    return .005 if spec['point'] == 'box_pickup' else .02
+
+
 def yaw_limits(spec):
     reference, target = spec['reference'], spec['target']
     distance, final_yaw = _errors(reference, target)
-    travel = _travel_heading_error(reference, target) if distance > .02 + _EPS else 0.
+    travel = _travel_heading_error(reference, target) if distance > distance_tolerance(spec) + _EPS else 0.
     # ArcPrecise follows a tangent circle: its ideal heading change to a point
     # at bearing alpha is 2*alpha. Bearing alone would reject a valid arc.
     excursion = min(POLICY['max_yaw_excursion_deg'],
@@ -104,9 +113,10 @@ def yaw_limits(spec):
 def validate_spec(spec, goal=None):
     """Return a normalized private copy; callers cannot supply looser policy."""
     _exact(spec, ('version', 'point', 'target', 'reference', 'attempt'), 'Correction spec')
-    if type(spec['version']) is not int or spec['version'] != 1 or spec['point'] != 'get1':
-        raise ValueError('Correction only supports version 1 / get1')
-    if type(spec['attempt']) is not int or not 1 <= spec['attempt'] <= POLICY['max_corrections']:
+    if type(spec['version']) is not int or spec['version'] != 1 or spec['point'] not in ('get1', 'box_pickup'):
+        raise ValueError('Correction only supports version 1 / get1 or box_pickup')
+    attempt_limit = BOX_PICKUP_MAX_CORRECTIONS if spec['point'] == 'box_pickup' else POLICY['max_corrections']
+    if type(spec['attempt']) is not int or not 1 <= spec['attempt'] <= attempt_limit:
         raise ValueError('Correction attempt outside budget')
     _exact(spec['target'], ('point_x', 'point_y', 'point_yaw'), 'Correction target')
     _exact(spec['reference'], ('x', 'y', 'yaw', 'stamp_ns'), 'Correction reference')
@@ -136,8 +146,8 @@ def validate_spec(spec, goal=None):
     return result
 
 
-def make_spec(target, reference, attempt):
-    return validate_spec({'version': 1, 'point': 'get1', 'target': target,
+def make_spec(target, reference, attempt, *, point='get1'):
+    return validate_spec({'version': 1, 'point': point, 'target': target,
                           'reference': reference, 'attempt': attempt})
 
 
@@ -185,6 +195,7 @@ class Guard:
     """Fail-sticky monitor, armed only after fresh stationary telemetry."""
     def __init__(self, spec, requested_ns):
         self.spec = validate_spec(spec)
+        self.distance_tolerance_m = distance_tolerance(self.spec)
         self.requested_ns = _ns(requested_ns, 'Request time')
         if self.spec['reference']['stamp_ns'] > self.requested_ns:
             raise ValueError('Correction reference is from the future')
@@ -251,7 +262,7 @@ class Guard:
         close = len(poses) == 2 and len(causal) == 2 and all(
             0 <= sample['received_ns'] - pose['stamp_ns'] <= POLICY['source_age_s'] * _NS and
             0 <= sample['received_ns'] - pose['received_ns'] <= POLICY['receive_age_s'] * _NS and
-            _errors(pose, self.spec['target'])[0] <= .02 + _EPS for pose in poses + causal)
+            _errors(pose, self.spec['target'])[0] <= self.distance_tolerance_m + _EPS for pose in poses + causal)
         if close and sample['linear_speed_m_s'] <= POLICY['alignment_linear_speed_m_s'] + _EPS:
             return POLICY['max_angular_speed_rad_s']
         return POLICY['max_approach_angular_speed_rad_s']
@@ -331,16 +342,16 @@ class Guard:
                         raise ValueError('Correction distance worsened beyond limit')
                     self._best_distance = min(self._best_distance, distance)
                     heading = _travel_heading_error(sample, self.spec['target'])
-                    if distance <= .02 + _EPS and not self._alignment_started:
+                    if distance <= self.distance_tolerance_m + _EPS and not self._alignment_started:
                         # Enter final orientation once; repeated threshold crossings
                         # must not renew the no-progress watchdog indefinitely.
                         self._alignment_started = True
                         self._progress = (min(self._progress[0], distance), yaw)
                         self._progress_ns = received_ns
                     positional_progress = self._progress[0] - distance >= .002 - _EPS
-                    final_progress = (distance <= .02 + _EPS and
+                    final_progress = (distance <= self.distance_tolerance_m + _EPS and
                                       self._progress[1] - yaw >= math.radians(.2) - _EPS)
-                    heading_progress = (distance > .02 + _EPS and not self._alignment_started and
+                    heading_progress = (distance > self.distance_tolerance_m + _EPS and not self._alignment_started and
                                         self._heading_progress - heading >= math.radians(.2) - _EPS)
                     if positional_progress or final_progress or heading_progress:
                         # ArcPrecise may still turn away from final yaw while
@@ -378,7 +389,7 @@ class Guard:
         self._origins = {kind: dict(recent[-1]) for kind, recent in self._recent.items()}
         self._progress = _errors(self._origins['map'], self.spec['target'])
         self._heading_progress = _travel_heading_error(self._origins['map'], self.spec['target'])
-        self._alignment_started = self._progress[0] <= .02 + _EPS
+        self._alignment_started = self._progress[0] <= self.distance_tolerance_m + _EPS
         self._best_distance = min(self._best_distance, self._progress[0])
         self._progress_ns = now_ns
 
@@ -394,7 +405,7 @@ class Guard:
         for recent in self._recent.values():
             self._fresh(recent[-1], now_ns)
         distance, yaw = _errors(self._recent['map'][-1], self.spec['target'])
-        if ((distance > .02 + _EPS or yaw > math.radians(2.) + _EPS) and
+        if ((distance > self.distance_tolerance_m + _EPS or yaw > math.radians(2.) + _EPS) and
                 (now_ns - self._progress_ns) / _NS >= POLICY['no_progress_s']):
             self._fail('Correction made no significant progress')
         return self.summary()
@@ -438,7 +449,7 @@ class Guard:
     def summary(self):
         latest = self._recent['map'][-1] if self._recent['map'] else self.spec['reference']
         distance, yaw = _errors(latest, self.spec['target'])
-        return {'version': 1, 'point': 'get1', 'attempt': self.spec['attempt'],
+        return {'version': 1, 'point': self.spec['point'], 'attempt': self.spec['attempt'],
                 'armed': self.armed_ns is not None, 'failure': self.failure,
                 'velocity_violation': copy.deepcopy(self.velocity_violation),
                 'requested_ns': self.requested_ns, 'armed_ns': self.armed_ns,

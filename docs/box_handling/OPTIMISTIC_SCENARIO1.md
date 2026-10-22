@@ -1,5 +1,56 @@
 # Escenario 1 con supervisión continua
 
+## 22-10-2026: aproximación visual configurable antes del único agarre
+
+**BOX-01-VISUAL-ALIGN-PORT-20261022 — Implementado en PC; pruebas del cambio
+correctas y errores globales previos separados; carga/ensayo físico PENDIENTES.** Port selectivo desde
+`feriabarcelona@0cbc320` a esta rama; no importa sus depósitos ni su recuperación
+automática tras falta de progreso. `--box-alignment-attempts N` acepta0..7,
+por defecto7 en Optimistic; las otras entradas compartidas conservan0 salvo
+selección explícita. **N son objetivos del chasis antes de un único agarre**, no
+reintentos de brazos. Cero conserva la entrada original sin esta aproximación.
+
+La fase exige brazos/torso HOME y abrazaderas vacías, baja sólo la cabeza con
+la tarea vendor verificada y adquiere dos medidas frescas. CorrigeXY hacia el
+margen interior20mm sin alterar gateSPS X[0,41;0,79],Y[−0,39;0,39],Z[0,01;1,49]m.
+Conserva paso≤50mm, suma solicitada≤100mm, plazo120s y vigilancia4s sin progreso;
+otro ajuste exige resultado válido, reposo, llegada≤12mm/2°, nueva visión,
+asociación y mejora≥2mm si sigue fuera. Cancelación, resultado incierto o fallo
+detienen; no se reinician workers ni se reintenta el agarre nativo.
+
+La preparación nativa **posterior** sigue moviendo cabeza y ambos brazos antes
+de pedir SPS. El adaptador compara sus capturas actuales con la referencia,
+sin convertirla en pose autorizada: un rechazo posterior puede dejar otra vez
+postura preparatoria. No usar medidas del ensayo fallido ni asumir HOME.
+El antecedente de plegado/divergencia izquierda sigue sin causa resuelta;
+preservar XML/YAML/fuerzas/SDK no demuestra corregido ese fallo.
+
+```bash
+# Local; sin conectar ni mover:
+./scripts/optimistic_scenario1.sh --table-height-cm 74 \
+  --box-alignment-attempts 3 --plan --stop-after grasp
+# Consulta técnica; no prepara cabeza ni inicia detección/alineación:
+./scripts/optimistic_scenario1.sh --table-height-cm 74 \
+  --box-alignment-attempts 3 --check --stop-after grasp
+```
+
+Una futura ejecución usa los mismos argumentos sustituyendo `--plan` por
+`--run`, únicamente después de recuperación específica, HOME medido y
+condiciones físicas actuales. No ejecutar ahora desde el checkpoint fallido.
+`box-alignment-policy.json` registra N/política; payload y retomas impresas
+conservan el contador. No hay depósito74 activado ni ciclo completo permitido.
+La consola muestra cabeza, intento/N, XYZ en cm, llegada y margen listo;
+un margen listo no equivale a un agarre completado.
+[Secuencia, procedencia, límites, fuentes y reversión](BOX_AXIS_REPOSITION_20261002.md).
+Evidencia/backups: `../Humanoide-vla-evidence/20261022T080944Z_BOX_ALIGNMENT_ONLY_PORT/`;
+suite global51 módulos/921 pruebas:904 pasan y17 errores previos del instalador
+de depósito, reproducidos idénticos en copia aislada de`8107664`. Pruebas focales
+del port correctas; otras2 pruebas nuevas de invariantes por bytes pasan después,
+fuera de ese recuento. No se modifican instalador/configuración ni se presenta
+la suite como completamente verde. Recibos `scenario1-regression-final-receipt.json`
+y `baseline-deposit-installer-complete-receipt.json`; fixture de once fuentes y
+test de invariantes versionados. Sin SSH ni movimiento en este port.
+
 ## 22-10-2026: recogida detenida en preparación; destino de 74 cm pendiente
 
 **BOX-01-TABLE74-PICKUP-REJECT-20261022 — OBSERVADO/VERIFICADO, Europe/Madrid.**

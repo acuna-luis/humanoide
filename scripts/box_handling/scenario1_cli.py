@@ -22,6 +22,7 @@ if __package__:
     from . import scenario1_contract as contract
     from . import scenario1_sensors as sensors
     from . import scenario1_nav_correction as nav_correction
+    from . import scenario1_box_alignment as box_alignment
     from . import scenario1_resume as resume
     from .scenario1_console import ConsoleReporter, stage_label
     from .front_box_integration import build_bundle, TASK_ROOT, META_ROOT, SNAPSHOT
@@ -29,6 +30,7 @@ else:
     import scenario1_contract as contract
     import scenario1_sensors as sensors
     import scenario1_nav_correction as nav_correction
+    import scenario1_box_alignment as box_alignment
     import scenario1_resume as resume
     from scenario1_console import ConsoleReporter, stage_label
     from front_box_integration import build_bundle, TASK_ROOT, META_ROOT, SNAPSHOT
@@ -49,6 +51,12 @@ MODULES = [('cruzr_home_posture_gate', ROOT/'scripts/lib/cruzr_home_posture_gate
            ('scenario1_resume', HERE/'scenario1_resume.py'),
            ('scenario1_cycle_lease', HERE/'scenario1_cycle_lease.py'),
            ('scenario1_request_ids', HERE/'scenario1_request_ids.py'),
+           ('select_front_box', HERE/'select_front_box.py'),
+           ('probe_front_box', HERE/'probe_front_box.py'),
+           ('front_sps_contract', HERE/'front_sps_contract.py'),
+           ('scenario1_perception', HERE/'scenario1_perception.py'),
+           ('scenario1_resume_worker', HERE/'scenario1_resume_worker.py'),
+           ('scenario1_box_alignment', HERE/'scenario1_box_alignment.py'),
            ('scenario1_runtime', HERE/'scenario1_runtime.py')]
 BOOTSTRAP = '''import json,sys,types
 payload=json.loads(sys.stdin.readline())
@@ -134,6 +142,8 @@ def report_pause(wrapper, checkpoint_path, checkpoint, cycle, *, args=None, resu
                 command += ['--table-height-cm', '74']
             elif args.profile.resolve() != (HERE/'scenario1_current_geometry.json').resolve():
                 command += ['--profile', str(args.profile.resolve())]
+            if hasattr(args, 'box_alignment_attempts'):
+                command += ['--box-alignment-attempts', str(args.box_alignment_attempts)]
             if args.wifi:
                 command += ['--wifi']
             if args.stop_after != 'cycle':
@@ -176,7 +186,7 @@ def make_payload(mode, profile, checkpoint):
     # supervisor. This introduces no ROS writers or persistent installation.
     health_dependencies = [(name, path) for name, path in MODULES
                            if name in ('cruzr_home_posture_gate', 'scenario1_checks',
-                                       'scenario1_live_health', 'scenario1_request_ids')]
+                                       'scenario1_live_health', 'scenario1_request_ids', 'scenario1_resume_worker')]
     health_source = ('import sys,types\n'
                      'for _name,_source in '+repr([(name, path.read_text())
                                                    for name, path in health_dependencies])+':\n'
@@ -367,6 +377,10 @@ def parser(policy='ask', execution_profile='standard_v1'):
     p.add_argument('--stop-after', choices=('get1', 'grasp', 'put1', 'cycle'), default='cycle',
                    help='get1: sólo navegar y medir llegada; grasp: terminar tras confirmar caja sujeta; '
                         'put1: llegar con la caja sujeta y detenerse antes del depósito')
+    p.add_argument('--box-alignment-attempts', type=int, choices=range(0, 8),
+                   default=(box_alignment.DEFAULT_MAX_CORRECTIONS if execution_profile == 'optimistic_v1' else 0), metavar='N',
+                   help='Hasta N ajustes visuales del chasis antes del único agarre (0..7; defecto %(default)s). '
+                        '0 conserva la entrada original sin ajuste; no repite movimientos de brazos')
     profile_selection = p.add_mutually_exclusive_group()
     profile_selection.add_argument('--profile', type=Path, default=HERE/'scenario1_current_geometry.json')
     profile_selection.add_argument('--table-height-cm', type=float, choices=(74.,),
@@ -434,6 +448,9 @@ def report_pending_table74_plan(args, profile):
                   table_preparation=table74_preparation_report(profile),
                   execution_allowed=False, checkpoint_created=False,
                   automatic_retries=0, continuous_cycle=getattr(args, 'cycle', False),
+                  box_alignment=dict(enabled=args.box_alignment_attempts > 0,
+                      policy=dict(box_alignment.make_policy(args.box_alignment_attempts)),
+                      before_native_grasp=True, arm_task_unchanged=True, physical_validation='pending'),
                   blocked_at='deposit',
                   blocked_stages=['deposit', 'verify_released', 'home', 'verify_home'],
                   resume=(dict(source_profile_matches=True, executable=False,
@@ -449,6 +466,11 @@ def _main(args, stop=None):
     policy = args.policy
     execution_profile = getattr(args, 'execution_profile', 'standard_v1')
     wrapper = entrypoint_name(policy, execution_profile)
+    alignment_attempts = box_alignment.validate_max_corrections(
+        getattr(args, 'box_alignment_attempts',
+                box_alignment.DEFAULT_MAX_CORRECTIONS if execution_profile == 'optimistic_v1' else 0))
+    alignment_report = dict(enabled=alignment_attempts > 0, policy=dict(box_alignment.make_policy(alignment_attempts)),
+                            before_native_grasp=True, arm_task_unchanged=True, physical_validation='pending')
     moving = is_moving(args)
     cycle = getattr(args, 'cycle', False)
     if cycle and (execution_profile != 'optimistic_v1' or args.stop_after != 'cycle'):
@@ -509,6 +531,8 @@ def _main(args, stop=None):
                   'sin reintento ante timeout, cancelación o fallo de comunicación.')
         else:
             print('HOME: sin reintento automático disponible en este segmento.')
+    print('Alineación visual de caja: '+('hasta '+str(alignment_attempts)+' ajustes de chasis antes del único agarre'
+          if alignment_attempts else 'desactivada; entrada de agarre original')+'.')
     correction_status = nav_correction.qualification_report()
     if correction_status['motion_enabled']:
         approach = format(nav_correction.POLICY['max_approach_angular_speed_rad_s'], '.2f').replace('.', ',')
@@ -534,6 +558,7 @@ def _main(args, stop=None):
             resume=resume_plan)
         if table74:
             report['table_preparation'] = table74_preparation_report(profile)
+        report['box_alignment'] = alignment_report
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
     if moving:
@@ -553,6 +578,8 @@ def _main(args, stop=None):
     payload['policy'] = policy
     payload['execution_profile'] = execution_profile
     payload['cycle'] = cycle
+    payload['box_alignment_attempts'] = alignment_attempts
+    atomic_json(evidence/'box-alignment-policy.json', alignment_report)
     payload['check_repetitions'] = args.benchmark_checks
     if sensor_profile is not None:
         payload['sensor_profile'] = sensor_profile

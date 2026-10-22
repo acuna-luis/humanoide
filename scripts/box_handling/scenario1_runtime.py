@@ -27,6 +27,7 @@ if __package__:
     from . import scenario1_sensors as sensors
     from . import scenario1_dependencies as dependencies
     from . import scenario1_nav_correction as nav_correction
+    from . import scenario1_box_alignment as box_alignment, scenario1_perception as perception
     from . import scenario1_resume as resume
     from . import scenario1_live_health as live_health
     from .scenario1_cycle_lease import adapter_runner_source
@@ -39,6 +40,8 @@ else:
     import scenario1_sensors as sensors
     import scenario1_dependencies as dependencies
     import scenario1_nav_correction as nav_correction
+    import scenario1_box_alignment as box_alignment
+    import scenario1_perception as perception
     import scenario1_resume as resume
     import scenario1_live_health as live_health
     from scenario1_cycle_lease import adapter_runner_source
@@ -118,7 +121,10 @@ def capture(timeout):
   return result['report']
 def stable(report,now_ns):
  remaining=8.0-max(0,(time.time_ns()-report['request_ns'])/1e9)
- return guard['stable_report'](report,now_ns,original,lambda:capture(remaining),time.time_ns)
+ result=guard['stable_report'](report,now_ns,original,lambda:capture(remaining),time.time_ns)
+ reference=session/'box-alignment-reference.json'
+ if reference.exists():guard['guard_selection'](result,json.loads(reference.read_text()))
+ return result
 contract.select_report=stable
 sys.argv=[root+'/front_sps_native.py','--session',str(session)]
 runpy.run_path(root+'/front_sps_native.py',run_name='__main__')
@@ -172,6 +178,11 @@ class Runtime:
         self.resume_validated = False
         self.perception_offset = 0
         self.perception_last_read = float('-inf')
+        # Older in-memory callers retain their original behavior; the CLI
+        # explicitly supplies the reviewed default for new invocations.
+        self.box_alignment_attempts = box_alignment.validate_max_corrections(
+            payload.get('box_alignment_attempts', 0))
+        self.box_association = None
         if payload.get('resume_plan') is not None:
             self.resume_plan = resume.plan_resume(payload['resume_source_checkpoint'], payload['profile'],
                                                  **payload['resume_options'])
@@ -851,6 +862,219 @@ class Runtime:
         for measured in measurements:
             self.emit('arrival', point=point, measurement=measured)
 
+    def stationary_base(self):
+        # The persistent reader uses the exact resume odometry validator. Two
+        # post-request samples are still required, without ROSA startup/shutdown
+        # consuming the remaining lifetime of the just-measured box image.
+        report = self.health_request('base', timeout=5)
+        if (report.get('event') != 'base_result' or report.get('stationary') is not True or
+                type(report.get('publishers')) is not int or report['publishers'] != 1):
+            raise RuntimeError('BOX_ALIGNMENT_BASE_NOT_STATIONARY')
+        self.emit('box_alignment_base', report=report)
+        return report
+
+
+    def capture_box(self):
+        # The socket is owned by root inside the container (0600). Use that
+        # existing namespace/owner without changing permissions or the worker.
+        source = '''import json,socket,sys
+from pathlib import Path
+with socket.socket(socket.AF_UNIX) as conn:
+ conn.settimeout(9)
+ conn.connect(str(Path(sys.argv[1])/'perception.sock'))
+ conn.sendall(b'capture\\n')
+ with conn.makefile('rb') as stream:raw=stream.readline(2000001)
+ if len(raw)>2000000 or not raw.endswith(b'\\n'):raise ValueError('Malformed perception reply')
+ print(raw.decode(),end='')
+'''
+        reply = json.loads(self.native(code_command(source, [str(self.session)]), timeout=11))
+        if set(reply) != {'report'}:
+            raise RuntimeError('BOX_ALIGNMENT_PERCEPTION_FAILED: '+str(reply.get('error', 'invalid reply')))
+        return box_alignment.observe(reply['report'], time.time_ns())
+
+
+    def pose_references(self):
+        poses, started = self.read_poses()
+        references, previous = [], None
+        for pose in poses:
+            measured = checks.validate_pose_sample(pose, started, time.time(), previous)
+            previous = measured['stamp']
+            references.append({key: measured[key] for key in ('x', 'y', 'yaw', 'stamp_ns')})
+        box_alignment.stable_base(references)
+        return references
+
+
+    def check_box_alignment_head(self):
+        # Check this added task immediately before use, outside the persisted
+        # dependency context: held/released checkpoints from earlier runs must
+        # retain their original context and do not need this preparation.
+        source = 'import hashlib,sys;from pathlib import Path;print(hashlib.sha256(Path(sys.argv[1]).read_bytes()).hexdigest())'
+        actual = self.native(code_command(source, [box_alignment.HEAD_PATH])).strip()
+        if actual != box_alignment.HEAD_SHA256:
+            raise RuntimeError('BOX_ALIGNMENT_HEAD_TASK_CHANGED')
+        self.emit('box_alignment_head_dependency', path=box_alignment.HEAD_PATH, sha256=actual)
+
+
+    def capture_box_with_poses(self, history, phase):
+        """Collect fresh map poses while the independent vision worker processes.
+
+        Only capture runs on the background thread. The main thread remains
+        the sole caller of the health session's sequential request protocol.
+        """
+        deadline = time.monotonic()+12
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            capture = pool.submit(self.capture_box)
+            while not capture.done():
+                self.connected()
+                if time.monotonic() >= deadline:
+                    raise RuntimeError('BOX_ALIGNMENT_CAPTURE_DEADLINE')
+                rows = self.pose_references()
+                for row in rows:
+                    box_alignment.stable_base([history[0], row])
+                history.extend(rows)
+                if len(history) > 256:
+                    raise RuntimeError('BOX_ALIGNMENT_POSE_HISTORY_LIMIT')
+            pending = capture.result()  # Failure is propagated, never recaptured.
+            if time.monotonic() >= deadline:
+                raise RuntimeError('BOX_ALIGNMENT_CAPTURE_DEADLINE')
+        self.emit('box_alignment_capture', phase=phase, observation=pending,
+                  map_samples=len(history), received_ns=time.time_ns())
+        return pending
+
+
+    def measure_box_for_pickup(self):
+        self.box_association = None  # A previous successful capture cannot authorize this one.
+        self.connected()
+        self.discover()
+        self.hashes()
+        box_alignment.pickup_posture(self.health())
+        odom_before = self.stationary_base()
+        if self.map_state() != ('utars_nav_map', 'FSM_WAITNAVIGATE'):
+            raise RuntimeError('BOX_ALIGNMENT_MAP_NOT_READY')
+        self.map_points()
+        before = self.pose_references()
+        history = list(before)
+        first = self.capture_box_with_poses(history, 'first')
+        second = self.capture_box_with_poses(history, 'second')
+        comparison = perception.validate_pair(first, second)
+        after = self.pose_references()
+        history.extend(after)
+        matches = [box_alignment.match_pose_time(pending, history) for pending in (first, second)]
+        self.emit('box_alignment_time_pair', matches=matches,
+                  current_reference=after[-1], samples=len(history))
+        odom_after = self.stationary_base()
+        age_ns = time.time_ns()-second['stamp_ns']
+        self.emit('box_alignment_freshness', image_stamp_ns=second['stamp_ns'],
+                  age_ns=age_ns, max_age_ns=2_000_000_000)
+        if not 0 <= age_ns <= 2_000_000_000:
+            raise RuntimeError('BOX_ALIGNMENT_DETECTION_STALE_BEFORE_DISPATCH: age_ns='+str(age_ns))
+        self.box_association = box_alignment.association_observation(first, second, odom_before, odom_after)
+        self.emit('box_alignment', phase='observed', observation=second, stability=comparison,
+                  reference=after[-1], association=self.box_association)
+        return second, after[-1]
+
+
+    def align_box_for_pickup(self, *, empty_entry=False):
+        """Correct visual range BEFORE the native arm preparation, never retry it."""
+        declared_empty = self.checkpoint['box_state'] == 'empty' or (
+            empty_entry is True and self.checkpoint['in_flight'] == 'grasp')
+        if not declared_empty or self.session is None:
+            raise RuntimeError('BOX_ALIGNMENT_EMPTY_ENTRY_REQUIRED')
+        (self.session/'box-alignment-reference.json').unlink(missing_ok=True)
+        policy = box_alignment.make_policy(self.box_alignment_attempts)
+        deadline = time.monotonic()+policy['total_budget_s']
+
+        def budget():
+            self.connected()
+            remaining = deadline-time.monotonic()
+            if remaining <= 0:
+                self.emit('box_alignment', phase='limit', reason='time',
+                          total_budget_s=policy['total_budget_s'])
+                raise RuntimeError('BOX_ALIGNMENT_TOTAL_BUDGET_EXCEEDED: '+
+                                   str(policy['total_budget_s'])+' s')
+            return remaining
+
+        # Review posture before any preparation; a rejected old grasp can have
+        # arms out of HOME and must use explicit recovery, not this adjustment.
+        box_alignment.pickup_posture(self.health(), observation=False)
+        self.check_box_alignment_head()
+        budget()
+        self.emit('box_alignment', phase='prepare_head', task=box_alignment.HEAD_TASK)
+        contract.validate_motion_result(self.action('motion',
+            {'task_name': box_alignment.HEAD_TASK, 'yaml_args': '{}'}, min(20, budget())))
+        pending, reference = self.measure_box_for_pickup()
+        budget()
+        anchor = self.box_association
+        if anchor is None:
+            raise RuntimeError('BOX_ALIGNMENT_ASSOCIATION_REQUIRED')
+        total, attempt = 0., 0
+        while True:
+            budget()
+            delta = box_alignment.displacement(pending)
+            step = math.hypot(delta['x'], delta['y'])
+            if step == 0:
+                # This is a comparison reference, never a cached authorization.
+                # The native adapter still captures twice and runs the XYZ gate.
+                atomic_json(self.session/'box-alignment-reference.json', pending)
+                self.emit('box_alignment', phase='ready', attempts=attempt,
+                          total_requested_m=total, observation=pending,
+                          inside_margin_m=policy['inside_margin_m'])
+                return
+            limit_reason = ('attempts' if attempt >= policy['max_corrections'] else
+                            'distance' if total+step > policy['max_total_m']+1e-12 else None)
+            if limit_reason is not None:
+                self.emit('box_alignment', phase='limit', reason=limit_reason,
+                          attempts=attempt, max_corrections=policy['max_corrections'],
+                          total_requested_m=total, next_step_m=step,
+                          max_total_m=policy['max_total_m'])
+                raise RuntimeError('BOX_ALIGNMENT_LIMIT: '+limit_reason+
+                    '; attempts='+str(attempt)+'/'+str(policy['max_corrections'])+
+                    '; requested='+format(total*1000, '.3f')+' mm'+
+                    '; next='+format(step*1000, '.3f')+' mm'+
+                    '; max_total='+format(policy['max_total_m']*1000, '.3f')+' mm')
+            attempt += 1
+            # Reserve at dispatch: a canceled goal may already have moved the
+            # chassis and must consume the same aggregate distance budget.
+            total += step
+            old_violation = box_alignment.violation(pending)
+            expected = box_alignment.target(reference, delta)
+            spec = nav_correction.make_spec(expected, reference, attempt, point='box_pickup')
+            target = dict(expected, map_name='utars_nav_map', mode='free_nav', level=1,
+                          speed={'linear': {'x': .05, 'y': .01, 'z': 0.},
+                                 'angular': {'x': 0., 'y': 0., 'z': .15}})
+            goal = {'command': 'navigation_start', 'arg_json': json.dumps({'target_point': target})}
+            record = dict(phase='in_flight', attempt=attempt, max_corrections=policy['max_corrections'],
+                          displacement_base_m=delta,
+                          observation=pending, spec=spec, total_requested_m=total)
+            atomic_json(self.session/'box-alignment.json', record)
+            self.emit('box_alignment', **record)
+            result = self.action('navigation', goal,
+                min(nav_correction.POLICY['action_timeout_s'], budget()), correction=spec)
+            contract.validate_navigation_result(result)
+            # Success/rest still require two fresh map poses. Native navigation
+            # has centimeter terminal precision; after this correspondence gate
+            # the new visual measurement decides pickup or another bounded goal.
+            budget()
+            references = self.pose_references()
+            measurements = box_alignment.validate_arrival(references, expected)
+            self.emit('box_alignment', phase='arrival', attempt=attempt, measurements=measurements,
+                      pickup_verified=False)
+            pending, reference = self.measure_box_for_pickup()
+            budget()
+            try:
+                association = box_alignment.validate_association(anchor, self.box_association)
+            except ValueError as exc:
+                self.emit('box_alignment_association', passed=False, anchor=anchor,
+                          current=self.box_association, reason=str(exc))
+                raise
+            self.emit('box_alignment_association', passed=True, measurement=association)
+            atomic_json(self.session/'box-alignment.json', dict(record, phase='measured',
+                observation=pending, reference=reference))
+            if (box_alignment.violation(pending) > 0 and
+                    old_violation-box_alignment.violation(pending) < policy['min_improvement_m']-1e-12):
+                raise RuntimeError('BOX_ALIGNMENT_NO_IMPROVEMENT')
+
+
     def sync_planner_map(self):
         """Reload saved destinations once per session, before sending any goal.
 
@@ -1005,6 +1229,7 @@ class Runtime:
             raise RuntimeError('RUN_NOT_ARMED')
         stage = message['stage']
         started = time.monotonic()
+        previous_box_state = self.checkpoint['box_state']
         self.checkpoint = contract.begin_stage(self.checkpoint, stage)
         self.save()  # Durable intent before an action is sent.
         try:
@@ -1037,6 +1262,8 @@ class Runtime:
                     self.emit('resume_prerequisite', stage=stage, task=task)
                     contract.validate_motion_result(self.action('motion',
                         {'task_name': task, 'yaml_args': '{}'}, timeout))
+                if stage == 'grasp' and self.box_alignment_attempts:
+                    self.align_box_for_pickup(empty_entry=previous_box_state == 'empty')
                 self.motion_stage(stage)
                 self.connected()
                 self.sensor_min_stamp_ns = time.time_ns()
@@ -1106,6 +1333,10 @@ class Runtime:
                     self.resume_validated = False  # Require the explicit resume handshake before arm.
             if self.payload.get('check_repetitions'):
                 self.benchmark_checks(self.payload['check_repetitions'], (map_name, nav_state))
+            remaining = contract.STAGES[contract.progress_index(self.checkpoint):
+                                        contract.STAGES.index(self.checkpoint['stop_after'])+1]
+            if self.box_alignment_attempts and ('grasp' in remaining or self.cycle):
+                self.check_box_alignment_head()  # Hash check only; --check never moves.
             self.emit('ready', points=points, map_name=map_name, nav_state=nav_state,
                       geometry='operator_assumed_existing', context=context)
             if self.payload['mode'] == 'check':

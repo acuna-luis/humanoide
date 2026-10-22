@@ -1,5 +1,30 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-01-VISUAL-ALIGN-PORT-20261022: ajuste visual configurable del chasis.**
+Implementado localmente en `feat/scenario1-deposit-table-74cm`, partiendo de
+`8107664`, con planificación adaptada de `feriabarcelona@0cbc320`.
+`optimistic_scenario1.sh --box-alignment-attempts N` admite 0..7 y usa 7 por
+defecto; otros lanzadores estándar conservan 0 por defecto. Cero omite el ajuste.
+Antes del único agarre nativo, verifica brazos/torso HOME, baja sólo la cabeza,
+mide dos veces y corrige el chasis con nuevas medidas después de cada llegada.
+Conserva gate XYZ, hasta 50 mm por objetivo, 100 mm solicitados acumulados y
+120 s. La navegación fallida o incierta aborta sin recuperar workers ni repetir
+el agarre. Se conservan también las dos detecciones SPS nuevas durante el
+agarre y su comparación con la referencia; no se reutiliza una pose antigua.
+
+**VERIFICADO offline:** once fuentes protegidas, XML/YAML generados, fuerzas,
+dependencias y pins nativos del paquete SPS `bf145fa17e1116fc` sin cambios;
+`TASKS` y `motion_stage` iguales al respaldo. Suite de 921 pruebas: 904 pasan
+y 17 errores del instalador de depósito se reproducen idénticos en el commit
+anterior, con esos archivos intactos. Dos pruebas adicionales de invariantes
+pasan. No hay fallos nuevos atribuibles al port. Planes locales y diff correctos.
+**PENDIENTE:** carga y ensayo físico; sin conexión ni movimiento del robot en
+esta intervención. El antecedente del brazo izquierdo sigue sin causa resuelta
+y el depósito de 74 cm continúa pendiente. No asumir HOME ni reutilizar el
+checkpoint fallido anterior para ejecutar esta nueva fase.
+[Uso, límites y procedencia](box_handling/BOX_AXIS_REPOSITION_20261002.md),
+[ficha y reversión](SYSTEM_CUSTOMIZATIONS.md#box-01-visual-align-port-20261022).
+
 **22-10-2026 — PROJECT-GIT-COMMITS-20261022: commits autónomos autorizados.**
 El usuario autoriza desde ahora confirmar conjuntos coherentes de cambios
 cuando sea apropiado, tras revisión, comprobaciones y documentación. Política

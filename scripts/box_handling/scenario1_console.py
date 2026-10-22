@@ -208,6 +208,34 @@ class ConsoleReporter:
             return ['  Sincronizando mapa y destinos del planificador (una vez por sesión)']
         if name == 'arrival':
             return ['  Llegada '+clean(event.get('point'))+': '+residual(event.get('measurement'))]
+        if name == 'box_alignment':
+            phase = event.get('phase')
+            if phase == 'prepare_head':
+                return ['  Preparando sólo la cabeza para medir antes del agarre']
+            if phase == 'observed':
+                position = mapping(mapping(mapping(mapping(event.get('observation')).get('selection'))
+                                           .get('selected_pose')).get('position'))
+                if any(number(position.get(axis)) is None for axis in 'xyz'):
+                    return []
+                return ['  Caja medida en base_link: '+', '.join(
+                    axis.upper()+'='+decimal(position[axis]*100, 3)+' cm' for axis in 'xyz')+
+                    ' (Z no es altura al suelo).']
+            if phase == 'in_flight':
+                delta = mapping(event.get('displacement_base_m'))
+                axes = ', '.join(axis.upper()+': '+decimal(number(delta[axis])*1000, 1)+' mm'
+                                 for axis in 'xy' if number(delta.get(axis)) not in (None, 0))
+                return ['  Ajuste visual del chasis '+clean(event.get('attempt'))+'/'+
+                        clean(event.get('max_corrections'))+': '+axes]
+            if phase == 'arrival':
+                return ['  Llegada del ajuste '+clean(event.get('attempt'))+': '+
+                        residual(event.get('measurements'))+'. Se vuelve a medir la caja.']
+            if phase == 'ready':
+                return ['  Caja dentro del margen visual; ajustes realizados: '+
+                        clean(str(event.get('attempts', 0)))+'. Se iniciará el único agarre con nueva validación SPS.']
+            if phase == 'limit':
+                return ['  Límite de alineación: '+clean(event.get('reason'))+
+                        '. No se inicia el agarre.']
+            return []
         if name == 'get1_correction':
             measured = residual(event.get('measurements'))
             if event.get('phase') == 'blocked_before_dispatch':

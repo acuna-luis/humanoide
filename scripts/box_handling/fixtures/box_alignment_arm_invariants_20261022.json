@@ -1,0 +1,36 @@
+{
+  "schema": "box-alignment-arm-invariants-v1",
+  "base_commit": "8107664669c187ecd31179c086cd29749d2b83b9",
+  "source_branch_commit": "0cbc32095be3e752de91db6a9ed91d165e02186a",
+  "source_files_sha256": {
+    "scripts/box_handling/front_box_integration.py": "5f07de37ac1f2cc8b10647cc870a9264940ded68709a9ab39f69000f2358fe36",
+    "scripts/box_handling/front_sps_contract.py": "72a662733ed24fef39b50292bcb868d81f5874b612b6b720e4fbac3c3d8f715f",
+    "scripts/box_handling/front_sps_native.py": "3e3a284adb126a515c5a8f10261d93a360fcdd753f702cc36c82a0a2968afae5",
+    "scripts/box_handling/front_sps_worker.py": "e4b115632427341297d41faed785a9e203f680dadc4571b161ee0c99d6407197",
+    "scripts/box_handling/front_sps_session.py": "9b6c93ad738ed8c13db5b5d445cafe5bfad23c1a1eb3af23e54b50246f327468",
+    "scripts/box_handling/probe_front_box.py": "f8ce43c9befc3328752558bf91debd65eae0aae045d4fe5e01a2bb694b29ea34",
+    "scripts/box_handling/select_front_box.py": "a67deadbab6a1e6fc56c523fe7aa4be63e6bd07d88a7b6051c7b05fe0d25b446",
+    "scripts/box_handling/scenario1_perception.py": "1e2902bc9b08817fd45c391c1dfce4eb1acefdb36bdb208ff8e69ea9bef15598",
+    "vendor/ubtech/cruzr_s2/snapshot_20260916/motion/tasks/Singapore/separate_right_cruzr.xml": "4ba2515ba030f7f1483eed704ce68e0d888ac29754bef1645908fb9f96345e0b",
+    "vendor/ubtech/cruzr_s2/snapshot_20260916/motion/meta_clamp/wrc/separate_right_cruzr.yaml": "648c713e286b1602dabcb538b755fe780bdbe9513618b3cc5133955c6eaec2ec",
+    "vendor/ubtech/cruzr_s2/snapshot_20260916/motion/meta_clamp/wrc/separate_bodyback_cruzr.yaml": "a3b25e1cfd0abbd4fa179e09cd161ebb9b1d46786bacf06192cc5c434af34dc6"
+  },
+  "sps_bundle_id": "bf145fa17e1116fc",
+  "generated_tasks_sha256": {
+    "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/local_front_box/detect_only.xml": "f26af8f757e648893524375f985275ba305974191716c441f2943ddea024cfeb",
+    "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/local_front_box/separate_right_cruzr.xml": "193272e23e745ba6d1c9314e8e5257c8ab5b25e0f10b80dcc19d6861704ccd5d",
+    "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/local_front_box/separate_right_cruzr.yaml": "549120efb7bbd3eb431c183d52bb5cb4e4f424eda7a090ca0d98ea23c0b00dbb"
+  },
+  "generated_dependencies": {
+    "/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/Singapore/separate_right_cruzr.xml": "4ba2515ba030f7f1483eed704ce68e0d888ac29754bef1645908fb9f96345e0b",
+    "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/separate_right_cruzr.yaml": "648c713e286b1602dabcb538b755fe780bdbe9513618b3cc5133955c6eaec2ec",
+    "/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_clamp/wrc/separate_bodyback_cruzr.yaml": "a3b25e1cfd0abbd4fa179e09cd161ebb9b1d46786bacf06192cc5c434af34dc6"
+  },
+  "native_binary_pins": {
+    "/opt/walker/manipulation_meta_tasks/lib/libmeta_clamp.so": "d6bc61a493f7d790150fdbd673108121f46589fef56620de4a9023dcc2ba520a",
+    "/opt/walker/manipulation_meta_tasks/lib/libmeta_look.so": "dc8a41bf3fa747ae91ce95d51d871042bbcdc5c11858ac37085a0627028063a7",
+    "/opt/walker/manipulation_perception/lib/libperception_action_client.so": "8b45c88e41eb797382d5bb7d89976e1eff60b31f931c866bf8f1ab3eb0c27421"
+  },
+  "grasp_task": "local_front_box/separate_right_cruzr",
+  "grasp_timeout_s": 45
+}

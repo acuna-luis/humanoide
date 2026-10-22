@@ -1,5 +1,33 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-01-VISUAL-ALIGN-PORT-20261022
+
+**22-10-2026, Europe/Madrid — IMPLEMENTADO en PC y VERIFICADO offline;
+carga en Motion y prueba física PENDIENTES.**
+
+| Campo | Registro vigente |
+| --- | --- |
+| Motivo | Petición de corregir visualmente el chasis un número configurable de veces antes de recoger, preservando los movimientos reales de los brazos de esta rama |
+| Fuente/base | Rama `feat/scenario1-deposit-table-74cm`, base `8107664669c187ecd31179c086cd29749d2b83b9`; planificación adaptada selectivamente de `feriabarcelona@0cbc32095be3e752de91db6a9ed91d165e02186a` |
+| Destino exacto | PC/repositorio, `scripts/box_handling/scenario1_{box_alignment,runtime,cli,nav_correction,health_worker,console}.py`, pruebas y fixture de invariantes; documentación enlazada abajo. Sin archivos nuevos instalados en robot |
+| Versión/hash | Fuentes previas y finales sin depender de un commit pendiente en la evidencia privada. Paquete SPS generado conserva ID `bf145fa17e1116fc` y SHA256 canónico `be10c8f95686506bfed0a2913e63f8b256cabfbbbea9744b2ed5340711a2edb0` |
+| Aplicación/activación | El CLI transmite código en memoria en una futura sesión. `--box-alignment-attempts N`, entero 0..7; predeterminado 7 sólo en Optimistic, 0 en lanzadores estándar. No requiere reinstalar SPS, recrear contenedores ni reiniciar servicios |
+| Secuencia | Antes del único goal nativo de agarre, brazos/torso HOME y abrazaderas declaradas vacías; tarea existente sólo de cabeza, dos detecciones actuales y TF exacta; ajustes de chasis y nueva medida tras llegada válida. Referencia temporal sólo de comparación; SPS nativo vuelve a detectar dos veces y conserva XYZ |
+| Dependencias | XML `cruzr/move_head_lower`, SHA256 `f3a73626f97b471d4a0a03c98c24de32243651116c497328e69b5ddc57ea46c1`, comprobado antes del uso; lector odométrico persistente usando validadores originales, dos muestras nuevas, publisher único y lease/IDs vigentes |
+| Límites | Hasta 50 mm/objetivo, 100 mm solicitados acumulados y 120 s por fase; margen interior adicional 20 mm, gate original XYZ y reserva 10 mm intactos; llegada 12 mm/2°, asociación y mejora visual mínima 2 mm cuando siga fuera. GET1 conserva dos ajustes y su política previa |
+| Fallos | No se importa la recuperación automática de NO_PROGRESS del donante. Timeout, cancelación, fallo de navegación, pérdida de frescura/salud o resultado incierto abortan; no reinicio de workers, reintento de brazos ni HOME automático |
+| Invariantes | Once archivos protegidos, builder SPS, XML/YAML/forces/SDK y pins nativos iguales al origen; `TASKS` y `motion_stage` iguales por AST. Fixture versionada `scripts/box_handling/fixtures/box_alignment_arm_invariants_20261022.json` y dos pruebas de igualdad |
+| Verificación | Suite final de 921 pruebas: 904 correctas y 17 errores anteriores del instalador de depósito; los 17 se reproducen con fuentes de `8107664` en copia aislada. Dos pruebas nuevas de invariantes adicionales correctas, planes locales N=0/3/7, bootstrap y guard embebidos, sintaxis y diff correctos. Sin ensayo físico |
+| Backup/evidencia | `../Humanoide-vla-evidence/20261022T080944Z_BOX_ALIGNMENT_ONLY_PORT/`: `context.json`, `before/`, hashes previos/finales, fuentes donantes, recibos focales, `scenario1-regression-final-receipt.json`, reproducción del baseline y planes locales |
+| Reversión | Con ejecutores detenidos, restaurar selectivamente los archivos del port desde el respaldo y retirar sólo módulos/tests nuevos sin referencias; preservar mesa de 74 cm y cambios posteriores. `--box-alignment-attempts 0` omite la nueva fase; no restaura postura, mapa o checkpoint. No se modifica ni se reinicia el robot para revertir el código local |
+
+Recetas y detalles de fases/frescura:
+[corrección visual del chasis](box_handling/BOX_AXIS_REPOSITION_20261002.md),
+[uso de Optimistic](box_handling/OPTIMISTIC_SCENARIO1.md#22-10-2026-aproximación-visual-configurable-antes-del-único-agarre).
+No resolver la causa del plegado izquierdo por inferencia de estos hashes;
+el soporte/liberación a 74 cm sigue pendiente. El estado físico actual debe
+comprobarse antes de un ensayo nuevo. No se realizó push ni consulta al robot.
+
 ## PROJECT-GIT-COMMITS-20261022
 
 **22-10-2026, Europe/Madrid — APLICADO y VERIFICADO en el repositorio local.**
