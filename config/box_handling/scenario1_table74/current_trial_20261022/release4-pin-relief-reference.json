@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "stage": "pin_relief",
+  "surface_height_m": 0.74,
+  "predecessor_bundle_id": "ab970cb8740dfc1b12c74722f3ccf6847debfcdb06185a115682e28a736819ed",
+  "predecessor_goal_id": "9565b30d-4753-4627-8238-aeb7a586de27",
+  "operator_support_confirmed": true,
+  "tool_table_clearance_m": 0.05,
+  "required_pin_exit_m": 0.04,
+  "operator_pins_free": false,
+  "lateral_path_clear": true,
+  "evidence": "optimistic --finish-deposit; explicit current operator declarations; predecessor_sha256=eef0385b36fec233532bff8c7f5640d103a014629ed8edea0507483779683b75; facts={\"path_clear\":true,\"pin_exit_cm\":4.0,\"pins_free\":false,\"supported\":true,\"tool_clearance_cm\":5.0}; operator_note=Confirmación actual tras ajuste manual previo de la caja y recarga: apoyo plano/completo y sin peso en brazos; al menos5cm bajo ambos útiles, pines salen en hasta4cm, corredores laterales10cm por lado; cargador retirado, inmóvil, ambos paros liberados, ruedas inmovilizadas, otros controles detenidos, nadie tocando y persona junto al paro.",
+  "scope": "current_supported_box_only"
+}

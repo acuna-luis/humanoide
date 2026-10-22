@@ -1,5 +1,28 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-TABLE74-FINISH-EXECUTED-20261022: liberación completada y HOME verificado.**
+Tras recargar, lectura inicial23,0 %/23,6 %, cargador0 y ambos paros0.
+El operador confirma apoyo completo, nueva holgura≥5 cm y condiciones actuales.
+Se ejecutó una vez el alivio nominal4 cm v2 y, después de confirmar pines
+libres/holgura actual≥4 cm, una apertura separada10 cm por lado: ambos
+SUCCEED/status4/1101001. Operador confirma caja estable y abrazaderas libres.
+No se modifican los journals para convertir esa observación en medición.
+
+Después el operador autoriza HOME y confirma su barrido completo libre.
+Una orden `scripts/force_home.sh`, goal `9410fb54-036e-4d10-b38f-f4434d03fcf7`,
+termina SUCCEED/status4/1101001. Dos muestras20D nuevas: HOME=1,
+velocidad0 y máximo absoluto0,002589 rad. Confirmación visual final:
+HOME correcto, sin contacto/ruidos/movimientos inesperados y caja estable.
+Batería final21,6 %/22,4 %. No navegación, reintento o nuevo ciclo.
+
+Instalados/cargados/probados dos bundles aditivos `3c755c47…ec9f3` y
+`72eb5cc6…267da`; referencias v2 versionadas. Journals de settle y alivio
+consumidos; no reutilizar el open tras HOME. El ajuste manual previo se
+conserva como condición de esta prueba: el depósito74 autónomo sigue pendiente.
+[Resultados y límites](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#cierre-real-del-depósito-y-home--22-10-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#box-table74-finish-executed-20261022).
+Evidencia: `../Humanoide-vla-evidence/20261022T115726Z_TABLE74_FINISH_EXECUTION/`.
+
 **22-10-2026 — BOX-TABLE74-RELEASE4-20261022: alivio cambiado a 4 cm en PC.**
 `optimistic_scenario1.sh --finish-deposit --phase pin-relief` genera ahora
 referencias v2: ambas manos Z−0,04 m, sin giro ni separación. Exige **≥5 cm

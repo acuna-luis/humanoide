@@ -1,5 +1,81 @@
 # Depósito WRC y estantería a 100 cm
 
+## Cierre real del depósito y HOME — 22-10-2026
+
+**BOX-TABLE74-FINISH-EXECUTED-20261022 — dos fases v2 completadas;
+caja liberada según operador y HOME medido/confirmado.** Tras la recarga,
+lecturas iniciales23,0 %/23,6 %, cargador0 y ambos paros0. Se redescubren
+contenedores y boot, sin cambios respecto al origen. El operador confirma
+apoyo plano/completo, brazos sin peso de caja, nueva holgura≥5 cm, pines que
+salen en≤4 cm y condiciones físicas/de control actuales. Se conserva el
+ajuste manual previo como condición de esta ejecución.
+
+| Fase ejecutada UNA vez | Bundle | Goal | Resultado | Tiempo etapa / aceptación→resultado |
+| --- | --- | --- | --- | --- |
+| Alivio nominal4 cm, sin apertura | `3c755c471a06e39736c5f7e69ff32bab627e9c67171eba6bf7283c7f766ec9f3` | `961d54cc-192f-442d-8258-290b935a8562` | SUCCEED/status4/1101001 | 8,068 s /2,406 s |
+| Apertura nominal10 cm por lado, Z0/sin giro | `72eb5cc6cd0990ff7360ad853575aee063868148e68a71fb535b4df436e267da` | `be47db90-8ba2-4deb-9d1b-b6d830e5f81b` | SUCCEED/status4/1101001 | 7,915 s /2,384 s |
+
+Entre fases el operador confirma **pines libres**, caja estable, ausencia de
+contacto/resistencia inesperados y holgura **ACTUAL≥4 cm**, sin reutilizar el
+valor anterior al descenso. Check put1 alivio11,2 mm/0,31°; apertura
+12,5 mm/0,40° y entrada run12,4 mm/0,40°. Instalación aditiva de dos archivos
+por fase, con copias externas y originales intactos; controles nativos
+conservados. Son consignas nominales, no una medida independiente de cuatro
+centímetros reales. El log de alivio registra BTree succeeded y NoneException,
+sin la finalización DectionForceCollision del descenso histórico.
+
+Tras abrir, el operador primero selecciona por error «hay algo pendiente» y
+lo corrige explícitamente: «antes respondí mal, no hay nada pendiente».
+Confirma así caja plana/estable, abrazaderas libres/separadas, inmovilidad y
+ausencia de contacto inesperado. Se registra la confirmación aparte: no se
+reescriben `physical_support_confirmed=false` ni los resultados nativos.
+
+### HOME posterior, autorizado y medido
+
+El operador pregunta por HOME y después confirma el **barrido completo**
+libre de caja/mesa/personas, abrazaderas vacías, cargador fuera, paros
+liberados, ruedas inmovilizadas, controles detenidos y persona junto al paro.
+Check fresco:21,7 %/22,6 %, paros/cargador0, acción anterior terminal4,
+20D habilitados y dos muestras inmóviles/delta consigna0,002232 rad.
+Se usa una sola vez el script habitual:
+
+```bash
+./scripts/force_home.sh
+```
+
+**Comando histórico ya ejecutado: no repetir por copiar esta receta.**
+Goal `9410fb54-036e-4d10-b38f-f4434d03fcf7`, SUCCEED/status4/1101001.
+Dos muestras posteriores nuevas:20D habilitados, HOME=1, velocidad0,
+posición máxima0,002589 rad, brazos0,000959 rad y delta consigna0,002589 rad.
+Operador confirma «Sí, HOME correcto y caja estable», sin contacto, ruidos o
+movimiento inesperado. Batería final21,6 %/22,4 %. No navegación, reset,
+rearme, otro agarre, nuevo ciclo ni reintento automático.
+
+### Archivos, evidencia y punto de reanudación
+
+Referencias exactas en `config/box_handling/scenario1_table74/current_trial_20261022/`:
+`release4-pin-relief-reference.json` y `release4-open-reference.json`.
+El builder reproduce los bundles ejecutados byte exactos; hashes, destinos y
+rollback en la [ficha](../SYSTEM_CUSTOMIZATIONS.md#box-table74-finish-executed-20261022).
+Evidencia privada y backups:
+`../Humanoide-vla-evidence/20261022T115726Z_TABLE74_FINISH_EXECUTION/`.
+Cada fase conserva supervisor/reference/bundle, check, physical-run y
+recibos de instalación; los backups remotos se copiaron fuera del robot.
+
+Settle trial y alivio trial están consumidos. La apertura completada no
+autoriza otra liberación; después de HOME tampoco se retoma su contexto
+anterior. Checkpoint862349 y journals históricos no se editaron. Los mensajes
+de lease al cerrar lectores ocurren después de session_finishing; se conservan
+en evidencia, separados del terminal y sin iniciar otra acción.
+Una lectura ROS adicional con QoS incorrecto agotó su timeout antes de HOME,
+sin enviar comandos; se repitió con el QoS usado por el runtime y el check
+completo pasó antes del único HOME.
+
+**Estado final: robot en HOME y caja en la mesa.** Los archivos aditivos
+siguen instalados, no se arrancan solos. La ejecución fue asistida por el
+ajuste manual de apoyo y confirmaciones por fase; el perfil ordinario de
+depósito74 autónomo sigue pendiente y no se activa con estos resultados.
+
 ## Finalización por fases y bloqueo de batería — 22-10-2026
 
 **BOX-TABLE74-RELEASE4-20261022 — receta vigente de alivio4 cm en PC,

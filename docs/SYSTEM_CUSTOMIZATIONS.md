@@ -1,5 +1,26 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-TABLE74-FINISH-EXECUTED-20261022
+
+**22-10-2026, Europe/Madrid — alivio4 cm y apertura INSTALADOS/CARGADOS/
+PROBADOS una vez; depósito comunicado completo y HOME medido/confirmado.**
+
+| Campo | Registro |
+| --- | --- |
+| Entrada/autoridad | Tras recarga y retirada del cargador, operador confirma apoyo plano/completo sin peso en brazos, holgura≥5 cm, salida de pines≤4 cm, corredores laterales10 cm, inmovilidad/paros liberados/ruedas inmovilizadas/otros mandos detenidos/persona junto al paro. El ajuste manual previo no se oculta |
+| Fuente reproducible | `optimistic_scenario1.sh --finish-deposit`, supervisor/builder/runner v2 del commit5319ab0. Referencias exactas `config/box_handling/scenario1_table74/current_trial_20261022/release4-pin-relief-reference.json` y `release4-open-reference.json`; instalador compartido, XML/open YAML/binario pinados como en la ficha anterior |
+| Destino/activación | Motion192.168.11.2, `walker-motion.manipulation_robot_app-1`, ID9cd509ff…0bd03, imagen9f7acf4b…7e75, mismo boot069a60e8-ffbb-4cd2-ae5f-de9efdead0af. Namespace `local_table74_release/ID_release` bajo raíces TASK_ROOT/META_ROOT; dos archivos por fase, sin sobrescribir originales ni reiniciar |
+| Alivio4 cm | Bundle `3c755c471a06e39736c5f7e69ff32bab627e9c67171eba6bf7283c7f766ec9f3`; YAML `d3956ddd3389e7bbb03f1c34ccbbc7ff5bcacc806fb7d16b6f302475aa15535a`, XML `77f3191d46b91f545ced66249e3c400bc7ef8619eb59508015831763e73bfda5`. Goal `961d54cc-192f-442d-8258-290b935a8562`, SUCCEED/status4/1101001, etapa8,068 s, aceptación→resultado2,406 s |
+| Apertura | Nueva confirmación del operador de pines libres, apoyo estable sin contacto inesperado y holgura ACTUAL≥4 cm/corredores10 cm. Bundle `72eb5cc6cd0990ff7360ad853575aee063868148e68a71fb535b4df436e267da`; YAML `55de8dcf65279dea07a6de50888982261d5c54abce9bccda5b9dcfee7abea4b4`, XML `b69562598a8a9c4431632869a3d634e56a05f604e764b6c1a3c82a5981e8be8b`. Goal `be47db90-8ba2-4deb-9d1b-b6d830e5f81b`, SUCCEED/status4/1101001, etapa7,915 s, aceptación→resultado2,384 s |
+| Desplazamientos/observación | Consignas nominales RELATIVE4 cm verticales, después Y±10 cm/Z0, sin giro; no son metrología independiente. Una única acción por fase. Operador corrige una selección de respuesta equivocada y confirma depósito completo, caja estable/abrazaderas libres/inmovilidad sin contacto inesperado |
+| Checks/continuidad | Salud inicial23,0 %/23,6 %, cargador/paros0; entrada put1 alivio11,2 mm/0,31°, apertura12,5/12,4 mm y0,40°. Settle trial consumido por alivio; alivio trial consumido por apertura. Journals mantienen `physical_support_confirmed=false`; resultado físico por confirmación separada. Errores lease de lectores al cierre, después de session_finishing, preservados y sin nuevo despacho |
+| HOME autorizado después | Tras confirmación específica de barrido completo libre, check fresco:21,7 %/22,6 %, paros/cargador0, acción anterior terminal4 y dos muestras inmóviles. UNA orden `scripts/force_home.sh`, goal `9410fb54-036e-4d10-b38f-f4434d03fcf7`, SUCCEED/status4/1101001. No reset, cambio de modo, navegación ni retry |
+| Estado final | Dos muestras nuevas20D habilitados/sin fault, velocidad0, máximo absoluto/delta consigna0,002589 rad, brazos0,000959 rad, HOME=1. Operador confirma HOME habitual sin contacto/ruidos y caja estable. Batería21,6 %/22,4 %. Open trial histórico sin consumir, pero no autoriza otra fase ni retoma después de HOME |
+| Backup/evidencia | `../Humanoide-vla-evidence/20261022T115726Z_TABLE74_FINISH_EXECUTION/`: before, operator-confirmation/pins-free/final, referencias/bundles, installer/check/run por fase, result-summary, home-preflight-fresh, home-run.log, home-postflight. Backups remotos `/var/tmp/cruzr-table74-trial/ID/`; copias externas pin-relief-robot-backup/open-robot-backup con manifest/bundle/originales/recibo |
+| Reversión/deuda | Archivos aditivos siguen instalados. Rollback selectivo del instalador con bundle externo/hashes/identidad intactos y sin consumidores; no retirar antecesores mientras se audite la cadena, borrar consumed ni restaurar postura. Depósito autónomo74 aún pendiente: la prueba incluyó ajuste manual y decisiones/confirmaciones por fase. No se promueve el perfil normal |
+
+[Resultados y receta](box_handling/DEPOSITO_WRC_ALTURA_100CM.md#cierre-real-del-depósito-y-home--22-10-2026).
+
 ## BOX-TABLE74-RELEASE4-20261022
 
 **22-10-2026, Europe/Madrid — cambio solicitado de 3 a 4 cm, sólo PC;

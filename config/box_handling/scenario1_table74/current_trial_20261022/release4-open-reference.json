@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "stage": "lateral_open",
+  "surface_height_m": 0.74,
+  "predecessor_bundle_id": "3c755c471a06e39736c5f7e69ff32bab627e9c67171eba6bf7283c7f766ec9f3",
+  "predecessor_goal_id": "961d54cc-192f-442d-8258-290b935a8562",
+  "operator_support_confirmed": true,
+  "tool_table_clearance_m": 0.04,
+  "required_pin_exit_m": 0.04,
+  "operator_pins_free": true,
+  "lateral_path_clear": true,
+  "evidence": "optimistic --finish-deposit; explicit current operator declarations; predecessor_sha256=8bac2749fbe9cdd47cebb4a819e9e55b5f84e6bdfdfd3631207db73ad3447338; facts={\"path_clear\":true,\"pin_exit_cm\":4.0,\"pins_free\":true,\"supported\":true,\"tool_clearance_cm\":4.0}; operator_note=Tras el alivio nominal4cm, operador confirma ambos pines libres, caja plana y estable apoyada, sin contacto ni resistencia inesperados; holgura actual al menos4cm bajo ambos útiles y10cm lateral por lado, observador junto al paro y mismas condiciones físicas/control, sin tocar caja/robot.",
+  "scope": "current_supported_box_only"
+}

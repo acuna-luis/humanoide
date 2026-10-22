@@ -1,5 +1,17 @@
 # Escenario 1 con supervisión continua
 
+**22-10-2026 — BOX-TABLE74-FINISH-EXECUTED-20261022: liberación y HOME completados.**
+Alivio4 cm y apertura10 cm por lado se ejecutaron una vez por fase con check
+real correcto y SUCCEED/status4/1101001. Entre ambas, operador confirma
+pines libres y holguras actuales; al finalizar confirma caja estable y
+abrazaderas libres. Tras nueva confirmación específica del barrido de HOME,
+una orden `force_home.sh` termina correcta; dos muestras20D muestran HOME=1,
+velocidad0 y máximo absoluto0,002589 rad. Operador confirma HOME y caja estable.
+No se repiten etapas ni se envía navegación. Fuentes anteriores de settle/
+alivio consumidas; no retomar el open después de HOME. El depósito74 normal
+sigue pendiente: hubo ajuste manual previo y confirmaciones por fase.
+[Resultados, referencias y evidencia](DEPOSITO_WRC_ALTURA_100CM.md#cierre-real-del-depósito-y-home--22-10-2026).
+
 ## Continuar una liberación de mesa74 ya apoyada — 22-10-2026
 
 **BOX-TABLE74-FINISH-20261022.** Nueva entrada exclusiva
