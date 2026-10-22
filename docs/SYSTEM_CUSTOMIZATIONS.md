@@ -1,5 +1,26 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-ALIGNED-PICKUP-RESUME-20261022
+
+**22-10-2026, Europe/Madrid — CORREGIDO en PC; 98 pruebas y check real de lectura
+VERIFICADOS. Retoma física PENDIENTE; sin instalación persistente ni movimiento nuevo.**
+
+| Campo | Registro |
+| --- | --- |
+| Motivo | La retoma 832193 comparó contra get1 nominal y rechazó 50,824 mm; la pose está a ≈2,77 mm del punto realmente medido tras alinear antes del agarre 807763 |
+| Fuentes/destino exactos | PC/repositorio: `scripts/box_handling/resume_pickup_reference.py` nuevo, `scenario1_cli.py` y `scenario1_runtime.py`; pruebas específicas. Código transmitido en memoria por el lanzador, sin archivos originales del robot o SDK alterados |
+| Referencia histórica | Origen 807763, pose mapa x = −0,7090384790175741 / y = 0,24621047424731896 / yaw = 3,0940205263894724. Pose de la retoma fallida 832193 x = −0,7111343965902477 / y = 0,24439768099719342 / yaw = 3,089475988660553; no se convierte en lectura actual |
+| Contrato | Sólo origen limpio held inmediatamente después de grasp/verify_held; prueba de alineación coherente y terminal nativo correcto con UUID/request, mismo contexto/perfil y sin navegación posterior. Helper puro deriva y runtime revalida el proof/hash; ante contradicción aborta |
+| Límites y dependencias | Sólo cambia el objetivo de comparación de entrada retreat/get1; no cambia waypoint guardado ni genera un goal hacia la referencia. Conserva 20 mm / 2°, salud/mapa/odom frescos, estado/contexto/dependencias y exclusividad. El held asumido no se convierte en sensor; origen sin alineación conserva referencia nominal |
+| Aplicación/activación | Nueva invocación con el origen limpio 807763, `--resume ... --box-state held --stop-after put1`; primero `--plan`/`--check` según condiciones actuales. Sin reiniciar servicios ni repetir grasp/HOME. Se guarda `resume-pickup-reference.json` y procedencia en `resume_arrival` |
+| Verificación | 98 pruebas focales PASS; check real final `RESUME_CHECK_OK`, 2,2 mm / 0,26°, mapa listo y entrada retreat verificada. Sin enviar órdenes de movimiento ni consumir/modificar el origen; ejecución física de retoma PENDIENTE. Secuencia retreat→navigate_put1, depósito de 74 cm fuera de alcance |
+| Backup/evidencia/versiones | `../Humanoide-vla-evidence/20261022T104831Z_ALIGNED_PICKUP_RESUME_FIX/`: `before/`, `before-sha256.json`, checkpoint 807763 preservado, `tests.log`, `live-check-final/` y `verification-receipt.json` con hashes finales. Checkpoint fallido 832193 sin editar |
+| Reversión | Con ejecutor detenido, retirar selectivamente helper/imports/uso de referencia comparando backup y cambios posteriores; vuelve la comparación nominal y puede reproducir el rechazo. No altera mapas ni recupera estado físico |
+
+[Receta y límites de reanudación](box_handling/OPTIMISTIC_SCENARIO1.md#referencia-de-retoma-tras-la-alineación-visual--22-10-2026).
+No es permiso para continuar con caja/estado desconocidos ni para consumir un
+checkpoint ya usado; no se amplían tolerancias o se ocultan fallos previos.
+
 ## BOX-01-TABLE74-HELD-RESUME-20261022
 
 **22-10-2026, Europe/Madrid — hallazgo y plan local; sin cambio del robot.**

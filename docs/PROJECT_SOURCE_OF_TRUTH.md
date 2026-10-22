@@ -1,5 +1,29 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-ALIGNED-PICKUP-RESUME-20261022: referencia correcta para retomar con caja sujeta.**
+La retoma 832193 del origen limpio 807763 rechazó la entrada por comparar la
+pose actual con get1 nominal: distancia 50,824 mm, aunque estaba a ≈2,77 mm de
+la referencia medida al terminar la alineación previa al agarre. Se corrige
+en PC la referencia de comparación de entrada `held → retreat`, sin cambiar
+el punto guardado ni mandar volver a esa pose. El helper puro
+`resume_pickup_reference.py` deriva/revalida la prueba histórica: origen
+held limpio, alineación y agarre nativo con terminales correctos, contexto y
+perfil coincidentes, sin navegación posterior a la referencia ni errores
+antes del cierre solicitado. Rechaza pruebas incompletas o contradictorias.
+Conserva **20 mm / 2°**, medidas nuevas de mapa/odom y salud actual; la evidencia
+`verify_held=assumed` sigue siendo asumida. Orígenes sin alineación conservan
+la referencia nominal. No reutilizar el checkpoint fallido 832193 para
+convertirlo en una recogida correcta: el origen es 807763.
+
+Carga en memoria VERIFICADA mediante `--check` real, sin instalación persistente,
+movimiento, HOME, nuevo agarre o depósito en esta corrección. Las 98 pruebas
+focales pasan. El check final mide 2,2 mm / 0,26° respecto a la referencia
+alineada y termina `RESUME_CHECK_OK`, sin consumir ni modificar el origen.
+Retoma prevista `retreat → navigate_put1`, detenida por `--stop-after put1`;
+depósito de 74 cm y ejecución física del arreglo PENDIENTES. [Receta y estado](box_handling/OPTIMISTIC_SCENARIO1.md#referencia-de-retoma-tras-la-alineación-visual--22-10-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#box-aligned-pickup-resume-20261022).
+Backup y evidencia: `../Humanoide-vla-evidence/20261022T104831Z_ALIGNED_PICKUP_RESUME_FIX/`.
+
 **22-10-2026 — BOX-01-TABLE74-HELD-RESUME-20261022: recogida comunicada y retoma planificada.**
 El operador informa recogida correcta tras corregir la ubicación de get1 respecto
 al montaje de cajas. Es observación del operador, no una prueba causal de la

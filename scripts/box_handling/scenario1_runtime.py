@@ -29,6 +29,7 @@ if __package__:
     from . import scenario1_nav_correction as nav_correction
     from . import scenario1_box_alignment as box_alignment, scenario1_perception as perception
     from . import scenario1_resume as resume
+    from . import resume_pickup_reference as pickup_reference
     from . import scenario1_live_health as live_health
     from .scenario1_cycle_lease import adapter_runner_source
     from .scenario1_session import ProcessSession
@@ -43,6 +44,7 @@ else:
     import scenario1_box_alignment as box_alignment
     import scenario1_perception as perception
     import scenario1_resume as resume
+    import resume_pickup_reference as pickup_reference
     import scenario1_live_health as live_health
     from scenario1_cycle_lease import adapter_runner_source
     from scenario1_session import ProcessSession
@@ -188,6 +190,17 @@ class Runtime:
                                                  **payload['resume_options'])
             if self.resume_plan != payload['resume_plan'] or self.resume_plan['checkpoint'] != self.checkpoint:
                 raise ValueError('RESUME_PLAN_CHANGED: origen o segmento no coinciden')
+        self.resume_pickup_reference = payload.get('resume_pickup_reference')
+        if self.resume_pickup_reference is not None:
+            self.validate_resume_pickup_reference()
+
+    def validate_resume_pickup_reference(self):
+        if (self.resume_plan is None or self.resume_plan['stage'] != 'retreat' or
+                self.resume_plan['requirements']['box_state'] != 'held' or
+                self.resume_plan['requirements']['waypoint'] != 'get1'):
+            raise ValueError('RESUME_PICKUP_REFERENCE_STAGE_MISMATCH')
+        pickup_reference.validate_reference(self.resume_pickup_reference,
+            self.payload['resume_source_checkpoint'], self.payload['resume_context'], self.payload['profile'])
 
     def timed(self, label, function, *args, **kwargs):
         started = time.monotonic()
@@ -709,11 +722,16 @@ class Runtime:
         waypoint = requirements['waypoint']
         poses, started = self.read_poses()
         if waypoint:
-            measurements, outside = self.arrival_measurements(waypoint,
-                self.points[waypoint]['_expected_pose'], poses, started)
+            expected = self.points[waypoint]['_expected_pose']
+            if self.resume_pickup_reference is not None:
+                self.validate_resume_pickup_reference()
+                expected = self.resume_pickup_reference['expected_pose']
+            measurements, outside = self.arrival_measurements(waypoint, expected, poses, started)
             if outside:
                 raise RuntimeError('RESUME_WAYPOINT_NOT_CONFIRMED: '+str(outside[0]))
-            self.emit('resume_arrival', point=waypoint, measurements=measurements)
+            self.emit('resume_arrival', point=waypoint, measurements=measurements,
+                      reference_source=('recorded_box_alignment' if self.resume_pickup_reference is not None else
+                                        'nominal_waypoint'), expected_pose=expected)
         box = requirements['box_state']
         if self.policy == 'sensors' and box in ('held', 'released'):
             # A posture without qualified references stays blocked. Never

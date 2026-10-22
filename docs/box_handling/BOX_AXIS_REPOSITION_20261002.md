@@ -1,5 +1,46 @@
 # Corrección visual del chasis antes de recoger
 
+## Referencia de retoma held después de alinear — 22-10-2026
+
+**BOX-ALIGNED-PICKUP-RESUME-20261022 — corrección en PC y check real de lectura
+VERIFICADOS, sin movimiento; retoma física PENDIENTE.** La alineación cambia la
+ubicación real de recogida respecto a get1 nominal. El origen limpio 807763
+guarda como referencia mapa x=−0,7090384790175741m,
+y=0,24621047424731896m, yaw=3,0940205263894724rad. La retoma 832193 midió
+x=−0,7111343965902477m, y=0,24439768099719342m,
+yaw=3,089475988660553rad: ≈2,77 mm de la referencia, pero 50,824 mm del nominal.
+El rechazo anterior no demuestra que la caja se desplazase esa distancia.
+
+`resume_pickup_reference.py` deriva una referencia histórica sólo de un
+segmento limpio held inmediatamente después del agarre y verify_held:
+alineación completa con presupuestos/llegadas y asociación de caja válidos,
+parejas visual/mapa coherentes, terminales nativos correctos e identidades
+de goal/request, contexto/perfil iguales y sin navegación posterior al referencia.
+La prueba compacta conserva hashes y se deriva otra vez en el runtime; si
+falta o contradice evidencia, se aborta. No convierte la sujeción asumida en
+medida ni la pose antigua en muestra fresca.
+
+Se cambia únicamente la comparación de entrada `held → retreat` frente a esa
+referencia verificada; siguen 20 mm / 2°, dos poses nuevas, odometría en reposo,
+mapa listo, salud y contexto actuales. No cambia get1, no hay nuevo objetivo
+de navegación al referencia y no se repite ningún agarre. Para orígenes sin
+alineación se conserva el comportamiento nominal. `resume_arrival` registra
+la procedencia y el valor usado. El origen es 807763, no el checkpoint fallido
+832193. Con `--stop-after put1` sólo se prevé retirada y llegada con caja
+sujeta: depósito de 74 cm / HOME siguen fuera del segmento.
+
+Validación: 98 pruebas focales PASS. El `--check` real final acepta entrada
+a 2,2 mm / 0,26°, mapa listo y reposo, termina `RESUME_CHECK_OK` sin enviar
+órdenes de movimiento ni consumir/modificar el origen. Evidencia en `live-check-final/`;
+la ejecución de retirada y navegación queda para el operador.
+
+Receta condicional y precauciones de estado:
+[Optimistic](OPTIMISTIC_SCENARIO1.md#referencia-de-retoma-tras-la-alineación-visual--22-10-2026).
+Fuentes CLI/runtime/helper y pruebas; backups, hashes y evidencia en
+`../Humanoide-vla-evidence/20261022T104831Z_ALIGNED_PICKUP_RESUME_FIX/`.
+No se han tocado límites, SPS, XML/YAML, fuerzas, trayectorias de brazos,
+servicios o configuración del robot para esta corrección.
+
 ## 22-10-2026: inestabilidad de pose después del segundo ajuste
 
 **BOX-ALIGN-BASE-UNSTABLE-20261022 — 22-10-2026, Europe/Madrid.

@@ -1,5 +1,44 @@
 # Escenario 1 con supervisión continua
 
+## Referencia de retoma tras la alineación visual — 22-10-2026
+
+**BOX-ALIGNED-PICKUP-RESUME-20261022. Corrección y check real de lectura
+VERIFICADOS; retoma física PENDIENTE.** El origen 807763 terminó limpio tras
+`grasp/verify_held`, con caja declarada held. La retoma 832193 se bloqueó al
+comparar contra get1 nominal: 50,824 mm, aunque la pose medida estaba a ≈2,77 mm
+de la referencia de mapa registrado al terminar la alineación previa al agarre.
+No se amplía la tolerancia de 20 mm / 2°: se usa la referencia correspondiente a la
+recogida que se pretende continuar. No se manda navegar hacia ese referencia ni
+se modifica el punto get1 guardado.
+
+El CLI deriva `resume-pickup-reference.json` del diario, checkpoint y contexto
+del origen; el runtime vuelve a validarlo. Exige origen held limpio, alineación
+coherente, UUID/request y terminales nativos correctos, perfil/contexto exactos
+y ausencia de navegación posterior a la referencia o fallo antes del cierre
+solicitado. Datos incompletos o contradictorios bloquean la retoma. Un origen
+sin alineación visual conserva la comparación nominal. Las poses históricas
+no sustituyen medidas nuevas de mapa/odom, salud, reposo y estado actuales;
+`verify_held.source=assumed` permanece asumido.
+
+Para esta secuencia se conserva el **origen 807763**, no el checkpoint fallido
+832193. El comando de la sección siguiente mantiene `--stop-after put1`:
+`retreat → navigate_put1`, sin repetir grasp, alineación, HOME o depósito.
+Antes de mover, comprobar la caja realmente sujeta/estable y las condiciones
+físicas actuales; inspeccionar con `--plan` y realizar `--check` antes de
+`--run`. Si el origen está consumido o cambia contexto/estado, no editarlo
+para forzar la entrada. Depósito de 74 cm sigue pendiente y bloqueado.
+
+Validación: 98 pruebas focales PASS y `--check` real final con entrada a
+2,2 mm / 0,26°, `RESUME_CHECK_OK`. Sólo consulta estado/mapa, no envía órdenes de movimiento ni altera el checkpoint
+ni lo consume. El diario conserva los errores de lease de la terminación de
+los workers después del cierre solicitado; no son un nuevo fallo de entrada.
+
+Fuentes: helper puro `scripts/box_handling/resume_pickup_reference.py`, CLI y
+runtime; backup/evidencia
+`../Humanoide-vla-evidence/20261022T104831Z_ALIGNED_PICKUP_RESUME_FIX/`.
+[Contrato de la referencia](BOX_AXIS_REPOSITION_20261002.md#referencia-de-retoma-held-después-de-alinear--22-10-2026),
+[ficha de restauración](../SYSTEM_CUSTOMIZATIONS.md#box-aligned-pickup-resume-20261022).
+
 ## Retomar la recogida de 74 cm con caja sujeta — 22-10-2026
 
 **BOX-01-TABLE74-HELD-RESUME-20261022. Plan local VERIFICADO; ejecución PENDIENTE.**
@@ -21,7 +60,8 @@ al paro, la retoma siguiente sólo retira y navega a put1:
 ```
 
 El plan comprobado usa entrada `retreat`, HOME no requerido y waypoint `get1`;
-no repite agarre ni alineación. Para inspección local, sustituir `--run` por
+la referencia de entrada alineada se corrige como se indica arriba. No repite
+agarre ni alineación. Para inspección local, sustituir `--run` por
 `--plan`: no conecta ni consume el origen. La ejecución real vuelve a comprobar
 contexto/boot, dependencias, estado y postura. No se ha ejecutado desde el agente.
 No usar `--from-stage grasp` para volver sobre una recogida ya completada.

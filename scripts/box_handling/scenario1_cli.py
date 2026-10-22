@@ -24,6 +24,7 @@ if __package__:
     from . import scenario1_nav_correction as nav_correction
     from . import scenario1_box_alignment as box_alignment
     from . import scenario1_resume as resume
+    from . import resume_pickup_reference as pickup_reference
     from .scenario1_console import ConsoleReporter, stage_label
     from .front_box_integration import build_bundle, TASK_ROOT, META_ROOT, SNAPSHOT
 else:
@@ -32,6 +33,7 @@ else:
     import scenario1_nav_correction as nav_correction
     import scenario1_box_alignment as box_alignment
     import scenario1_resume as resume
+    import resume_pickup_reference as pickup_reference
     from scenario1_console import ConsoleReporter, stage_label
     from front_box_integration import build_bundle, TASK_ROOT, META_ROOT, SNAPSHOT
 
@@ -57,6 +59,7 @@ MODULES = [('cruzr_home_posture_gate', ROOT/'scripts/lib/cruzr_home_posture_gate
            ('scenario1_perception', HERE/'scenario1_perception.py'),
            ('scenario1_resume_worker', HERE/'scenario1_resume_worker.py'),
            ('scenario1_box_alignment', HERE/'scenario1_box_alignment.py'),
+           ('resume_pickup_reference', HERE/'resume_pickup_reference.py'),
            ('scenario1_runtime', HERE/'scenario1_runtime.py')]
 BOOTSTRAP = '''import json,sys,types
 payload=json.loads(sys.stdin.readline())
@@ -499,6 +502,8 @@ def _main(args, stop=None):
             raise SensorCalibrationPending('Sensor calibration qualification is pending')
     resume_plan = None
     source_checkpoint = None
+    resume_context = None
+    corrected_pickup_reference = None
     if args.resume:
         if args.resume.with_name(args.resume.name+'.consumed.json').exists():
             raise RuntimeError('Este checkpoint ya fue consumido por otra reanudación')
@@ -510,6 +515,14 @@ def _main(args, stop=None):
                               execution_profile=execution_profile)
         resume_plan = resume.plan_resume(source_checkpoint, profile, **resume_options)
         checkpoint = resume_plan['checkpoint']
+        # Preserve the actual aligned pickup location as a historical arrival
+        # reference, never as a new goal or a fabricated live sensor reading.
+        events_path = args.resume.parent/'events.jsonl'
+        if resume_plan['stage'] == 'retreat' and events_path.exists():
+            resume_context = json.loads((args.resume.parent/'context.json').read_text())
+            rows = [json.loads(line) for line in events_path.read_text().splitlines() if line.strip()]
+            corrected_pickup_reference = pickup_reference.derive_reference(
+                rows, source_checkpoint, resume_context, profile)
     if moving and policy == 'ask' and not sys.stdin.isatty():
         raise RuntimeError('Se requiere un terminal y operador junto al robot')
     home_retry_remaining = int(
@@ -559,6 +572,8 @@ def _main(args, stop=None):
         if table74:
             report['table_preparation'] = table74_preparation_report(profile)
         report['box_alignment'] = alignment_report
+        if corrected_pickup_reference is not None:
+            report['resume_pickup_reference'] = corrected_pickup_reference
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0
     if moving:
@@ -585,10 +600,15 @@ def _main(args, stop=None):
         payload['sensor_profile'] = sensor_profile
         atomic_json(evidence/'sensor-profile.json', sensor_profile)
     if args.resume:
-        payload['resume_context'] = json.loads((args.resume.parent/'context.json').read_text())
+        payload['resume_context'] = (resume_context if resume_context is not None else
+                                     json.loads((args.resume.parent/'context.json').read_text()))
         payload['resume_source_checkpoint'] = source_checkpoint
         payload['resume_options'] = resume_options
         payload['resume_plan'] = resume_plan
+        if corrected_pickup_reference is not None:
+            payload['resume_pickup_reference'] = corrected_pickup_reference
+            atomic_json(evidence/'resume-pickup-reference.json', corrected_pickup_reference)
+            print('Retoma: referencia de recogida alineada del origen; se conservan 2 cm / 2 grados.')
         atomic_json(evidence/'resume-source-checkpoint.json',
                     dict(artifact='resume_source_snapshot', checkpoint=source_checkpoint))
         atomic_json(evidence/'resume-plan.json', resume_plan)
