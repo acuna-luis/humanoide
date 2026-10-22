@@ -250,6 +250,10 @@ class ConsoleReporter:
             return ['  Posición de entrada '+clean(event.get('point'))+': '+residual(event.get('measurements'))]
         if name == 'resume_prerequisite':
             return ['  Preparación de la entrada: '+clean(event.get('task'))]
+        if name == 'table74_native_completion':
+            if event.get('verified') is False and event.get('diagnostic_status') in ('inconclusive', 'unavailable'):
+                return ['  Registro Docker no concluyente; resultado SDK correcto y supervisión activa.']
+            return []
         if name == 'sensor_check':
             return ['  Telemetría FT/articular recibida; referencias: '+clean(event.get('qualification'))]
         if name == 'sensor_verification':

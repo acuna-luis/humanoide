@@ -1,5 +1,29 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**22-10-2026 — BOX-TABLE74-FERIA-COORDINATION-20261022: coordinación rápida
+con auditoría adicional opcional.** La aproximación de la toma1280135
+terminó SUCCEED/status4/1101001 en12,367 s, goal
+`48339049-920e-4c9b-9762-7774f92c3621`; luego el auditor bloqueó por identidad.
+La consulta de lectura encontró77 bytes de error del lector Docker, rc0,
+`invalid character '\x00' looking for beginning of value`, sin transacción
+nativa. No se tocaron logs ni se reiniciaron servicios.
+
+Un log ausente/formato inconcluyente se registra ahora `verified=false` y
+diagnóstico `unavailable`/`inconclusive`; se mantienen terminal SDK auténtico
+y salud fresca. Fuerza/IK/fault, resultado fallido, fin prematuro documentado
+y pruebas/configuración inválidas siguen bloqueando. Se guarda la salida
+cruda acotada antes del análisis. Las fases usan `quick_health` continuo y
+handshake de menos de2 s sólo con idéntico contexto, última acción y monitor;
+la entrada de cada etapa se verifica de nuevo. Se conserva íntegra la
+geometría74 cm y la recogida; no se importa el depósito69,5/90 cm de otra rama.
+
+**Caja todavía SUJETA según el usuario:** no usar el inicio completo inferior
+como retoma, repetir aproximación/HOME o editar journals/`consumed`.
+Esta corrección sólo tiene comprobación local y consultas remotas de lectura;
+**ensayo físico PENDIENTE**. Evidencia y backups:
+`../Humanoide-vla-evidence/20261022T150650Z_TABLE74_FERIA_COORDINATION/`.
+[Detalles y estado](../box_handling/OPTIMISTIC_SCENARIO1.md#ciclo-completo-supervisado-para-mesa-de-74-cm).
+
 **22-10-2026 — BOX-TABLE74-RECORDED-RECIPE-20261022: receta74 guardada, sin
 preguntas al ejecutar el ciclo completo.** La toma supervisada
 `20261022T142922Z_TABLE74_SUPERVISED_CYCLE_1198976` completó recogida,
@@ -32,9 +56,10 @@ apoyo5 cm, alivio4 cm, apertura10 cm por lado y HOME medido, sin settle
 automático. Se suprimen cinco checks completos duplicados, que sumaban78,4 s
 en la toma fuente, y un preflight HOME repetido; se conservan el preflight
 fresco de cada run, salud continua, paros, cargador, batería, mapa/localización,
-fuerza y límites. La nueva auditoría de la transacción nativa exacta y su
-duración rechaza `DectionForceCollision` incluso con SUCCEED. Un fallo o
-evidencia incierta detienen sin otra fase ni HOME de recuperación. No hay
+fuerza y límites. La auditoría adicional rechaza `DectionForceCollision`
+incluso con SUCCEED; un log ausente o inconcluyente se registra sin inventar
+verificación, conservando terminal real y salud. Un fallo de control, salud
+o pruebas auténticas detiene sin otra fase ni HOME de recuperación. No hay
 retry de brazos ni repetición `--cycle`. El tiempo total nuevo queda pendiente
 de medir. La entrada completa usa Ethernet y rechaza `--wifi`.
 

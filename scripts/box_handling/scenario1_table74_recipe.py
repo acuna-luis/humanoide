@@ -95,18 +95,37 @@ class RecipePolicy:
         return receipt
 
     def validate_completion(self, after, evidence):
-        """Require the runtime's native audit, not a bare vendor SUCCEED."""
+        """Bind the successful action to an honest, possibly inconclusive log audit.
+
+        Feria uses the native terminal plus live guards. An unavailable Docker
+        log is a diagnostic limitation, not a contradictory robot outcome.
+        Positive force/IK evidence still fails in the runtime before success.
+        """
         self.as_dict()
         events = Path(after)/'events.jsonl'
         if events.stat().st_size > 16*1024*1024:
             raise ValueError('TABLE74_RECIPE_EVENTS_UNBOUNDED')
         rows = [json.loads(line) for line in events.read_text().splitlines() if line.strip()]
         checks = [row for row in rows if row.get('event') == 'table74_native_completion']
-        if len(checks) != 1 or checks[0].get('verified') is not True:
+        if len(checks) != 1:
             raise RuntimeError('TABLE74_RECIPE_NATIVE_COMPLETION_UNCONFIRMED')
         journal = json.loads((Path(after)/'trial.json').read_text())
         check = checks[0]
+        complete = check.get('verified') is True
+        inconclusive = (check.get('verified') is False and
+            check.get('guard_policy') == 'feria_native_terminal_v1' and
+            check.get('diagnostic_status') in ('inconclusive', 'unavailable') and
+            check.get('critical_fault_observed') is False and
+            check.get('execution_result_validated') is True)
+        if not (complete or inconclusive):
+            raise RuntimeError('TABLE74_RECIPE_NATIVE_COMPLETION_UNCONFIRMED')
         if (journal.get('phase') != 'succeeded' or check.get('goal_id') != journal.get('result', {}).get('goal_id')
                 or check.get('bundle_id') != journal.get('bundle_id')):
             raise RuntimeError('TABLE74_RECIPE_COMPLETION_IDENTITY_CHANGED')
+        if inconclusive:
+            if __package__:
+                from .scenario1_contract import validate_motion_result
+            else:
+                from scenario1_contract import validate_motion_result
+            validate_motion_result(journal['result'])
         return check

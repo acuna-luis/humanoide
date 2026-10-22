@@ -3,6 +3,7 @@ import copy
 import json
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 from scripts.box_handling import scenario1_table74_native_completion as native
 from scripts.box_handling.test_scenario1_table74_current_lower import bundle as lowering
@@ -100,6 +101,92 @@ class NativeCompletionTests(unittest.TestCase):
             '[clamp_abnormality_helper.cpp:752:CheckCollisionForce]: '
             'Collision force on right_hand axis[2] exceeded limit 3 times, exiting.')
         with self.assertRaisesRegex(ValueError,'NATIVE_FAULT'):native.validate_native_log(text,bundle)
+
+
+class NativeDiagnosticAssessmentTests(unittest.TestCase):
+    def test_complete_transaction_is_verified_only_as_native_diagnostic_evidence(self):
+        bundle=lowering()
+        report=native.assess_native_log(log(bundle),bundle)
+        self.assertIs(report['verified'],True)
+        self.assertEqual(report['diagnostic_status'],'complete')
+        self.assertEqual(report['guard_policy'],'feria_native_terminal_v1')
+        self.assertIs(report['critical_fault_observed'],False)
+        self.assertIs(report['physical_support_verified'],False)
+        self.assertIs(report['pin_disengagement_verified'],False)
+
+    def test_docker_reader_error_with_returncode_zero_is_unavailable_not_a_robot_fault(self):
+        bundle=lowering()
+        text=r"Error grabbing logs: invalid character '\x00' looking for beginning of value"+'\n'
+        report=native.assess_native_log(text,bundle)
+        self.assertIs(report['verified'],False)
+        self.assertEqual(report['diagnostic_status'],'unavailable')
+        self.assertIs(report['critical_fault_observed'],False)
+        self.assertIn('Error grabbing logs',report['reason'])
+        self.assertEqual(report['native_log_sha256'],native._sha(text))
+        self.assertEqual(report['native_log_bytes'],len(text.encode()))
+        self.assertIsNone(report['clamp_status'])
+
+    def test_missing_or_ambiguous_format_is_inconclusive_without_rewriting_strict_api(self):
+        bundle=lowering();text=log(bundle)
+        cases=['',None,'BTree tick succeeded\n',text.replace('End MetaClamp:','End MetaMove:'),
+            text.replace('spent_time: 12.032 s','spent_time: nan s'),
+            'Start MetaWaypointGeneral: cruzr/go2init\nEnd MetaWaypointGeneral: cruzr/go2init\n'+text,
+            text+'\nStart MetaWaypointGeneral: cruzr/go2init\nEnd MetaWaypointGeneral: cruzr/go2init\n']
+        for value in cases:
+            with self.subTest(text=str(value)[-100:]):
+                with self.assertRaises(ValueError):native.validate_native_log(value,bundle)
+                report=native.assess_native_log(value,bundle)
+                self.assertIs(report['verified'],False)
+                self.assertEqual(report['diagnostic_status'],'inconclusive')
+                self.assertIsNone(report['clamp_status'])
+                self.assertIsNone(report['spent_time_s'])
+                self.assertIs(report['physical_support_verified'],False)
+
+    def test_explicit_force_ik_status_and_failed_result_stay_hard_even_without_identity(self):
+        bundle=lowering()
+        messages=['DectionForceCollision','DetectionForceCollision',
+            'Collision force on right_hand axis[2] exceeded limit 3 times, exiting.',
+            'IK solver failed','HQP infeasible','BTree tick failed',
+            'result: FAILURE','result: FAILED','result: ABORTED',
+            'unknown header clamp_status: JointTrackingError',
+            'prefix clamp_status: DectionForceCollision']
+        for message in messages:
+            for query_error in (None,'Docker diagnostic query failed'):
+                with self.subTest(message=message,query_error=query_error),self.assertRaisesRegex(ValueError,'NATIVE_(FAULT|STATUS)'):
+                    native.assess_native_log('missing start/end\n'+message+'\n',bundle,query_error=query_error)
+
+    def test_unavailable_query_does_not_hide_positive_fault_or_invent_normal_status(self):
+        bundle=lowering()
+        report=native.assess_native_log('',bundle,query_error='docker logs query timed out')
+        self.assertEqual(report['diagnostic_status'],'unavailable')
+        self.assertIs(report['verified'],False)
+        self.assertIsNone(report['clamp_status'])
+        complete=native.assess_native_log(log(bundle),bundle,query_error='diagnostic stream incomplete')
+        self.assertIs(complete['verified'],False)
+        self.assertEqual(complete['diagnostic_status'],'unavailable')
+        with self.assertRaisesRegex(ValueError,'NATIVE_FAULT'):
+            native.assess_native_log('Error grabbing logs: reader failed\nresult: FAILURE\n',bundle)
+
+    def test_confirmed_early_duration_remains_hard_but_long_or_missing_duration_is_diagnostic(self):
+        for bundle in (lowering(),releasing()):
+            duration=bundle['review']['nominal_duration_s']
+            for spent in (0.,duration-native.MIN_DURATION_TOLERANCE_S-.001):
+                for query_error in (None,'diagnostic query incomplete'):
+                    with self.subTest(duration=duration,spent=spent,query_error=query_error),self.assertRaisesRegex(ValueError,'NATIVE_DURATION'):
+                        native.assess_native_log(log(bundle,spent=spent),bundle,query_error=query_error)
+            report=native.assess_native_log(log(bundle,spent=duration+native.MAX_DURATION_OVERRUN_S+.001),bundle)
+            self.assertIs(report['verified'],False)
+            self.assertEqual(report['diagnostic_status'],'inconclusive')
+            native.assess_native_log(log(bundle,spent=duration-native.MIN_DURATION_TOLERANCE_S),bundle)
+
+    def test_invalid_candidate_and_programming_errors_are_not_absorbed_as_missing_logs(self):
+        bundle=lowering()
+        bad=copy.deepcopy(bundle);path=next(iter(bad['tasks']));bad['tasks'][path]+='changed'
+        with self.assertRaises(ValueError):native.assess_native_log('',bad,query_error='reader failed')
+        for error in (ImportError('missing code dependency'),RuntimeError('unexpected parser bug'),ValueError('unexpected invariant')):
+            with self.subTest(error=type(error).__name__),patch.object(native,'validate_native_log',side_effect=error):
+                with self.assertRaises(type(error)):native.assess_native_log(log(bundle),bundle)
+        with self.assertRaises(TypeError):native.assess_native_log('',bundle,query_error=False)
 
 
 if __name__=='__main__':unittest.main()

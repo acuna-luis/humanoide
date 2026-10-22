@@ -1,6 +1,48 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
 
+**22-10-2026 — BOX-TABLE74-FERIA-COORDINATION-20261022: fallo de diagnóstico separado del resultado nativo.**
+**OBSERVADO:** intento `20261022T150133Z_TABLE74_SUPERVISED_CYCLE_1280135`,
+aproximación `48339049-920e-4c9b-9762-7774f92c3621`, SUCCEED/status4/1101001
+tras12,367 s; después TABLE74_NATIVE_IDENTITY, antes de support/apertura.
+La consulta posterior de la misma ventana/contenedor de logs devuelve rc0 pero
+sólo77 bytes: `Error grabbing logs: invalid character '\x00' looking for beginning of value`.
+El rechazo original no conservó su RAW: atribuirle ese mismo fallo del lector
+es una **INFERENCIA**, no una prueba de contenido del registro original.
+No demuestra un fallo de servo ni confirma por sí solo el apoyo de la caja.
+
+**VERIFICADO en código/pruebas:** comparado `feriabarcelona`, se toma su uso del
+terminal nativo identificado más salud continua para el avance. El registro
+Docker pasa a ser diagnóstico adicional: formato ausente/ambiguo, error de
+lectura o timeout acotado2 s producen verified=false/inconclusive/unavailable;
+no se convierten en éxito de auditoría ni en medidas de apoyo/pines. El PC
+exige UUID/bundle correctos y resultado nativo SUCCEED/status4/1101001.
+Fuerza/IK/estado anormal/resultado fallido observados y fin prematuro demostrado
+siguen bloqueando; también los fallos de contexto, hashes, leases, paros,
+batería, cargador, localización y reposo. RAW y bounds se archivan antes del
+análisis incluso si falla.
+
+Como la rama de feria, cada fase optimista usa quick_health del monitor vivo
+en lugar de adquirir otra vez toda la salud. Se conserva el preflight inicial
+completo y la entrada final fresca de cada etapa. El handshake inmediato puede
+reutilizar una entrada auténtica durante menos de2 s sólo con el mismo contexto,
+última acción y monitor; un nuevo fault no permite usar un éxito antiguo.
+No se cambia el agarre ni la geometría74: aproximaciónZ0,94, descensos14+5 cm,
+alivio4 cm, apertura10 cm por lado y HOME20D; sin preguntas ni retry.
+
+**Estado físico comunicado:** caja sigue SUJETA. No se ha enviado movimiento,
+HOME, paro ni reinicio; sólo una consulta SSH de lectura de logs. No repetir la
+recogida/aproximación ni revivir el checkpoint consumido de esta toma. La
+continuación exige tratar su frontera actual, no iniciar un ciclo desde vacío.
+Verificación: **383 pruebas correctas** de27 módulos de mesa74, runtime,
+monitor de salud, reanudación, sesión y consola; plan offline y sintaxis correctos.
+**PENDIENTE:** ensayo físico y cronometraje del arreglo. Fuentes y respaldo en
+[ficha](SYSTEM_CUSTOMIZATIONS.md#box-table74-feria-coordination-20261022) y
+[manual](box_handling/OPTIMISTIC_SCENARIO1.md).
+Evidencia: `../Humanoide-vla-evidence/20261022T150650Z_TABLE74_FERIA_COORDINATION/`.
+
+
+
 **22-10-2026 — BOX-TABLE74-RECORDED-RECIPE-20261022: ciclo74 sin preguntas y checks duplicados retirados.**
 **OBSERVADO:** la toma completa `20261022T142922Z_TABLE74_SUPERVISED_CYCLE_1198976`
 terminó recogida, aproximación, descensos14+5 cm, alivio4 cm, apertura10 cm

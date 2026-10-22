@@ -136,6 +136,70 @@ print(json.dumps({p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest() for
         super().hashes()
         self.verify_trial_files()
 
+    def recorded_recipe_enabled(self):
+        """Validate the exact record before using any recipe-only optimization."""
+        if 'recipe_provenance' not in self.payload:
+            return False
+        if __package__:
+            from .scenario1_table74_recipe import validate_record
+        else:
+            from scenario1_table74_recipe import validate_record
+        validate_record(self.payload['recipe_provenance'])
+        return True
+
+    def _trial_entry_identity(self):
+        return copy.deepcopy(dict(containers=self.container_identity,
+            dependencies=self.dependency_identity, points=self.points,
+            resume_plan=self.resume_plan, resume_context=self.payload.get('resume_context'),
+            checkpoint=self.checkpoint, session=str(self.session),
+            health_worker_identity=id(self.health_session)))
+
+    def check_resume_entry(self, *, refresh_health=False):
+        """Reuse only a recent authentic entry for the explicit recipe handshake.
+
+        The initial Runtime.run health remains complete. Every stage calls this
+        method with refresh_health=False, always recapturing base/map/arrival.
+        Only the immediate explicit resume may reuse its own fresh entry; the
+        continuously validated safety stream is still checked and no current
+        physical measurement is claimed for that reuse.
+        """
+        if not self.recorded_recipe_enabled():
+            self._trial_entry_cache = None
+            return super().check_resume_entry(refresh_health=refresh_health)
+        cached = getattr(self, '_trial_entry_cache', None)
+        self._trial_entry_cache = None
+        now = time.monotonic()
+        if (refresh_health and cached is not None and self.live_monitor_enabled and
+                0 <= now-cached['checked_at'] < 2. and
+                cached['identity'] == self._trial_entry_identity() and
+                cached['last_action_end_ns'] == self.last_action_end_ns):
+            self.resume_validated = False
+            self.connected()
+            self.quick_health()  # A fault is fatal, never a reason to use older success.
+            age = time.monotonic()-cached['checked_at']
+            if (0 <= age < 2. and self.live_monitor_enabled and
+                    cached['identity'] == self._trial_entry_identity() and
+                    cached['last_action_end_ns'] == self.last_action_end_ns):
+                self.resume_validated = True
+                self.emit('trial_resume_entry_reused', age_s=age, maximum_age_s=2.,
+                    current_entry_measurement_refreshed=False, continuous_live_health_checked=True,
+                    source_sha256=self.resume_plan['source_sha256'])
+                return
+        if refresh_health:
+            self.resume_validated = False
+            self.connected()
+            self.timed('resume_containers', self.discover)
+            self.timed('resume_dependencies', self.hashes)
+            self.timed('resume_live_health', self.quick_health)
+            self.map_points()
+        result = super().check_resume_entry(refresh_health=False)
+        if (self.resume_validated and self.live_monitor_enabled and
+                isinstance(self.container_identity,dict) and self.container_identity and
+                isinstance(self.dependency_identity,dict) and self.dependency_identity):
+            self._trial_entry_cache = dict(checked_at=time.monotonic(),
+                identity=self._trial_entry_identity(), last_action_end_ns=self.last_action_end_ns)
+        return result
+
     def action(self, kind, goal, timeout, *, correction=None, allow_home_retry=False):
         query = (kind == 'navigation' and isinstance(goal, dict) and
                  set(goal) == {'command', 'arg_json'} and
@@ -166,23 +230,21 @@ print(json.dumps({p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest() for
         self.save_trial()  # Durable intent before gates and before any dispatch.
         started = time.monotonic()
         try:
+            recipe_enabled = self.recorded_recipe_enabled()
+            if recipe_enabled and self.trial_bundle['review']['reference'].get('stage') == 'settle':
+                raise RuntimeError('The recorded recipe never adds an automatic settle')
             self.connected()
             self.timed('trial_containers', self.discover)
             self.timed('trial_dependencies', self.hashes)
-            self.timed('trial_health', self.health, require_home=False)
+            if recipe_enabled:
+                self.timed('trial_live_health', self.quick_health)
+            else:
+                self.timed('trial_health', self.health, require_home=False)
             self.check_resume_entry()
             self.timed('trial_stationary', self.quick_health)
-            self.verify_trial_files()
+            if not recipe_enabled:
+                self.verify_trial_files()
             self.connected()
-            recipe_enabled = 'recipe_provenance' in self.payload
-            if recipe_enabled:
-                if __package__:
-                    from .scenario1_table74_recipe import validate_record
-                else:
-                    from scenario1_table74_recipe import validate_record
-                validate_record(self.payload['recipe_provenance'])
-                if self.trial_bundle['review']['reference'].get('stage') == 'settle':
-                    raise RuntimeError('The recorded recipe never adds an automatic settle')
             native_start_ns = time.time_ns()
             self._trial_dispatch = True
             try:
@@ -206,26 +268,51 @@ print(json.dumps({p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest() for
             raise
 
     def audit_native_completion(self, start_ns, result):
-        """A vendor SUCCEED may conceal force termination; never chain it blindly."""
+        """Keep observed native faults fatal; log-reader failures are diagnostic.
+
+        As in the feria runner, execution depends on its identified successful
+        native result and live safety checks. Text log availability is separate.
+        """
         if __package__:
-            from .scenario1_table74_native_completion import validate_native_log
+            from .scenario1_table74_native_completion import assess_native_log
         else:
-            from scenario1_table74_native_completion import validate_native_log
+            from scenario1_table74_native_completion import assess_native_log
         end_ns = time.time_ns()
         since = str(start_ns//10**9)+'.'+format(start_ns%10**9, '09d')
         until = str(end_ns//10**9)+'.'+format(end_ns%10**9, '09d')
         # Docker timestamps and these bounds use Motion's host clock. Neither
         # the PC's journal timestamps nor the vendor's differently zoned text
         # clock are used to select a log window.
-        process = subprocess.run(['docker', 'logs', '--timestamps', '--since', since,
-            '--until', until, self.native_container], stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, text=True, timeout=8)
-        log = process.stdout
-        if process.returncode or len(log.encode()) > 512*1024:
-            raise RuntimeError('TABLE74_NATIVE_LOG_UNAVAILABLE_OR_UNBOUNDED; no automatic continuation')
-        report = validate_native_log(log, self.trial_bundle)
+        command = ['docker', 'logs', '--timestamps', '--since', since,
+            '--until', until, self.native_container]
+        query_error = None
+        returncode = None
+        try:
+            process = subprocess.run(command, stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, text=True, timeout=2)
+            log, returncode = process.stdout, process.returncode
+            if returncode or 'Error grabbing logs:' in log:
+                query_error = 'Docker log reader failed; rc='+str(returncode)
+        except subprocess.TimeoutExpired as exc:
+            log = exc.output or ''
+            if isinstance(log, bytes):
+                log = log.decode('utf-8', errors='replace')
+            query_error = 'Docker log diagnostic timed out after 2 seconds'
+        raw_bytes = len(log.encode())
+        if raw_bytes > 512*1024:
+            log = log.encode()[:512*1024].decode('utf-8', errors='replace')
+            query_error = 'Docker log diagnostic exceeded its bounded capture'
+        capture = dict(log=log, returncode=returncode, query_error=query_error,
+            raw_bytes=raw_bytes, truncated=raw_bytes > 512*1024,
+            host_start_ns=start_ns, host_finished_ns=end_ns,
+            bundle_id=self.trial_bundle['manifest']['id'], goal_id=result['goal_id'])
+        # Preserve the evidence BEFORE parsing, also when native faults block.
+        atomic_json(self.session/'native-log-capture.json', capture)
+        self.emit('table74_native_log_capture', **capture)
+        report = assess_native_log(log, self.trial_bundle, query_error=query_error)
         report.update(goal_id=result['goal_id'], bundle_id=self.trial_bundle['manifest']['id'],
-            host_start_ns=start_ns, host_finished_ns=end_ns)
+            host_start_ns=start_ns, host_finished_ns=end_ns,
+            execution_result_validated=True)
         atomic_json(self.session/'native-completion.json', dict(report=report, log=log))
         self.emit('table74_native_completion', **report)
         self.connected()

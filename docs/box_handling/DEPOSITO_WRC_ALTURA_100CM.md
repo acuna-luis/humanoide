@@ -1,5 +1,36 @@
 # Depósito WRC y estantería a 100 cm
 
+**22-10-2026 — BOX-TABLE74-FERIA-COORDINATION-20261022: diagnóstico opcional
+y coordinación con salud continua.** La toma
+`20261022T150133Z_TABLE74_SUPERVISED_CYCLE_1280135` terminó la aproximación
+con SUCCEED/status4/1101001, goal `48339049-920e-4c9b-9762-7774f92c3621`,
+12,367 s, y se detuvo después por `TABLE74_NATIVE_IDENTITY`. Una consulta
+posterior de lectura encontró que Docker devolvía rc0 pero sólo77 bytes:
+`Error grabbing logs: invalid character '\x00' looking for beginning of value`.
+No se modificaron logs, servicios o configuración remota.
+
+La auditoría adicional admite ahora log ausente/formato inconcluyente como
+`verified=false`, diagnóstico `unavailable`/`inconclusive`. La continuidad
+requiere el terminal SDK auténtico y salud fresca; nunca se fabrica una
+transacción de log. Fallos positivos de fuerza, IK, fault, resultado fallido
+o fin prematuro documentado siguen bloqueando, así como configuración,
+contexto o pruebas inválidos. Se guarda la salida cruda acotada antes de parsear.
+
+Como `feriabarcelona`, las fases aprovechan `quick_health` del monitor continuo
+y sólo reutilizan un handshake de menos de2 s si coinciden contexto, última
+acción y monitor. Cada etapa comprueba de nuevo su entrada. No se copian
+geometrías de otra mesa: siguen74 cm, Z0,94,14+5 cm, alivio4 cm, apertura10 cm
+y HOME20D; recogida y duraciones intactas, sin preguntas ni retries.
+
+**El usuario comunica que la caja sigue SUJETA.** No repetir el ciclo completo,
+aproximación o HOME para retomar, ni editar journals o borrar `consumed`.
+Los comandos de inicio inferiores son para un futuro ciclo desde HOME.
+Corrección local con diagnóstico remoto sólo de lectura; **ensayo físico
+PENDIENTE**. [Fuente del runner](../../scripts/box_handling/scenario1_table74_trial_run.py),
+[auditoría](../../scripts/box_handling/scenario1_table74_native_completion.py),
+[receta](../../scripts/box_handling/scenario1_table74_recipe.py).
+Backup/evidencia: `../Humanoide-vla-evidence/20261022T150650Z_TABLE74_FERIA_COORDINATION/`.
+
 **22-10-2026 — BOX-TABLE74-RECORDED-RECIPE-20261022: ciclo74 sin preguntas
 con receta registrada.** La toma completa supervisada
 `20261022T142922Z_TABLE74_SUPERVISED_CYCLE_1198976` terminó correctamente,
@@ -50,12 +81,13 @@ se ha medido. Se mantienen salud fresca, supervisión continua, contexto,
 mapa/llegada, batería, cargador, paros, fuerza y límites. No se reintenta
 ninguna acción de brazos ni se repite el ciclo automáticamente.
 
-La ruta automática exige además la transacción nativa completa de la tarea
-exacta, con duración coherente. `DectionForceCollision`, otro fallo o un log
-incompleto bloquean el siguiente movimiento **aunque el resultado ROS sea
-SUCCEED**. La falta de evidencia detiene; no dispara HOME de recuperación.
-Esa auditoría tampoco demuestra apoyo o pines libres: éstos siguen siendo
-supuestos de la receta, cuya validez requiere conservar el montaje.
+La auditoría adicional contrasta la transacción nativa exacta y su duración
+cuando el log está disponible. `DectionForceCollision` u otro fallo positivo
+bloquean el siguiente movimiento **aunque ROS devuelva SUCCEED**. Un log
+ausente o inconcluyente queda marcado como diagnóstico no verificado, sin
+suplantar terminal SDK o salud. La auditoría tampoco demuestra apoyo o pines
+libres: siguen siendo supuestos del mismo montaje. Un fallo de control,
+salud o prueba auténtica detiene sin HOME de recuperación.
 
 ### Toma fuente completa y procedencia
 

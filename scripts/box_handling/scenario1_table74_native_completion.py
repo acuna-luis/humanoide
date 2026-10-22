@@ -33,6 +33,10 @@ _FAULTS = (
     re.compile(r'\b(?:timed out|timeout occurred|watchdog expired|lease expired)\b', re.I),
     re.compile(r'\b(?:BTree tick|task execution)\s+(?:failed|aborted)\b', re.I),
 )
+GUARD_POLICY = 'feria_native_terminal_v1'
+_RESULT_FAILURE = re.compile(r'\bresult\s*:\s*(?:FAILURE|FAILED|ABORTED|ERROR|CANCELED|CANCELLED)\b', re.I)
+_RAW_CLAMP_STATUS = re.compile(r'\bclamp_status\s*:\s*(.*?)\s*$', re.I)
+_READER_FAILURE = re.compile(r'^(?:Error grabbing logs:|Error response from daemon:|Error: No such container:)', re.I)
 
 
 def _sha(text):
@@ -133,3 +137,68 @@ def validate_native_log(text,bundle):
         evidence_kind='complete_native_transaction_without_observed_fault',
         physical_support_verified=False,pin_disengagement_verified=False,
         scope='Caller must bind this bounded live window to the pinned container and native goal UUID.')
+
+
+def assess_native_log(text, bundle, query_error=None):
+    """Assess supplementary logs without replacing an authenticated SDK terminal.
+
+    Candidate identity/checksums and observed native faults remain hard errors.
+    Missing or ambiguous diagnostic formatting returns an honest inconclusive
+    report. In particular this does not turn absent status into NoneException,
+    claim physical support, or authorize a retry. The caller must still validate
+    the action UUID/result and all live health gates independently.
+    """
+    task, bundle_id, nominal = _expected(bundle)  # Invalid candidates are not diagnostics.
+    if query_error is not None and type(query_error) is not str:
+        raise TypeError('query_error must be diagnostic text or None')
+    messages = ([_message(line) for line in _ANSI.sub('', text).splitlines()]
+                if type(text) is str else [])
+    reader_failure = None
+    for message in messages:
+        # Scan independently of transaction formatting. A truncated header or
+        # an extra MetaWaypointGeneral must never conceal an explicit fault.
+        if any(pattern.search(message) for pattern in _FAULTS) or _RESULT_FAILURE.search(message):
+            raise ValueError('TABLE74_NATIVE_FAULT: '+message[:500])
+        status = _RAW_CLAMP_STATUS.search(message)
+        if status and status[1] and status[1] != 'NoneException':
+            raise ValueError('TABLE74_NATIVE_STATUS: '+status[1][:500])
+        if _READER_FAILURE.match(message):
+            reader_failure = message
+    try:
+        report = validate_native_log(text, bundle)
+    except ValueError as exc:
+        reason = str(exc)
+        if reason.startswith(('TABLE74_NATIVE_FAULT:', 'TABLE74_NATIVE_STATUS:')):
+            raise
+        if reason.startswith('TABLE74_NATIVE_DURATION:'):
+            # This error is reached only after the exact identity and ordered
+            # SUCCESS summary were established by the strict validator. A
+            # positive early spent_time remains evidence of incomplete motion.
+            durations = [re.fullmatch(r'spent_time:\s*('+_NUMBER+r')\s+s', message)
+                         for message in messages if message.startswith('spent_time:')]
+            if len(durations) == 1 and durations[0] is not None:
+                spent = float(durations[0][1])
+                if math.isfinite(spent) and spent < nominal-MIN_DURATION_TOLERANCE_S:
+                    raise
+        elif not reason.startswith(('TABLE74_NATIVE_LOG_INVALID:', 'TABLE74_NATIVE_IDENTITY:',
+                                    'TABLE74_NATIVE_SUMMARY:')):
+            # Do not conceal programming/import errors or a changed contract.
+            raise
+        report = None
+    else:
+        reason = None
+    unavailable = query_error is not None or reader_failure is not None
+    if report is not None and not unavailable:
+        return dict(report, diagnostic_status='complete', guard_policy=GUARD_POLICY,
+                    critical_fault_observed=False, reason=None)
+    diagnostics = [part for part in (query_error, reader_failure, reason) if part]
+    return dict(verified=False, diagnostic_status='unavailable' if unavailable else 'inconclusive',
+        guard_policy=GUARD_POLICY, critical_fault_observed=False,
+        reason='; '.join(diagnostics) if diagnostics else 'Native log query did not provide diagnostic evidence',
+        task_name=task, bundle_id=bundle_id, expected_meta_name='MetaClamp',
+        nominal_duration_s=nominal, clamp_status=None, spent_time_s=None,
+        native_log_sha256=_sha(text) if type(text) is str else None,
+        native_log_bytes=len(text.encode()) if type(text) is str else None,
+        evidence_kind='supplementary_native_log_without_verified_transaction',
+        physical_support_verified=False, pin_disengagement_verified=False,
+        scope='Diagnostic only; an authenticated SDK terminal and live physical guards remain independently required.')

@@ -1,7 +1,37 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
 
+## BOX-TABLE74-FERIA-COORDINATION-20261022
+
+**22-10-2026, Europe/Madrid — fuentes PC modificadas y verificadas offline;
+ensayo físico de esta revisión PENDIENTE.**
+
+| Campo | Registro |
+| --- | --- |
+| Motivo/fuente | Tras SUCCEED de aproximación, el intento150133Z1280135 paró por TABLE74_NATIVE_IDENTITY. Comparación con la rama `feriabarcelona` (commit exacto en before.json) para usar terminal nativo identificado y monitor continuo sin condicionar el avance al formato Docker |
+| Hallazgo | Goal48339049-920e-4c9b-9762-7774f92c3621, SUCCEED/status4/1101001,12,367 s. Consulta posterior de su ventana devuelve rc0/error lectorDocker77bytes (`invalid character '\x00'`). RAW original no archivado: inferencia sobre causa exacta original, no evidencia de fault físico. No se reparan ni truncan logs |
+| Archivos/destino | PC: `scenario1_table74_trial_run.py`, `_native_completion.py`, `_recipe.py` y presentación `scenario1_console.py`, más pruebas/docs. Sin instalación persistente ni cambio de configuración/servicios/contenedores del robot |
+| Diagnóstico adicional | `assess_native_log` mantiene validador estricto disponible, añade resultado inconclusive/unavailable verified=false ante logs ausentes/ambiguos/error/timeout. No captura errores de programación/import ni configuración inválida como si fueran diagnósticos. RAW/bounds/UUID/bundle/rc archivados ANTES de parsear; consulta limitada2 s y512 KiB |
+| Fallos que bloquean | Evidencia positiva de fuerza/IK/fault/resultadoFAILURE, fin prematuro con identidad/duración demostradas; hashes/manifest/config/contexto/origen/UUID incoherentes; resultado SDK incorrecto; fallos de salud, paros, cargador, batería, localización o reposo. No apertura siguiente ni HOME de recuperación tras error real |
+| Salud/velocidad | Preflight inicial completo conservado. Stage74 de receta usa monitor continuo quick_health como feria, sin otra adquisición completa; hashes de cadena siguen completos y se evita sólo su lectura extra duplicada. Entrada base/mapa/dos poses put1 siempre fresca antes del goal. Handshake puede usar una entrada auténtica de menos de2 s con contexto/últimaacción/monitor idénticos y salud nueva; si caduca o cambia, se vuelve a medir; si hay fault, se detiene |
+| Geometría/procedencia | Mantiene caja0,603×0,397×0,22 m, mesa74 cm, Zmanos nominal0,94, precontact14 cm, support5 cm, alivio4 cm, apertura10 cm y HOME medido. Receta, referencias y perfiles geométricos sin cambios. No se copia el depósito69,5/90 cm de feria ni se promueve el WRC original; apoyo/pines continúan como supuestos explícitos |
+| Activación | Mismo comando74 con `--run` para un NUEVO ciclo desde HOME/vacías y condiciones físicas comprobadas. Sin modo sigue check; plan offline; `--table74-supervised` conserva observaciones/confirmaciones y preflight anterior. Al ejecutar, las fuentes actualizadas viajan por el payload existente; no requiere reiniciar el robot |
+| Estado actual/continuidad | Usuario comunica caja SUJETA. Aproximación terminó técnicamente antes del rechazo diagnóstico; journal mantiene failed y origen consumido. No se reescribe ni se repite esa acción. No iniciar el comando desde vacío ni enviar HOME con caja sujeta; la continuación actual requiere su frontera específica |
+| Intervención real | UNA consulta SSH/Docker de lectura de la ventana archivada, sin ROS físico, modo, servicio, E-stop, HOME o reinicio. Error del lector conservado en failed-approach-native-log.json. Ningún movimiento enviado por el agente |
+| Backup/evidencia | `../Humanoide-vla-evidence/20261022T150650Z_TABLE74_FERIA_COORDINATION/`: before/, hashes/commits, consulta real, replay offline del lector y pruebas/planes. Fuentes geométricas/recogida comparadas con HEAD anterior para conservar identidad |
+| Reversión | Restaurar selectivamente fuentes de esta ficha desde commitcf5f6e6/backup anterior. No restaura posturas ni hace reutilizable el origen consumido; esa revisión anterior vuelve a exigir el log estricto. Se conservan backups aditivos del robot y la historia del fallo |
+| Verificación |383 casos PASS de27 módulos de mesa74, runtime, salud continua, reanudación, sesiones y presentación. Incluye lectorDocker roto rc0, timeout2s conRAW, inconcluso sin falso éxito, fuerza/IK/resultFAIL bloqueantes, caché caducada/cambio de contexto/fault y etapa con entrada fresca. Plan del wrapper offline y sintaxis/diff correctos; no ensayo físico |
+| Pendiente | Ensayo físico y tiempo total. Los logs opcionales no permiten excluir fallos que no se puedan leer; se conservan protecciones nativas/monitor y supuestos atendidos, sin declarar seguridad funcional ni apoyo/pines medidos |
+
+[Comandos y límites](box_handling/OPTIMISTIC_SCENARIO1.md).
+
+
+
 ## BOX-TABLE74-RECORDED-RECIPE-20261022
+
+**Vigencia:** la receta geométrica se conserva; la exigencia de log completo y
+las adquisiciones repetidas de salud quedan sustituidas por
+BOX-TABLE74-FERIA-COORDINATION-20261022. No reinstalar esa política anterior.
 
 **22-10-2026, Europe/Madrid — instalado en fuentes del PC/verificado offline;
 activación física de la nueva receta PENDIENTE.**

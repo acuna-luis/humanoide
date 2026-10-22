@@ -2,6 +2,43 @@
 
 ## Ciclo completo supervisado para mesa de 74 cm
 
+**22-10-2026 — BOX-TABLE74-FERIA-COORDINATION-20261022: coordinación rápida
+sin convertir los logs de Docker en un requisito de movimiento.** El intento
+`20261022T150133Z_TABLE74_SUPERVISED_CYCLE_1280135` completó la aproximación:
+goal `48339049-920e-4c9b-9762-7774f92c3621`, SUCCEED/status4/1101001,
+12,367 s. Después se detuvo por `TABLE74_NATIVE_IDENTITY`. La consulta de
+lectura identificó el problema del diagnóstico: Docker devolvía rc0 y sólo
+77 bytes, `Error grabbing logs: invalid character '\x00' looking for beginning of value`,
+sin la transacción nativa. No se repararon logs ni se reiniciaron servicios.
+
+La auditoría de logs es ahora adicional: ausencia/formato no disponible
+produce `verified=false` y diagnóstico `inconclusive`/`unavailable`, sin
+inventar éxito. La continuación conserva el UUID y terminal SDK reales más
+salud fresca. Un hallazgo positivo de fuerza/IK/fault, resultado fallido o
+fin prematuro documentado **sigue bloqueando**, igual que una incompatibilidad
+de configuración, contexto o pruebas históricas. La salida cruda acotada se
+guarda antes de analizarla.
+
+Las fases usan la salud fresca del monitor continuo (`quick_health`) como
+`feriabarcelona`, evitando adquirir de nuevo toda la salud. Sólo se reutiliza
+el handshake durante menos de2 s, con idéntico contexto, última acción y
+monitor; la entrada de cada etapa se vuelve a comprobar. Se mantienen74 cm,
+Z0,94,14+5 cm, alivio4 cm, apertura10 cm, recogida intacta y HOME20D; no se
+copian las geometrías69,5/90 cm de otra rama. Sin nuevas preguntas ni retry.
+
+**Estado comunicado: caja aún SUJETA.** No reiniciar el ciclo desde vacío ni
+repetir la aproximación, enviar HOME, borrar `consumed` o reescribir journals
+para retomar. Los comandos de inicio que siguen corresponden a un futuro
+ciclo desde HOME; la continuación actual requiere su frontera específica.
+Verificación: **383 pruebas correctas** de27 módulos de mesa74, runtime,
+monitor de salud, reanudación, sesión y consola; plan offline y sintaxis correctos.
+Esta corrección está comprobada localmente y sólo se han hecho consultas
+remotas de lectura; **ensayo físico de la corrección PENDIENTE**.
+Fuentes: [`recipe`](../../scripts/box_handling/scenario1_table74_recipe.py),
+[`auditoría`](../../scripts/box_handling/scenario1_table74_native_completion.py)
+y [`runner`](../../scripts/box_handling/scenario1_table74_trial_run.py).
+Backup/evidencia: `../Humanoide-vla-evidence/20261022T150650Z_TABLE74_FERIA_COORDINATION/`.
+
 **22-10-2026 — BOX-TABLE74-RECORDED-RECIPE-20261022: receta guardada y avance
 sin preguntas al ejecutar el ciclo completo.** Por petición expresa del
 usuario, `--table-height-cm 74 --run` utiliza ahora la receta de la toma
@@ -86,11 +123,12 @@ de medir;78,4 s es el coste medido de las sesiones retiradas.
 Continúan las comprobaciones de contexto, dependencias, salud, reposo,
 llegada/mapa/localización, cargador, batería, paros y supervisión continua de
 los runners. Fuerza, límites y controles nativos quedan intactos. La nueva
-barrera automática exige además el log nativo acotado de la **tarea exacta**,
-su duración y resultado; rechaza `DectionForceCollision`, otros fallos o una
-transacción incompleta aunque ROS devuelva SUCCEED. Ante fallo o evidencia
-incierta detiene el ciclo, sin apertura siguiente, retry ni HOME de
-recuperación. Un log nativo normal tampoco mide apoyo o pines libres.
+auditoría adicional contrasta, cuando está disponible, el log nativo de la
+**tarea exacta**, su duración y resultado. Rechaza `DectionForceCollision` y
+otros fallos positivos aunque ROS devuelva SUCCEED. Un log ausente o de formato
+inconcluyente se registra como tal y no sustituye el terminal real ni la salud
+fresca; tampoco mide apoyo o pines libres. Un fallo de control, salud o prueba
+auténtica detiene sin retry ni HOME de recuperación.
 
 Esta entrada permite un solo ciclo y rechaza `--cycle` y `--wifi` antes de
 conectar; las pausas parciales anteriores no cambian. Se usa Ethernet.
