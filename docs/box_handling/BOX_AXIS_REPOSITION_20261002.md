@@ -1,5 +1,15 @@
 # Corrección visual de posición antes de recoger
 
+**22-10-2026 — revisión de vídeo, distinta de la corrección de chasis.**
+El clip muestra contacto y separación/inclinación parcial de la caja superior.
+Operador confirma que continúa sin retirarla y que son las mismas cajas.
+Es compatible con el balanceo del
+desapilado nativo; no prueba un fallo de alineación ni autoriza más fuerza o
+repetición del agarre. Altura exacta y resultado final PENDIENTES; diario149970
+sin vínculo probado, no atribuir su fallo al clip. Sólo lectura local;
+sin código, SSH o movimiento.
+[Observaciones, fuentes y preguntas](../incidents/2026-10-22_CAJA_DESAPILADO_VIDEO.md).
+
 **07-10-2026 — BOX-MARGIN-CONSOLE-20261007. VERIFICADO offline; instaladoPC.**
 Usuario pide cambiar20mm. Margen real actual editado porusuario inside_margin_m
 0,002(2mm) se conserva; antes CLI/ready mostraban20mm fijo. CLI leePOLICY y

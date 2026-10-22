@@ -1,5 +1,17 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-VIDEO-DESAPILADO-20261022: revisión del clip de recogida.**
+Vídeo conservado con SHA256 y19 frames privados: se observa contacto lateral,
+separación/inclinación parcial y retorno muy próximo a la pila. El operador
+confirma que continúa pero no retira la caja, y que son las mismas cajas;
+altura exacta y resultado técnico final pendientes. Compatible con el desapilado
+nativo (preparación3 s, separación18 s, bodyback6 s), distinto de la alineación
+del chasis y del retroceso posterior20 cm. Explicación mecánica INFERIDA;
+diario149970 separado, sin correspondencia probada: no atribuir su paro al clip.
+Fuerza, encaje y geometría relativa requieren contraste. Sólo lectura local y
+documentación, sin SSH, movimiento o cambios de sistema.
+[Vídeo, fuentes y límites de la conclusión](incidents/2026-10-22_CAJA_DESAPILADO_VIDEO.md).
+
 **19-10-2026 — PICO-USB-CONNECT-20261019: falta el reverse XR; diagnóstico verificado.**
 Visor PA94Y0MGKB070822G conectado por USB1-2/transport1 y despierto. Servicio
 XR63901 escuchando, sin conexiones XR; `adb reverse --list` vacío. --check del
