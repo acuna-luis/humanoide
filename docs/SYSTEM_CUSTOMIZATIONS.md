@@ -1,5 +1,22 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-DEMO-TIMING-PREP-20261022
+
+**22-10-2026, Europe/Madrid — preparación local VERIFICADA; nuevo ciclo PENDIENTE.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo/autoridad | Preparar medición futura y candidatos de optimización de demo; usuario indica explícitamente que todavía no se lance |
+| Destino/fuente | PC/repositorio: scripts/box_handling/scenario1_timing_observe.py y scenario1_timing_analyze.py; analizador promovido de evidencia privada de baseline, observador local nuevo. Sin integración/import en control |
+| Aplicación/activación | Comandos locales versionados en manual; activación manual futura antes de un ciclo autorizado por separado. Hoy no se arranca observador ni ciclo |
+| Estado/dependencias | Instalado sólo como fuentes PC, validado offline; Python3 con biblioteca estándar. Control, robot, servicios y geometría sin cambios. Hash/versión en preparation-result.json y commit de esta intervención |
+| Verificación | Baseline replay323,798353316 s de journal,8 ventanas/residual0; pruebas sintéticas de conservación journal, colisión de salida, pausa/timeout y relojes separados. No ensayo físico |
+| Propuestas | Sesión/monitor común, SPS por contexto, instalación estable, revisión de dos trayectorias con referencias cero hasta10 s. Cambios no aplicados;45,986 s de SPS se solapan con83,885 s de arranques. Geometría fija como supuesto, salud/llegada reales conservadas |
+| Evidencia/backup | ../Humanoide-vla-evidence/20261022_DEMO_TIMING_PREPARATION_163323Z/: before/, before.json y preparation-result.json; anterior analizador SHA registrado |
+| Reversión/reanudación | Retirar sólo herramientas/entradas de esta ficha; no alterar control ni journals históricos. Esperar aviso para próxima toma y verificar condiciones actuales antes de cualquier movimiento |
+
+[Receta de medición y alcance](box_handling/OPTIMISTIC_SCENARIO1.md#preparación-de-la-próxima-medición-y-candidatos-para-demo--22-10-2026).
+
 ## BOX-SCENARIO1-UNIFIED-HEIGHTS-REVIEW-20261022
 
 **22-10-2026, Europe/Madrid — análisis offline; unificación propuesta, no implementada.**

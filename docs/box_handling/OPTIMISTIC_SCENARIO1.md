@@ -2,6 +2,95 @@
 
 ## Ciclo completo supervisado para mesa de 74 cm
 
+### Preparación de la próxima medición y candidatos para demo — 22-10-2026
+
+**BOX-DEMO-TIMING-PREP-20261022 — VERIFICADO offline; ciclo nuevo PENDIENTE.**
+El usuario pide preparar otra toma, **sin ejecutarla hasta su aviso**, y estudiar
+operaciones sin valor en un montaje de demo repetible. No se cambia el control,
+la receta, las distancias, las comprobaciones ni las trayectorias en esta preparación.
+
+Se versionan dos herramientas locales independientes del ejecutor:
+[observador](../../scripts/box_handling/scenario1_timing_observe.py) y
+[analizador](../../scripts/box_handling/scenario1_timing_analyze.py).
+El observador sólo lee `cycle.json` cada10 ms y escribe sus cambios en otro
+archivo nuevo; no importa el runtime ni abre SSH/ROS, inicia ciclos o manda señales.
+Ctrl+C sólo termina el observador. No queda proceso de observación iniciado.
+El analizador incorpora la receta usada para la referencia323,879 s, antes
+ubicada sólo en evidencia privada; genera `summary.json` y `pc-phases.csv`.
+
+#### Captura preparada para cuando se autorice el ciclo
+
+Elegir una carpeta NUEVA externa al repositorio para cada toma. En estos ejemplos
+`/ruta/nueva-toma` es un marcador que debe sustituirse; no es evidencia existente.
+Antes de lanzar por separado el ciclo autorizado, arrancar el observador:
+
+```bash
+python3 -B scripts/box_handling/scenario1_timing_observe.py \
+  --evidence /ruta/nueva-toma/cycle \
+  --output /ruta/nueva-toma/cycle-observer.jsonl
+```
+
+La carpeta padre de salida debe existir y el archivo debe ser nuevo. El observador
+espera hasta30 minutos y sale al ver un estado terminal, también `paused`.
+No reutilizar carpeta/journal anterior. Tras terminar observador y ciclo:
+
+```bash
+python3 -B scripts/box_handling/scenario1_timing_analyze.py \
+  --evidence /ruta/nueva-toma/cycle \
+  --observer /ruta/nueva-toma/cycle-observer.jsonl \
+  --output /ruta/nueva-toma/timing-analysis
+```
+
+`timing-analysis` también debe ser nuevo. El resultado separa ventanas PC,
+etapas de recogida, acciones SDK, eventos `timing`, arranque hasta ready y
+consultas HOME ya registradas. No resta relojes PC/Motion ni suma intervalos
+anidados/paralelos. Sin captura externa del comando, `wrapper` queda ausente:
+el total es **journal**, no comando completo. Para repetir el total323,879 s,
+medir además inicio/salida del comando con reloj monotónico PC cuando se lance;
+se conservará recibo `command-result.json` compatible, sin convertir una espera
+del observador o check independiente en tiempo del robot.
+
+Limitaciones: sondeo no garantiza capturar toda transición; se indica si falta
+final de fase. Las ventanas incluyen coordinación y no miden comienzo/fin físico.
+El hueco atribuido a descubrimiento SPS sigue siendo INFERENCIA por orden de
+código, sin cronómetro propio. HOME no tiene accepted/result individuales.
+No inventar esos tiempos ni contar una toma interrumpida como ciclo completo.
+
+#### Candidatos concretos, todavía sin aplicar
+
+| Prioridad | Coste identificado | Cambio propuesto y condición |
+| --- | --- | --- |
+| 1 | Seis arranques hasta ready:83,885 s incluidos en la toma anterior | Mantener una sesión/clientes/monitor para todo el ciclo; eliminar arranques repetidos, conservar evaluación de salud fresca al pasar de etapa. El total no es ahorro íntegro garantizado |
+| 2 | Descubrimiento SPS repetido al iniciar Runtime.run; huecos atribuidos45,986 s, incluidos en los arranques anteriores | Descubrir topología al inicio/contexto y vigilarla dentro de sesión; no arrancar descubrimiento de percepción en cada descenso sin uso de visión. Invalidar al cambiar boot/contenedor/topología. No sumar45,986 a83,885 |
+| 3 | Aproximación+dos descensos:36 s nominales; cada descenso mantiene referencias cero hasta10 s | Integrar un descenso de apoyo y quitar tiempos heredados sin desplazamiento cuando su función haya sido revisada. Son referencias de trayectoria, no `sleep`; validar fuerzas, interpolación y nueva trayectoria antes de probar |
+| 4 | Instalador/archivo de rollback por fase y liberación con staging separado | Generar e instalar por contenido/configuración antes del ciclo cronometrado; verificar identidad vigente y conservar respaldo único verificable. La procedencia de cada ejecución/consumo sigue separada |
+| 5 | HOME42,514 s de bloque total, movimiento sin cronómetro individual | Compartir monitor y clientes; localizar adquisición/consultas repetidas. No atribuir todo el bloque a HOME físico ni prometer eliminarlo |
+| 6 | Medidas manuales repetidas de montaje | Declarar una vez geometría calibrada de mesa/caja/efector y recorridos para la demo. Ya existe receta sin preguntas: verificar antes si el coste está realmente eliminado |
+
+Las distancias nominales y holguras del montaje pueden registrarse como
+**supuestos de receta**, con perfil/hash; no son mediciones nuevas de apoyo,
+pines o posición real. La llegada del navegador, el reposo tras la acción y la
+salud cambian durante un ciclo, aunque mesa y destino sean los mismos. Mantener
+esas observaciones, paros, cargador, batería, límites, fuerza, localización,
+identidad del resultado y HOME medido. El objetivo es eliminar adquisiciones y
+preparación duplicadas, usando datos frescos del monitor, sin forzar éxito.
+
+La siguiente toma debe conservar el flujo actual para comparar contra323,879 s,
+registrar ajustes de alineación reales y distinguir preparación/SDK/cierre.
+Después seleccionar cambios por ahorro **medido**, probando nueva geometría
+aparte. No se fija aún un tiempo objetivo ni se afirma que toda la infraestructura
+sea prescindible. Un montaje de demo no acredita que su estado real no cambie.
+
+Verificación offline: replay de la toma anterior reproduce journal323,798353316 s,
+ocho ventanas (incluida coordinación) y residual0; éxito/HOME registrados
+conservados. Ensayos locales sintéticos: pausa terminal, journal intacto,
+rechazo de salida existente/dentro del ciclo, timeout sin journal y duración de
+acción usando sólo reloj interno Motion. `--help` de ambas herramientas correcto.
+No consultas ni cambios en robot/servicios. Backup/validación:
+`../Humanoide-vla-evidence/20261022_DEMO_TIMING_PREPARATION_163323Z/`.
+Reversión: retirar únicamente estas herramientas y sus entradas documentales;
+no tocar evidencia/journals ni revertir el control. Ensayo nuevo PENDIENTE.
+
 ### Comparación 90/74 cm y diseño de un único ciclo — 22-10-2026
 
 **BOX-SCENARIO1-UNIFIED-HEIGHTS-REVIEW-20261022 — comparación offline; implementación pendiente.**

@@ -1,5 +1,16 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**22-10-2026 — BOX-DEMO-TIMING-PREP-20261022: próxima toma preparada, sin ejecutarla.**
+Observador pasivo local y analizador de tiempos versionados; no cambian control,
+checks, geometría ni trayectorias. Replay offline reproduce journal323,798353316 s
+con residual0. Candidatos: una sesión/monitor, descubrimiento por contexto,
+instalación por contenido y revisión de referencias cero de los dos descensos.
+83,885 s hasta ready y45,986 s atribuidos a SPS se solapan: no sumar ni prometer
+ese ahorro. Distancias fijas pueden ser supuestos del montaje; llegada, salud,
+reposo, fuerza y HOME se observan durante la ejecución. Nueva toma PENDIENTE
+hasta aviso del usuario; ningún proceso de captura ni ciclo iniciado.
+[Receta, límites y prioridades](../box_handling/OPTIMISTIC_SCENARIO1.md#preparación-de-la-próxima-medición-y-candidatos-para-demo--22-10-2026).
+
 **22-10-2026 — comparación90/74 y consolidación propuesta.** El depósito del
 perfil90 registrado dura14,626 s; el actual74,153,026 s incluyendo aproximación
 y liberación.90 integra una tarea;74 conserva cinco tareas/sesiones del ensayo,
