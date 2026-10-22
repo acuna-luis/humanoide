@@ -1,5 +1,21 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-01-TABLE74-HELD-RESUME-20261022
+
+**22-10-2026, Europe/Madrid — hallazgo y plan local; sin cambio del robot.**
+El operador informa que get1 no correspondía al montaje y que la recogida807763
+ahora funciona. Checkpoint limpio held; evidencia original de sujeción asumida
+conservada. Comparación de contextos y fuente preservadas en la evidencia;
+archivo/persistencia/backup de la modificación de get1 no verificados por el
+agente. No se declara ese relato causa demostrada del salto MAP previo.
+Plan real `--table-height-cm 74 --resume CHECKPOINT --box-state held
+--stop-after put1 --plan`: sólo retreat/navigate_put1, sin consumir origen,
+conectar ni mover. Ejecución de retoma y depósito74 pendientes. No cambia
+scripts, límites, perfiles, objetivos o servicios; no hay rollback de sistema
+aplicado por este diagnóstico. Restaurar sólo documentación no mueve el robot.
+[Receta versionada](box_handling/OPTIMISTIC_SCENARIO1.md#retomar-la-recogida-de-74-cm-con-caja-sujeta--22-10-2026).
+Evidencia: `../Humanoide-vla-evidence/20261022T104224Z_TABLE74_HELD_RESUME_PLAN`, plan/recibo/copia de origen y respaldos `before/`.
+
 ## BOX-ALIGN-BASE-UNSTABLE-20261022
 
 **22-10-2026, Europe/Madrid — HALLAZGO de una ejecución del operador;

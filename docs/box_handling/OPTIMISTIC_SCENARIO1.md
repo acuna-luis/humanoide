@@ -1,5 +1,38 @@
 # Escenario 1 con supervisión continua
 
+## Retomar la recogida de 74 cm con caja sujeta — 22-10-2026
+
+**BOX-01-TABLE74-HELD-RESUME-20261022. Plan local VERIFICADO; ejecución PENDIENTE.**
+El checkpoint `20261022T103357Z_OPTIMISTIC_SCENARIO1_807763/checkpoint.json`
+conserva `grasp/verify_held` completados y `box_state=held`, sin fallo ni acción
+en curso. El operador informa recogida correcta y get1 anteriormente mal
+situado respecto a las cajas; no se atribuye por ello la causa de cada fallo
+anterior. No editar el checkpoint para convertir la evidencia asumida en medida.
+
+Con caja aún sujeta, separada y estable, trayectorias libres, cargador fuera,
+paros liberados, ruedas en navegación, otros mandos detenidos y persona junto
+al paro, la retoma siguiente sólo retira y navega a put1:
+
+```bash
+./scripts/optimistic_scenario1.sh --table-height-cm 74 \
+  --box-alignment-attempts 5 \
+  --resume /home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261022T103357Z_OPTIMISTIC_SCENARIO1_807763/checkpoint.json \
+  --box-state held --stop-after put1 --run
+```
+
+El plan comprobado usa entrada `retreat`, HOME no requerido y waypoint `get1`;
+no repite agarre ni alineación. Para inspección local, sustituir `--run` por
+`--plan`: no conecta ni consume el origen. La ejecución real vuelve a comprobar
+contexto/boot, dependencias, estado y postura. No se ha ejecutado desde el agente.
+No usar `--from-stage grasp` para volver sobre una recogida ya completada.
+No hace falta `--recovery-confirmed` para este origen limpio.
+
+El límite `--stop-after put1` es necesario: por defecto se solicita el ciclo
+completo y el selector74 bloquea el depósito aún pendiente. Al llegar a put1
+se conservará la caja sujeta; apoyo/desenganche/apertura74 requieren su propia
+preparación. Rutas históricas sólo son utilizables mientras no estén consumidas
+y el estado/contexto siga siendo válido.
+
 **22-10-2026 — BOX-01-ALIGN-HEALTH-RETURN-20261022: corregido el `NoneType`
 de la primera ejecución con alineación.** Se omitió retornar el informe de
 `Runtime.health()` al trasladar el consumidor del donante. Se añade sólo

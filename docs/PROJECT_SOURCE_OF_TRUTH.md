@@ -1,5 +1,18 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-01-TABLE74-HELD-RESUME-20261022: recogida comunicada y retoma planificada.**
+El operador informa recogida correcta tras corregir la ubicación de get1 respecto
+al montaje de cajas. Es observación del operador, no una prueba causal de la
+inestabilidad MAP anterior. El checkpoint807763 está limpio, `box_state=held`,
+con get1/visión/agarre/verify_held completados; la confirmación original sigue
+`source=assumed`, sin editarla. Plan local real: `--resume CHECKPOINT --box-state
+held --stop-after put1 --table-height-cm 74 --plan` produce únicamente
+`retreat → navigate_put1`, sin conexión, movimiento o consumo del origen.
+Omitir `--stop-after put1` solicita el ciclo completo y activa el bloqueo del
+depósito74 pendiente. No retroceder a `grasp` con caja ya sujeta.
+Ejecución de la retoma, estado físico actual y depósito74 PENDIENTES.
+[Comando y alcance](box_handling/OPTIMISTIC_SCENARIO1.md#retomar-la-recogida-de-74-cm-con-caja-sujeta--22-10-2026).
+
 **22-10-2026 — BOX-ALIGN-BASE-UNSTABLE-20261022: segundo ajuste detenido antes del agarre.**
 El diario `20261022T101928Z_OPTIMISTIC_SCENARIO1_772739` registra terminal
 correcto y reposo del segundo ajuste de chasis; después falla
