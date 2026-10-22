@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**22-10-2026 — BOX-TABLE74-OPEN-STALE-20261022: aborto antes de apertura.**
+Toma162111Z1476072: alivio SUCCEED4/1101001, journal sin consumir; apertura
+sin ready, acciones ni trial.json; HOME no iniciado. Health inicial falla en5,860 s
+por `Collected safety samples became stale`. Inconsistencia VERIFICADA: adquisición
+completa exige2 s para todos los recibos, monitor continuo admite5 s para paros
+con cadencia histórica≈4,49 s. Puede fallar con valores invariantes; canal/edades
+reales no archivados, causa temporal concreta PENDIENTE. Diagnóstico offline,
+sin arreglo operativo ni movimiento; conservar frontera tras alivio y no repetir ciclo.
+[Análisis y reproducción](incidents/2026-10-22_APERTURA_BLOQUEADA_TELEMETRIA_CADUCADA.md).
+
 **22-10-2026 — BOX-DEMO-TIMING-PREP-20261022: próxima toma preparada, sin ejecutarla.**
 Observador pasivo local y analizador de tiempos versionados; no cambian control,
 checks, geometría ni trayectorias. Replay offline reproduce journal323,798353316 s

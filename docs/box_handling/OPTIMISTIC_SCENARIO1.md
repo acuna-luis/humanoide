@@ -1,5 +1,15 @@
 # Escenario 1 con supervisión continua
 
+**22-10-2026 — BOX-TABLE74-OPEN-STALE-20261022: aborto antes de apertura.**
+Toma162111Z1476072: alivio SUCCEED4/1101001, journal sin consumir; apertura
+sin ready, acciones ni trial.json; HOME no iniciado. Health inicial falla en5,860 s
+por `Collected safety samples became stale`. Inconsistencia VERIFICADA: adquisición
+completa exige2 s para todos los recibos, monitor continuo admite5 s para paros
+con cadencia histórica≈4,49 s. Puede fallar con valores invariantes; canal/edades
+reales no archivados, causa temporal concreta PENDIENTE. Diagnóstico offline,
+sin arreglo operativo ni movimiento; conservar frontera tras alivio y no repetir ciclo.
+[Análisis y reproducción](../incidents/2026-10-22_APERTURA_BLOQUEADA_TELEMETRIA_CADUCADA.md).
+
 ## Ciclo completo supervisado para mesa de 74 cm
 
 ### Preparación de la próxima medición y candidatos para demo — 22-10-2026

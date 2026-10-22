@@ -1,5 +1,21 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-TABLE74-OPEN-STALE-20261022
+
+**22-10-2026, Europe/Madrid — diagnóstico offline VERIFICADO; código sin modificar.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo/autoridad | Analizar aborto de apertura en ciclo162111Z1476072; sólo lectura |
+| Hallazgo | Alivio da91bcf4 termina SUCCEED4/1101001, no consumido; apertura sin ready/acciones/journal; HOME ausente. Health5,860017 s falla por edad de muestras |
+| Mecanismo | Adquisición inicial uniforme2 s frente a monitor continuo5 s sólo en paros; cadencia histórica de éstos≈4,49 s. Fuente embebida reconstruida coincide con SHA8f7761d7…dddfb2 de ejecución |
+| Verificación/límite | Reproducción offline con valores invariantes y recibo estop2,9 s reproduce excepción; no prueba el canal real. Error original no archiva recibos/edades. Estado físico y causa temporal exacta PENDIENTES |
+| Cambios | Sólo incidente/fuentes documentales PC. Sin SSH, cambios de límites/código/servicios, retoma ni movimiento. Trabajo de unificación paralelo conservado |
+| Fuente/evidencia | Incidente con receta reproducible; ../Humanoide-vla-evidence/20261022_OPEN_STALE_DIAGNOSTIC_163801Z/: diagnostic.json, SHA y before/; evidencia original162111Z intacta |
+| Activación/reversión/reanudación | Ningún cambio operativo a activar/revertir. Retirar sólo documentación de este diagnóstico si procede. Conservar frontera tras alivio; no reiniciar ciclo. Corrección y continuación específica pendientes |
+
+[Análisis detallado](incidents/2026-10-22_APERTURA_BLOQUEADA_TELEMETRIA_CADUCADA.md).
+
 ## BOX-DEMO-TIMING-PREP-20261022
 
 **22-10-2026, Europe/Madrid — preparación local VERIFICADA; nuevo ciclo PENDIENTE.**
