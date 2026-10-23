@@ -71,6 +71,8 @@ payload=json.loads(sys.stdin.readline())
 for name,source in payload.pop('modules'):
  module=types.ModuleType(name);sys.modules[name]=module
  exec(compile(source,name+'.py','exec'),module.__dict__)
+if payload.pop('home_only',False):
+ raise SystemExit(sys.modules['scenario1_robot_home'].main(payload))
 raise SystemExit(sys.modules['scenario1_runtime'].main(payload))
 '''
 
@@ -236,6 +238,15 @@ def prepare_height_installation(bundle, evidence, moving):
     Check never installs. The same immutable package is reused across cycles;
     the existing installer rejects conflicts and preserves rollback receipts.
     """
+    if os.environ.get('CRUZR_SCENARIO1_LOCAL') == '1':
+        # Resident jobs never install native tasks during an operator request.
+        # Commissioning is an explicit file-only maintenance operation.
+        import scenario1_table74_trial_install as local_installer
+        receipt = local_installer.operate(bundle, operation='check')
+        atomic_json(evidence/'installer-check.json', receipt)
+        if not receipt.get('installed'):
+            raise ValueError('HEIGHT_DEPOSIT_NOT_INSTALLED: prepare native files during commissioning')
+        return
     if __package__:
         from . import scenario1_table74_cycle as installation
     else:
@@ -250,6 +261,10 @@ def prepare_height_installation(bundle, evidence, moving):
 
 
 def ssh_command(wifi):
+    if os.environ.get('CRUZR_SCENARIO1_LOCAL') == '1':
+        if wifi:
+            raise ValueError('Motion-local transport cannot use --wifi')
+        return [sys.executable, '-u', '-B', '-c', BOOTSTRAP]
     command = ['ssh', '-T', '-o', 'BatchMode=no', '-o', 'StrictHostKeyChecking=yes',
                '-o', 'ConnectTimeout=8', '-o', 'ConnectionAttempts=1',
                '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax=2',

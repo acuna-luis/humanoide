@@ -1,5 +1,198 @@
 # Escenario 1 con supervisión continua
 
+### Instalador residente: HOME y ciclo sin PC — 23-10-2026
+
+**WEB-SCENARIO1-ROBOT-INSTALLER-20261023 — IMPLEMENTADO Y PROBADO OFFLINE;
+NO INSTALADO NI PROBADO FÍSICAMENTE EN ROBOT.**
+La decisión vigente es ejecutar todo en el **host Motion**, con sus contenedores
+nativos descubiertos en cada trabajo. Vision sólo ofrece enlaces desde su web;
+el navegador solicita operaciones autenticadas. El PC externo no ejecuta,
+transfiere supervisores, renueva leases ni guarda checkpoints durante el ciclo.
+La propuesta anterior de un ejecutor en el PC queda sustituida por ésta.
+
+#### Qué incluye y qué conserva
+
+- Generador `scripts/web/build_robot_installer.py` e instalador
+  `scripts/web/install_robot_scenario1.py`: paquete autónomo con fuentes,
+  snapshots XML/YAML pequeños, pines revisados, manifiesto SHA256 y este manual.
+  No incluye claves del PC, contraseñas SSH, SDK original, modelos ni binarios.
+  Las fuentes corresponden a los bytes del árbol de trabajo: el manifiesto no
+  atribuye cambios pendientes al commit base.
+- Servicio `scripts/web/robot/service.py`, página española con **Ir a HOME** y
+  **Ejecutar ciclo**, mesa74/90, entrada de operador, declaración física por
+  trabajo y autorización explícita del ensayo integrado. Los botones de esta
+  página sí apuntan al ejecutor residente; el panel preview previo sigue siendo
+  simulación y no se reutiliza como control real.
+- Token de operador generado en el robot, sólo su digest en configuración;
+  sesión HttpOnly/SameSite, origen/Host exactos, CSRF, peticiones cerradas e
+  idempotentes y un único trabajo. No recibe shell, rutas, argumentos libres,
+  tareas ROS arbitrarias ni credenciales del navegador.
+- Worker `scripts/web/robot/worker.py`: preflight de lectura y luego una sola
+  operación. El ciclo usa el mismo CLI/runtime, geometrías y agarre existentes;
+  `CRUZR_SCENARIO1_LOCAL=1` sustituye exclusivamente SSH por Python local y
+  exige paquetes nativos ya instalados. No instala tareas durante una petición.
+  Voz desactivada en esta primera integración para no recurrir al TTS vía SSH.
+- HOME independiente `scenario1_robot_home.py`: locks existentes, descubrimiento,
+  hashes, salud fresca, controladores/acciones inactivos, reposo, monitor/lease,
+  **una única** acción `cruzr/home` y dos muestras20D nuevas al terminar.
+  No abre útiles, retrocede, navega, cambia modo ni reintenta. Vacío y recorrido
+  libre son declaraciones actuales del operador, no sensores de caja ni un
+  certificado de trayectoria libre. Un HOME válido no cualifica todo arranque.
+- Logs/checkpoints persistentes en `/var/lib/cruzr-scenario1/<job_id>/` y sesiones
+  temporales nativas ya existentes en `/tmp`. Cerrar la pestaña no cancela.
+  Fallo o reinicio con trabajo no terminado deja un bloqueo persistente; no hay
+  botón de reset, HOME automático ni reinicio del ciclo desde estado incierto.
+  El servicio systemd usa `Restart=no`; instalar/arrancar el servicio no mueve.
+
+Los locks se comparten con los scripts existentes en Motion. La salud y la
+confirmación de otros mandos detenidos se conservan; NO se ha demostrado una
+reserva central compartida con todos los clientes propietarios/PICO. No permitir
+operadores paralelos. No se amplían límites ni se modifica firmware/SDK.
+
+#### Preparar el paquete ahora, sin robot
+
+```bash
+python3 scripts/web/build_robot_installer.py \
+  --output /ruta/externa/nueva/cruzr-scenario1-robot
+python3 /ruta/externa/nueva/cruzr-scenario1-robot/install.py
+```
+
+La segunda orden sólo verifica hashes/muestra el plan. Copiar la carpeta completa
+al robot cuando vuelva el acceso. La copia ya preparada en esta intervención
+está en `../Humanoide-vla-evidence/20261023_ROBOT_WEB_INSTALLER/package/` y su
+archivo `cruzr-scenario1-robot.tar.gz` al lado. Copiar/verificar el paquete puede
+hacerse por USB o transferencia; el funcionamiento posterior no requiere PC.
+
+#### Instalar en Motion cuando recuperemos el acceso
+
+Antes: descubrir los contenedores, hardware, rutas y versiones reales; respaldar
+fuera del robot la web/configuración actual. Conservar paros/estado físico como
+estén durante la instalación, sin usarla para provocar HOME de arranque. Los
+nombres y direcciones siguientes son el baseline, no una lectura actual.
+
+En **Motion**, desde la carpeta copiada (se asume cuenta `walker` con acceso a
+Docker y Python3.10+ ya instalado):
+
+```bash
+python3 install.py
+sudo python3 install.py --apply --user walker \
+  --bind 192.168.11.2 --origin http://192.168.11.2:18776
+```
+
+El instalador verifica el manifiesto, espacio>=512MiB y contenedores/HW conocidos;
+crea `/opt/cruzr-scenario1`, `/var/lib/cruzr-scenario1`,
+`/etc/cruzr-scenario1.json` y la unidad systemd. Rechaza destinos existentes:
+no sobrescribe instalaciones ni datos previos. Instala **deshabilitado y sin
+arrancar**. No instala paquetes del sistema, cambia red/firmware, recarga Motion
+ni ejecuta acciones. La instalación parcial deja los archivos para diagnóstico;
+no ejecutar otra copia encima ni borrarlos sin revisar el recibo.
+
+Por defecto, sin `--bind/--origin`, sólo escucha loopback. El ejemplo HTTP es
+exclusivo de una LAN de robot aislada. Para otras redes debe prepararse TLS y
+proxy autenticado, configurando el origen público exacto antes de arrancar;
+no publicar este puerto en Internet. El instalador no inventa nginx/rutas web
+que no hemos podido descubrir. No desactiva autenticación de la web UBTECH.
+
+**Dependencias nativas:** el adaptador frontal SPS y los paquetes existentes
+siguen siendo requisitos; no se reconstruyen a ciegas ni se cambian nombres
+históricos de contenedores. Si falta SPS, el preflight bloquea: revisar su
+instalación versionada con descubrimiento actual antes de habilitar. Los nuevos
+archivos de depósito se preparan por separado, sin movimiento ni recarga:
+
+```bash
+sudo -u walker python3 -B /opt/cruzr-scenario1/app/scripts/web/robot/commission.py --height 74
+# Sólo tras revisar el check y autorizar la instalación de archivos aditivos:
+sudo -u walker python3 -B /opt/cruzr-scenario1/app/scripts/web/robot/commission.py --height 74 --install-files
+```
+
+Usar90 en lugar de74 sólo si se prepara esa altura. Recibos/originales quedan en
+`/var/tmp/cruzr-table74-trial/<id>/`; copiarlos fuera del robot y verificar hashes
+antes de activar. El instalador existente conserva pines y rechaza conflictos;
+instalado no equivale a cargado ni validado físicamente. No reactivar tareas
+por cambios de modo/reinicio sin su protocolo actual y autorización de movimiento.
+
+Con el robot disponible, inmóvil y en HOME, condiciones físicas revisadas y
+otros mandos detenidos, habilitar desde la carpeta original del paquete:
+
+```bash
+sudo python3 install.py --activate --user walker --height 74
+```
+
+Esta orden exige mismos bytes/unidad, servicio aún parado/deshabilitado y sin
+historial de trabajos; ejecuta sólo el check completo y, si pasa, habilita el
+servicio para futuros arranques. No envía HOME ni ciclo. El check no cualifica
+los nuevos perfiles ni elimina la declaración de ensayo en la interfaz.
+Para inspeccionar la página antes de habilitar puede iniciarse el servicio
+manualmente con configuración `enabled=false`: mostrará ambos botones bloqueados;
+pararlo antes de `--activate`, siempre comprobando que no hay trabajo activo.
+
+Abrir `http://192.168.11.2:18776/`. La clave de operador está en
+`/var/lib/cruzr-scenario1/operator-token.txt`, modo0600; consultarla sólo desde
+una terminal autorizada. No copiarla al repositorio, al chat ni a la web compilada.
+Seleccionar altura y declarar condiciones actuales. Cada clic autorizado crea
+un trabajo, hace preflight y luego ejecuta en Motion. No es repetición continua.
+Primera prueba HOME vacío y después ciclo supervisado; medir y validar físicamente
+la instalación antes de su uso en feria. No se ha realizado ninguna aquí.
+
+#### Enlazar los dos botones desde la web existente de Vision
+
+Después de descubrir la **ruta real** de su index y conservar copia externa,
+se puede aplicar una integración mínima aditiva desde Vision, con el script
+`integrate_web.py` del paquete. Añade enlaces a la página residente con sesión
+propia; no introduce SSH ni claves en los bundles del otro desarrollador:
+
+```bash
+python3 integrate_web.py --web-root /RUTA_WEB_REAL \
+  --executor-url http://192.168.11.2:18776
+python3 integrate_web.py --web-root /RUTA_WEB_REAL \
+  --executor-url http://192.168.11.2:18776 --apply \
+  --backup-dir /RUTA_PRIVADA_NUEVA/backup-web
+```
+
+El archivo está en `app/scripts/web/robot/integrate_web.py` dentro del paquete.
+Los enlaces **Ir a HOME / Ejecutar ciclo** abren el panel del robot; no ejecutan
+por GET ni se saltan su autenticación/confirmación. La ubicación aditiva al final
+del body es funcional; con fuentes React, colocar ambos en Tareas → Demo de cajas.
+No se modifica ahora `actual_20261021T103405` ni se supone una ruta de despliegue.
+
+#### Fallo, recuperación y reversión
+
+No apagar, enviar HOME ni repetir el ciclo con objeto sujeto/estado incierto.
+Revisar `job.json`, `console.log`, `check/`, `run/events.jsonl` y checkpoint.
+La recuperación continúa con el procedimiento específico ya existente en Motion;
+la interfaz de esta versión no ofrece retoma. Para levantar el bloqueo, un
+administrador debe primero verificar estado físico y finalización de procesos,
+terminar la recuperación apropiada, parar el servicio y **archivar fuera de su
+state** las carpetas de los trabajos fallidos/indeterminados, conservándolas con
+su evidencia. No editar succeeded ni borrar sólo el marcador para simular éxito.
+Después puede arrancarse el servicio habilitado; no retoma trabajos antiguos.
+Este paso no está automatizado deliberadamente.
+
+Reversión: sólo sin trabajo activo, detener/deshabilitar
+`cruzr-scenario1.service`, guardar configuración/token/evidencia en ubicación
+privada y restaurar el index de Vision desde su copia exacta si se añadieron
+los enlaces. Conservar archivos nativos: su retirada requiere su recibo y
+rollback por hashes, no eliminar directorios del proveedor. La desinstalación
+no mueve el robot ni revierte una postura. Reaplicar tras actualizaciones sólo
+tras revisar la guía y las dependencias vigentes.
+
+#### Pruebas y limitaciones
+
+77 pruebas locales correctas (17 nuevas y60 de regresión/preview):
+autenticación/CSRF, idempotencia/concurrencia, bloqueo tras
+reinicio/fallo, no despacho tras preflight fallido, transporte sin SSH, HOME
+único con postcondición, paquete reubicado74/90 sin PC y hashes/manifiesto.
+6 comprobaciones Chrome correctas: entrada, botones/alturas, bloqueo deshabilitado, advertencia
+de ensayo y móvil390px. Receta: `python3 -m unittest
+scripts.web.test_robot_scenario1 -q`; helper Chrome de servicio deshabilitado
+`test_browser_robot_scenario1.cjs` (loopback18777/CDP18778).
+Evidencia/capturas/hashes y copia anterior:
+`../Humanoide-vla-evidence/20261023_ROBOT_WEB_INSTALLER/`.
+**PENDIENTE real:** instalación, montaje de /tmp compartido, privilegios Docker,
+activación, integración nginx/web, compatibilidad viva, exclusión de clientes
+del proveedor, audio residente y prueba física HOME/ciclo/tiempos.
+
+
 ### Web local: botones HOME y ciclo — 23-10-2026
 
 **WEB-SCENARIO1-CONTROLS-PREVIEW-20261023 — vista previa local VERIFICADA;
@@ -62,7 +255,7 @@ desarrollador; no constituye una nueva ruta React ni integración autenticada.
    instalar; seguir la guía de reaplicar cambios y registrar fichas/hashes.
    No se asumen vigentes nombres/puertos sólo porque aparezcan en esta copia.
 2. **Añadir un servicio de trabajos, no órdenes de shell desde JavaScript.**
-   Primera opción compatible con el flujo actual: ejecutor supervisado en el PC
+   Propuesta inicial, sustituida por el instalador residente descrito arriba: ejecutor supervisado en el PC
    que contiene el repositorio/SDK/snapshot y lanza el CLI existente. La web de
    Vision accedería por un proxy del mismo origen hacia ese servicio en red
    privada. Si se exige operar sin PC, hay que empaquetar/adaptar y probar el

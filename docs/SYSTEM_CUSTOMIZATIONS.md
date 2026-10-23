@@ -1,5 +1,38 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## WEB-SCENARIO1-ROBOT-INSTALLER-20261023
+
+23-10-2026, Europe/Madrid — IMPLEMENTADO/VERIFICADO OFFLINE; instalación,
+carga y validación física PENDIENTES. Autoridad: usuario exige funcionamiento
+dentro del robot sin PC y pide preparar instalador sin acceso al robot.
+Objetivo/destino previsto: host Motion /opt/cruzr-scenario1, estado privado
+/var/lib/cruzr-scenario1, /etc/cruzr-scenario1.json, unidad systemd; enlaces
+opcionales en index real de Vision aún por descubrir. Robot no contactado.
+Fuente reproducible: scripts/web/build_robot_installer.py, install_robot_scenario1.py,
+robot/{service,worker,commission,integrate_web}.py y HTML/JS/CSS; nuevo HOME
+scripts/box_handling/scenario1_robot_home.py y transporte local en scenario1_cli.py.
+Versión: manifiesto del paquete conserva commit base y SHA de bytes reales,
+no sólo HEAD. Sin contraseñas heredadas, SSH de operación ni paquetes binarios.
+Dependencias: Linux Motion Python>=3.10, Docker/contenedores/hardware/pines
+conocidos, adaptador SPS ya instalado y tareas aditivas preparadas explícitamente;
+se descubren y bloquean discrepancias. No cambia firmware, SDK ni trayectorias.
+Aplicación: instalación fresca --apply con usuario/bind/origen explícitos;
+no sobreescribe y no arranca. Activación --activate hace check de lectura y
+habilita servicio sin trabajos. UI exige nueva declaración física por operación.
+No hay PC en runtime/evidencia; voz off. Reinicio/fallo bloquea nuevas órdenes;
+no reset remoto ni HOME/reintento sobre incertidumbre. No se acredita reserva
+central de control PICO/UI; se conservan salud, locks y operador presencial.
+Verificación:77 pruebas locales y6 Chrome; paquete reubicado, sin movimiento.
+Backup/evidencia, fuentes/hashes/paquete y fotos del panel local:
+../Humanoide-vla-evidence/20261023_ROBOT_WEB_INSTALLER/.
+Reversión: sólo sin trabajo activo, detener/deshabilitar servicio, conservar
+historial/configuración y restaurar index de Vision desde copia previa.
+No borra tareas nativas sin recibo ni corrige automáticamente estado físico.
+Deuda: inventario vivo, copia externa previa al despliegue, instalación/carga,
+/tmp compartido, integración real/autenticación, HOME/ciclo físico y audio.
+[Receta completa y límites](box_handling/OPTIMISTIC_SCENARIO1.md#instalador-residente-home-y-ciclo-sin-pc--23-10-2026).
+
+
 ## WEB-SCENARIO1-CONTROLS-PREVIEW-20261023
 
 23-10-2026, Europe/Madrid — VERIFICADO local; nada instalado/cargado en robot.

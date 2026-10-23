@@ -1,5 +1,19 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**23-10-2026 — WEB-SCENARIO1-ROBOT-INSTALLER-20261023: instalador sin PC preparado.**
+Por decisión del usuario, ejecución/leases/evidencia residen en Motion; Vision
+puede enlazar los dos botones al panel residente. Servicio autenticado con CSRF,
+lista cerrada HOME/ciclo74/90, idempotencia, un trabajo y bloqueo persistente
+tras fallo/reinicio. CLI usa transporte local, mismo agarre/controles; HOME
+específico envía sólo cruzr/home y exige dos muestras20D finales. Instalación
+fresca deshabilitada; activación con check de lectura separado, sin movimiento.
+Paquete autónomo con hashes y pines sin secretos SSH, web previa intacta.
+VERIFICADO offline; NO instalado/cargado/probado físicamente en robot. Mantiene
+ensayo explícito de depósitos integrados; no acredita apoyo ni exclusión global
+de controles propietarios. Sustituye propuesta de PC de la entrada previa.
+[Instalación, integración, pruebas y reversión](box_handling/OPTIMISTIC_SCENARIO1.md#instalador-residente-home-y-ciclo-sin-pc--23-10-2026).
+
+
 **23-10-2026 — WEB-SCENARIO1-CONTROLS-PREVIEW-20261023: dos botones revisados sin robot.**
 actual_20261021T103405 es carpeta de web compilada, no rama.474 archivos intactos
 por SHA. Vista previa127.0.0.1:18774 con panel «Operación de cajas»: Ir a HOME,
