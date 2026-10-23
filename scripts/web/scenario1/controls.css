@@ -1,0 +1,31 @@
+#sc1-host { font-family: system-ui, sans-serif; color: #eaf1f8; }
+#sc1-host [hidden] { display: none !important; }
+#sc1-host .sc1-banner { position: fixed; top: 0; left: 0; width: 100%; padding: 7px 12px; background: #714708; color: #fff4d6; text-align: center; font-size: 13px; z-index: 2147483000; pointer-events: none; }
+#sc1-host button, #sc1-host select { font: inherit; cursor: pointer; }
+#sc1-host button:focus-visible, #sc1-host select:focus-visible, #sc1-host input:focus-visible { outline: 3px solid #9ed6ff; outline-offset: 3px; }
+#sc1-host button:disabled, #sc1-host select:disabled { opacity: .45; cursor: not-allowed; }
+#sc1-host .sc1-launch { position: fixed; right: 20px; bottom: 20px; z-index: 2147483001; border: 1px solid #77baff; border-radius: 12px; padding: 13px 20px; background: #124c88; color: white; box-shadow: 0 4px 20px #0005; }
+#sc1-host .sc1-dialog { color: #edf4fa; background: #142237; border: 1px solid #486585; border-radius: 18px; padding: 24px; width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow: auto; box-sizing: border-box; }
+#sc1-host .sc1-dialog::backdrop { background: #071321b8; }
+#sc1-host header { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
+#sc1-host h2 { font-size: 26px; margin: 2px 0 16px; color: inherit; }
+#sc1-host .sc1-eyebrow { font-size: 11px; letter-spacing: .1em; color: #9ac6ec; margin: 0; }
+#sc1-host .sc1-close { color: #cbd9e7; background: transparent; border: 0; padding: 0 8px; font-size: 28px; }
+#sc1-host .sc1-mode { padding: 10px 12px; border: 1px solid #997337; border-radius: 8px; background: #543b1b; color: #ffe3ac; font-size: 14px; }
+#sc1-host .sc1-height { display: flex; gap: 16px; align-items: center; margin: 18px 0; }
+#sc1-host select { color: white; border: 1px solid #5d7692; background: #243a54; border-radius: 6px; padding: 7px 14px; }
+#sc1-host .sc1-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+#sc1-host .sc1-actions button { border: 1px solid #5c89b8; border-radius: 12px; background: #243d5c; color: white; padding: 20px 14px; text-align: left; }
+#sc1-host .sc1-actions button:last-child { background: #17598c; border-color: #73b9f5; }
+#sc1-host .sc1-actions strong { display: block; font-size: 18px; margin-bottom: 8px; }
+#sc1-host .sc1-actions span { font-size: 13px; line-height: 1.5; display: block; color: #cadced; }
+#sc1-host .sc1-confirm { margin-top: 18px; padding: 16px; border-radius: 10px; border: 1px solid #7295bc; }
+#sc1-host .sc1-confirm h3 { color: inherit; font-size: 17px; margin: 0 0 10px; }
+#sc1-host .sc1-confirm p, #sc1-host .sc1-confirm label { font-size: 14px; line-height: 1.5; }
+#sc1-host .sc1-confirm label { display: flex; align-items: start; gap: 10px; margin: 12px 0; }
+#sc1-host .sc1-confirm input { margin-top: 4px; }
+#sc1-host .sc1-confirm button, #sc1-host .sc1-cancel { background: #24537e; border: 1px solid #8db7dc; border-radius: 6px; padding: 8px 12px; color: white; margin: 4px 8px 0 0; }
+#sc1-host .sc1-status { margin: 18px 0 8px; font-size: 14px; }
+#sc1-host progress { width: 100%; accent-color: #7ac2ff; }
+#sc1-host .sc1-note { color: #adbed0; font-size: 12px; line-height: 1.5; margin-top: 16px; }
+@media (max-width: 480px) { #sc1-host .sc1-actions { grid-template-columns: 1fr; } #sc1-host .sc1-launch { right: 12px; bottom: 12px; } #sc1-host .sc1-banner { font-size: 11px; } }

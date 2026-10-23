@@ -1,5 +1,28 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## WEB-SCENARIO1-CONTROLS-PREVIEW-20261023
+
+23-10-2026, Europe/Madrid — VERIFICADO local; nada instalado/cargado en robot.
+Autoridad: revisar copia del otro desarrollador y preparar/aconsejar botones
+HOME y ciclo sin acceso al robot. Fuentes: scripts/web/preview_scenario1.py,
+scenario1/controls.js y controls.css; pruebas HTTP y Chrome versionadas.
+Destino: PC, servidor temporal127.0.0.1:18774; lectura snapshot sin escritura,
+CSP contra endpoints fijos remotos y sin proxy ni aceptación de comandos.
+Panel con dos acciones simuladas y altura74/90. Sin modo preview controles
+deshabilitados. No se implementó backend físico ni se cambió firmware/SDK.
+Snapshot externo actual_20261021T103405 no versionado,474 SHA conservados;
+se necesita para reproducir la vista completa en otro PC. Dependencias:
+Python3 estándar; Node20/Chrome sólo para prueba de navegador.10 checks de
+navegador y6 HTTP correctos; audio/movimiento no probados ni enviados.
+Backup documental, hashes y capturas:
+../Humanoide-vla-evidence/20261023_WEB_SCENARIO1_LOCAL/.
+Activación: comando de preview del manual; sin servicio/autoinicio. Reversión:
+terminar sólo ese proceso local; original web/robot intactos. Deuda: reserva
+de control/autenticación/ejecutor real, HOME independiente supervisado,
+despliegue y pruebas físicas. No confundir los clics simulados con HOME medido.
+[Procedimiento y propuesta de integración](box_handling/OPTIMISTIC_SCENARIO1.md#web-local-botones-home-y-ciclo--23-10-2026).
+
+
 ## VLA-PASSIVE-EPISODE-CAPTURE-20261022
 
 **23-10-2026 — actualización documental:** instrucciones paso a paso y lectura

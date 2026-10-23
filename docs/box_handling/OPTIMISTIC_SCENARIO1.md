@@ -1,5 +1,142 @@
 # Escenario 1 con supervisión continua
 
+### Web local: botones HOME y ciclo — 23-10-2026
+
+**WEB-SCENARIO1-CONTROLS-PREVIEW-20261023 — vista previa local VERIFICADA;
+backend de movimiento/despliegue/validación física PENDIENTES.**
+`actual_20261021T103405/` es una carpeta no versionada suministrada por el otro
+desarrollador, no una rama Git. Contiene474 archivos con HTML, bundles React,
+imágenes y traducción runtime. No se han modificado ni añadido a Git esos
+archivos. Sus hashes antes/después coinciden. No contiene aquí un proyecto
+frontend con package.json/fuentes React editables ni el servidor de ejecución
+de nuestro ciclo. El icono /fine_admin.svg referenciado por index falta en la
+copia recibida; no impide cargar login/panel local.
+
+**Hallazgos de código, no comprobaciones en robot:** el bundle index configura
+Motion192.168.11.2/Vision192.168.11.3, HTTP5000 y WebSocket9099 (además de9090).
+Declaración frontend de action_dispatch: /mc/manipulation/action con tipo
+mc_task_msgs/action/ArmTask. El chunk524 envía task_name=e.id y yaml_args y usa
+un timeout local60 s. Esto NO demuestra el endpoint/tipo operativo actual ni
+implementa `optimistic_scenario1.sh`: el ciclo multietapa con checkpoints,
+watchdogs, navegación y depósito no equivale a despachar una sola acción.
+No se abrió ningún cliente hacia Motion/Vision para revisar esto.
+
+#### Vista previa disponible
+
+```bash
+python3 scripts/web/preview_scenario1.py \
+  --snapshot actual_20261021T103405 --port 18774
+```
+
+Abrir http://127.0.0.1:18774/ y pulsar **Operación de cajas**, abajo a la derecha.
+El servidor sólo escucha127.0.0.1, lee el snapshot sin alterarlo e inyecta dos
+assets versionados de scripts/web/scenario1/. CSP limita conexiones al mismo
+origen local; no hay proxy a robot y POST/PUT/PATCH/DELETE se rechazan405.
+Las API del fabricante devuelven503 o son bloqueadas por CSP si van a sus IP
+fijas. La web original carga el login traducido, pero no se ha probado su
+sesión autenticada ni sus pantallas conectadas: no hay backend del robot.
+
+El panel ofrece **Ir a HOME** y **Ejecutar ciclo**, altura74/90, confirmación,
+estado/progreso y cancelación de la simulación. HOME significa postura, no
+retorno del chasis a get1. El panel funciona sólo en modo preview explícito;
+carece de fetch/WebSocket/ROS/ejecución de comandos. Cada resultado indica
+simulación y que HOME/depósito reales no se han verificado. Dos operaciones
+simultáneas quedan bloqueadas. Sin atributo data-mode=preview los controles
+quedan deshabilitados; copiarlos al robot no activa movimiento por accidente.
+La confirmación actual sólo reconoce una simulación; NO cuenta como declaración
+física válida para un futuro servicio real.
+
+**Ubicación recomendada para producción:** tarjeta «Demo de cajas» dentro de
+la sección de tareas/operación, tras autenticación. Dos acciones juntas, HOME
+secundaria y ciclo primaria, altura y estado del robot visibles. Mantener
+accesibles los controles originales; HOME deshabilitado mientras haya un ciclo
+u otro cliente activo o una caja sujeta. El panel flotante actual es una forma
+aditiva de revisar el diseño sin recompilar ni reescribir los bundles de otro
+desarrollador; no constituye una nueva ruta React ni integración autenticada.
+
+#### Trabajo necesario para movimiento real
+
+1. **Descubrir y respaldar el sistema real.** Cuando vuelva el acceso: inventariar
+   contenedor/ruta web/nginx, versiones, servicios/tipos de acción, modo actual,
+   efector y mapa. Copia externa del HTML/assets/configuración/backend antes de
+   instalar; seguir la guía de reaplicar cambios y registrar fichas/hashes.
+   No se asumen vigentes nombres/puertos sólo porque aparezcan en esta copia.
+2. **Añadir un servicio de trabajos, no órdenes de shell desde JavaScript.**
+   Primera opción compatible con el flujo actual: ejecutor supervisado en el PC
+   que contiene el repositorio/SDK/snapshot y lanza el CLI existente. La web de
+   Vision accedería por un proxy del mismo origen hacia ese servicio en red
+   privada. Si se exige operar sin PC, hay que empaquetar/adaptar y probar el
+   ejecutor en Motion: copiar sólo la web a Vision no instala el ciclo, sus
+   dependencias ni sus mecanismos de evidencia. Ambas opciones están pendientes.
+3. **Dos acciones en lista cerrada.** API propuesta, todavía NO implementada:
+   GET /api/scenario1/status; POST /api/scenario1/jobs con action=home|cycle,
+   altura74|90 y clave de idempotencia; GET /api/scenario1/jobs/id para estado,
+   fase, tiempos, motivo de bloqueo y recuperación. Responder202 con job_id;
+   el navegador no debe esperar cinco minutos en una petición ni repetirla por
+   timeout. Reabrir la web consulta el mismo trabajo, no arranca uno nuevo.
+   No aceptar scripts, tareas ROS arbitrarias, rutas ni argumentos de shell.
+   El JavaScript actual no incluye adaptador real: habrá que implementarlo
+   contra esta API y su sesión, sin reutilizar el modo de simulación.
+4. **Autenticación y exclusión en servidor.** Permisos de operador, sesión,
+   CSRF/origen y enlace privado; sin contraseñas/SSH en el navegador. Reserva de
+   control compartida con PICO/UI/manual, locks del ciclo, detección de proceso
+   vivo y revalidación antes de actuar. Deshabilitar botones HTML no sustituye
+   la exclusión real ni demuestra que otro cliente esté parado.
+5. **HOME específico y supervisado.** Nueva entrada del ejecutor que valide
+   útiles vacíos, trayectoria declarada libre, salud/estados frescos, parada,
+   postura admisible y ausencia de otro mando; despache sólo cruzr/home y
+   compruebe dos muestras20D nuevas después. force_home.sh carece del preflight
+   completo para exponerlo directamente. cruzr_recover_to_home.sh puede abrir
+   útiles y retroceder el chasis en ciertas rutas: NO equivale a este botón de
+   postura. No usarlo sin revisar y mostrar explícitamente su plan. El nuevo
+   ejecutor HOME independiente queda pendiente; no se ha creado un endpoint
+   inseguro para dar apariencia de integración terminada.
+6. **Ciclo común y estado físico.** En el ejecutor PC conservar la selección de
+   altura y llamar al CLI actual tras su --check. La confirmación física debe
+   recogerse nueva en la web y validarse por el servidor; no trasladar la
+   casilla de simulación ni recordar indefinidamente declaraciones. Mantener
+   gates, reservas de control, evidencia, checkpoints consumidos, errores y
+   reanudación específica. Los perfiles integrados74/90 siguen en ensayo: no
+   ocultar --height-deposit-trial ni convertirlos en validados desde la UI.
+   --empty-home-recovery sólo tras declarar el recorrido apropiado para esa
+   ejecución; nunca añadirlo de forma permanente a cualquier petición web.
+7. **Interrupción y validación.** Un trabajo que pierde su cliente/heartbeat se
+   gestiona con el protocolo real y sus watchdogs. Matar un proceso, cerrar la
+   pestaña o ver una respuesta de cancelación no acredita parada física. No
+   permitir HOME ni nuevo ciclo desde una caja/acción incierta. Probar primero
+   estados ocupado/sin conexión/rechazo/doble clic/reconexión, luego HOME vacío
+   con condiciones actuales y finalmente ciclo supervisado a la altura real.
+
+No es necesario cambiar firmware ni modificar SDK/trajectorias para añadir
+los botones. Sí hacen falta interfaz de ejecución y despliegue de integración;
+la confirmación física y las pruebas en robot siguen pendientes.
+
+#### Verificación y reversión
+
+Chrome real:10 comprobaciones correctas (carga de React/login, etiquetas,
+diálogo, confirmación, exclusión, HOME/ciclo simulados, cancelación, móvil390px
+y bloqueo predeterminado sin integración). HTTP:6 pruebas correctas de CSP,
+rechazo de comandos, no proxy, rutas/lectura y conservación del snapshot.
+Node --check correcto. Capturas desktop/móvil y resultados privados:
+`../Humanoide-vla-evidence/20261023_WEB_SCENARIO1_LOCAL/browser-final/`.
+El test de navegador requiere Chrome local con CDP18775 y Node20:
+
+```bash
+node --experimental-websocket scripts/web/test_browser_scenario1.cjs \
+  ../Humanoide-vla-evidence/otra-prueba-web-nueva
+python3 -m unittest scripts.web.test_preview_scenario1 -q
+```
+
+El servidor de preview debe seguir abierto. El CDP se inicia en un perfil de
+prueba separado, sin usar sesión personal; los tests sólo admiten URLs loopback.
+Se conserva el snapshot fuera de Git; para otro PC hace falta esa misma copia
+externa, no sólo clonar las fuentes nuevas. No versionar bundles del proveedor.
+Proceso de preview temporal en18774, sin servicio ni autoarranque; navegador
+headless de prueba cerrado al terminar. Para revertir, Ctrl+C al preview; la
+copia original, robot y servicios permanecen intactos. Retirar el commit sólo
+quita assets/preview/pruebas/documentación locales, no una instalación robot.
+
+
 ### Voz y recuperación limitada del ciclo — 22-10-2026
 
 **BOX-CYCLE-VOICE-RECOVERY-20261022 — implementado y probado offline;

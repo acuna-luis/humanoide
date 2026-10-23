@@ -1,5 +1,18 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**23-10-2026 — WEB-SCENARIO1-CONTROLS-PREVIEW-20261023: dos botones revisados sin robot.**
+actual_20261021T103405 es carpeta de web compilada, no rama.474 archivos intactos
+por SHA. Vista previa127.0.0.1:18774 con panel «Operación de cajas»: Ir a HOME,
+Ejecutar ciclo, mesa74/90 y estados exclusivamente simulados. CSP/no proxy y
+rechazo de comandos;10 pruebas Chrome y6 HTTP correctas. Sin integración,
+controles deshabilitados por defecto. La copia contiene IP fijas Motion/Vision;
+no abrirla sin aislamiento para una revisión desconectada.
+Backend de trabajos autenticado/reserva de control, HOME supervisado específico
+y despliegue en PC+Vision o adaptación a Motion PENDIENTES. force_home.sh no
+es botón web validado; recuperador general puede retroceder chasis. No hubo
+conexión ni cambios en robot. [Vista previa, integración y reversión](box_handling/OPTIMISTIC_SCENARIO1.md#web-local-botones-home-y-ciclo--23-10-2026).
+
+
 **23-10-2026 — instrucciones de captura simplificadas.**
 Guía Markdown ampliada con pasos de inicio, espera CAPTURA_LISTA, revisión de
 quality.json y separación de tomas. Sólo documentación; sin nueva captura,
