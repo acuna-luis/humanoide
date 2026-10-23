@@ -2,6 +2,11 @@
 
 ## VLA-PASSIVE-EPISODE-CAPTURE-20261022
 
+**23-10-2026 — actualización documental:** instrucciones paso a paso y lectura
+de `quality.json` en la guía enlazada. Sin cambios de fuentes/configuración,
+conexión ni captura nueva; validación física/larga sigue pendiente. Copia previa:
+`../Humanoide-vla-evidence/20261023_CAPTURE_INSTRUCTIONS_092738Z/before/`. Reversión: retirar sólo esta ampliación documental.
+
 **22-10-2026, Europe/Madrid — instalado como fuentes PC; cargado temporalmente y lectura real VERIFICADA, movimiento/entrenamiento no probados.**
 
 | Campo | Registro |

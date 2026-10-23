@@ -4,6 +4,39 @@
 Implementado en PC y verificado con lecturas reales; no envía movimiento,
 entrena, arranca VLA ni instala/reinicia servicios del robot.
 
+## Instrucciones sencillas — 23-10-2026
+
+1. **Abre una terminal en el PC Linux del robot.** Para PowerShell desde otro
+   Windows, consulta el apartado correspondiente: el acceso SSH al PC seguía
+   pendiente en la revisión del22-10; no se ha vuelto a comprobar hoy.
+2. **Inicia la grabación** con el comando del apartado siguiente. Para una
+   recogida, puedes cambiar `--task demo_caja` por `--task recoger_caja`;
+   para un depósito, por `--task depositar_caja`.
+3. **Espera a `CAPTURA_LISTA`.** Después realiza la demostración con el medio
+   de control autorizado para esa sesión. El capturador sólo observa.
+4. **Espera al cierre automático.** El ejemplo graba cinco minutos. No cierres
+   la terminal durante ese tiempo. `Ctrl+C` deja una captura interrumpida y
+   no detiene el robot.
+5. **Anota la carpeta mostrada en pantalla.** Contiene las imágenes en `rgb/`,
+   las muestras originales en `samples.jsonl` y los pares en `aligned.jsonl`.
+6. **Revisa `quality.json`.** Puedes abrirlo en el editor o ejecutar lo siguiente,
+   sustituyendo `/ruta/episodio` por la carpeta real:
+
+   ```bash
+   python3 -m json.tool /ruta/episodio/quality.json
+   ```
+
+   Busca `"capture_checks_passed": true`. Si aparece `false`, conserva la toma
+   para diagnóstico y revisa los errores; no la aceptes como episodio válido.
+   `"training_ready": false` es esperado: todavía falta revisar las etiquetas,
+   cualificar la señal de acción y convertir los datos al formato del modelo.
+7. **Revisa las imágenes y anota el resultado de la demostración.** Conserva
+   separadas las tomas correctas, fallidas e interrumpidas. Cada nueva ejecución
+   crea otra carpeta; nunca grabes encima de la anterior.
+
+Esta ampliación sólo documenta el procedimiento. La validación disponible sigue
+siendo el piloto corto del22-10; no se ha realizado otra captura ni movimiento.
+
 ## Uso directo en el PC Linux del robot
 
 Abrir una terminal del PC que contiene este repositorio:

@@ -1,5 +1,10 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**23-10-2026 — instrucciones de captura simplificadas.**
+Guía Markdown ampliada con pasos de inicio, espera CAPTURA_LISTA, revisión de
+quality.json y separación de tomas. Sólo documentación; sin nueva captura,
+conexión, cambio de programa o movimiento. [Instrucciones](vla/CAPTURA_PASIVA_EPISODIOS.md).
+
 **22-10-2026 — VLA-PASSIVE-EPISODE-CAPTURE-20261022: capturador pasivo disponible.**
 PC captura RGB PNG, posiciones20D, consignas `cmd_pos` y fuerzas con sellos
 originales y recepción común Vision, sin control/movimiento ni arranque VLA.
