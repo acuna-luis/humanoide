@@ -1,5 +1,10 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**29-10-2026 — corrección de llegada get1 interrumpida:** velocidad angular
+medida 0,718746 rad/s sobre límite activo 0,60; cancelación status5, sin
+recogida ni HOME. La instrumentación nueva sólo aclara futuras decisiones del
+guard: **no corrige la parada ni autoriza movimiento**. [Detalles y estado](../box_handling/OPTIMISTIC_SCENARIO1.md#diagnóstico-de-corrección-get1--29-10-2026).
+
 **29-10-2026 — adquisición inicial de salud:** el worker local espera una
 ventana coherente de las cuatro señales frescas sin aumentar el límite de 2 s;
 la prueba del flujo real sigue pendiente. El fallo de salud y el rechazo de

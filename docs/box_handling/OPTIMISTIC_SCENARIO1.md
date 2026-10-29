@@ -1,5 +1,52 @@
 # Escenario 1 con supervisión continua
 
+### Diagnóstico de corrección get1 — 29-10-2026
+
+**BOX-GET1-GUARD-DIAGNOSTIC-20261029 — OBSERVADO / diagnóstico local
+VERIFICADO offline; solución del movimiento PENDIENTE.** En
+`20261029T121841Z_OPTIMISTIC_SCENARIO1_669518`, después de la navegación
+principal, el objetivo de corrección se inició con dos poses de 23,612 mm y
+~0,31° del destino; el umbral de llegada es 20 mm/2°. El destino era casi
+lateral al eje del robot; el navegador recibió `free_nav` con velocidad
+angular solicitada 0,15 rad/s. La petición no garantiza ese máximo: la revisión
+previa del controlador ArcPrecise indica que ignora `setNaviSpeed`/`level`.
+La excursión angular máxima registrada fue ~88,75° en odometría y mapa.
+
+El guard recibió de odometría 0,718745979 rad/s, por encima de su límite
+activo 0,60 rad/s, y solicitó cancelar; resultado status5. `physical_stop_verified`
+quedó false, `navigate_get1` falló, caja `unknown` en checkpoint y no se
+despacharon visión, agarre, depósito ni HOME. El usuario informa después que
+el robot está inmóvil y las abrazaderas vacías; no es una lectura directa ni
+certifica el estado futuro.
+
+El límite superior de 1,20 sólo se aplica con dos poses recientes y dos
+causales frescas dentro de 20 mm y traslación ≤0,02 m/s; en otro caso se aplica
+0,60 sin rampa. La última distancia en la instantánea fallida fue 21,68 mm,
+pero su pose de mapa era posterior al sello de la odometría y no se guardaron
+las cuatro poses necesarias. El cruce de umbral es compatible con el rechazo,
+no prueba cuál condición exacta falló. Se desconoce si otra transición física
+habría sido segura; elevar el límite o ignorar el error no es una corrección
+acreditada. Las ventanas/ángulos y el guard están en
+[`scenario1_nav_correction.py`](../../scripts/box_handling/scenario1_nav_correction.py).
+
+Por ello se añade **sólo instrumentación diagnóstica** al evento de infracción:
+registrar dos poses recientes y dos causales, distancia, edad de fuente y
+recepción y sus criterios. Un fallo del diagnóstico deja intacta la excepción
+y cancelación originales. No cambia el límite ni evita la interrupción: una
+alternativa que complete el ajuste respetando las guardas y el criterio de
+llegada sigue PENDIENTE de diseño, validación offline y física. No se amplía
+la tolerancia, ni se ejecuta o reintenta la corrección en esta intervención.
+
+**121 pruebas offline correctas**, sin SSH ni movimiento. Código en PC y
+rollback `code-before/`, documentación anterior `docs-before/`, manifiestos
+SHA-256 en `../Humanoide-vla-evidence/20261029_GET1_CORRECTION_DIAGNOSTIC/`;
+el guard se transmite en memoria en un futuro inicio, sin instalación
+persistente. Evidencia original sin modificar:
+`../Humanoide-vla-evidence/20261029T121841Z_OPTIMISTIC_SCENARIO1_669518/`;
+SHA-256 eventos `248aae40c7ab02b66fc5402682b86d7e3945482d1896d494d8533c16d501ec40`,
+checkpoint `b2de73de8c15fb5e848828d536b234da9fdd8fb66d3c3802b344dbd5d7f19ecd`.
+El código nuevo no se ha cargado ni probado con robot.
+
 ### Ventana fresca de seguridad — 29-10-2026
 
 **BOX-HEALTH-FRESH-WINDOW-20261029 — verificado offline y salud aislada; prueba física PENDIENTE.**

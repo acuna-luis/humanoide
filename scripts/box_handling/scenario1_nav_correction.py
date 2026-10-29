@@ -267,6 +267,29 @@ class Guard:
             return POLICY['max_angular_speed_rad_s']
         return POLICY['max_approach_angular_speed_rad_s']
 
+    def angular_limit_diagnostic(self, sample):
+        """Explain a recorded violation without changing the active guard."""
+        def describe(pose):
+            distance = _errors(pose, self.spec['target'])[0]
+            source_age = sample['received_ns'] - pose['stamp_ns']
+            receipt_age = sample['received_ns'] - pose['received_ns']
+            return dict(stamp_ns=pose['stamp_ns'], received_ns=pose['received_ns'],
+                        source_age_ns=source_age, receipt_age_ns=receipt_age,
+                        distance_m=distance,
+                        within_distance=distance <= self.distance_tolerance_m + _EPS,
+                        source_fresh=0 <= source_age <= POLICY['source_age_s'] * _NS,
+                        receipt_fresh=0 <= receipt_age <= POLICY['receive_age_s'] * _NS,
+                        causal_to_odometry=pose['stamp_ns'] <= sample['stamp_ns'])
+
+        causal = [pose for pose in self._map_history
+                  if pose['stamp_ns'] <= sample['stamp_ns']][-2:]
+        return dict(armed=self.armed_ns is not None,
+                    odometry_stamp_ns=sample['stamp_ns'], odometry_received_ns=sample['received_ns'],
+                    distance_tolerance_m=self.distance_tolerance_m,
+                    alignment_linear_limit_m_s=POLICY['alignment_linear_speed_m_s'],
+                    map_recent=[describe(pose) for pose in self._recent['map']],
+                    map_causal=[describe(pose) for pose in causal])
+
     def add(self, kind, payload, received_ns):
         self._healthy()
         try:
@@ -307,6 +330,12 @@ class Guard:
                                   (('linear', linear, linear_limit), ('angular', angular, angular_limit))
                                   if value > limit + _EPS],
                         sample=copy.deepcopy(payload if isinstance(payload, dict) else json.loads(payload)))
+                    # Diagnostics run only on rejection: ordinary high-rate
+                    # telemetry and the actual authorization stay unchanged.
+                    try:
+                        self.velocity_violation['angular_limit_decision'] = self.angular_limit_diagnostic(sample)
+                    except Exception as error:
+                        self.velocity_violation['angular_limit_diagnostic_error'] = type(error).__name__
                     raise ValueError('Correction velocity exceeds %s limit: '
                                      'linear=%.9f m/s (limit=%.9f), '
                                      'angular=%.9f rad/s (limit=%.9f), stamp_ns=%d' %

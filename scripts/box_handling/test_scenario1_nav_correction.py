@@ -2,6 +2,7 @@
 import json
 import math
 import unittest
+from unittest.mock import patch
 
 from scripts.box_handling import scenario1_nav_correction as correction
 
@@ -243,6 +244,45 @@ class MalformedTelemetryTest(unittest.TestCase):
 
 
 class ActiveLimitsTest(unittest.TestCase):
+    def test_violation_records_recent_and_causal_pose_evidence_without_changing_limit(self):
+        guard = armed()
+        # DDS can deliver a newer map pose before the older odometry sample.
+        # Both causal poses are inside 20 mm, but the latest pose is outside.
+        for offset, x in ((.3, .019), (.4, .019), (.5, .021)):
+            when = START + round(offset * NS)
+            guard.add('map', sample('map', when, x=x), when)
+        odom_stamp = START + 450_000_000
+        received = START + 510_000_000
+        with self.assertRaisesRegex(ValueError, r'limit=0\.600000000'):
+            guard.add('odom', sample('odom', odom_stamp, angular=.718745979), received)
+        violation = guard.summary()['velocity_violation']
+        decision = violation['angular_limit_decision']
+        self.assertEqual(violation['angular_limit_rad_s'], .6)
+        self.assertEqual(decision['odometry_stamp_ns'], odom_stamp)
+        self.assertEqual(decision['odometry_received_ns'], received)
+        self.assertEqual(decision['distance_tolerance_m'], .02)
+        self.assertEqual([row['stamp_ns'] for row in decision['map_causal']],
+                         [START + 300_000_000, START + 400_000_000])
+        self.assertTrue(all(row['within_distance'] for row in decision['map_causal']))
+        last = decision['map_recent'][-1]
+        self.assertEqual(last['stamp_ns'], START + 500_000_000)
+        self.assertAlmostEqual(last['distance_m'], .021)
+        self.assertFalse(last['causal_to_odometry'])
+        self.assertFalse(last['within_distance'])
+        self.assertTrue(last['source_fresh'] and last['receipt_fresh'])
+        self.assertEqual(last['source_age_ns'], 10_000_000)
+        self.assertEqual(last['receipt_age_ns'], 10_000_000)
+
+    def test_diagnostic_failure_does_not_suppress_velocity_rejection(self):
+        guard = armed()
+        when = START + 300_000_000
+        with patch.object(guard, 'angular_limit_diagnostic', side_effect=RuntimeError('diagnostic')):
+            with self.assertRaisesRegex(ValueError, 'Correction velocity exceeds active limit'):
+                guard.add('odom', sample('odom', when, angular=.7), when + 1)
+        violation = guard.summary()['velocity_violation']
+        self.assertEqual(violation['angular_limit_diagnostic_error'], 'RuntimeError')
+        self.assertEqual(violation['angular_limit_rad_s'], .6)
+
     def test_angular_violation_keeps_exact_sample_and_active_phase(self):
         guard = armed()
         when = START + 300_000_000

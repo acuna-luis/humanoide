@@ -1,5 +1,19 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**29-10-2026 — BOX-GET1-GUARD-DIAGNOSTIC-20261029: corrección interrumpida.**
+En `20261029T121841Z_OPTIMISTIC_SCENARIO1_669518`, primera corrección get1
+iniciada a 23,612 mm/0,309°, con excursión angular máxima ~88,75°; el guard
+observó 0,718746 rad/s con límite activo 0,60 y canceló status5. No se inició
+recogida ni HOME; la cancelación no acredita parada física. El usuario declaró
+después robot inmóvil y abrazaderas vacías; observación no medida aquí. La
+última distancia registrada era 21,68 mm, pero las cuatro poses usadas por el
+guard no se conservaron: la causa exacta del límite inferior sigue PENDIENTE.
+Añadido diagnóstico local sólo en rechazo, con poses recientes/causales y
+frescura; **no evita la parada ni cambia límites, trayectoria o tolerancias**.
+121 pruebas offline correctas; no conectado ni probado físicamente. Sigue
+PENDIENTE una solución de movimiento capaz de respetar los límites actuales.
+[Detalle, evidencia y reversión](box_handling/OPTIMISTIC_SCENARIO1.md#diagnóstico-de-corrección-get1--29-10-2026).
+
 **29-10-2026 — BOX-HEALTH-FRESH-WINDOW-20261029: adquisición inicial de seguridad.**
 El intento `20261029T114633Z_OPTIMISTIC_SCENARIO1_591227` falló antes de
 armar o despachar acciones por muestras de seguridad caducadas; no identifica

@@ -1,5 +1,35 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-GET1-GUARD-DIAGNOSTIC-20261029
+
+29-10-2026, Europe/Madrid — **diagnóstico local VERIFICADO offline; no cargado
+en Motion ni probado físicamente**. El usuario pide corregir una parada en
+corrección get1. En la toma `20261029T121841Z_OPTIMISTIC_SCENARIO1_669518`,
+el guard canceló al medir velocidad angular 0,718746 rad/s con límite 0,60;
+la respuesta terminal status5 no acredita reposo. El usuario informa después
+robot inmóvil y abrazaderas vacías, sin comprobación remota aquí.
+
+Fuente reproducible: PC `scripts/box_handling/scenario1_nav_correction.py` y
+`test_scenario1_nav_correction.py`. Se registran, **sólo tras infracción**, los
+dos grupos de poses usados por la selección del límite, sus edades, distancia,
+causalidad y frescura. Una excepción al preparar diagnóstico no impide abortar.
+No altera la condición de límite angular, velocidades, salida, trayectoria,
+watchdogs, mapa ni tolerancia de llegada. El CLI transmite el guard en memoria
+al iniciar una sesión futura; no se instaló ni cargó en esta intervención.
+Esta instrumentación **no corrige ni evita la parada de la toma registrada**;
+la solución que permita completar la corrección respetando límites está
+PENDIENTE, igual que la validación física. No reutilizar el checkpoint fallido.
+
+Verificación: 121 pruebas offline de corrección, transporte y navegación;
+sin ROS/SSH ni movimiento. Código anterior/final y hashes, además de respaldo
+documental: `../Humanoide-vla-evidence/20261029_GET1_CORRECTION_DIAGNOSTIC/`.
+Evidencia original: `../Humanoide-vla-evidence/20261029T121841Z_OPTIMISTIC_SCENARIO1_669518/`.
+Rollback: revertir sólo la instrumentación y sus pruebas mediante el diff del
+commit de esta ficha o restaurar las fuentes previas desde `code-before/`;
+conservar evidencia y evitar sobrescribir cambios posteriores. El estado de
+trabajo/presencia de controles y trayectoria físicos exige nueva comprobación.
+[Análisis](box_handling/OPTIMISTIC_SCENARIO1.md#diagnóstico-de-corrección-get1--29-10-2026).
+
 ## BOX-HEALTH-FRESH-WINDOW-20261029
 
 29-10-2026, Europe/Madrid — **cambio local; worker cargado temporalmente en
