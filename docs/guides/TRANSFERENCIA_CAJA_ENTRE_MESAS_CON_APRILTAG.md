@@ -1,5 +1,16 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**29-10-2026 — plazo de navegación del escenario 1 ampliado en el PC.**
+El ciclo Optimistic usa 300 s por defecto para cada navegación principal a
+`get1` y `put1`, configurable entre 180 y 600 s mediante
+`--navigation-timeout-s`. El límite de sesión de 900 s y las comprobaciones
+permanecen vigentes. El cambio no se ha probado físicamente. El último intento
+documentado quedó interrumpido en put1; el usuario comunicó después apagado
+seguro y retirada de la caja. El estado físico después del arranque sigue
+pendiente de comprobar. Esta opción pertenece al escenario 1, no al
+orquestador AprilTag descrito más abajo.
+[Registro, alcance y reversión](../box_handling/OPTIMISTIC_SCENARIO1.md#plazo-de-navegación-y-ciclo-interrumpido--29-10-2026).
+
 **22-10-2026 — ciclo común por altura implementado, pendiente de ensayo.**
 `optimistic_scenario1.sh --table-height-cm 74|90 --plan` muestra el motor único.
 No cambia la recogida. Para74, aproximación y descenso19 cm se integran en una

@@ -142,6 +142,8 @@ runpy.run_path(root+'/front_sps_native.py',run_name='__main__')
 class Runtime:
     def __init__(self, payload, emit=None):
         self.payload = payload
+        self.navigation_timeout_s = contract.validate_navigation_timeout(
+            payload.get('navigation_timeout_s', contract.NAVIGATION_TIMEOUT_DEFAULT_S))
         height = height_deposit.profile_height(payload.get('profile'))
         if height is not None:
             checked = height_deposit.validate_bundle(payload.get('deposit_bundle'))
@@ -881,9 +883,9 @@ class Runtime:
         target = dict(self.points[point])
         expected = dict(target.pop('_expected_pose'))
         self.emit('navigation_target', point=point, mode=target['mode'],
-                  expected=expected, target=target)
+                  expected=expected, target=target, timeout_s=self.navigation_timeout_s)
         result = self.action('navigation', {'command': 'navigation_start',
-            'arg_json': json.dumps({'target_point': target})}, 180)
+            'arg_json': json.dumps({'target_point': target})}, self.navigation_timeout_s)
         contract.validate_navigation_result(result)
         if self.map_state() != ('utars_nav_map', 'FSM_WAITNAVIGATE'):
             raise RuntimeError('Estado después de navegación no confirmado')

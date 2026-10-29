@@ -1,5 +1,65 @@
 # Escenario 1 con supervisión continua
 
+### Plazo de navegación y ciclo interrumpido — 29-10-2026
+
+**BOX-NAV-DEADLINE-20261029 — OBSERVADO, Europe/Madrid.** En el ciclo
+`20261029T090425Z_OPTIMISTIC_SCENARIO1_217574`, `get1` terminó en 108,837 s
+de etapa; visión, recogida y retirada también terminaron. La sujeción se anotó
+por la política `assume`, sin evidencia de sensor. En `navigate_put1`, el
+objetivo `f997d935-87ad-46d3-9e1d-6e7ef3d5fabe` fue aceptado y el cliente
+alcanzó su plazo de 180 s sin resultado terminal. Solicitó cancelación y el
+navegador devolvió estado 5, `FSM_Navigating onCancel and stop`; el registro
+indica `physical_stop_verified=false`. El checkpoint marca caja `unknown`;
+no hubo depósito ni HOME. El tiempo del comando comunicado por el usuario fue
+6 min 11,136 s. Los errores de lease son posteriores al primer error.
+
+Los feedbacks de navegación/localización no demuestran por sí solos la causa
+del retraso, la llegada, el movimiento ni la parada. El usuario comunicó
+después apagado seguro, retirada de la caja y comienzo de un nuevo arranque;
+postura, abrazaderas y estado actuales siguen **PENDIENTES** de comprobación.
+El checkpoint previo conserva el fallo: no se debe tratar como ciclo completo
+ni aplicar una continuación de depósito a una caja ya retirada.
+
+Evidencia privada original: `../Humanoide-vla-evidence/20261029T090425Z_OPTIMISTIC_SCENARIO1_217574/`.
+SHA-256 `events.jsonl`: `2ef5ec83beb812cdb4770e894f2b171230243bb8a914d19508d5f1b2b1390368`;
+`checkpoint.json`: `fd195d2db599490ed45cb3d720b13579f80ec2919363d6153c69f81d463c6ff6`.
+El archivo de respaldo y manifiesto de esta intervención están en
+`../Humanoide-vla-evidence/20261029_NAVIGATION_DEADLINE_CHANGE/`.
+
+**Cambio local del plazo:** el límite por cada navegación principal a `get1`
+o `put1` pasa de 180 a **300 s** por defecto. La opción
+`--navigation-timeout-s SEGUNDOS` acepta valores enteros entre 180 y 600 s;
+la selección aparece en el plan y queda registrada en `navigation-policy.json`
+de la ejecución. Afecta a cada objetivo principal, no a correcciones cortas,
+movimientos de brazos ni consultas. El plazo sigue siendo finito: si vence,
+se solicita cancelación y se requiere comprobar la parada física.
+
+La sesión sigue limitada a **900 s**; puede vencer antes que una navegación
+larga, especialmente si ambas navegaciones consumen mucho tiempo. La espera
+externa de cada etapa de navegación se ajusta al plazo elegido más 240 s, sin
+revivir el lease ni omitir supervisión de salud, llegada o controles existentes.
+El feedback `RUNNING` o `LOCATE_RUNNING` no se considera una prueba de avance
+ni justifica renovar el plazo automáticamente.
+
+Revisar el plan sin conectarse ni mover:
+
+```bash
+./scripts/optimistic_scenario1.sh --table-height-cm 74 --navigation-timeout-s 300 --plan
+```
+
+Para una futura ejecución autorizada se puede elegir otro plazo en el rango;
+con `--navigation-timeout-s 180` se recupera el plazo anterior para esa
+invocación. La activación ocurre al iniciar el CLI desde estas fuentes, que
+transmite el runtime al robot; este cambio no se ha instalado ni cargado de
+forma persistente en el robot. Antes de cualquier movimiento, redescubrir el
+stack tras el arranque y comprobar las condiciones físicas actuales. La prueba
+de navegación real con congestión queda **PENDIENTE**. No se modifican el
+checkpoint histórico ni los datos privados de la ejecución interrumpida.
+
+Verificación: 156 pruebas offline correctas en nueve módulos; planes normal y
+supervisado comprobados, integración simulada sin ROS/SSH. Fuentes y pruebas
+con sus hashes en `../Humanoide-vla-evidence/20261029_NAVIGATION_DEADLINE_CHANGE/after-code-sha256.txt`.
+
 ### Instalador residente: HOME y ciclo sin PC — 23-10-2026
 
 **WEB-SCENARIO1-ROBOT-INSTALLER-20261023 — IMPLEMENTADO Y PROBADO OFFLINE;

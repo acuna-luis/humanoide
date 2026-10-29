@@ -91,7 +91,7 @@ class PosePreflightTest(unittest.TestCase):
     def assert_one_navigation_goal(self, machine, point):
         machine.action.assert_called_once()
         kind, goal, timeout = machine.action.call_args.args
-        self.assertEqual((kind, goal['command'], timeout), ('navigation', 'navigation_start', 180))
+        self.assertEqual((kind, goal['command'], timeout), ('navigation', 'navigation_start', 300))
         target = json.loads(goal['arg_json'])['target_point']
         self.assertEqual(target['id'], point)
         self.assertNotIn('_expected_pose', target)

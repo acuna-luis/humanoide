@@ -23,6 +23,25 @@ STAGES = (
     'navigate_get1', 'enable_vision', 'grasp', 'verify_held', 'retreat',
     'navigate_put1', 'deposit', 'verify_released', 'home', 'verify_home',
 )
+# Maximum time for one ordinary get1/put1 navigation action. This is separate
+# from the fixed session/watchdog lifetime and the short correction guards.
+NAVIGATION_TIMEOUT_DEFAULT_S = 300
+NAVIGATION_TIMEOUT_MIN_S = 180
+NAVIGATION_TIMEOUT_MAX_S = 600
+
+
+def validate_navigation_timeout(value):
+    if type(value) is not int or not NAVIGATION_TIMEOUT_MIN_S <= value <= NAVIGATION_TIMEOUT_MAX_S:
+        raise ValueError('Navigation timeout must be an integer between 180 and 600 seconds')
+    return value
+
+
+def stage_wait_timeout(stage, navigation_timeout):
+    """Preserve the previous 240 s margin for non-action work in navigation."""
+    timeout = validate_navigation_timeout(navigation_timeout)
+    return timeout + 240 if stage in ('navigate_get1', 'navigate_put1') else 420
+
+
 STOP_AFTER = ('navigate_get1', 'verify_held', 'navigate_put1', 'verify_home')
 BOX_STATES = ('empty', 'held', 'released', 'unknown')
 CONFIRMATION_POLICIES = ('ask', 'assume', 'sensors')

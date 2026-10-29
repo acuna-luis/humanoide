@@ -101,7 +101,9 @@ def plan(args):
     automatic = not getattr(args, 'table74_supervised', True)
     return dict(mode='plan', application='table74_recorded_recipe' if automatic else 'table74_supervised_cycle', cycles=1,
         pickup_stop_after='navigate_put1', pickup_and_alignment_unchanged=True,
-        box_alignment_attempts=args.box_alignment_attempts, arm_task_unchanged=True,
+        box_alignment_attempts=args.box_alignment_attempts,
+        navigation_timeout_s=getattr(args, 'navigation_timeout_s', cli.contract.NAVIGATION_TIMEOUT_DEFAULT_S),
+        session_timeout_s=900, arm_task_unchanged=True,
         stages=['pickup_to_put1', 'approach_absolute_z_0.94', 'precontact_14cm',
                 'support_5cm', *([] if automatic else ['optional_single_settle_1cm']), 'pin_relief_4cm',
                 'lateral_open_10cm_per_side', 'empty_measured_home'],

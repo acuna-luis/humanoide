@@ -18,7 +18,7 @@ from scripts.box_handling.test_scenario1_runtime import PROFILE, SimulatedRuntim
 
 class CycleCliTest(unittest.TestCase):
     def exercise(self, root, *, stop_stage=None, stop_cycle=1, stop_at_ready=False,
-                 cycle=True, failure=None, source=None, during_lock=None):
+                 cycle=True, failure=None, source=None, during_lock=None, navigation_timeout=None):
         instances = []
         evidence = root/'run'
         command_calls = []
@@ -28,6 +28,7 @@ class CycleCliTest(unittest.TestCase):
                 instances.append(self)
                 self.sent = []
                 self.waits = []
+                self.wait_details = []
                 self.location = location
                 self.process = Mock()
                 self.process.wait.return_value = 0
@@ -49,6 +50,7 @@ class CycleCliTest(unittest.TestCase):
 
             def wait(self, desired, timeout=None):
                 self.waits.append(desired)
+                self.wait_details.append((desired, timeout))
                 if desired == 'ready':
                     if stop_at_ready:
                         signal.raise_signal(signal.SIGINT)
@@ -88,6 +90,8 @@ class CycleCliTest(unittest.TestCase):
                 signal.raise_signal(signal.SIGINT)
 
         flags = ['--cycle'] if cycle else ['--run']
+        if navigation_timeout is not None:
+            flags += ['--navigation-timeout-s', str(navigation_timeout)]
         if source:
             flags += ['--resume', str(source)]
         with ExitStack() as stack:
@@ -102,6 +106,17 @@ class CycleCliTest(unittest.TestCase):
         connection = instances[0]
         connection.close.assert_called_once()
         return rc, connection, evidence, output.getvalue()
+
+    def test_selected_navigation_budget_reaches_remote_and_stage_wait(self):
+        with tempfile.TemporaryDirectory() as directory:
+            rc, conn, folder, output = self.exercise(Path(directory), cycle=False, stop_stage='navigate_put1',
+                                                      navigation_timeout=600)
+            self.assertEqual(rc, 0)
+            self.assertEqual(conn.machine.payload['navigation_timeout_s'], 600)
+            self.assertEqual(json.loads((folder/'navigation-policy.json').read_text())['navigation_timeout_s'], 600)
+            stage_waits = [timeout for name, timeout in conn.wait_details if name == 'stage_complete']
+            self.assertEqual(stage_waits[:6], [840, 420, 420, 420, 420, 840])
+            self.assertIn('--navigation-timeout-s 600', output)
 
     def test_two_cycles_one_connection_and_pause_after_grasp_closes_held_ledger(self):
         with tempfile.TemporaryDirectory() as directory:

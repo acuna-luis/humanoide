@@ -162,6 +162,8 @@ def report_pause(wrapper, checkpoint_path, checkpoint, cycle, *, args=None, resu
                 command += ['--voice', args.voice]
             if hasattr(args, 'box_alignment_attempts'):
                 command += ['--box-alignment-attempts', str(args.box_alignment_attempts)]
+            if hasattr(args, 'navigation_timeout_s'):
+                command += ['--navigation-timeout-s', str(args.navigation_timeout_s)]
             if args.wifi:
                 command += ['--wifi']
             if args.stop_after != 'cycle':
@@ -454,6 +456,11 @@ def parser(policy='ask', execution_profile='standard_v1'):
                    default=(box_alignment.DEFAULT_MAX_CORRECTIONS if execution_profile == 'optimistic_v1' else 0), metavar='N',
                    help='Hasta N ajustes visuales del chasis antes del único agarre (0..7; defecto %(default)s). '
                         '0 conserva la entrada original sin ajuste; no repite movimientos de brazos')
+    p.add_argument('--navigation-timeout-s', type=int,
+                   choices=range(contract.NAVIGATION_TIMEOUT_MIN_S, contract.NAVIGATION_TIMEOUT_MAX_S+1),
+                   default=contract.NAVIGATION_TIMEOUT_DEFAULT_S, metavar='SEGUNDOS',
+                   help='Plazo por navegación principal get1/put1 (180..600 s; defecto %(default)s); '
+                        'la sesión sigue limitada a 900 s')
     profile_selection = p.add_mutually_exclusive_group()
     profile_selection.add_argument('--profile', type=Path, default=HERE/'scenario1_current_geometry.json')
     profile_selection.add_argument('--table-height-cm', type=float, choices=(74., 90.),
@@ -559,6 +566,8 @@ def _main(args, stop=None):
     alignment_attempts = box_alignment.validate_max_corrections(
         getattr(args, 'box_alignment_attempts',
                 box_alignment.DEFAULT_MAX_CORRECTIONS if execution_profile == 'optimistic_v1' else 0))
+    navigation_timeout = contract.validate_navigation_timeout(
+        getattr(args, 'navigation_timeout_s', contract.NAVIGATION_TIMEOUT_DEFAULT_S))
     alignment_report = dict(enabled=alignment_attempts > 0, policy=dict(box_alignment.make_policy(alignment_attempts)),
                             before_native_grasp=True, arm_task_unchanged=True, physical_validation='pending')
     moving = is_moving(args)
@@ -649,6 +658,7 @@ def _main(args, stop=None):
             print('HOME: sin reintento automático disponible en este segmento.')
     print('Alineación visual de caja: '+('hasta '+str(alignment_attempts)+' ajustes de chasis antes del único agarre'
           if alignment_attempts else 'desactivada; entrada de agarre original')+'.')
+    print('Plazo get1/put1: '+str(navigation_timeout)+' s por acción; sesión limitada a 900 s.')
     correction_status = nav_correction.qualification_report()
     if correction_status['motion_enabled']:
         approach = format(nav_correction.POLICY['max_approach_angular_speed_rad_s'], '.2f').replace('.', ',')
@@ -662,6 +672,8 @@ def _main(args, stop=None):
         report = dict(profile=profile, stages=list(contract.STAGES[contract.progress_index(checkpoint):contract.STAGES.index(stop_after)+1]),
             policy=policy, execution_profile=execution_profile,
             continuous_cycle=cycle,
+            navigation_timeout_s=navigation_timeout,
+            session_timeout_s=900,
             interstage_health=('live_snapshot_and_fresh_stationary_actuators'
                                if execution_profile == 'optimistic_v1' else 'full_acquisition'),
             sensor_qualification=sensor_profile['qualification'] if sensor_profile else None,
@@ -707,6 +719,9 @@ def _main(args, stop=None):
     payload['policy'] = policy
     payload['execution_profile'] = execution_profile
     payload['cycle'] = cycle
+    payload['navigation_timeout_s'] = navigation_timeout
+    atomic_json(evidence/'navigation-policy.json', dict(navigation_timeout_s=navigation_timeout,
+                session_timeout_s=900, scope=['navigate_get1', 'navigate_put1']))
     payload['box_alignment_attempts'] = alignment_attempts
     atomic_json(evidence/'box-alignment-policy.json', alignment_report)
     payload['check_repetitions'] = args.benchmark_checks
@@ -832,7 +847,7 @@ def _main(args, stop=None):
                 print('Etapa '+str(contract.STAGES.index(stage)+1)+'/'+str(len(contract.STAGES))+
                       ': '+stage_label(stage), flush=True)
                 connection.send(message)
-                connection.wait('stage_complete', timeout=420)
+                connection.wait('stage_complete', timeout=contract.stage_wait_timeout(stage, navigation_timeout))
                 checkpoint = contract.validate_checkpoint(json.loads((evidence/'checkpoint.json').read_text()), profile)
             finish_connection(connection)
             if stop.requested:

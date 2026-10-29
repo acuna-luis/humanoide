@@ -1,5 +1,45 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-NAV-DEADLINE-20261029
+
+29-10-2026, Europe/Madrid — **OBSERVADO** en journal de la ejecución
+`20261029T090425Z_OPTIMISTIC_SCENARIO1_217574`: navegación put1 cancelada al
+vencer el plazo de 180 s, resultado status5; sin prueba de parada física.
+Recogida y retirada completadas, sujeción asumida sin sensor, caja `unknown`;
+depósito y HOME no iniciados. El usuario comunicó después apagado seguro,
+retirada de caja y nuevo arranque; estado actual PENDIENTE. La congestión es
+posible pero no queda demostrada por los estados del navegador.
+Evidencia original privada: `../Humanoide-vla-evidence/20261029T090425Z_OPTIMISTIC_SCENARIO1_217574/`;
+hashes y detalle en [el manual](box_handling/OPTIMISTIC_SCENARIO1.md#plazo-de-navegación-y-ciclo-interrumpido--29-10-2026).
+Respaldo del estado anterior: `../Humanoide-vla-evidence/20261029_NAVIGATION_DEADLINE_CHANGE/before/`
+y `before-sha256.txt`; HEAD anterior `c0e3d893b120c5ff8b9b7c24e3eb2eb41dd094b0`.
+
+**Adaptación en PC/repositorio; carga y prueba física PENDIENTES.** El usuario
+pide ampliar el plazo por congestión. Fuentes reproducibles:
+`scripts/box_handling/scenario1_contract.py`, `scenario1_runtime.py`,
+`scenario1_cli.py`, `scenario1_table74_cycle.py` y sus pruebas versionadas.
+Plazo principal `get1`/`put1`: 300 s por defecto, opción
+`--navigation-timeout-s` de 180 a 600 s enteros. Se anota en la evidencia y
+se propaga al runtime; espera externa de navegación ajustada a plazo+240 s.
+Watchdogs/lease y salud siguen activos, sesión total900 s sin ampliar; al
+vencimiento se conserva cancelación y resultado de fallo. No altera trayectoria,
+límites de movimiento ni correcciones. Depende de Python3 estándar y el stack
+habitual con sus comprobaciones de versión/identidad vigentes.
+
+Aplicación: usar las fuentes versionadas del PC; `--plan` es local y sin
+movimiento. En un futuro lanzamiento autorizado, el CLI transmite el runtime
+en memoria; no existe instalación persistente nueva en Motion. Para recuperar
+el plazo anterior en una invocación, seleccionar `--navigation-timeout-s 180`;
+para rollback completo, revertir únicamente el cambio asociado a esta ficha
+antes de otra sesión. Conservar journal/checkpoint y demás trabajo ajeno.
+El nuevo plazo no modifica el ciclo ya fallido ni demuestra parada o llegada.
+Verificación: **156 pruebas offline correctas** en nueve módulos de navegación,
+pose, planificación, sesión, cliente de acción, CLI, alturas y ciclo74;
+planes normal y supervisado comprobados, integración simulada sin ROS/SSH.
+Hashes de fuentes y pruebas finales en
+`../Humanoide-vla-evidence/20261029_NAVIGATION_DEADLINE_CHANGE/after-code-sha256.txt`.
+Ensayo real, reposo y estado físico tras el arranque: PENDIENTES.
+
 ## WEB-SCENARIO1-ROBOT-INSTALLER-20261023
 
 23-10-2026, Europe/Madrid — IMPLEMENTADO/VERIFICADO OFFLINE; instalación,
