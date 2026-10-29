@@ -7,8 +7,8 @@ física y caja quedaron sin confirmar en el registro. No hubo depósito ni HOME.
 El usuario comunica apagado seguro, retirada de caja y nuevo arranque; postura
 y estado físico actuales PENDIENTES. Los feedbacks no demuestran congestión
 como causa. No reutilizar el checkpoint como depósito ni ciclo completo.
-Plazo de navegación principal local: 300 s por defecto, configurable entre
-180 y 600 s; el límite de sesión900 s y la supervisión se conservan. No
+Plazo de navegación principal local: 600 s por defecto (antes 300 s), configurable
+entre 180 y 600 s; el límite de sesión900 s y la supervisión se conservan. No
 instalado/cargado ni probado físicamente; ensayo con congestión PENDIENTE.
 [Detalle, evidencia y plazos](box_handling/OPTIMISTIC_SCENARIO1.md#plazo-de-navegación-y-ciclo-interrumpido--29-10-2026).
 

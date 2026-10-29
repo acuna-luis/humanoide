@@ -17,7 +17,7 @@ from scripts.box_handling.test_scenario1_runtime import PROFILE
 class NavigationTimeoutTest(unittest.TestCase):
     def test_cli_and_runtime_reject_out_of_range_values(self):
         parser = cli.parser('assume', 'optimistic_v1')
-        self.assertEqual(parser.parse_args([]).navigation_timeout_s, 300)
+        self.assertEqual(parser.parse_args([]).navigation_timeout_s, 600)
         for value in (180, 300, 600):
             self.assertEqual(parser.parse_args(['--navigation-timeout-s', str(value)]).navigation_timeout_s, value)
             self.assertEqual(contract.validate_navigation_timeout(value), value)
@@ -72,17 +72,17 @@ class NavigationTimeoutTest(unittest.TestCase):
             'state': {'desc': 'SUCCEED', 'state': 1101001}, 'dmsg': 'navigation_start SUCCEEDED'}}
         cancelled = {'event': 'result', 'status': 5, 'result': {}}
         for schedule, expected, cancelled_expected in (
-                (((.25, ACCEPT), (220., success)), 0, []),
+                (((.25, ACCEPT), (500., success)), 0, []),
                 (((.25, ACCEPT),), 2, [GOAL_ID])):
             clock = FakeClock()
             transport = FakeTransport(clock, schedule, ((.25, cancelled),))
             events = []
             status = action.run_action(transport, 'navigation', {'command': 'navigation_start', 'arg_json': '{}'},
-                                       300, lambda **row: events.append(row), clock=clock, cancel_grace=1)
+                                       600, lambda **row: events.append(row), clock=clock, cancel_grace=1)
             self.assertEqual(status, expected)
             self.assertEqual(transport.canceled, cancelled_expected)
             if expected:
-                self.assertEqual(clock(), 300.25)
+                self.assertEqual(clock(), 600.25)
                 self.assertTrue(any(row.get('reason') == 'Action deadline exceeded' for row in events))
 
     def test_control_lease_still_cancels_before_navigation_limit(self):
@@ -93,7 +93,7 @@ class NavigationTimeoutTest(unittest.TestCase):
             transport = FakeTransport(clock, ((.25, ACCEPT),))
             events = []
             status = action.run_action(transport, 'navigation', {'command': 'navigation_start', 'arg_json': '{}'},
-                300, lambda **row: events.append(row), lease_file=path, clock=clock, cancel_grace=1)
+                600, lambda **row: events.append(row), lease_file=path, clock=clock, cancel_grace=1)
         self.assertEqual(status, 3)
         self.assertEqual(transport.canceled, [GOAL_ID])
         self.assertTrue(any('expired' in row.get('reason', '') for row in events))
@@ -107,7 +107,7 @@ class NavigationTimeoutTest(unittest.TestCase):
 
     def test_plan_reports_limits_without_connecting(self):
         with contextlib.redirect_stdout(io.StringIO()) as output:
-            self.assertEqual(cli.main(['--plan', '--navigation-timeout-s', '600'],
+            self.assertEqual(cli.main(['--plan'],
                                       policy='assume', execution_profile='optimistic_v1'), 0)
         self.assertIn('"navigation_timeout_s": 600', output.getvalue())
         self.assertIn('"session_timeout_s": 900', output.getvalue())

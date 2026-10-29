@@ -109,8 +109,7 @@ class CycleCliTest(unittest.TestCase):
 
     def test_selected_navigation_budget_reaches_remote_and_stage_wait(self):
         with tempfile.TemporaryDirectory() as directory:
-            rc, conn, folder, output = self.exercise(Path(directory), cycle=False, stop_stage='navigate_put1',
-                                                      navigation_timeout=600)
+            rc, conn, folder, output = self.exercise(Path(directory), cycle=False, stop_stage='navigate_put1')
             self.assertEqual(rc, 0)
             self.assertEqual(conn.machine.payload['navigation_timeout_s'], 600)
             self.assertEqual(json.loads((folder/'navigation-policy.json').read_text())['navigation_timeout_s'], 600)

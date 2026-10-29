@@ -1,7 +1,7 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
 **29-10-2026 — plazo de navegación del escenario 1 ampliado en el PC.**
-El ciclo Optimistic usa 300 s por defecto para cada navegación principal a
+El ciclo Optimistic usa 600 s por defecto para cada navegación principal a
 `get1` y `put1`, configurable entre 180 y 600 s mediante
 `--navigation-timeout-s`. El límite de sesión de 900 s y las comprobaciones
 permanecen vigentes. El cambio no se ha probado físicamente. El último intento

@@ -25,7 +25,7 @@ STAGES = (
 )
 # Maximum time for one ordinary get1/put1 navigation action. This is separate
 # from the fixed session/watchdog lifetime and the short correction guards.
-NAVIGATION_TIMEOUT_DEFAULT_S = 300
+NAVIGATION_TIMEOUT_DEFAULT_S = 600
 NAVIGATION_TIMEOUT_MIN_S = 180
 NAVIGATION_TIMEOUT_MAX_S = 600
 

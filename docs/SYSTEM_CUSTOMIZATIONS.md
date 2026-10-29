@@ -1,5 +1,26 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-NAV-DEFAULT600-20261029
+
+29-10-2026, Europe/Madrid — **cambio local; carga y ensayo físico PENDIENTES**.
+Por solicitud del usuario, el plazo predeterminado de navegación principal a
+`get1` y `put1` cambia de 300 a 600 s. `--navigation-timeout-s` conserva el
+rango 180–600 s; los plazos de otras acciones, supervisión, lease y límite de
+sesión de 900 s no cambian. Una sesión puede vencer antes del plazo individual.
+Fuente reproducible: `scripts/box_handling/scenario1_contract.py` y pruebas
+asociadas, activadas al lanzar el CLI desde el PC. Sin conexión ni movimiento
+durante este cambio; estado físico posterior al arranque PENDIENTE.
+Estado anterior: commit `0c49cb7`, respaldo y hashes de documentos y código en
+`../Humanoide-vla-evidence/20261029_NAVIGATION_DEFAULT_600/`.
+Reversión por invocación: `--navigation-timeout-s 300`; para el plazo original
+seleccionar 180, o revertir sólo este cambio antes de la próxima sesión.
+Verificación: **156 pruebas offline correctas** en nueve módulos, con éxito
+simulado a 500 s, cancelación al vencer los 600 s, lease vigente e integración
+sin opción explícita con espera externa de 840 s. Sin ROS ni SSH. Hashes finales:
+`../Humanoide-vla-evidence/20261029_NAVIGATION_DEFAULT_600/code-after-sha256.txt`.
+El incidente y la implementación previa quedan en la ficha siguiente.
+[Detalle](box_handling/OPTIMISTIC_SCENARIO1.md#plazo-de-navegación-y-ciclo-interrumpido--29-10-2026).
+
 ## BOX-NAV-DEADLINE-20261029
 
 29-10-2026, Europe/Madrid — **OBSERVADO** en journal de la ejecución
@@ -14,11 +35,11 @@ hashes y detalle en [el manual](box_handling/OPTIMISTIC_SCENARIO1.md#plazo-de-na
 Respaldo del estado anterior: `../Humanoide-vla-evidence/20261029_NAVIGATION_DEADLINE_CHANGE/before/`
 y `before-sha256.txt`; HEAD anterior `c0e3d893b120c5ff8b9b7c24e3eb2eb41dd094b0`.
 
-**Adaptación en PC/repositorio; carga y prueba física PENDIENTES.** El usuario
+**Adaptación inicial en PC/repositorio; sustituida por BOX-NAV-DEFAULT600-20261029.** El usuario
 pide ampliar el plazo por congestión. Fuentes reproducibles:
 `scripts/box_handling/scenario1_contract.py`, `scenario1_runtime.py`,
 `scenario1_cli.py`, `scenario1_table74_cycle.py` y sus pruebas versionadas.
-Plazo principal `get1`/`put1`: 300 s por defecto, opción
+Plazo principal inicial `get1`/`put1`: 300 s por defecto, opción
 `--navigation-timeout-s` de 180 a 600 s enteros. Se anota en la evidencia y
 se propaga al runtime; espera externa de navegación ajustada a plazo+240 s.
 Watchdogs/lease y salud siguen activos, sesión total900 s sin ampliar; al

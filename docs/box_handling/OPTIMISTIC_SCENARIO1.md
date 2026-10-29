@@ -27,7 +27,8 @@ El archivo de respaldo y manifiesto de esta intervención están en
 `../Humanoide-vla-evidence/20261029_NAVIGATION_DEADLINE_CHANGE/`.
 
 **Cambio local del plazo:** el límite por cada navegación principal a `get1`
-o `put1` pasa de 180 a **300 s** por defecto. La opción
+o `put1` pasó de 180 a 300 s y, por nueva petición del usuario, a **600 s**
+por defecto. La opción
 `--navigation-timeout-s SEGUNDOS` acepta valores enteros entre 180 y 600 s;
 la selección aparece en el plan y queda registrada en `navigation-policy.json`
 de la ejecución. Afecta a cada objetivo principal, no a correcciones cortas,
@@ -44,7 +45,7 @@ ni justifica renovar el plazo automáticamente.
 Revisar el plan sin conectarse ni mover:
 
 ```bash
-./scripts/optimistic_scenario1.sh --table-height-cm 74 --navigation-timeout-s 300 --plan
+./scripts/optimistic_scenario1.sh --table-height-cm 74 --plan
 ```
 
 Para una futura ejecución autorizada se puede elegir otro plazo en el rango;
@@ -56,9 +57,14 @@ stack tras el arranque y comprobar las condiciones físicas actuales. La prueba
 de navegación real con congestión queda **PENDIENTE**. No se modifican el
 checkpoint histórico ni los datos privados de la ejecución interrumpida.
 
-Verificación: 156 pruebas offline correctas en nueve módulos; planes normal y
-supervisado comprobados, integración simulada sin ROS/SSH. Fuentes y pruebas
-con sus hashes en `../Humanoide-vla-evidence/20261029_NAVIGATION_DEADLINE_CHANGE/after-code-sha256.txt`.
+Verificación de la versión anterior de 300 s: 156 pruebas offline correctas en
+nueve módulos; planes normal y supervisado comprobados, integración simulada
+sin ROS/SSH. Fuentes anteriores y sus hashes en
+`../Humanoide-vla-evidence/20261029_NAVIGATION_DEADLINE_CHANGE/after-code-sha256.txt`.
+Para el nuevo valor de 600 s, **156 pruebas offline correctas**: incluyen éxito
+simulado a 500 s, cancelación a 600 s, lease vigente y propagación de la opción
+predeterminada con espera externa de 840 s. Respaldo y hashes en
+`../Humanoide-vla-evidence/20261029_NAVIGATION_DEFAULT_600/`.
 
 ### Instalador residente: HOME y ciclo sin PC — 23-10-2026
 

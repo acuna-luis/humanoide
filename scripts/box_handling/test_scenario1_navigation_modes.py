@@ -83,7 +83,7 @@ class NavigationModesTests(unittest.TestCase):
 
     def assert_target(self, machine, name, mode):
         kind, goal, timeout = machine.action.call_args.args
-        self.assertEqual((kind, goal['command'], timeout), ('navigation', 'navigation_start', 300))
+        self.assertEqual((kind, goal['command'], timeout), ('navigation', 'navigation_start', 600))
         self.assertEqual(machine.action.call_args.kwargs, {})
         target = json.loads(goal['arg_json'])['target_point']
         self.assertEqual(target['mode'], mode)
@@ -137,7 +137,7 @@ class NavigationModesTests(unittest.TestCase):
             with self.subTest(mode=mode), self.machine(saved_map(mode, mode)) as (machine, events, pose, http):
                 def action(kind, goal, timeout):
                     self.assertEqual(events[-1], dict(event='navigation_target', point='get1',
-                        mode=mode, expected=POSES['get1'], target=json.loads(goal['arg_json'])['target_point'], timeout_s=300))
+                        mode=mode, expected=POSES['get1'], target=json.loads(goal['arg_json'])['target_point'], timeout_s=600))
                     return copy.deepcopy(SUCCESS)
                 machine.action.side_effect = action
                 machine.navigate('get1')
