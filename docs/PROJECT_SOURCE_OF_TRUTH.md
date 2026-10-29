@@ -1,5 +1,19 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**29-10-2026 — BOX-HEALTH-FRESH-WINDOW-20261029: adquisición inicial de seguridad.**
+El intento `20261029T114633Z_OPTIMISTIC_SCENARIO1_591227` falló antes de
+armar o despachar acciones por muestras de seguridad caducadas; no identifica
+el canal. Observación pasiva posterior durante 20 s: ambos paros publicaron
+cuatro muestras cada uno, intervalos de recepción 4,926–4,931 s; no demuestra
+cuál caducó en el intento ni certifica el estado físico. El worker local espera
+una ventana conjunta nueva sin aumentar el límite de antigüedad de 2 s ni omitir
+guardas; ante señal insegura, reloj incoherente o timeout sigue bloqueando.
+Implementación local verificada offline; worker cargado temporalmente en Motion
+para una comprobación aislada de salud correcta, sin movimiento y con limpieza
+del proceso/sesión propios. Rama de espera con datos caducados no demostrada
+en robot; check completo y ensayo físico PENDIENTES.
+[Detalle, evidencia y reversión](box_handling/OPTIMISTIC_SCENARIO1.md#ventana-fresca-de-seguridad--29-10-2026).
+
 **29-10-2026 — BOX-NAV-DEADLINE-20261029: ciclo interrumpido en put1.**
 OBSERVADO en registros: recogida y retirada completadas; sujeción asumida sin
 sensor. Navegación put1 alcanzó el plazo180 s y se canceló con status5; parada

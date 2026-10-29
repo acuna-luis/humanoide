@@ -1,5 +1,77 @@
 # Escenario 1 con supervisión continua
 
+### Ventana fresca de seguridad — 29-10-2026
+
+**BOX-HEALTH-FRESH-WINDOW-20261029 — verificado offline y salud aislada; prueba física PENDIENTE.**
+La ejecución `20261029T114633Z_OPTIMISTIC_SCENARIO1_591227` terminó en el
+preflight inicial con `Collected safety samples became stale`. El journal no
+registra `ready`, `armed`, acciones ni etapas; el checkpoint es un estado
+lógico inicial, no una medición de postura o de caja. El error no preservó el
+canal ni la edad que lo causó. La instalación consultada ya estaba presente;
+el recibo `installer-check.json` registra `status=checked`, cero movimientos y
+cero reinicios. No atribuir este fallo al plazo de navegación ni a obstáculos.
+
+En una observación pasiva posterior de 20 s, por Wi-Fi PC–Motion y contenedor
+descubierto, ambos canales de paro tuvieron un emisor, cuatro muestras y tres
+intervalos de recepción de **4,926–4,931 s**; cargador y batería registraron
+77 y 79 muestras. Los UInt8 de paro carecen de sello de origen: son cadencias
+de recepción y no establecen latencia física ni máximo garantizado. La toma
+no identifica el canal caducado en el fallo anterior ni comprueba la postura.
+Evidencia privada, receta de sólo lectura y hashes:
+`../Humanoide-vla-evidence/20261029_HEALTH_FRESHNESS_FIX/observacion/`.
+
+`scenario1_health_worker.py` espera dentro del plazo de adquisición existente
+una ventana coherente de recibos nuevos. Sigue exigiendo las cuatro señales
+con edad de recepción **≤2 s**, sin alterar el watchdog o el monitor continuo;
+valida tiempo de reloj y monotónico, dos muestras articulares, unicidad de
+emisores, controladores, estado y lease. Las señales inseguras y fallos de
+actuadores observados, así como un estado de acción activo, se bloquean sin
+poder ocultarse con una muestra posterior; si el servicio de controladores
+envejece durante la espera, se consulta de nuevo. El bloqueo ante un estado
+de acción activo transitorio puede detener adquisiciones posteriores a una
+acción. Ante timeout se registran canales y edades para diagnóstico. La espera
+no garantiza que los intervalos de publicación permitan una ventana común.
+La edad de 5 s del monitor continuo para paros no cambia; la cadencia observada
+se aproxima a ella y no demuestra que vaya a cumplirse en futuras ejecuciones.
+
+Fuentes en PC y respaldo previo en
+`../Humanoide-vla-evidence/20261029_HEALTH_FRESHNESS_FIX/`.
+El CLI transmite el worker temporalmente en memoria al iniciar una nueva
+sesión; no se instalaron tareas ni cambió la configuración de Motion.
+
+Una única comprobación aislada de salud el 29-10 a las **12:54:02 Europe/Madrid**
+transmitió el worker y dependencias en memoria a Motion por SSH. El request
+health terminó en **3,545 s**, el monitor continuo alcanzó `live_health_ready`
+y el proceso global en **5,570 s**, rc0. Dos muestras 20D indicaron HOME=1 y
+velocidad0 en ese instante; es una observación histórica, no certifica la
+postura actual. No se enviaron comandos de navegación o movimiento, ni se
+cargaron mapas. Se creó una sesión temporal propia en Motion con lease/snapshot;
+tras solicitar stop se cerraron procesos y retiró la carpeta propia, con
+`isolated_health_cleanup.removed=true`. El cierre produjo posteriormente
+`lease expired or stop requested`, rc78, por la parada intencionada: no es
+el resultado del request ya exitoso. La comprobación obtuvo y liberó flock de
+`/tmp/cruzr-front-sps.lock`; se abrió con creación si faltaba, permanece intacto
+y su preexistencia es **PENDIENTE**. No se cambiaron servicios ni configuración.
+Receta, raw y hashes privados en
+`../Humanoide-vla-evidence/20261029_HEALTH_FRESHNESS_FIX/health_check/`.
+El worker empaquetado usado tuvo SHA-256
+`fc568735e99665bacb40e64e2a8640b5aea59c3a14c0b3219c031343b36712a1`.
+Esta comprobación no conserva las edades de cada canal en el éxito ni demuestra
+que se haya ejercido la rama de espera por muestras caducadas; no equivale al
+`--check` completo del escenario ni a una prueba de movimiento.
+
+Verificación offline: **107 pruebas focales correctas**. En la suite ampliada
+de **442 pruebas de 27 módulos**, 441 pasan y una produce error en
+`test_scenario1_box_alignment_cli.py:124`, en el test anterior de `BOOTSTRAP`;
+test y CLI no se modificaron aquí. La suite no está completamente verde y se
+excluyó el instalador genérico con fallos históricos ya documentados.
+Check completo del escenario, ejercicio real de la espera y ensayo físico:
+**PENDIENTES**.
+Reversión: revertir únicamente el cambio de `scenario1_health_worker.py` y
+sus pruebas, conservando evidencia y sin reinstalar configuración antigua.
+No reutilizar un checkpoint fallido ni reiniciar un ciclo sin comprobar el
+estado físico y resolver el `START_ONOBSTACLE` anterior por separado.
+
 ### Plazo de navegación y ciclo interrumpido — 29-10-2026
 
 **BOX-NAV-DEADLINE-20261029 — OBSERVADO, Europe/Madrid.** En el ciclo

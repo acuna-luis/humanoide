@@ -23,9 +23,11 @@ import time
 if __package__:
     from .scenario1_request_ids import RequestIds
     from . import scenario1_resume_worker as base_gate
+    from . import scenario1_live_health as live_health
 else:
     from scenario1_request_ids import RequestIds
     import scenario1_resume_worker as base_gate
+    import scenario1_live_health as live_health
 
 
 TOPICS = {
@@ -101,12 +103,17 @@ class Acquisition:
         self.requested_monotonic_ns = requested_monotonic_ns
         self.safety = {}
         self.samples = deque(maxlen=2)
+        self.sample_monotonic_receipts = deque(maxlen=2)
         self.receipts = {}
+        self.monotonic_receipts = {}
         self.last_stamp = None
         self.duplicates_ignored = 0
+        self.safety_failure = None
         self.base = base_gate.Acquisition(requested_ns) if self.request['command'] == 'base' else None
 
     def add(self, key, message, received_ns, received_monotonic_ns):
+        if self.safety_failure is not None:
+            raise ValueError('SAFETY_ACQUISITION_FAILED: '+self.safety_failure)
         if received_monotonic_ns <= self.requested_monotonic_ns:
             return
         if self.base is not None:
@@ -114,9 +121,30 @@ class Acquisition:
                 self.base.add(message, received_ns)
             return
         message = object_json(message)
+        if self.request['command'] == 'health' and key == 'status':
+            try:
+                live_health.checks.parse_idle_status(message)
+            except Exception as error:
+                self.safety_failure = key+': '+str(error)
+                raise ValueError('SAFETY_ACQUISITION_FAILED: '+self.safety_failure) from error
         if self.request['command'] == 'health' and key in SAFETY:
+            # Even without the optional live monitor, a dangerous value seen
+            # during a delayed acquisition must not be overwritten by a later
+            # clear value. Reuse the existing continuous-health validators.
+            try:
+                if (type(received_ns) is not int or received_ns < self.requested_ns or
+                        type(received_monotonic_ns) is not int or
+                        (key in self.receipts and received_ns < self.receipts[key]) or
+                        (key in self.monotonic_receipts and
+                         received_monotonic_ns < self.monotonic_receipts[key])):
+                    raise ValueError('Safety receipt clock regressed')
+                live_health._validate_message(key, message)
+            except Exception as error:
+                self.safety_failure = key+': '+str(error)
+                raise ValueError('SAFETY_ACQUISITION_FAILED: '+self.safety_failure) from error
             self.safety[key] = copy.deepcopy(message)
             self.receipts[key] = received_ns
+            self.monotonic_receipts[key] = received_monotonic_ns
         wanted = 'actuator' if self.request['command'] == 'health' else 'pose'
         if key != wanted:
             return
@@ -143,11 +171,20 @@ class Acquisition:
                               previous_sha256=hashlib.sha256(previous.encode()).hexdigest(),
                               current_sha256=hashlib.sha256(current.encode()).hexdigest())
             raise ValueError(reason+'; '+json.dumps(diagnostic, sort_keys=True))
+        if key == 'actuator':
+            try:
+                live_health._validate_message(key, message)
+            except Exception as error:
+                self.safety_failure = key+': '+str(error)
+                raise ValueError('SAFETY_ACQUISITION_FAILED: '+self.safety_failure) from error
         self.last_stamp = stamp
         self.samples.append(copy.deepcopy(message))
+        self.sample_monotonic_receipts.append(received_monotonic_ns)
         self.receipts[wanted] = received_ns
 
-    def complete(self, now_ns, controller=None, status=None, publishers=None):
+    def complete(self, now_ns, controller=None, status=None, publishers=None, *, now_monotonic_ns=None):
+        if self.safety_failure is not None:
+            raise ValueError('SAFETY_ACQUISITION_FAILED: '+self.safety_failure)
         if self.base is not None:
             result = self.base.complete(now_ns, publishers)
             if result is None:
@@ -157,14 +194,28 @@ class Acquisition:
             return None
         if any(not 0 <= now_ns-source_stamp_ns(row) <= MAX_AGE_NS for row in self.samples):
             raise ValueError('Collected source samples became stale')
+        if self.request['command'] == 'health':
+            if type(now_monotonic_ns) is not int:
+                raise ValueError('Missing monotonic collection time')
+            sample_ages = [now_monotonic_ns-receipt for receipt in self.sample_monotonic_receipts]
+            if any(age < 0 for age in sample_ages):
+                raise ValueError('Actuator receipt is in the future')
+            if any(age > MAX_AGE_NS for age in sample_ages):
+                raise ValueError('Collected actuator receipts became stale')
         result = dict(event=self.request['command']+'_result', request_id=self.request['request_id'],
                       requested_ns=self.requested_ns, completed_ns=now_ns)
         if self.request['command'] == 'pose':
             return dict(result, poses=copy.deepcopy(list(self.samples)))
         if set(self.safety) != set(SAFETY) or controller is None or status is None:
             return None
-        if any(not 0 <= now_ns-self.receipts[key] <= MAX_AGE_NS for key in SAFETY):
-            raise ValueError('Collected safety samples became stale')
+        ages = {key: now_ns-self.receipts[key] for key in SAFETY}
+        monotonic_ages = {key: now_monotonic_ns-self.monotonic_receipts[key] for key in SAFETY}
+        if any(age < 0 for age in (*ages.values(), *monotonic_ages.values())):
+            raise ValueError('Safety receipt is in the future')
+        if any(age > MAX_AGE_NS for age in (*ages.values(), *monotonic_ages.values())):
+            # Wait for a coherent new window within the original request
+            # deadline; old receipts are never accepted or made fresh.
+            return None
         return dict(result, require_home=self.request['require_home'], controller=object_json(controller),
                     status=object_json(status), status_retained=True,
                     safety=copy.deepcopy(self.safety), actuator=copy.deepcopy(list(self.samples)),
@@ -329,19 +380,31 @@ class NativeReader:
         self.controller = None
         self.response_ready.clear()
         future = None
+        controller_received_monotonic_ns = None
         publisher_counts = {}
         try:
             while time.monotonic() < deadline:
                 check_guard()
                 self.spin()
-                if request['command'] == 'base':
+                if request['command'] in ('base', 'health'):
                     check_guard()
                     if time.monotonic() >= deadline:
                         break
                 if request['command'] == 'health':
+                    if self.controller is not None:
+                        controller_age = time.monotonic_ns()-controller_received_monotonic_ns
+                        if controller_age < 0:
+                            raise ValueError('Controller receipt clock regressed')
+                        if controller_age > MAX_AGE_NS:
+                            self.controller = None
+                            controller_received_monotonic_ns = None
+                            future = None
+                            self.response_ready.clear()
                     count = self.client.getServiceCount()
                     if count > 1:
                         raise RuntimeError('Ambiguous ListControllers service')
+                    if count == 0:
+                        continue
                     if future is None and count == 1:
                         # ROSA requires wait_for_service to set its readiness
                         # state; getServiceCount alone does not authorize call_async.
@@ -356,6 +419,8 @@ class NativeReader:
                             raise RuntimeError('ListControllers request failed')
                     if self.response_ready.is_set() and self.controller is None:
                         self.controller = object_json(self.client.get_result(future, json_format=True))
+                        live_health._validate_message('controller', self.controller)
+                        controller_received_monotonic_ns = time.monotonic_ns()
                     required = (*SAFETY, 'actuator', 'status')
                 elif request['command'] == 'base':
                     required = ('odom',)
@@ -373,9 +438,18 @@ class NativeReader:
                 if not acceptable:
                     continue
                 result = self.acquisition.complete(time.time_ns(), self.controller, self.status,
-                                                  publisher_counts.get('odom'))
+                                                  publisher_counts.get('odom'),
+                                                  now_monotonic_ns=time.monotonic_ns())
                 if result is not None:
                     check_guard()
+                    if request['command'] == 'health' and time.monotonic() >= deadline:
+                        break
+                    if request['command'] == 'health':
+                        controller_age = time.monotonic_ns()-controller_received_monotonic_ns
+                        if controller_age < 0:
+                            raise ValueError('Controller receipt clock regressed')
+                        if controller_age > MAX_AGE_NS:
+                            continue
                     if request['command'] == 'pose':
                         result['publisher_count'] = publisher_counts['pose']
                     return result
@@ -386,6 +460,15 @@ class NativeReader:
                               actuator_duplicates_ignored=self.acquisition.duplicates_ignored,
                               controller_received=self.controller is not None,
                               status_received=self.status is not None)
+            if request['command'] == 'health':
+                now_ns = time.time_ns()
+                diagnostic['safety_receipt_age_ns'] = {
+                    key: now_ns-self.acquisition.receipts[key]
+                    for key in SAFETY if key in self.acquisition.receipts}
+                now_monotonic_ns = time.monotonic_ns()
+                diagnostic['safety_receipt_monotonic_age_ns'] = {
+                    key: now_monotonic_ns-self.acquisition.monotonic_receipts[key]
+                    for key in SAFETY if key in self.acquisition.monotonic_receipts}
             raise TimeoutError('Fresh read-only '+request['command']+' collection timed out; '+
                                json.dumps(diagnostic, sort_keys=True))
         finally:

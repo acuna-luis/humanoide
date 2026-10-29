@@ -1,5 +1,41 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-HEALTH-FRESH-WINDOW-20261029
+
+29-10-2026, Europe/Madrid — **cambio local; worker cargado temporalmente en
+Motion para salud aislada; ensayo físico PENDIENTE**. El
+usuario solicita corregir el rechazo de seguridad del preflight. El journal
+`../Humanoide-vla-evidence/20261029T114633Z_OPTIMISTIC_SCENARIO1_591227/`
+lo sitúa antes de armar y sin acciones; canal y edad concretos no archivados.
+Observación pasiva separada de paros/batería/cargador: cuatro muestras por
+paro en 20 s, intervalos 4,926–4,931 s, un emisor por canal; no identifica la
+causa del rechazo ni certifica seguridad o estado físico.
+
+Destino/fuente reproducible: PC `scripts/box_handling/scenario1_health_worker.py`
+y pruebas de `test_scenario1_health_worker.py`; worker transmitido en memoria
+en futuras sesiones, sin instalación persistente nueva de tareas. Espera una ventana
+conjunta válida dentro del plazo existente, conserva la frescura inicial ≤2 s,
+lease, unicidad de publicadores, controles y cierre ante señales inseguras,
+fallos de actuador y estado de acción activo observados durante la petición;
+registra canales y edades al agotar el plazo. Respaldos previos y hashes en
+`../Humanoide-vla-evidence/20261029_HEALTH_FRESHNESS_FIX/`; código previo en
+`before-code/`, documentación en `docs-before/`. Reversión: revertir sólo
+este cambio y conservar registros; no restaura configuración de Motion.
+Verificación: 107 pruebas focales pasan; suite ampliada de 27 módulos y 442
+pruebas, 441 correctas y un error en test previo `test_scenario1_box_alignment_cli.py:124`;
+test y CLI sin cambios aquí, no presentar la suite como verde. El worker
+empaquetado `fc568735…36712a1` se cargó temporalmente para salud aislada: request
+3,545 s, monitor listo, total5,570 s rc0, sin navegación ni movimiento. Stop y
+cierre posteriores y retirada de carpeta temporal propia verificados; el lock
+`/tmp/cruzr-front-sps.lock` fue abierto y liberado, su preexistencia PENDIENTE.
+Receta y evidencia: `health_check/` y `observacion/` en la carpeta citada;
+hashes de código previo/final en `code-before-sha256.txt` y `code-after-sha256.txt`.
+No está demostrado que la prueba real ejercitara la espera por caducidad;
+check de escenario completo y validación física PENDIENTES. Riesgo/deuda: si
+las ventanas frescas de los canales no coinciden dentro del plazo se mantiene
+el bloqueo; la detección de obstáculo anterior requiere diagnóstico separado.
+[Receta, evidencia y condiciones](box_handling/OPTIMISTIC_SCENARIO1.md#ventana-fresca-de-seguridad--29-10-2026).
+
 ## BOX-NAV-DEFAULT600-20261029
 
 29-10-2026, Europe/Madrid — **cambio local; carga y ensayo físico PENDIENTES**.

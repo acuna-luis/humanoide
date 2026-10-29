@@ -7,6 +7,7 @@ import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
+from scripts.lib.cruzr_home_posture_gate import BODY_ACTUATOR_ALIASES
 
 try:
     from . import scenario1_health_worker as worker
@@ -19,16 +20,29 @@ START = 10_000_000_000
 
 def stamped(stamp):
     sec, nanosec = divmod(stamp, 10**9)
-    return {'header': {'stamp': {'sec': sec, 'nanosec': nanosec}}, 'value': [1, 2]}
+    return {'header': {'stamp': {'sec': sec, 'nanosec': nanosec}}, 'value': [1, 2],
+            'act_item': [dict(id=aliases[0], name=name, error_code=0, status=7,
+                              position=0., velocity=0., cmd_pos=0.)
+                         for name, aliases in BODY_ACTUATOR_ALIASES]}
 
 
 def acquisition(command='health'):
     return worker.Acquisition({'request_id': 'request-1', 'command': command}, START, 100)
 
 
+def safe_message(key):
+    return {'packs': [{'batsoc': 55.}, {'batsoc': 56.}]} if key == 'battery' else {'data': 0}
+
+
+def complete(collector, now_ns, *args):
+    latest = max(collector.monotonic_receipts.values(), default=100)
+    latest = max(latest, *collector.sample_monotonic_receipts) if collector.sample_monotonic_receipts else latest
+    return collector.complete(now_ns, *args, now_monotonic_ns=latest+1)
+
+
 def fill_health(collector):
     for key in worker.SAFETY:
-        collector.add(key, {'data': 0}, START+1, 101)
+        collector.add(key, safe_message(key), START+1, 101)
     collector.add('actuator', stamped(START+1), START+1, 101)
     collector.add('actuator', stamped(START+2), START+2, 102)
 
@@ -66,11 +80,11 @@ class ProtocolTests(unittest.TestCase):
 class AcquisitionTests(unittest.TestCase):
     def test_health_needs_new_four_safety_two_actuators_and_controller(self):
         collector = acquisition()
-        self.assertIsNone(collector.complete(START+10, {}, {}))
+        self.assertIsNone(complete(collector, START+10, {}, {}))
         fill_health(collector)
-        self.assertIsNone(collector.complete(START+10, None, {}))
-        self.assertIsNone(collector.complete(START+10, {}, None))
-        result = collector.complete(START+10, {'controller': []}, {'status_list': []})
+        self.assertIsNone(complete(collector, START+10, None, {}))
+        self.assertIsNone(complete(collector, START+10, {}, None))
+        result = complete(collector, START+10, {'controller': []}, {'status_list': []})
         self.assertEqual(result['event'], 'health_result')
         self.assertEqual(result['request_id'], 'request-1')
         self.assertEqual(result['requested_ns'], START)
@@ -83,10 +97,10 @@ class AcquisitionTests(unittest.TestCase):
     def test_pre_request_receipts_cannot_satisfy_health(self):
         collector = acquisition()
         for key in worker.SAFETY:
-            collector.add(key, {'data': 0}, START+1, 99)
+            collector.add(key, safe_message(key), START+1, 99)
         collector.add('actuator', stamped(START+1), START+1, 99)
         collector.add('actuator', stamped(START+2), START+2, 100)
-        self.assertIsNone(collector.complete(START+10, {}, {}))
+        self.assertIsNone(complete(collector, START+10, {}, {}))
         self.assertEqual(collector.safety, {})
         self.assertEqual(len(collector.samples), 0)
 
@@ -94,14 +108,14 @@ class AcquisitionTests(unittest.TestCase):
         collector = acquisition('pose')
         collector.add('pose', stamped(START-10), START+1, 101)
         collector.add('pose', stamped(START-5), START+2, 102)
-        self.assertIsNone(collector.complete(START+10))
+        self.assertIsNone(complete(collector, START+10))
 
     def test_pose_result_requires_two_advancing_current_sources(self):
         collector = acquisition('pose')
         collector.add('pose', stamped(START+1), START+2, 101)
-        self.assertIsNone(collector.complete(START+3))
+        self.assertIsNone(complete(collector, START+3))
         collector.add('pose', stamped(START+3), START+4, 102)
-        result = collector.complete(START+5)
+        result = complete(collector, START+5)
         self.assertEqual(result['event'], 'pose_result')
         self.assertEqual(len(result['poses']), 2)
         self.assertNotIn('controller', result)
@@ -126,26 +140,27 @@ class AcquisitionTests(unittest.TestCase):
         samples = list(collector.samples)
         receipts = dict(collector.receipts)
         # Object order/JSON whitespace differ; all fields and their types agree.
-        duplicate = {'value': [1, 2], 'header': {'stamp': {'nanosec': 2, 'sec': 10}}}
+        duplicate = stamped(START+2)
+        duplicate['header']['stamp'] = {'nanosec': 2, 'sec': 10}
         collector.add('actuator', json.dumps(duplicate, indent=2), START+100, 200)
         self.assertEqual(list(collector.samples), samples)
         self.assertEqual(collector.receipts, receipts)
         self.assertEqual(collector.last_stamp, START+2)
         self.assertEqual(collector.duplicates_ignored, 1)
-        self.assertEqual(collector.complete(START+101, {}, {})['actuator_duplicates_ignored'], 1)
+        self.assertEqual(complete(collector, START+101, {}, {})['actuator_duplicates_ignored'], 1)
 
     def test_duplicates_never_substitute_for_a_second_new_source(self):
         collector = acquisition()
         for key in worker.SAFETY:
-            collector.add(key, {'data': 0}, START+1, 101)
+            collector.add(key, safe_message(key), START+1, 101)
         collector.add('actuator', stamped(START+1), START+1, 101)
         for offset in range(2, 102):
             collector.add('actuator', stamped(START+1), START+offset, 100+offset)
-            self.assertIsNone(collector.complete(START+offset, {}, {}))
+            self.assertIsNone(complete(collector, START+offset, {}, {}))
         self.assertEqual(len(collector.samples), 1)
         self.assertEqual(collector.duplicates_ignored, 100)
         collector.add('actuator', stamped(START+102), START+102, 202)
-        result = collector.complete(START+103, {}, {})
+        result = complete(collector, START+103, {}, {})
         self.assertEqual([worker.source_stamp_ns(row) for row in result['actuator']], [START+1, START+102])
         self.assertEqual(result['actuator_duplicates_ignored'], 100)
 
@@ -174,9 +189,9 @@ class AcquisitionTests(unittest.TestCase):
             collector.add('actuator', stamped(START+2), START+worker.MAX_AGE_NS, 1000)
             now = START+worker.MAX_AGE_NS+3
             for key in worker.SAFETY:
-                collector.add(key, {'data': 0}, now, 1001)
+                collector.add(key, safe_message(key), now, 1001)
             with self.subTest(controller=controller), self.assertRaisesRegex(ValueError, 'source samples became stale'):
-                collector.complete(now, controller, {'status_list': []})
+                complete(collector, now, controller, {'status_list': []})
             self.assertEqual(collector.receipts['actuator'], START+2)
 
     def test_initial_queued_actuator_data_does_not_count_as_a_duplicate(self):
@@ -197,7 +212,7 @@ class AcquisitionTests(unittest.TestCase):
         fill_health(collector)
         for offset in range(3, 100):
             collector.add('actuator', stamped(START+offset), START+offset, 100+offset)
-        rows = collector.complete(START+100, {}, {})['actuator']
+        rows = complete(collector, START+100, {}, {})['actuator']
         self.assertEqual([worker.source_stamp_ns(row) for row in rows], [START+98, START+99])
 
     def test_advancing_stream_survives_controller_delay_longer_than_source_age(self):
@@ -205,10 +220,10 @@ class AcquisitionTests(unittest.TestCase):
         for step in range(1, 13):
             now = START+step*250_000_000
             for key in worker.SAFETY:
-                collector.add(key, {'data': 0}, now, 100+step)
+                collector.add(key, safe_message(key), now, 100+step)
             collector.add('actuator', stamped(now), now, 100+step)
-            self.assertIsNone(collector.complete(now, None, {'status_list': []}))
-        rows = collector.complete(now, {}, {})['actuator']
+            self.assertIsNone(complete(collector, now, None, {'status_list': []}))
+        rows = complete(collector, now, {}, {})['actuator']
         self.assertEqual([worker.source_stamp_ns(row) for row in rows],
                          [START+2_750_000_000, START+3_000_000_000])
 
@@ -218,8 +233,66 @@ class AcquisitionTests(unittest.TestCase):
         now = START+worker.MAX_AGE_NS+10
         collector.add('actuator', stamped(now-1), now-1, 1000)
         collector.add('actuator', stamped(now), now, 1001)
-        with self.assertRaisesRegex(ValueError, 'safety'):
-            collector.complete(now, {}, {})
+        self.assertIsNone(complete(collector, now, {}, {}))
+        for key in worker.SAFETY:
+            collector.add(key, safe_message(key), now+1, 1100)
+        self.assertIsNotNone(complete(collector, now+1, {}, {}))
+
+    def test_future_safety_receipt_fails_closed(self):
+        collector = acquisition()
+        fill_health(collector)
+        collector.receipts['estop'] = START+20
+        with self.assertRaisesRegex(ValueError, 'Safety receipt is in the future'):
+            complete(collector, START+10, {}, {})
+
+    def test_frozen_wall_clock_cannot_hide_expired_safety_receipts(self):
+        collector = acquisition()
+        fill_health(collector)
+        collector.add('actuator', stamped(START+3), START+3, 2_500_000_001)
+        collector.add('actuator', stamped(START+4), START+4, 2_500_000_002)
+        self.assertIsNone(collector.complete(START+10, {}, {}, now_monotonic_ns=2_500_000_003))
+        for key in worker.SAFETY:
+            collector.add(key, safe_message(key), START+10, 2_500_000_004)
+        self.assertIsNotNone(collector.complete(START+10, {}, {}, now_monotonic_ns=2_500_000_005))
+
+    def test_unsafe_safety_message_is_latched_and_cannot_be_overwritten(self):
+        for key, unsafe in (('estop', {'data': 1}), ('servo', {'data': 1}),
+                            ('charger', {'data': 1}),
+                            ('battery', {'packs': [{'batsoc': 55.}, {'batsoc': 1.}]})):
+            with self.subTest(key=key):
+                collector = acquisition()
+                fill_health(collector)
+                with self.assertRaisesRegex(ValueError, 'SAFETY_ACQUISITION_FAILED'):
+                    collector.add(key, unsafe, START+3, 103)
+                with self.assertRaisesRegex(ValueError, 'SAFETY_ACQUISITION_FAILED'):
+                    collector.add(key, safe_message(key), START+4, 104)
+                with self.assertRaisesRegex(ValueError, 'SAFETY_ACQUISITION_FAILED'):
+                    complete(collector, START+5, {}, {})
+
+    def test_transient_actuator_fault_is_latched_before_later_clear_sample(self):
+        collector = acquisition()
+        fill_health(collector)
+        unsafe = stamped(START+3)
+        unsafe['act_item'][0]['error_code'] = 1
+        with self.assertRaisesRegex(ValueError, 'SAFETY_ACQUISITION_FAILED.*actuator'):
+            collector.add('actuator', unsafe, START+3, 103)
+        with self.assertRaisesRegex(ValueError, 'SAFETY_ACQUISITION_FAILED'):
+            collector.add('actuator', stamped(START+4), START+4, 104)
+
+    def test_transient_active_action_status_is_latched(self):
+        collector = acquisition()
+        with self.assertRaisesRegex(ValueError, 'SAFETY_ACQUISITION_FAILED.*status'):
+            collector.add('status', {'status_list': [{'status': 2}]}, START+1, 101)
+        with self.assertRaisesRegex(ValueError, 'SAFETY_ACQUISITION_FAILED'):
+            collector.add('status', {'status_list': []}, START+2, 102)
+
+    def test_safety_receipt_clock_regression_fails_closed(self):
+        collector = acquisition()
+        fill_health(collector)
+        with self.assertRaisesRegex(ValueError, 'Safety receipt clock regressed'):
+            collector.add('estop', safe_message('estop'), START, 103)
+        with self.assertRaisesRegex(ValueError, 'SAFETY_ACQUISITION_FAILED'):
+            complete(collector, START+10, {}, {})
 
     def test_acquired_samples_cannot_be_mutated_by_caller(self):
         collector = acquisition('pose')
@@ -227,14 +300,14 @@ class AcquisitionTests(unittest.TestCase):
         collector.add('pose', message, START+1, 101)
         message['value'][0] = 900
         collector.add('pose', stamped(START+2), START+2, 102)
-        first = collector.complete(START+3)
+        first = complete(collector, START+3)
         first['poses'][0]['value'][0] = 800
-        self.assertEqual(collector.complete(START+3)['poses'][0]['value'], [1, 2])
+        self.assertEqual(complete(collector, START+3)['poses'][0]['value'], [1, 2])
 
     def test_unrelated_stream_does_not_satisfy_acquisition(self):
         collector = acquisition('pose')
         fill_health(collector)
-        self.assertIsNone(collector.complete(START+10))
+        self.assertIsNone(complete(collector, START+10))
 
 
 class LeaseTests(unittest.TestCase):
@@ -289,7 +362,10 @@ class NativeHandshakeTests(unittest.TestCase):
                 return object()
 
             def get_result(self, future, json_format):
-                return '{"controller":[]}'
+                return json.dumps({'controller': [
+                    {'name': 'manipulation_controller', 'state': 'running'},
+                    {'name': 'sdk_controller', 'state': 'initialized'},
+                    {'name': 'vla_sdk_controller', 'state': 'initialized'}]})
 
         native.client = Client()
         native.readers = {key: SimpleNamespace(getWriterCount=lambda: 1) for key in worker.TOPICS}
@@ -297,7 +373,7 @@ class NativeHandshakeTests(unittest.TestCase):
         def spin():
             now, arrival = time.time_ns(), time.monotonic_ns()
             for key in worker.SAFETY:
-                native.acquisition.add(key, {'data': 0}, now, arrival)
+                native.acquisition.add(key, safe_message(key), now, arrival)
             key = 'actuator' if native.acquisition.request['command'] == 'health' else 'pose'
             native.acquisition.add(key, stamped(now), now, arrival)
             native.acquisition.add(key, stamped(now+1), now+1, arrival+1)
@@ -319,7 +395,7 @@ class NativeHandshakeTests(unittest.TestCase):
         def guard():
             nonlocal checks
             checks += 1
-            if checks > 1:
+            if checks > 2:
                 raise RuntimeError('Lease expired')
         request = worker.validate_request({'request_id': 'native-2', 'command': 'health'})
         with self.assertRaisesRegex(RuntimeError, 'Lease expired'):
@@ -377,7 +453,7 @@ class NativeHandshakeTests(unittest.TestCase):
             collectors.append(current)
             now = clock.time_ns()
             for key in worker.SAFETY:
-                current.add(key, {'data': 0}, now, clock.monotonic_ns())
+                current.add(key, safe_message(key), now, clock.monotonic_ns())
             if elapsed['ns'] <= 1_000_000_000:
                 current.add('actuator', stamped(START+250_000_000), now, clock.monotonic_ns())
 
@@ -389,10 +465,108 @@ class NativeHandshakeTests(unittest.TestCase):
         self.assertEqual(elapsed['ns'], 12_000_000_000)
         self.assertEqual(collectors[-1].duplicates_ignored, 3)
         self.assertEqual(len(collectors[-1].samples), 1)
-        self.assertEqual(calls, [('wait', 0), ('call', '{}')])
+        self.assertEqual(len(calls), 12)
+        self.assertEqual(calls, [('wait', 0), ('call', '{}')]*6)
         self.assertGreater(len(checks), 1)
         self.assertTrue(all(instant <= 12 for instant in checks))
         self.assertIsNone(native.acquisition)
+
+    def test_skewed_stop_streams_wait_for_fresh_window_without_relaxing_age(self):
+        native, calls = self.make_native()
+        elapsed = {'ns': 0}
+        clock = SimpleNamespace(time_ns=lambda: START+elapsed['ns'],
+                                monotonic_ns=lambda: 100+elapsed['ns'],
+                                monotonic=lambda: elapsed['ns']/1e9)
+        def spin():
+            elapsed['ns'] += 250_000_000
+            now = clock.time_ns()
+            for key in ('charger', 'battery'):
+                native.acquisition.add(key, safe_message(key), now, clock.monotonic_ns())
+            if elapsed['ns'] in (250_000_000, 4_750_000_000):
+                native.acquisition.add('estop', safe_message('estop'), now, clock.monotonic_ns())
+            if elapsed['ns'] == 3_000_000_000:
+                native.acquisition.add('servo', safe_message('servo'), now, clock.monotonic_ns())
+            native.acquisition.add('actuator', stamped(now), now, clock.monotonic_ns())
+        native.spin = spin
+        request = worker.validate_request({'request_id': 'skewed', 'command': 'health', 'timeout': 12})
+        with patch.object(worker, 'time', clock):
+            result = native.acquire(request, lambda: None)
+        self.assertEqual(elapsed['ns'], 4_750_000_000)
+        self.assertEqual(result['event'], 'health_result')
+        self.assertEqual(result['completed_ns']-START, 4_750_000_000)
+        self.assertEqual(worker.MAX_AGE_NS, 2_000_000_000)
+        self.assertEqual(calls, [('wait', 0), ('call', '{}')]*3)
+
+    def test_controller_fault_on_refresh_prevents_delayed_health_success(self):
+        native, calls = self.make_native()
+        elapsed = {'ns': 0}
+        clock = SimpleNamespace(time_ns=lambda: START+elapsed['ns'],
+                                monotonic_ns=lambda: 100+elapsed['ns'],
+                                monotonic=lambda: elapsed['ns']/1e9)
+        original = native.client.get_result
+        def get_result(future, json_format):
+            if len(calls) > 2:
+                return '{"controller": []}'
+            return original(future, json_format)
+        native.client.get_result = get_result
+        def spin():
+            elapsed['ns'] += 250_000_000
+            now = clock.time_ns()
+            for key in ('charger', 'battery'):
+                native.acquisition.add(key, safe_message(key), now, clock.monotonic_ns())
+            if elapsed['ns'] == 250_000_000:
+                native.acquisition.add('estop', safe_message('estop'), now, clock.monotonic_ns())
+            if elapsed['ns'] == 3_000_000_000:
+                native.acquisition.add('servo', safe_message('servo'), now, clock.monotonic_ns())
+            native.acquisition.add('actuator', stamped(now), now, clock.monotonic_ns())
+        native.spin = spin
+        request = worker.validate_request({'request_id': 'controller', 'command': 'health', 'timeout': 12})
+        with patch.object(worker, 'time', clock):
+            with self.assertRaisesRegex(ValueError, 'Controllers do not permit'):
+                native.acquire(request, lambda: None)
+        self.assertEqual(elapsed['ns'], 2_500_000_000)
+
+    def test_stale_safety_never_becomes_success_and_timeout_identifies_age(self):
+        native, _ = self.make_native()
+        elapsed = {'ns': 0}
+        clock = SimpleNamespace(time_ns=lambda: START+elapsed['ns'],
+                                monotonic_ns=lambda: 100+elapsed['ns'],
+                                monotonic=lambda: elapsed['ns']/1e9)
+        def spin():
+            elapsed['ns'] += 250_000_000
+            now = clock.time_ns()
+            for key in ('charger', 'battery'):
+                native.acquisition.add(key, safe_message(key), now, clock.monotonic_ns())
+            if elapsed['ns'] == 250_000_000:
+                native.acquisition.add('estop', safe_message('estop'), now, clock.monotonic_ns())
+            if elapsed['ns'] == 3_000_000_000:
+                native.acquisition.add('servo', safe_message('servo'), now, clock.monotonic_ns())
+            native.acquisition.add('actuator', stamped(now), now, clock.monotonic_ns())
+        native.spin = spin
+        request = worker.validate_request({'request_id': 'stale', 'command': 'health', 'timeout': 12})
+        with patch.object(worker, 'time', clock):
+            with self.assertRaisesRegex(TimeoutError, 'safety_receipt_age_ns.*estop'):
+                native.acquire(request, lambda: None)
+        self.assertEqual(elapsed['ns'], 12_000_000_000)
+
+    def test_health_cannot_succeed_if_spin_completes_at_deadline(self):
+        native, calls = self.make_native()
+        elapsed = {'ns': 0}
+        clock = SimpleNamespace(time_ns=lambda: START+elapsed['ns'],
+                                monotonic_ns=lambda: 100+elapsed['ns'],
+                                monotonic=lambda: elapsed['ns']/1e9)
+        def spin():
+            elapsed['ns'] += 1_000_000_000
+            now = clock.time_ns()
+            for key in worker.SAFETY:
+                native.acquisition.add(key, safe_message(key), now, clock.monotonic_ns())
+            native.acquisition.add('actuator', stamped(now), now, clock.monotonic_ns())
+        native.spin = spin
+        request = worker.validate_request({'request_id': 'deadline', 'command': 'health', 'timeout': 2})
+        with patch.object(worker, 'time', clock):
+            with self.assertRaisesRegex(TimeoutError, 'collection timed out'):
+                native.acquire(request, lambda: None)
+        self.assertEqual(elapsed['ns'], 2_000_000_000)
 
 
 if __name__ == '__main__':

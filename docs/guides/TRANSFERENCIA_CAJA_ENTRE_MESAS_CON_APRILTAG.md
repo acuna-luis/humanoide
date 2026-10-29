@@ -1,5 +1,11 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**29-10-2026 — adquisición inicial de salud:** el worker local espera una
+ventana coherente de las cuatro señales frescas sin aumentar el límite de 2 s;
+la prueba del flujo real sigue pendiente. El fallo de salud y el rechazo de
+obstáculo del navegador son incidencias separadas. [Evidencia, límites y
+reversión](../box_handling/OPTIMISTIC_SCENARIO1.md#ventana-fresca-de-seguridad--29-10-2026).
+
 **29-10-2026 — plazo de navegación del escenario 1 ampliado en el PC.**
 El ciclo Optimistic usa 600 s por defecto para cada navegación principal a
 `get1` y `put1`, configurable entre 180 y 600 s mediante

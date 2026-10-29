@@ -110,6 +110,13 @@ with ExitStack() as stack:
   raise
 ```
 
+**29-10-2026 — actualización:** un nuevo rechazo en preflight mostró el mismo
+mensaje. La observación pasiva posterior halló intervalos de recepción de paros
+de 4,926–4,931 s. Se ha preparado una espera acotada de ventana coherente sin
+ampliar el límite inicial de 2 s; la causa concreta de cada rechazo sigue sin
+identificarse y la validación en flujo real está pendiente. [Detalle y estado
+vigente](../box_handling/OPTIMISTIC_SCENARIO1.md#ventana-fresca-de-seguridad--29-10-2026).
+
 **BOX-TABLE74-OPEN-STALE-20261022 — VERIFICADO offline / causa temporal concreta PENDIENTE.**
 Zona de registro: Europe/Madrid. Petición del usuario: analizar por qué se detuvo
 el ciclo aunque no cambiaron las condiciones. Sólo lectura local y reproducción
