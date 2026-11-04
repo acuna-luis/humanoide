@@ -1,5 +1,9 @@
 # Transferencia de una caja entre dos mesas con AprilTag
 
+**04-11-2026 — avisos adicionales del ciclo retirados.** El CLI optimista ya
+no inicia la voz añadida el 22-10; conserva los eventos y la recuperación.
+[Ficha y reversión](../SYSTEM_CUSTOMIZATIONS.md#box-cycle-voice-removal-20261104).
+
 **29-10-2026 — corrección de llegada get1 interrumpida:** velocidad angular
 medida 0,718746 rad/s sobre límite activo 0,60; cancelación status5, sin
 recogida ni HOME. La instrumentación nueva sólo aclara futuras decisiones del

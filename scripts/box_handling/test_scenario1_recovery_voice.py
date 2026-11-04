@@ -1,4 +1,4 @@
-"""Recovery fault injection and speech fakes; no audio, ROS or network."""
+"""Recovery fault injection; no audio, ROS or network."""
 import copy
 import json
 from pathlib import Path
@@ -7,7 +7,6 @@ import unittest
 from unittest.mock import Mock, patch
 
 from scripts.box_handling import scenario1_contract as contract
-from scripts.box_handling import scenario1_voice as voice
 from scripts.box_handling import scenario1_cli as cli
 from scripts.box_handling import scenario1_box_alignment as alignment
 from scripts.box_handling.test_scenario1_box_alignment_runtime import AlignmentRuntimeTests, posture, SUCCESS
@@ -110,23 +109,25 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(helper.kinds(m),['motion','navigation','navigation'])
 
 
-class VoiceTests(unittest.TestCase):
-    def test_voice_is_optional_and_recovery_requires_explicit_option(self):
+class ConnectionTests(unittest.TestCase):
+    def test_recovery_still_requires_explicit_option(self):
         args=cli.parser('assume','optimistic_v1').parse_args([])
-        self.assertEqual(args.voice,'robot-en')
         self.assertFalse(args.empty_home_recovery)
 
-    def test_spanish_local_speech_is_queued_deduplicated_and_bounded(self):
-        with tempfile.TemporaryDirectory() as directory, patch.object(voice.threading.Thread,'start'), \
-             patch.object(voice.shutil,'which',return_value='/usr/bin/espeak-ng'), \
-             patch.object(voice.subprocess,'run',return_value=Mock(returncode=0)) as run:
-            v=voice.Voice('pc',directory,'/not-used')
-            e={'event':'recovery','code':'position_retry'}
-            v.feed(e);v.feed(e);v.close();v.work()
-            self.assertEqual(run.call_count,1)
-            self.assertIn('Error al posicionarse',run.call_args.args[0][-1])
-            self.assertEqual(run.call_args.kwargs['timeout'],12)
-            self.assertNotIn('shell',run.call_args.kwargs)
+    def test_recovery_events_do_not_start_speech(self):
+        import io
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(cli.subprocess, 'Popen') as popen, \
+             patch.object(cli.threading.Thread, 'start'):
+            process = popen.return_value
+            process.stdout = io.StringIO(json.dumps({'event': 'recovery', 'code': 'position_ready'})+'\n')
+            process.stdin = io.StringIO()
+            connection = cli.Connection({'mode': 'run'}, False, Path(directory), console=Mock())
+            connection.read()
+            self.assertEqual(popen.call_count, 1)
+            self.assertFalse(hasattr(connection, 'voice'))
+            self.assertFalse((Path(directory)/'voice.jsonl').exists())
+            self.assertEqual(connection.events.get_nowait()['code'], 'position_ready')
 
     def test_pc_reader_archives_recovery_without_promoting_failed_checkpoint(self):
         import io,queue
@@ -138,15 +139,5 @@ class VoiceTests(unittest.TestCase):
             c.read()
             self.assertEqual(json.loads((c.evidence/'empty-home-recovery.json').read_text()),record)
             self.assertFalse((c.evidence/'checkpoint.json').exists())
-
-    def test_robot_mode_calls_only_existing_speech_script(self):
-        with tempfile.TemporaryDirectory() as directory,patch.object(voice.threading.Thread,'start'), \
-             patch.object(voice.subprocess,'run',side_effect=OSError('synthetic speech unavailable')) as run:
-            v=voice.Voice('robot-en',directory,'/repo/scripts/cruzr_say_english.sh')
-            v.feed({'event':'recovery','code':'home_recovered'});v.close();v.work()
-            self.assertEqual(run.call_args.args[0][:2],['bash','/repo/scripts/cruzr_say_english.sh'])
-            records=[json.loads(x) for x in (Path(directory)/'voice.jsonl').read_text().splitlines()]
-            self.assertEqual(records[-1]['status'],'failed')
-
 
 if __name__=='__main__':unittest.main()

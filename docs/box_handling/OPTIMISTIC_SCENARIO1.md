@@ -517,21 +517,11 @@ quita assets/preview/pruebas/documentación locales, no una instalación robot.
 
 ### Voz y recuperación limitada del ciclo — 22-10-2026
 
-**BOX-CYCLE-VOICE-RECOVERY-20261022 — implementado y probado offline;
-voz real, recuperación física y tiempos PENDIENTES.** No se han conectado ni
-movido robot/PC audio en esta intervención; sólo fuentes y pruebas locales.
-
-- Voz predeterminada `--voice robot-en`: script existente
-  `scripts/cruzr_say_english.sh`, TTS inglés en Vision, sin reconocimiento de
-  órdenes ni cliente de movimiento. `--voice pc` usa espeak-ng/espeak español;
-  ninguno está instalado actualmente en este PC. `--voice off` desactiva audio.
-- Los avisos se encolan en un hilo PC independiente, con deduplicación, cola
-  acotada y timeout12 s por invocación. Un fallo de audio no retrasa ni altera
-  la supervisión, cancelación o decisión de recuperación. Son avisos de mejor
-  esfuerzo, sin garantía de reproducción inmediata; ver `voice.jsonl`.
-- Se anuncian ajustes/reintentos, error de posición, recuperación HOME y su
-  resultado/bloqueo. El mensaje del error conserva el motivo concreto nativo;
-  diagnóstico y eventos permanecen en consola/journal aunque falle el audio.
+**BOX-CYCLE-VOICE-RECOVERY-20261022 — histórico.** El 04-11-2026 se retiran
+los avisos adicionales del ciclo y su opción de voz; se conservan los eventos
+en consola y journal y las funciones de recuperación descritas a continuación.
+No se modifica el TTS nativo ni las adaptaciones de voz anteriores del robot.
+[Ficha vigente y reversión](../SYSTEM_CUSTOMIZATIONS.md#box-cycle-voice-removal-20261104).
 
 **Reintento de posición:** sólo después de resultado nativo exitoso,
 comprobaciones de llegada/reposo y nueva medición/asociación de la misma caja.
@@ -572,37 +562,31 @@ borra/promueve su checkpoint fallido. El proceso conserva salida de error y
 registra la recuperación aparte. Vacío sigue siendo supuesto del operador y
 no una medición de carga; el estado final lo distingue expresamente.
 
-Plan local sin voz, conexión ni movimiento:
+Plan local sin conexión ni movimiento:
 
 ```bash
 ./scripts/optimistic_scenario1.sh --table-height-cm 74 \
-  --empty-home-recovery --voice robot-en --plan
+  --empty-home-recovery --plan
 ```
 
 Para una futura prueba, tras verificar las condiciones físicas actuales y el
-recorrido de recuperación, habilitar ambas funciones en el mismo comando:
+recorrido de recuperación:
 
 ```bash
 ./scripts/optimistic_scenario1.sh --table-height-cm 74 \
   --box-alignment-attempts 7 --height-deposit-trial \
-  --voice robot-en --empty-home-recovery --run
+  --empty-home-recovery --run
 ```
 
-La voz sola queda activa por defecto; para probar sólo disponibilidad del TTS
-sin reproducir audio ni mover: `./scripts/cruzr_say_english.sh --check`.
-Para voz local española, instalar espeak-ng con el procedimiento habitual del
-PC y seleccionar `--voice pc`; no se instaló ningún paquete aquí.
-
-Fuentes: scenario1_voice.py, scenario1_cli.py y scenario1_runtime.py.
-Hash de voz registrado junto a las fuentes del ciclo. Pruebas de recuperación
-con fallos inyectados y audio/transportes simulados; sin ROS ni red.
+Fuentes actuales: scenario1_cli.py y scenario1_runtime.py. Pruebas de recuperación
+con fallos inyectados y transportes simulados; sin ROS ni red.
 Regresión1164 pruebas correcta y28 focalizadas finales correctas (incluye
 comprobación posterior de persistir intención HOME antes de enviarlo).
 La suite antigua de instalador genérico con fixtures fallidos documentados
 permanece excluida y sin cambios. Backup, hashes y resultados:
 `../Humanoide-vla-evidence/20261022_RECOVERY_VOICE_193528/`.
-Reversión: quitar `--empty-home-recovery`, usar `--voice off`, o revertir sólo
-el commit de esta intervención antes de otra sesión; conservar evidencia y
+Reversión de recuperación: quitar `--empty-home-recovery` antes de otra sesión;
+conservar evidencia y
 checkpoint. Próximo paso: prueba física supervisada, sin asumir éxito por los
 ensayos sintéticos ni reutilizar condiciones físicas antiguas.
 

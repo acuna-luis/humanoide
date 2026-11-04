@@ -1,5 +1,27 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## BOX-CYCLE-VOICE-REMOVAL-20261104
+
+04-11-2026, Europe/Madrid — **cambio local; prueba física PENDIENTE**. El
+usuario solicita retirar los anuncios añadidos el 22-10 al ciclo, conservando
+los demás cambios. Se retiran `scripts/box_handling/scenario1_voice.py`, su
+integración y opción CLI de audio; `scripts/web/robot/worker.py` deja de pasar
+esa opción. Los eventos, recuperación HOME, checks y tareas se conservan.
+Se preservan el TTS nativo, el script general de voz y adaptaciones anteriores.
+Destino: fuentes del PC; se usan al iniciar una futura sesión desde el árbol
+versionado. El antiguo paquete web ya preparado no se ha reconstruido ni
+instalado; construir uno nuevo desde estas fuentes antes de su despliegue.
+No se ha conectado al robot ni modificado configuración o servicios remotos.
+Versión previa: commit `cb85827` y copia privada
+`../Humanoide-vla-evidence/20261104_REMOVE_SCENARIO1_VOICE/before/` con hashes
+`before-sha256.txt`. Reversión: revertir únicamente este cambio y conservar
+trabajos posteriores; no reinstalar configuración antigua del robot.
+Verificación offline: 79 pruebas de recuperación, CLI, plazos y ciclo74, y
+17 pruebas del ejecutor web/paquete correctas. La simulación conserva eventos
+de recuperación sin iniciar voz; el paquete reconstruido valida los planes
+74/90. Hashes de fuentes finales en `after-code-sha256.txt` junto al respaldo.
+La ausencia de anuncios propios del ciclo en una ejecución real sigue PENDIENTE.
+
 ## BOX-GET1-GUARD-DIAGNOSTIC-20261029
 
 29-10-2026, Europe/Madrid — **diagnóstico local VERIFICADO offline; no cargado
@@ -206,6 +228,11 @@ conexión ni captura nueva; validación física/larga sigue pendiente. Copia pre
 [Receta y criterios](vla/CAPTURA_PASIVA_EPISODIOS.md).
 
 ## BOX-CYCLE-VOICE-RECOVERY-20261022
+
+**04-11-2026:** la voz de esta ficha fue retirada por
+[BOX-CYCLE-VOICE-REMOVAL-20261104](#box-cycle-voice-removal-20261104); se
+conserva la recuperación. La ficha siguiente es histórica y no debe reaplicarse
+como configuración vigente de voz.
 
 22-10-2026, Europe/Madrid — implementación PC/repositorio, validada offline;
 no instalada/cargada/probada físicamente en robot. Autoridad: usuario pide

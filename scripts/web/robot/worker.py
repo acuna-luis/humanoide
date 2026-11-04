@@ -28,7 +28,7 @@ def main():
     os.environ['CRUZR_SCENARIO1_LOCAL'] = '1'
     if args.action == 'cycle':
         return cli.main(['--table-height-cm', args.height, '--box-alignment-attempts', '7',
-            '--voice', 'off', '--evidence-dir', str(args.evidence),
+            '--evidence-dir', str(args.evidence),
             *(['--run', '--height-deposit-trial'] if args.run else ['--check'])],
             policy='assume', execution_profile='optimistic_v1')
     args.evidence.mkdir(parents=True, exist_ok=False, mode=0o700)
@@ -36,7 +36,7 @@ def main():
     checkpoint = contract.new_checkpoint(profile, policy='assume', execution_profile='optimistic_v1')
     payload = cli.make_payload('run' if args.run else 'check', profile, checkpoint)
     payload.update(policy='assume', execution_profile='optimistic_v1', home_only=True,
-                   box_alignment_attempts=0, voice='off')
+                   box_alignment_attempts=0)
     payload['modules'].append(('scenario1_robot_home', (ROOT/'scripts/box_handling/scenario1_robot_home.py').read_text()))
     with open('/tmp/cruzr-improved-scenario1.lock', 'a') as lock, open('/tmp/cruzr_blue_workbin_cycle.lock', 'a') as legacy:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)

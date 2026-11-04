@@ -19,7 +19,6 @@ import threading
 import time
 
 if __package__:
-    from . import scenario1_voice as voice
     from . import scenario1_height_deposit as height_deposit
     from . import scenario1_contract as contract
     from . import scenario1_sensors as sensors
@@ -30,7 +29,6 @@ if __package__:
     from .scenario1_console import ConsoleReporter, stage_label
     from .front_box_integration import build_bundle, TASK_ROOT, META_ROOT, SNAPSHOT
 else:
-    import scenario1_voice as voice
     import scenario1_height_deposit as height_deposit
     import scenario1_contract as contract
     import scenario1_sensors as sensors
@@ -158,8 +156,6 @@ def report_pause(wrapper, checkpoint_path, checkpoint, cycle, *, args=None, resu
                 command += ['--profile', str(args.profile.resolve())]
             if getattr(args, 'empty_home_recovery', False):
                 command += ['--empty-home-recovery']
-            if getattr(args, 'voice', 'robot-en') != 'robot-en':
-                command += ['--voice', args.voice]
             if hasattr(args, 'box_alignment_attempts'):
                 command += ['--box-alignment-attempts', str(args.box_alignment_attempts)]
             if hasattr(args, 'navigation_timeout_s'):
@@ -292,8 +288,6 @@ class Connection:
         self.process = subprocess.Popen(ssh_command(wifi), stdin=subprocess.PIPE,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env,
             start_new_session=True, bufsize=1)
-        self.voice = (voice.Voice(payload['voice'], evidence, ROOT/'scripts/cruzr_say_english.sh')
-                      if payload.get('mode') == 'run' and payload.get('voice', 'off') != 'off' else None)
         self.send(payload)
         self.threads = [threading.Thread(target=self.read, daemon=True),
                         threading.Thread(target=self.errors, daemon=True),
@@ -322,11 +316,6 @@ class Connection:
                         if event['event'] == 'recovery' and isinstance(event.get('record'), dict):
                             atomic_json(self.evidence/'empty-home-recovery.json', event['record'])
                         self.present(event)
-                        if getattr(self, 'voice', None) is not None:
-                            try:
-                                self.voice.feed(event)
-                            except Exception:
-                                pass  # Speech must never break the protocol reader.
                         self.events.put(event)
                     except (ValueError, KeyError, TypeError) as exc:
                         error = dict(event='error', reason='Protocolo remoto inválido: '+str(exc))
@@ -381,8 +370,6 @@ class Connection:
         raise RuntimeError('Plazo agotado esperando '+desired+'; estado físico no confirmado')
 
     def close(self):
-        if getattr(self, 'voice', None) is not None:
-            self.voice.close()
         self.closed.set()
         try:
             with self.write_lock:
@@ -466,8 +453,6 @@ def parser(policy='ask', execution_profile='standard_v1'):
     profile_selection.add_argument('--table-height-cm', type=float, choices=(74., 90.),
         help='Mesa 74/90 cm: motor común y depósito integrado sin preguntas; '
              'get1/grasp/put1 conservan sus pausas. Por defecto sólo --check')
-    p.add_argument('--voice', choices=('pc', 'robot-en', 'off'), default='robot-en',
-        help='Avisos asíncronos: pc=español con espeak; robot-en=TTS inglés existente; off=sin audio')
     p.add_argument('--empty-home-recovery', action='store_true',
         help='Declara abrazaderas vacías y recorrido HOME libre para recuperación previa al agarre; no autoriza HOME tras resultado incierto')
     p.add_argument('--height-deposit-trial', action='store_true',
@@ -683,7 +668,7 @@ def _main(args, stop=None):
                             terminal_status=6, code=7104050, desc='MoveToGoalFailed',
                             fresh_health_and_stationary_required=True),
             get1_correction=dict(nav_correction.qualification_report(), policy=dict(nav_correction.POLICY)),
-            resume=resume_plan, voice=getattr(args, 'voice', 'off'),
+            resume=resume_plan,
             empty_home_recovery=bool(getattr(args, 'empty_home_recovery', False)))
         if table74:
             report['table_preparation'] = table74_preparation_report(profile)
@@ -714,7 +699,6 @@ def _main(args, stop=None):
     if integrated_height is not None:
         atomic_json(evidence/'deposit-bundle.json', payload['deposit_bundle'])
         print('Altura '+str(integrated_height)+' cm: sesión única; depósito integrado pendiente de prueba física.', flush=True)
-    payload['voice'] = getattr(args, 'voice', 'off')
     payload['empty_home_recovery'] = bool(getattr(args, 'empty_home_recovery', False))
     payload['policy'] = policy
     payload['execution_profile'] = execution_profile
@@ -750,7 +734,6 @@ def _main(args, stop=None):
             'sensor_worker': hashlib.sha256(payload['sensor_worker'].encode()).hexdigest(),
             'health_worker': hashlib.sha256(payload['health_worker'].encode()).hexdigest(),
             'resume_worker': hashlib.sha256(payload['resume_worker'].encode()).hexdigest(),
-            'scenario1_voice': hashlib.sha256((HERE/'scenario1_voice.py').read_bytes()).hexdigest(),
             'scenario1_console': hashlib.sha256((HERE/'scenario1_console.py').read_bytes()).hexdigest(),
             'scenario1_cli': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             'entrypoint': hashlib.sha256((ROOT/'scripts'/wrapper).read_bytes()).hexdigest()})

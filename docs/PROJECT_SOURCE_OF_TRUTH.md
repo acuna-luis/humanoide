@@ -1,5 +1,13 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**04-11-2026 — BOX-CYCLE-VOICE-REMOVAL-20261104: avisos adicionales retirados.**
+Por petición del usuario se retira del CLI del ciclo la voz asíncrona añadida
+el 22-10: módulo, integración y opciones de audio. Se conservan los eventos
+en consola/journal, la recuperación HOME y las demás reglas del ciclo. Fuentes
+PC actualizadas; robot no conectado y reproducción física no comprobada.
+Los anuncios nativos y adaptaciones de voz anteriores son independientes.
+[Detalle, pruebas y reversión](SYSTEM_CUSTOMIZATIONS.md#box-cycle-voice-removal-20261104).
+
 **29-10-2026 — BOX-GET1-GUARD-DIAGNOSTIC-20261029: corrección interrumpida.**
 En `20261029T121841Z_OPTIMISTIC_SCENARIO1_669518`, primera corrección get1
 iniciada a 23,612 mm/0,309°, con excursión angular máxima ~88,75°; el guard
@@ -82,8 +90,8 @@ validar. SSH del PC observado inactivo, no activado; uso local disponible.
 [Comando y límites](vla/CAPTURA_PASIVA_EPISODIOS.md).
 
 **22-10-2026 — BOX-CYCLE-VOICE-RECOVERY-20261022: voz y recuperación acotada, offline.**
-Voz asíncrona por defecto en inglés en robot (`--voice robot-en`); español PC
-opcional con espeak, actualmente no instalado. Audio no interviene en control.
+La voz asíncrona añadida en esta intervención fue retirada el 04-11-2026;
+la recuperación y los demás cambios se conservan.
 Tras corrección completada y reposo/nueva medida, se permite otro ajuste si
 la mejora fue pequeña; dos resultados consecutivos sin mejora significativa
 agotan esa vía. Presupuestos/guard4 s intactos; no reintento tras cancelación.
