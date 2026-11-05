@@ -2,6 +2,35 @@
 
 ## PICO-V4-FULL-PREP-20261105
 
+**05-11-2026, Europe/Madrid — diagnóstico complementario OBSERVADO; sólo lectura.**
+El operador confirma manos v4 vacías y libres, sin extrapolar la condición a
+un momento posterior. En PC `wlo1` estaba conectado a `Cruzr S2-0669` con
+`192.168.42.44`; la ruta Wi-Fi a `.11.0/24` vía `192.168.42.2` respondió a
+ping Motion2/2 y TCP/22 de Motion/Vision al forzar esa interfaz, mientras Motion conservaba
+`eno1` como ruta preferida. Powersave de `wlo1` estaba desactivado en runtime,
+pero el perfil figuraba en default: persistencia/estabilidad PENDIENTES.
+PICO mostraba `wlan0` DOWN, Wi-Fi habilitada, supplicant desconectado y sin IP;
+XR usaba ADB reverse por USB/loopback. PICO/XR inalámbrico no está probado.
+La tarea leída seguía v4/`waist=0,leg=0`; `--check` full rechazó el hash
+arms-only a las17:29:32. YAML vendor v4: `init_reset=true`,12 s nominales,
+con brazos/manos/elevador/cintura afectados. Recargar puede mover. No se ha
+validado retorno PICO→HOME con v4, carga full desde PICO ni modelo articulado
+de dedos v4; no se enviaron HOME, recarga ni control, ni se cambió red/servicios.
+Lectura puntual hacia las17:29: `/mc/whole_joint_states` próximo a objetivos
+PICO-init vendor (máximo aproximado0,004 rad según mapeo aparente); siete dedos
+por mano próximos a objetivo (máximo aproximado0,0047 rad), velocidades de manos
+cero en muestras puntuales. No demuestra estabilidad, sincronía o seguridad ni
+valida salida de teleop o habilitación. El incidente del10-09 muestra que
+`auto_task` puede iniciar HOME; no se cambió el modo ni se ordenó movimiento.
+**Punto de reanudación:** verificar de nuevo estado físico, ruta y seguimiento;
+revisar geometría y transición sin asumir seguridad por estas lecturas.
+Evidencia privada `../Humanoide-vla-evidence/20261105_PICO_V4_FULL_DIAG/evidence/report.txt`
+SHA256 `eebcfd28517e9b65221ebb320e11310bbe9a20f63ec8b5fee32af2c09c1a78a6`.
+Respaldo documental anterior `../Humanoide-vla-evidence/20261105_PICO_V4_FULL_DIAG/before/`;
+`before.sha256` SHA256 `e7caea1512ad586cd85176dea2627e9387cbfc802f80c4a5e02c52230c29a592`.
+Reversión: comparar y retirar sólo este añadido documental, preservando
+actualizaciones posteriores. No hay cambio remoto de esta consulta que revertir.
+
 **05-11-2026, Europe/Madrid — fuentes PC preparadas y comprobadas offline;
 perfil full remoto no instalado/cargado, funcionamiento físico PENDIENTE.**
 

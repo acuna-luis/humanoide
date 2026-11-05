@@ -1,5 +1,28 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**05-11-2026 — PICO-V4-FULL-PREP-20261105: diagnóstico de la vía inalámbrica.**
+El operador confirma manos v4 vacías y libres; no se infiere el estado físico
+posterior. Lecturas en el PC muestran `wlo1` en `Cruzr S2-0669`, IP
+`192.168.42.44`, con ruta a `.11.0/24` vía `192.168.42.2`: ping a Motion2/2
+y TCP/22 a Motion y Vision por Wi-Fi respondieron, aunque la ruta preferida de Motion era
+`eno1`. En PICO, `wlan0` figuraba DOWN, Wi-Fi habilitada pero supplicant
+desconectado y sin IP; XR usaba ADB reverse por USB/loopback. PICO/XR inalámbrico
+sigue PENDIENTE. `wlo1` tenía powersave desactivado en runtime, perfil en
+default; persistencia y estabilidad por verificar. El check full rechazó de
+nuevo el hash arms-only a las17:29:32; la tarea continuaba v4/0/0. El YAML
+vendor indica `init_reset=true`, duración nominal12 s y afecta brazos/manos,
+elevador y cintura: una recarga puede mover. No hay retorno PICO→HOME para
+manos v4, carga full desde PICO ni modelo articulado de dedos v4 demostrados.
+Lectura puntual hacia las17:29: articulaciones20D cercanas a PICO-init vendor
+(máximo aproximado0,004 rad según mapeo aparente), siete dedos por mano cerca
+del objetivo (máximo aproximado0,0047 rad), velocidades de manos cero en
+muestras puntuales. No demuestra estabilidad, sincronía o seguridad ni valida
+salir de teleop o habilitar el perfil. Un incidente del10-09 muestra que el
+cambio a `auto_task` puede iniciar HOME.
+Sólo consultas y documentación; sin HOME, recarga, comandos de control ni
+cambios de red. No usar las lecturas para inferir el estado actual. [Evidencia y
+reversión documental](SYSTEM_CUSTOMIZATIONS.md#pico-v4-full-prep-20261105).
+
 **05-11-2026 — PICO-V4-FULL-PREP-20261105: soporte full v4 preparado sólo en PC.**
 El usuario solicita preparar el torso y conoce que `X` puede habilitar el modo
 de chasis. Se documentan manos v4 libres y postura PICO comunicadas, sin inferir

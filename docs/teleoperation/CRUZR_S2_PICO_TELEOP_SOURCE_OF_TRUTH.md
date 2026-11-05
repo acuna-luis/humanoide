@@ -2,6 +2,35 @@
 
 ## Preparación full v4 sólo PC — 05-11-2026
 
+**Diagnóstico de red e inicialización, 05-11-2026, Europe/Madrid — sólo lectura.**
+El usuario confirma manos v4 vacías y libres; la confirmación no acredita la
+situación física posterior. `wlo1` del PC estaba conectado a `Cruzr S2-0669`
+con IP `192.168.42.44` y ruta a `.11.0/24` vía `192.168.42.2`: consultas
+forzadas por Wi-Fi devolvieron ping Motion2/2 y TCP/22 a Motion y Vision. La ruta
+preferida hacia Motion seguía siendo `eno1`. El powersave de `wlo1` estaba
+desactivado en ejecución, pero el perfil figuraba `default`; la persistencia
+y estabilidad de esta ruta siguen PENDIENTES.
+
+En el visor, `wlan0` figuraba DOWN, Wi-Fi habilitada pero supplicant
+desconectado y sin IP; XR usaba ADB reverse por USB/loopback. No se ha probado
+PICO/XR inalámbrico. El nuevo `--check` full rechazó a las17:29:32 el hash
+arms-only: la tarea leída era v4 con `waist=0,leg=0`. El YAML vendor v4
+establece `init_reset=true`, nominalmente12 s, con afectación de brazos/manos,
+elevador y cintura: recargar puede mover. No se han demostrado una carga full
+desde PICO, un retorno PICO→HOME con manos v4 ni un modelo articulado de dedos
+v4. No se envió HOME, recarga o mando, ni se cambió la red. Repetir lecturas y
+condiciones físicas antes de cualquier intervención; no ejecutar acciones sólo
+para eliminar estos bloqueos. Detalle y reversión documental en la
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-full-prep-20261105).
+
+Hacia las17:29, `/mc/whole_joint_states` mostraba articulaciones20D próximas
+a PICO-init vendor (máximo aproximado0,004 rad según mapeo aparente); los siete
+dedos de cada mano estaban cerca de su objetivo (máximo aproximado0,0047 rad),
+con velocidad cero en muestras puntuales. Esto no demuestra estabilidad,
+sincronía ni seguridad, no valida salir de teleop y no autoriza habilitar el
+perfil. El incidente del10-09 muestra que `auto_task` puede iniciar HOME; no se
+cambió el modo ni se ordenó movimiento.
+
 **17:17 Europe/Madrid — check real sólo lectura; rechazo esperado.** El nuevo
 wrapper `--check` terminó rc1 al contrastar el hash instalado arms-only
 `01a5ca8acba16bbe136a3bdbcb4a593667d672f8ee9613b98631699fc429b582` con el
