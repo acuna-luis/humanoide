@@ -1,5 +1,11 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**05-11-2026 — PICO-V4-REPLAY-PREP-20261105: toma 10.** Inspeccionado el bag
+cerrado y preparado un derivado geométrico `.motion` a mitad de velocidad; los
+estados de dedos se usan como posiciones y no se reproducen fuerza ni modos.
+No se ejecutó player y el derivado no valida trayectoria ni datos de entrenamiento.
+[Procedencia y hallazgos](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-replay-prep-20261105--toma-10).
+
 **05-11-2026 — PICO-V4-CAPTURE-PORT-20261105: grabador de manos v4.**
 Se incorpora [record_pico_v4_complete.sh](../../scripts/teleoperation/record_pico_v4_complete.sh).
 El `--check` real verifica el contenedor ROS actual, rosbag y tipos de órdenes

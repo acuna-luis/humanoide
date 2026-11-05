@@ -1,5 +1,15 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**05-11-2026 — PICO-V4-REPLAY-PREP-20261105: toma 10 preparada.**
+La captura `prueba_v4_10_20261105T121633Z_710745` se convirtió sin movimiento a
+un `.motion` geométrico de 123,092 s (`--time-scale 2`). El usuario decidirá
+cuándo reproducir: no se envió ningún objetivo al player. Posiciones de cabeza
+y brazos proceden de órdenes, dedos de estados medidos; no conserva fuerza,
+corriente ni modos de agarre. Se observaron movimientos amplios de cabeza,
+brazo y mano derecha. Archivo y checksum, validaciones realizadas, recuperación
+de la copia y condiciones pendientes en
+[PICO-V4-REPLAY-PREP-20261105](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-replay-prep-20261105--toma-10).
+
 **05-11-2026 12:53 CET — PICO-V4-CAPTURE-PORT-20261105.** Incorporado el
 [grabador pasivo v4](../../scripts/teleoperation/record_pico_v4_complete.sh)
 desde la rama PICO. `--check` verificó el contenedor ROS actual, herramientas

@@ -2497,6 +2497,70 @@ XML o entradas de `task_list.yaml` no están instalados/cargados en Motion.
 - **Reversión:** retirar únicamente el lanzador PC tras conservar las capturas
   deseadas; no borrar grabaciones remotas ni restaurar estados de control.
 
+### PICO-V4-REPLAY-PREP-20261105 — Toma 10
+
+- **05-11-2026 Europe/Madrid; conversión VERIFICADA; reproducción PENDIENTE.**
+  El usuario solicitó preparar el comando y decidió reservarse la ejecución.
+  No se envió player, START ni ningún movimiento. Fuente:
+  `feat/pico-v4-workflows-and-scenario-fixes` commit
+  `412415a084615eedd1cb158b82ffbd20641497ab`:
+  [`pico_v4_bag_to_motion.py`](../scripts/teleoperation/pico_v4_bag_to_motion.py)
+  SHA256 `8a4ef2de522e012d6c05985190a641bb08d75900477d39f5993e892dc7da9d7d`,
+  [`inspect_pico_v4_bag.py`](../scripts/teleoperation/inspect_pico_v4_bag.py)
+  SHA256 `9305b7b5a31f566faba590e989eb5b84c78993743fc6dcf90a9b710f223eab1a`.
+  Receta reproducible de preparación PC:
+  [`prepare_pico_v4_geometric_replay.py`](../scripts/teleoperation/prepare_pico_v4_geometric_replay.py)
+  SHA256 `4f60fba9e28e1a79b485f4f4f3fda06592b628f754d337d4acef4bdcf23ce6aa`;
+  seis pruebas offline, incluida la regresión por `/tmp` compartido, pasan.
+  Backup documental previo `../Humanoide-vla-evidence/20261105_PICO_V4_REPLAY_PREP/`;
+  los scripts son nuevos y no reemplazan código anterior.
+- **Original:** Motion host
+  `/home/walker/grabaciones_v4_completas/prueba_v4_10_20261105T121633Z_710745/rosbag/rosbag_0.db3`
+  y ROS container
+  `/tmp/pico_v4_capture_prueba_v4_10_20261105T121633Z_710745/rosbag/rosbag_0.db3`;
+  SHA256 `e08915a949cf4e415d483eae874609b8fae766d027905d2c1082cc8fd69d5169`
+  en ambas copias antes y después. Inspector: 61,543 s, 221150 mensajes,
+  SQLite íntegro; cinco canales para conversión sin datos inválidos ni marcas
+  regresivas; whole tiene45 marcas repetidas, no usado como origen convertido.
+  Informe privado `../Humanoide-vla-evidence/20261105_PICO_V4_TAKE10_REVIEW/`.
+- **Preparación y recuperación:**
+  `python3 scripts/teleoperation/prepare_pico_v4_geometric_replay.py --capture
+  prueba_v4_10_20261105T121633Z_710745 --sha256
+  e08915a949cf4e415d483eae874609b8fae766d027905d2c1082cc8fd69d5169 --time-scale 2`.
+  La ejecución completó conversión, copia y verificación host, pero se detuvo al
+  crear en app el mismo directorio ya existente: ROS y app comparten `/tmp`.
+  Sin sobrescribir ni repetir, se verificó el archivo ya visible en app y se
+  copió mediante `copy_remote_file_to_pc` de la receta versionada a evidencia;
+  `recovered-result.json` registra el resultado. La receta se corrigió para
+  usar directorios ROS/app distintos; su nueva ejecución real queda PENDIENTE.
+  Directorio ROS/app compartido:
+  `/tmp/pico_v4_derivative_20261105T122327Z_df5fe088/geometry_slow.motion`;
+  copia host Motion:
+  `/home/walker/grabaciones_v4_completas/prueba_v4_10_20261105T121633Z_710745/derived_20261105T122327Z_df5fe088/geometry_slow.motion`;
+  copia PC, reportes de inspección/conversión y fallos anteriores:
+  `../Humanoide-vla-evidence/PICO-V4-DERIVATIVE-20261105T122327Z_df5fe088/`.
+  Las tres copias coinciden en SHA256
+  `5bee66a110374975fd1217833fe6d2f9688cbc31f6638a3569621520493ff66d`.
+  Reversión: conservar original, eliminar selectivamente derivados y scripts si
+  se desea; no restaurar estados transitorios de control.
+- **Límites:** derivado 123,091936 s, posiciones de cabeza/brazos desde órdenes
+  y dedos desde estados; no reproduce fuerza/corriente/modos5/7. Mayor paso
+  dedo derecho0,053690 rad, brazo0,003382 rad, cabeza0,004 rad. Se observan
+  rangos cabeza yaw0,839, pitch0,68, codo derecho1,219, índice derecho1,641 rad.
+  La inspección numérica no valida colisiones, velocidades ni trayectoria.
+  Antes del player deben comprobarse condiciones físicas actuales, exclusividad
+  de control, estado técnico y correspondencia de postura inicial; verificar
+  también el hash y la presencia del archivo tras reinicio del contenedor.
+  La comparación del primer punto con la postura real está PENDIENTE y ningún
+  ensayo físico de esta toma ha sido efectuado. En una lectura previa se observó
+  CC joystick, PC sin UI ni pico_control, OutlineSdkPlay 1 servidor/0 clientes,
+  y controladores manipulation/force_torque/dexterous_hand running. El player
+  vendor tenía SHA `8744a30ecce20c414dcf67b60d9aa7ac486bab752d5eee3de08a7336d65ddf0d`;
+  revalidar todo en el momento de uso. Tras esos controles, el player instalado
+  admite `rosa run manipulation_outline_sdk player -- --robot
+  utars_with_v4_hand --input /tmp/pico_v4_derivative_20261105T122327Z_df5fe088/geometry_slow.motion`
+  dentro de Motion app, sin `--loop`. No reproducir topics ROS directamente.
+
 ### MOT-04 — READY, recovery y tareas auxiliares
 
 - **2026-09-14 — uso de tarea existente, sin adaptación persistente:**

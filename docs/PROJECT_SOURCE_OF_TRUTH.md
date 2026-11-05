@@ -1,5 +1,13 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**05-11-2026 — PICO-V4-REPLAY-PREP-20261105: toma 10 convertida, replay pendiente.**
+La captura `prueba_v4_10_20261105T121633Z_710745` se inspeccionó y convirtió a
+un `.motion` geométrico a mitad de velocidad. La conversión no reproduce las
+fuerzas ni los modos originales de las manos. El archivo está en Motion y PC
+con hashes comparados; no se ha reproducido ni validado físicamente. Antes del
+player es necesario comprobar postura inicial, trayectoria/entorno y control
+exclusivo. [Registro, rutas y límites](SYSTEM_CUSTOMIZATIONS.md#pico-v4-replay-prep-20261105--toma-10).
+
 **05-11-2026 12:53 CET — PICO-V4-CAPTURE-PORT-20261105: grabador incorporado.**
 Se trajo a PC `scripts/teleoperation/record_pico_v4_complete.sh` desde la rama
 PICO v4. Se redescubrió `walker-ros.ros2-1` en Motion y `--check` confirmó
