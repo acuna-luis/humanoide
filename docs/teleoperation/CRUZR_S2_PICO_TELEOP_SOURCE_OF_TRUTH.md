@@ -1,5 +1,14 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**05-11-2026 13:33 CET — PICO-V4-NORMAL-SPEED-20261105.** A petición del
+usuario se preparó la toma10 a velocidad original: 61,545968 s, mismo orden y
+posiciones que la versión 2× lenta, tiempos divididos entre dos. Copias en PC,
+host Motion y app verificadas por SHA; no se envió player. Falta comparar la
+postura inicial con la real y validar trayectoria/velocidades. La mano derecha
+alcanza una tasa discreta calculada de 5,299 rad/s; no es una medición de lo
+que aplicará el player ni una validación de límite. Fuerza y modos originales
+no se reproducen. [Receta y límites](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-normal-speed-20261105--toma-10-a-1).
+
 **05-11-2026 — PICO-V4-REPLAY-PREP-20261105: toma 10 preparada.**
 La captura `prueba_v4_10_20261105T121633Z_710745` se convirtió sin movimiento a
 un `.motion` geométrico de 123,092 s (`--time-scale 2`). El usuario decidirá

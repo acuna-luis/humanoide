@@ -1,5 +1,13 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**05-11-2026 13:33 CET — PICO-V4-NORMAL-SPEED-20261105: toma 10 a 1×.**
+Preparada una segunda versión geométrica de 61,545968 s, con posiciones
+idénticas y tiempos a la mitad de la versión lenta. Copias en PC, host Motion
+y app coinciden en SHA. No se ha reproducido ni validado la trayectoria o sus
+velocidades; no conserva fuerza ni modos originales de las manos. Se mantiene
+el preparador anterior con su umbral `--time-scale >= 2`. Detalles, receta,
+backups y punto de reanudación en [PICO-V4-NORMAL-SPEED-20261105](SYSTEM_CUSTOMIZATIONS.md#pico-v4-normal-speed-20261105--toma-10-a-1).
+
 **05-11-2026 — PICO-V4-REPLAY-PREP-20261105: toma 10 convertida, replay pendiente.**
 La captura `prueba_v4_10_20261105T121633Z_710745` se inspeccionó y convirtió a
 un `.motion` geométrico a mitad de velocidad. La conversión no reproduce las

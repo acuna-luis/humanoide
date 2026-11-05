@@ -1,5 +1,10 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**05-11-2026 — PICO-V4-NORMAL-SPEED-20261105.** Preparado derivado geométrico
+de la toma10 con escala temporal 1, sin reproducción ni validación física.
+Mantiene los mismos puntos que el derivado lento; no reconstruye esfuerzos ni
+modos de control originales. [Procedencia](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-normal-speed-20261105--toma-10-a-1).
+
 **05-11-2026 — PICO-V4-REPLAY-PREP-20261105: toma 10.** Inspeccionado el bag
 cerrado y preparado un derivado geométrico `.motion` a mitad de velocidad; los
 estados de dedos se usan como posiciones y no se reproducen fuerza ni modos.

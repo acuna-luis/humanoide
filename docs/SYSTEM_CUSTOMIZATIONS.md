@@ -2561,6 +2561,51 @@ XML o entradas de `task_list.yaml` no están instalados/cargados en Motion.
   utars_with_v4_hand --input /tmp/pico_v4_derivative_20261105T122327Z_df5fe088/geometry_slow.motion`
   dentro de Motion app, sin `--loop`. No reproducir topics ROS directamente.
 
+### PICO-V4-NORMAL-SPEED-20261105 — Toma 10 a 1×
+
+- **05-11-2026 13:33 CET; archivo generado y copiado, reproducción PENDIENTE.**
+  El usuario pidió una versión a velocidad normal y conserva la decisión de
+  cuándo reproducir. Se creó
+  [`prepare_pico_v4_normal_speed.py`](../scripts/teleoperation/prepare_pico_v4_normal_speed.py)
+  SHA256 `0c6f3b5284ad05a25fa6e12a926c051365981684534dc69ca961a5c2901eba69`,
+  con [cuatro pruebas nuevas](../scripts/teleoperation/test_prepare_pico_v4_normal_speed.py)
+  y seis pruebas anteriores correctas. Sin cambios en el preparador con mínimo
+  `--time-scale 2`, el SDK, controles, límites ni protecciones del robot.
+  Los archivos de documentación anteriores se respaldaron en
+  `../Humanoide-vla-evidence/20261105_PICO_V4_NORMAL_SPEED/`.
+- **Fuente y procedimiento:** bag SHA256
+  `e08915a949cf4e415d483eae874609b8fae766d027905d2c1082cc8fd69d5169`;
+  derivado lento SHA256
+  `5bee66a110374975fd1217833fe6d2f9688cbc31f6638a3569621520493ff66d`.
+  La receta versionada verifica la procedencia, divide sus marcas temporales
+  entre dos y preserva posiciones. Invocación reproducible:
+  `python3 scripts/teleoperation/prepare_pico_v4_normal_speed.py --capture
+  prueba_v4_10_20261105T121633Z_710745 --bag-sha256
+  e08915a949cf4e415d483eae874609b8fae766d027905d2c1082cc8fd69d5169
+  --slow-sha256 5bee66a110374975fd1217833fe6d2f9688cbc31f6638a3569621520493ff66d
+  --slow-file ../Humanoide-vla-evidence/PICO-V4-DERIVATIVE-20261105T122327Z_df5fe088/geometry_slow.motion
+  --slow-receipt ../Humanoide-vla-evidence/PICO-V4-DERIVATIVE-20261105T122327Z_df5fe088/conversion.json`.
+  Además, una comparación independiente de las 104495 muestras confirmó
+  posiciones exactamente iguales y tiempos divididos entre dos.
+- **Destino y verificación:** Motion host
+  `/home/walker/grabaciones_v4_completas/prueba_v4_10_20261105T121633Z_710745/derived_normal_20261105T123303Z_6629bb3e/geometry_normal.motion`;
+  contenedor `walker-motion.manipulation_robot_app-1`
+  `/tmp/pico_v4_app_normal_20261105T123303Z_6629bb3e/geometry_normal.motion`;
+  copia PC, recibos y evidencia
+  `../Humanoide-vla-evidence/PICO-V4-NORMAL-DERIVATIVE-20261105T123303Z_6629bb3e/`.
+  Las tres copias SHA256
+  `b3197fb87f99f06527be17646cf5ebef726ad8ff81f7ae53d88688b3a31c1034`;
+  original comprobado intacto. Duración 61,545968239 s. Reversión: conservar
+  las tomas originales y retirar selectivamente el derivado y la receta si se
+  desea; no restaurar estados de control. El archivo de `/tmp` puede desaparecer
+  al recrear el contenedor y debe verificarse antes de usarlo.
+- **Límites:** tasas discretas máximas calculadas a partir de muestras: mano
+  derecha 5,299 rad/s, brazo izquierdo 2,651 rad/s, brazo derecho 2,155 rad/s,
+  cabeza 2,008 rad/s; no son validación de límites ni velocidades medidas de
+  reproducción. No reproduce fuerza/corriente/modos originales. Comparación
+  inicial, espacio libre, seguridad, trayectoria y velocidades físicas siguen
+  PENDIENTES; no se ha enviado movimiento ni se inició player.
+
 ### MOT-04 — READY, recovery y tareas auxiliares
 
 - **2026-09-14 — uso de tarea existente, sin adaptación persistente:**
