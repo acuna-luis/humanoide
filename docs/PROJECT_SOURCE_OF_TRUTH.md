@@ -1,5 +1,18 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**05-11-2026 — VLA-PASSIVE-HANDS-20261105: captura pasiva de manos añadida.**
+El mismo capturador RGB/20D descubre por separado estados y órdenes de ambas
+manos v4 y conserva los mensajes disponibles; la captura base sigue funcionando
+si faltan. La calidad de manos es **independiente** del resultado base: revisar
+`quality.json`, `hands.hand_left` y `hands.hand_right`, pues `CAPTURA_LISTA` o
+`capture_checks_passed` base no garantizan dedos válidos. Piloto pasivo de10 s:
+44 imágenes,43 pares RGB/base,255 y251 estados válidos de mano,43 pares por mano,
+ambos controles de manos correctos;0 órdenes de mano observadas. Se cargó el nodo
+temporal en Vision y terminó; no se enviaron movimientos ni hubo configuración
+persistente del robot. **PENDIENTE:** agarre/dedos en movimiento, sesiones largas,
+calibración de sincronía física, semántica de acción y entrenamiento. Las tomas previas de este capturador no contienen estos nuevos datos. [Ficha y reversión](SYSTEM_CUSTOMIZATIONS.md#vla-passive-hands-20261105),
+[uso y calidad](vla/CAPTURA_PASIVA_EPISODIOS.md#manos-v4--05-11-2026).
+
 **05-11-2026 — APP2-VISION-PORT-20261105: fuentes APP2 incorporadas.**
 Se importaron selectivamente las guías y herramientas APP2 de
 `vision-reconoce` `daa4cf43c70aced0def10d31a98faf04b33d56bc`, preservando

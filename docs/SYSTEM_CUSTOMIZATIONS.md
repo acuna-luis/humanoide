@@ -1,5 +1,22 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## VLA-PASSIVE-HANDS-20261105
+
+**05-11-2026, Europe/Madrid — fuentes PC instaladas; nodo temporal cargado y
+lectura pasiva corta VERIFICADA; agarre, acciones y entrenamiento PENDIENTES.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo | A petición del usuario, ampliar el capturador pasivo RGB/20D para registrar dedos de ambas manos v4 sin ordenar movimientos. |
+| Destino y dependencias | Fuentes PC en `scripts/vla/`. Proceso/nodo temporal en contenedor ROS de Vision redescubierto en cada toma; `rclpy`, tipos ROS de la instalación existente y conectividad PC→Vision. No se instalaron paquetes, alteraron servicios ni parámetros persistentes del robot. Descubrir de nuevo después de cambios. |
+| Fuente reproducible | `capture_passive_episode.py` SHA256 `e73afde29a9be3eb8a911ac678cf95ca11e7e400f2b2d97ec358f1aeaa288670`; `passive_episode_remote.py` `36dc07fd01b17ccb43b2d450fa9e0de47eb5e8bdc000ae68ccca8d8452d28f77`; `passive_episode_quality.py` `c5825e8f323f34fdd3df8d0e8436be0e31261d2a8dca8c3c55090080b29f972d`; `test_passive_episode.py` `b1be982af44ee5fc0e98991a15f11d96ea7f1a3bc209449b0bb3d0e2365403f9`. |
+| Aplicación y activación | Scripts versionados en el PC; el mismo comando de la [guía de captura](vla/CAPTURA_PASIVA_EPISODIOS.md#manos-v4--05-11-2026) inicia una carpeta nueva y un nodo que sólo observa. Cada segundo redescubre por mano estados `JointState` y órdenes `JointCommand` con tipo y publicador; espera hasta2 s adicionales por estados opcionales antes de `CAPTURA_LISTA`. Si faltan, continúa la captura base, sin inventar dedos. |
+| Datos y control de calidad | `samples.jsonl` conserva los mensajes recibidos con tiempos y descubrimiento; los estados incluyen posiciones y los campos disponibles de velocidad/esfuerzo; comandos crudos opcionales sin limitar tasa. `aligned.jsonl` incorpora por mano nombres y posiciones cuando se pueden emparejar. `quality.json` informa por separado manos y comandos. QC individual comprueba siete nombres v4, datos finitos, secuencia, recuentos, cobertura y parejas; origen≤80 ms por defecto y recepción común≤500 ms. No certifica sincronización física ni ausencia de pérdidas best-effort. |
+| Verificación | 26 pruebas offline correctas en `../Humanoide-vla-evidence/20261105_HAND_OPTIONAL_CAPTURE/tests.txt`. Piloto real pasivo de10 s, `../Humanoide-vla-evidence/20261105_HAND_OPTIONAL_CAPTURE/piloto/`:44 imágenes,43 pares RGB/base,255 estados izquierdos y251 derechos válidos;43 pares por mano, `complete` y QC individual `true`. Cero comandos recibidos de ambas manos. Nodo temporal finalizado, sin ordenar movimiento. |
+| Alcance y deuda | Una mano ausente, parcial o inválida no invalida por sí sola el QC base: revisar cada campo de `hands` de `quality.json`. Los comandos se reciben sólo si se publican, sin garantizar ausencia de pérdidas y sin calificarlos como acción. `training_ready=false`; pendiente probar dedos/agarre en movimiento, capturas largas, sincronía física y contrato de acción. No reconstruye los dedos de episodios anteriores. Ningún registro describe el estado físico actual. |
+| Backup y reversión | Antes del cambio: `../Humanoide-vla-evidence/20261105_HAND_OPTIONAL_CAPTURE/before/`; inventario `before.sha256`, SHA256 `d4c29732c848e4bfc0084d305548e5e56644dbf970e1bbd9adbe4eae5408cdc8`. Comparar cambios posteriores y restaurar selectivamente sólo los cuatro scripts y referencias afectadas desde ese respaldo; preservar episodios y trabajo concurrente. No hay cambio remoto persistente que revertir. |
+
+
 ## EFFECTOR-V4-ACTIVATION-20261105
 
 05-11-2026, Europe/Madrid — **perfil v4 instalado/cargado; HOME y estados verificados**.

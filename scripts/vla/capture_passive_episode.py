@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture RGB + joints + actuator setpoints + forces, without moving the robot.
+"""Capture RGB, joints, forces and available hand signals without moving the robot.
 
 The default creates a new private episode on the Linux PC. Ctrl+C ends capture
 only; it cannot stop the robot. No VLA container or control client is started.
@@ -128,6 +128,9 @@ def capture(args):
                             (directory/name).write_bytes(data); row['png_file'] = name
                         elif row.get('kind') == 'ready':
                             print('CAPTURA_LISTA — grabando durante '+str(args.seconds)+' segundos.',flush=True)
+                            print('Muestras iniciales de manos (izquierda/derecha): '+
+                                  str(row.get('hand_samples', {}))+
+                                  '. La calidad final de cada mano se informa al terminar.',flush=True)
                         samples.write(json.dumps(row,allow_nan=False,separators=(',',':'))+'\n')
             manifest['transport']['returncode'] = proc.wait(timeout=3)
     except KeyboardInterrupt:
@@ -154,7 +157,9 @@ def capture(args):
     (directory/'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p.relative_to(directory))+'\n'
         for p in sorted(directory.rglob('*')) if p.is_file() and p.name != 'SHA256SUMS'))
     print(json.dumps(dict(directory=str(directory),capture_checks_passed=report['capture_checks_passed'],
-        frames=images,matched_frames=report['matched_frames'],training_ready=False,error=manifest['transport'].get('error')),indent=2),flush=True)
+        frames=images,matched_frames=report['matched_frames'],
+        hands=report.get('hands', {}), hand_commands=report.get('hand_commands', {}),
+        training_ready=False,error=manifest['transport'].get('error')),indent=2),flush=True)
     return 0 if report['capture_checks_passed'] else 3
 
 

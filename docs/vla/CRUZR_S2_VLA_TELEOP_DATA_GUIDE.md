@@ -1,5 +1,18 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**05-11-2026 — VLA-PASSIVE-HANDS-20261105: manos v4 opcionales en el capturador RGB.**
+Los estados y las órdenes de cada mano se descubren por separado; las órdenes
+crudas sólo se guardan cuando llegan y no se han cualificado como acción de
+entrenamiento. Piloto pasivo de10 s con estados de ambas manos,255/251 muestras
+válidas,43 imágenes emparejadas con cada mano y control de calidad individual
+correcto;0 comandos observados. La captura base puede pasar sin manos: revisar
+el resultado por mano en `quality.json`. Fuentes PC actualizadas, nodo temporal
+cargado en Vision y finalizado; no se mandó movimiento. Movimiento de dedos,
+agarre, duración larga, sincronía física y acción aún PENDIENTES;
+`training_ready=false`. La toma anterior de120 s no se puede completar
+retroactivamente con dedos. [Uso y límites](CAPTURA_PASIVA_EPISODIOS.md#manos-v4--05-11-2026);
+[ficha reproducible](../SYSTEM_CUSTOMIZATIONS.md#vla-passive-hands-20261105).
+
 **05-11-2026 — PICO-V4-TAKE14-PREP-20261105.** Se inspeccionó el bag de la
 toma14 y se generó una copia geométrica completa a1×, sin reproducción y sin
 recortar. Los datos convertidos no reproducen las fuerzas/modos de mano y no

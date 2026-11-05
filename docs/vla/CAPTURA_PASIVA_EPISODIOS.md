@@ -1,5 +1,63 @@
 # Captura pasiva de episodios RGB y movimiento
 
+## Manos v4 — 05-11-2026
+
+**VLA-PASSIVE-HANDS-20261105 — fuentes PC instaladas; nodo de lectura temporal
+cargado/finalizado y piloto pasivo corto VERIFICADO.** El mismo comando descubre
+las manos por separado y, cuando están disponibles, guarda sus estados de siete
+ejes con posición y los campos de velocidad/esfuerzo recibidos. También escucha
+las órdenes crudas de cada mano cuando existen; que un topic tenga publicador no
+asegura que haya mensajes. **No se ha verificado el agarre ni cualificado la
+acción para entrenamiento.** Las capturas anteriores no se completan con datos
+que no se grabaron.
+
+En el PC Linux, por ejemplo para una prueba pasiva de120 s:
+
+```bash
+cd /home/lacuna/proyectos/Robots/Humanoide
+python3 -B scripts/vla/capture_passive_episode.py --seconds 120 --task prueba_pelota
+```
+
+El nodo redescubre cada segundo los estados y comandos de izquierda y derecha,
+y espera hasta2 s adicionales por estados de manos antes de indicar
+`CAPTURA_LISTA`. Si una mano falta o tiene otro tipo, la captura base continúa:
+**`CAPTURA_LISTA` y el `capture_checks_passed` general no garantizan que se
+hayan capturado ambas manos.** Después del cierre, consultar `quality.json`:
+
+```bash
+python3 -m json.tool /ruta/del/episodio/quality.json
+```
+
+En `hands.hand_left` y `hands.hand_right`, comprobar por separado
+`status: complete`, `capture_checks_passed: true`, `valid_samples` y
+`matched_frames`. Si figura `not_recorded_by_version`, `not_detected_at_discovery`,
+`type_mismatch_or_unsubscribed`, `subscribed_no_samples`, `partial`, `invalid`
+o `incomplete_or_unknown_joints`, no dar esa mano por completa: conservar la
+toma y revisar descubrimiento y errores. `hand_commands` informa suscripciones
+y cantidad de órdenes crudas; cero significa que no se recibió ninguna, no que
+se haya demostrado ausencia de órdenes en el sistema. Best-effort tampoco prueba
+que no haya pérdidas. El `training_ready` general permanece `false`.
+
+Los `JointState` completos, sus timestamps y los eventos de descubrimiento y
+órdenes recibidos quedan en `samples.jsonl`; `aligned.jsonl` incluye `hand_left`
+y/o `hand_right` con nombres y posiciones sólo si se ha encontrado pareja.
+Cada mano exige siete nombres v4, muestras finitas, sellos crecientes, recuentos,
+cobertura y límites de tiempo. El emparejamiento por defecto usa diferencia de
+origen≤80 ms y de recepción común≤500 ms; estos valores son controles de la
+toma, **no calibración de relojes ni certificado de sincronía física**. Las
+órdenes no se convierten en una columna de acción para entrenar.
+
+**Piloto pasivo:** 10 s,44 imágenes y43 emparejadas con señales base;255
+muestras válidas de mano izquierda y251 de derecha;43 pares de imagen por cada
+mano, ambas `complete` y QC `true`. Se suscribieron los dos topics de órdenes,
+pero se recibieron0 mensajes. Nodo de Vision cerrado, sin orden de movimiento.
+Pruebas offline:26 correctas. Evidencia privada:
+`../Humanoide-vla-evidence/20261105_HAND_OPTIONAL_CAPTURE/piloto/` y `tests.txt`.
+PENDIENTE: demostración con dedos/agarre, grabación larga, validación de acción,
+sincronía física y entrenamiento; la lectura no describe el estado físico actual.
+[Detalle, fuentes, respaldo y reversión](../SYSTEM_CUSTOMIZATIONS.md#vla-passive-hands-20261105).
+
+
 **VLA-PASSIVE-EPISODE-CAPTURE-20261022 — 22-10-2026, Europe/Madrid.**
 Implementado en PC y verificado con lecturas reales; no envía movimiento,
 entrena, arranca VLA ni instala/reinicia servicios del robot.
@@ -19,6 +77,7 @@ entrena, arranca VLA ni instala/reinicia servicios del robot.
    no detiene el robot.
 5. **Anota la carpeta mostrada en pantalla.** Contiene las imágenes en `rgb/`,
    las muestras originales en `samples.jsonl` y los pares en `aligned.jsonl`.
+   Para manos v4 consulta además la sección superior y el QC de cada mano.
 6. **Revisa `quality.json`.** Puedes abrirlo en el editor o ejecutar lo siguiente,
    sustituyendo `/ruta/episodio` por la carpeta real:
 
@@ -34,8 +93,9 @@ entrena, arranca VLA ni instala/reinicia servicios del robot.
    separadas las tomas correctas, fallidas e interrumpidas. Cada nueva ejecución
    crea otra carpeta; nunca grabes encima de la anterior.
 
-Esta ampliación sólo documenta el procedimiento. La validación disponible sigue
-siendo el piloto corto del22-10; no se ha realizado otra captura ni movimiento.
+Esta ampliación del23-10 sólo documentó el procedimiento. La verificación
+posterior de manos del05-11 se describe arriba; no implica entrenamiento ni
+validación del agarre.
 
 ## Uso directo en el PC Linux del robot
 
@@ -80,10 +140,10 @@ No confundir la IP del PC con Motion192.168.11.2 o Vision192.168.11.3.
 | Archivo | Contenido |
 | --- | --- |
 | `rgb/*.png` | Píxeles reales960×576 en el piloto, PNG sin pérdida; decodificación bgr8/rgb8/mono8 con padding de fila |
-| `samples.jsonl` | Muestras originales de imagen, JointState, ActuatorState y ambas fuerzas; marcas de origen, recepción Vision y llegada PC |
-| `aligned.jsonl` | Pares por imagen con posiciones20D, `actuator_cmd_pos20`, fuerza6D por muñeca y diferencias temporales explícitas |
+| `samples.jsonl` | Muestras originales de imagen, JointState, ActuatorState, fuerzas y, si se reciben, estados y órdenes de manos; tiempos de origen y recepción disponibles |
+| `aligned.jsonl` | Pares por imagen con posiciones20D, `actuator_cmd_pos20`, fuerza6D por muñeca y, cuando hay pareja válida, nombres/posiciones de cada mano; diferencias temporales explícitas |
 | `manifest.json` | Etiqueta de tarea, orden20D, límites, fuentes/hash, identidad y resultado de transporte |
-| `quality.json` | Cobertura, cadencias/huecos reales, muestras válidas, emparejamiento y limitaciones |
+| `quality.json` | Cobertura, cadencias/huecos reales, muestras válidas, emparejamiento y limitaciones; calidad por mano y estado de órdenes separados de la captura base |
 | `discovery.json`, `container-identity*.json` | Contenedor ROS Vision descubierto e identidad antes/después |
 | `SHA256SUMS`, `sources/`, `collector_remote.py`, `capture.log` | Integridad, fuente enviada y diagnósticos de la toma |
 
@@ -134,7 +194,7 @@ a LeRobot con splits y frecuencia adecuados. No se fabrica una columna `action`
 ni se copia una posición observada bajo ese nombre. Una misión completa se
 puede guardar en bruto, pero PICK/PLACE deben segmentarse antes de entrenar.
 
-## Verificación de esta intervención
+## Verificación histórica de la intervención del 22-10-2026
 
 14 pruebas offline correctas: píxeles BGR/padding y CRC PNG; orden y separación
 estado/consigna; fuentes faltantes, corrupción, duplicación, desfase, interrupción,
@@ -148,8 +208,8 @@ excluidas; máximo desfase de origen49,081052 ms.0 imágenes descartadas por col
 en el piloto previo. El piloto03 también pasó; piloto01/02 quedaron rechazados
 por QC de tiempos/transporte, conservados como evidencia y no convertidos en éxitos.
 
-Sólo se validaron capturas pasivas cortas, **no una demostración en movimiento,
-una sesión de300 s ni entrenamiento**. No se han enviado movimientos. No asumir
+En aquella intervención sólo se validaron capturas pasivas cortas, **no una
+demostración en movimiento, una sesión de300 s ni entrenamiento**. No se han enviado movimientos. No asumir
 que esta lectura describe la postura actual o autoriza un ensayo físico.
 
 Evidencia privada, hashes y backup documental:

@@ -23,6 +23,12 @@ TOPICS = {
     'force_right': ('/mc/ft_states/R_hand_ft', 'geometry_msgs/msg/WrenchStamped'),
 }
 OPTIONAL_COMMAND = ('/mc/sdk/robot_command', 'mc_task_msgs/msg/RobotCommand')
+OPTIONAL_HANDS = {
+    'hand_left': ('/mc/left_hand/joint_states', 'sensor_msgs/msg/JointState'),
+    'hand_right': ('/mc/right_hand/joint_states', 'sensor_msgs/msg/JointState'),
+    'hand_command_left': ('/mc/left_hand/command', 'mc_task_msgs/msg/JointCommand'),
+    'hand_command_right': ('/mc/right_hand/command', 'mc_task_msgs/msg/JointCommand'),
+}
 
 
 def message_text(value):
@@ -77,6 +83,7 @@ def main(argv=None):
     node = rclpy.create_node('cruzr_passive_episode_capture',
                              enable_rosout=False, start_parameter_services=False)
     counts, last, errors, subscriptions = {}, {}, [], []
+    hand_subscriptions = {}
     image_queue = queue.Queue(maxsize=2)
     closed = threading.Event()
     output_lock = threading.Lock()
@@ -128,7 +135,7 @@ def main(argv=None):
             nonlocal image_drops
             now, wall = time.monotonic_ns(), time.time_ns()
             period = 1/args.fps if kind == 'rgb' else 1/args.telemetry_hz
-            if kind != 'sdk_command' and now-last.get(kind, 0) < period*1e9:
+            if kind not in ('sdk_command', 'hand_command_left', 'hand_command_right') and now-last.get(kind, 0) < period*1e9:
                 return
             try:
                 row = dict(kind=kind, source_ns=source_ns(message),
@@ -153,8 +160,13 @@ def main(argv=None):
                 last[kind] = now
                 counts[kind] = counts.get(kind, 0)+1
             except Exception as exc:
-                errors.append(kind+': '+type(exc).__name__+': '+str(exc))
-                stop()
+                error = type(exc).__name__+': '+str(exc)
+                if kind in OPTIONAL_HANDS:
+                    emit(dict(kind='hand_error', stream=kind, error=error,
+                              received_ns=wall, received_monotonic_ns=now))
+                else:
+                    errors.append(kind+': '+error)
+                    stop()
         for kind, (topic, typ) in specs.items():
             counts[kind] = 0
             subscriptions.append(node.create_subscription(get_message(typ), topic,
@@ -164,14 +176,53 @@ def main(argv=None):
                   seconds=args.seconds, fps_limit=args.fps, telemetry_hz_limit=args.telemetry_hz,
                   topics=specs, clock='single Vision host reception clock; source stamps unmodified',
                   movement_commands=0))
+        hand_graph_previous = None
+        hand_discovery_at = 0.0
+        def discover_hands():
+            nonlocal hand_graph_previous, hand_discovery_at
+            hand_discovery_at = time.monotonic()+1.0
+            graph_now = dict(node.get_topic_names_and_types())
+            detail = {}
+            for kind, (topic, typ) in OPTIONAL_HANDS.items():
+                observed = sorted(graph_now.get(topic, []))
+                error = None
+                if typ in observed and kind not in hand_subscriptions:
+                    try:
+                        hand_qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT,
+                                              durability=DurabilityPolicy.VOLATILE)
+                        sub = node.create_subscription(get_message(typ), topic,
+                            lambda message, kind=kind: receive(kind, message), hand_qos)
+                        subscriptions.append(sub)
+                        hand_subscriptions[kind] = sub
+                        counts[kind] = 0
+                    except Exception as exc:
+                        error = type(exc).__name__+': '+str(exc)
+                detail[kind] = dict(topic=topic, expected_type=typ,
+                    observed_types=observed, subscribed=kind in hand_subscriptions,
+                    publisher_count=node.count_publishers(topic))
+                if error:
+                    detail[kind]['error'] = error
+            if detail != hand_graph_previous:
+                emit(dict(kind='hand_discovery', topics=detail, received_ns=time.time_ns(),
+                          received_monotonic_ns=time.monotonic_ns()))
+                hand_graph_previous = detail
+        discover_hands()
         warmup_deadline = time.monotonic()+8
-        deadline, ready = warmup_deadline, False
+        deadline, ready, base_ready_at = warmup_deadline, False, None
         while not stopped and time.monotonic() < deadline:
             rclpy.spin_once(node, timeout_sec=.02)
-            if not ready and all(counts[k] >= 2 for k in TOPICS):
+            if time.monotonic() >= hand_discovery_at:
+                discover_hands()
+            if not ready and base_ready_at is None and all(counts[k] >= 2 for k in TOPICS):
+                base_ready_at = time.monotonic()
+                deadline = max(deadline, base_ready_at+2)
+            if (not ready and base_ready_at is not None and
+                    (all(counts.get(k, 0) >= 2 for k in ('hand_left', 'hand_right')) or
+                     time.monotonic()-base_ready_at >= 2)):
                 ready = True
                 deadline = time.monotonic()+args.seconds
-                emit(dict(kind='ready', received_ns=time.time_ns(),received_monotonic_ns=time.monotonic_ns()))
+                emit(dict(kind='ready', received_ns=time.time_ns(),received_monotonic_ns=time.monotonic_ns(),
+                          hand_samples={k: counts.get(k, 0) for k in ('hand_left', 'hand_right')}))
         if not ready:
             errors.append('Required signals never became ready during warmup')
         closed.set(); image_thread.join(timeout=5)

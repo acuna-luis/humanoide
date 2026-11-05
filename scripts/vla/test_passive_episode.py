@@ -131,4 +131,177 @@ class ReadOnlyContract(unittest.TestCase):
         self.assertFalse(names & {'create_publisher','create_client','send_goal','publish','call_async','write_text','write_bytes'})
 
 
+class OptionalHands(unittest.TestCase):
+    setUp = CaptureQuality.setUp
+    run_report = CaptureQuality.run_report
+
+    def discovery(self, left=False, right=False):
+        topics = {}
+        for side, subscribed in (('left', left), ('right', right)):
+            for prefix, suffix in (('hand_', 'joint_states'), ('hand_command_', 'command')):
+                kind = prefix + side
+                topics[kind] = dict(topic=f'/mc/{side}_hand/{suffix}',
+                    expected_type='sensor_msgs/msg/JointState' if prefix == 'hand_' else 'mc_task_msgs/msg/JointCommand',
+                    observed_types=(['sensor_msgs/msg/JointState'] if prefix == 'hand_' else ['mc_task_msgs/msg/JointCommand']) if subscribed else [],
+                    subscribed=subscribed)
+        self.rows.insert(0, dict(kind='hand_discovery', topics=topics))
+
+    def add_hand(self, side, *, offset_ns=0, only_one=False):
+        kind = 'hand_'+side
+        for index in range(1 if only_one else 2):
+            stamp = START+index*100_000_000+offset_ns
+            self.rows.insert(-1, dict(kind=kind, source_ns=stamp,
+                received_ns=stamp+10_000_000,
+                received_monotonic_ns=stamp-500_000_000_000,
+                message=dict(name=[side+'_'+suffix for suffix in quality.HAND_SUFFIXES],
+                             position=[.1, .2, .3, .4, .5, .6, .7])))
+        self.rows[-1]['counts'][kind] = 1 if only_one else 2
+
+    def test_no_hand_streams_preserve_base_success(self):
+        self.discovery()
+        report = self.run_report()
+        self.assertTrue(report['capture_checks_passed'])
+        for side in ('left', 'right'):
+            hand = report['hands']['hand_'+side]
+            self.assertEqual(hand['status'], 'not_detected_at_discovery')
+            self.assertIsNone(hand['capture_checks_passed'])
+        pair = json.loads((self.directory/'aligned.jsonl').read_text().splitlines()[0])
+        self.assertNotIn('hand_left', pair)
+        self.assertNotIn('hand_right', pair)
+
+    def test_old_episode_has_no_discovery(self):
+        report = self.run_report()
+        self.assertTrue(report['capture_checks_passed'])
+        self.assertEqual(report['hands']['hand_left']['status'], 'not_recorded_by_version')
+
+    def test_one_hand_is_optional_and_reports_other_absent(self):
+        self.discovery(left=True)
+        self.add_hand('left')
+        report = self.run_report()
+        self.assertTrue(report['capture_checks_passed'])
+        self.assertTrue(report['hands']['hand_left']['capture_checks_passed'])
+        self.assertEqual(report['hands']['hand_right']['status'], 'not_detected_at_discovery')
+        pair = json.loads((self.directory/'aligned.jsonl').read_text().splitlines()[0])
+        self.assertEqual(pair['hand_left'], dict(name=['left_'+suffix for suffix in quality.HAND_SUFFIXES],
+                                                position=[.1, .2, .3, .4, .5, .6, .7]))
+        self.assertNotIn('hand_right', pair)
+        self.assertIn('hand_left', pair['source_lines'])
+        self.assertEqual(pair['source_delta_ms']['hand_left'], 0)
+
+    def test_two_hand_streams_are_reported_and_aligned(self):
+        self.discovery(left=True, right=True)
+        self.add_hand('left'); self.add_hand('right')
+        report = self.run_report()
+        self.assertTrue(report['capture_checks_passed'])
+        self.assertTrue(report['hands']['hand_left']['capture_checks_passed'])
+        self.assertTrue(report['hands']['hand_right']['capture_checks_passed'])
+        self.assertEqual(report['hands']['hand_right']['matched_frames'], 2)
+        pair = json.loads((self.directory/'aligned.jsonl').read_text().splitlines()[0])
+        self.assertEqual(pair['hand_right']['name'], ['right_'+suffix for suffix in quality.HAND_SUFFIXES])
+
+    def test_missing_malformed_or_short_hand_never_masquerades_as_complete(self):
+        for scenario in ('no_samples', 'bad_names', 'nonfinite', 'short', 'remote_error'):
+            with self.subTest(scenario=scenario):
+                old = copy.deepcopy(self.rows)
+                self.discovery(left=True)
+                if scenario not in ('no_samples', 'remote_error'):
+                    self.add_hand('left', only_one=scenario == 'short')
+                    if scenario == 'bad_names':
+                        next(row for row in self.rows if row.get('kind') == 'hand_left')['message']['name'] = ['dup', 'dup']
+                    elif scenario == 'nonfinite':
+                        next(row for row in self.rows if row.get('kind') == 'hand_left')['message']['position'][0] = float('nan')
+                elif scenario == 'remote_error':
+                    self.rows.insert(-1, dict(kind='hand_error', stream='hand_left', error='serialization failed'))
+                report = self.run_report()
+                self.assertTrue(report['capture_checks_passed'])
+                self.assertFalse(report['hands']['hand_left']['capture_checks_passed'])
+                self.rows = old
+
+    def test_hand_misalignment_does_not_invalidate_base_or_forge_pair(self):
+        self.discovery(left=True)
+        self.add_hand('left')
+        for row in self.rows:
+            if row.get('kind') == 'hand_left':
+                row['received_monotonic_ns'] += 600_000_000
+        report = self.run_report()
+        self.assertTrue(report['capture_checks_passed'])
+        self.assertFalse(report['hands']['hand_left']['capture_checks_passed'])
+        self.assertEqual(report['hands']['hand_left']['unmatched_frames'], 2)
+        pair = json.loads((self.directory/'aligned.jsonl').read_text().splitlines()[0])
+        self.assertNotIn('hand_left', pair)
+
+    def test_hand_coverage_or_counts_failure_is_separate_from_base(self):
+        self.discovery(left=True)
+        self.add_hand('left')
+        self.rows[-1]['counts']['hand_left'] = 3
+        report = self.run_report()
+        self.assertTrue(report['capture_checks_passed'])
+        self.assertFalse(report['hands']['hand_left']['capture_checks_passed'])
+        self.assertFalse(report['hands']['hand_left']['sample_counts_match'])
+
+    def test_hand_regressing_timestamp_cannot_pass(self):
+        self.discovery(left=True)
+        self.add_hand('left')
+        rows = [row for row in self.rows if row.get('kind') == 'hand_left']
+        rows[1]['source_ns'] = rows[0]['source_ns']
+        report = self.run_report()
+        self.assertTrue(report['capture_checks_passed'])
+        self.assertEqual(report['hands']['hand_left']['status'], 'invalid')
+        self.assertTrue(report['hands']['hand_left']['invalid'])
+
+    def test_hand_insufficient_coverage_cannot_pass(self):
+        self.discovery(left=True)
+        self.add_hand('left')
+        # Base duration remains valid; hand only covers the first 40 ms.
+        hand = [row for row in self.rows if row.get('kind') == 'hand_left'][1]
+        hand['source_ns'] -= 60_000_000
+        hand['received_ns'] -= 60_000_000
+        hand['received_monotonic_ns'] -= 60_000_000
+        report = self.run_report()
+        self.assertTrue(report['capture_checks_passed'])
+        self.assertFalse(report['hands']['hand_left']['capture_checks_passed'])
+        self.assertEqual(report['hands']['hand_left']['status'], 'partial')
+
+    def test_hand_type_mismatch_is_not_described_as_absent_hardware(self):
+        self.discovery()
+        discovery = next(row for row in self.rows if row.get('kind') == 'hand_discovery')
+        discovery['topics']['hand_left']['observed_types'] = ['other/msg/Type']
+        report = self.run_report()
+        self.assertTrue(report['capture_checks_passed'])
+        self.assertEqual(report['hands']['hand_left']['status'], 'type_mismatch_or_unsubscribed')
+        self.assertIsNone(report['hands']['hand_left']['capture_checks_passed'])
+
+    def test_missing_or_unexpected_v4_joint_preserves_raw_but_fails_hand_check(self):
+        for scenario in ('missing', 'unexpected'):
+            with self.subTest(scenario=scenario):
+                old = copy.deepcopy(self.rows)
+                self.discovery(left=True)
+                self.add_hand('left')
+                hand = next(row for row in self.rows if row.get('kind') == 'hand_left')
+                if scenario == 'missing':
+                    hand['message']['name'].pop()
+                    hand['message']['position'].pop()
+                else:
+                    hand['message']['name'][-1] = 'left_unknown'
+                report = self.run_report()
+                self.assertTrue(report['capture_checks_passed'])
+                self.assertFalse(report['hands']['hand_left']['capture_checks_passed'])
+                self.assertEqual(report['hands']['hand_left']['status'], 'incomplete_or_unknown_joints')
+                raw = [json.loads(line) for line in (self.directory/'samples.jsonl').read_text().splitlines()]
+                self.assertIn(hand, raw)
+                pair = json.loads((self.directory/'aligned.jsonl').read_text().splitlines()[0])
+                self.assertNotIn('hand_left', pair)
+                self.rows = old
+
+    def test_hand_command_is_preserved_as_raw_event_without_training_claim(self):
+        self.discovery(left=True)
+        self.add_hand('left')
+        self.rows.insert(-1, dict(kind='hand_command_left', message={'joint_cmd': [{'name': 'left_thumb', 'mode': 3}]}))
+        self.rows[-1]['counts']['hand_command_left'] = 1
+        report = self.run_report()
+        self.assertEqual(report['hand_commands']['hand_command_left']['raw_samples'], 1)
+        self.assertTrue(report['hand_commands']['hand_command_left']['sample_counts_match'])
+        self.assertFalse(report['training_ready'])
+
+
 if __name__=='__main__':unittest.main()
