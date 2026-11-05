@@ -2,38 +2,42 @@
 
 ## EFFECTOR-V4-ACTIVATION-20261105
 
-05-11-2026, Europe/Madrid — **sesión interactiva en espera; sin aplicación**.
+05-11-2026, Europe/Madrid — **perfil instalado/cargado; espera de liberación**.
 El usuario confirmó las condiciones y autorizó recarga con posible HOME.
 Lectura independiente anterior: HOME20D=1, velocidad0, máximo0,003068rad,
 paros principal/servo0/0, cargador0 y baterías89,5/89,5 %. Son observaciones
 de ese instante, no pruebas de zona, objeto ni inmovilidad actuales. El
-operador confirmó verbalmente el montaje y recorrido; estado de ruedas y
-accionamiento efectivo del paro principal siguen PENDIENTES de confirmación.
+operador confirmó verbalmente el montaje y recorrido; el estado de ruedas sigue
+PENDIENTE. Después informó de que pulsó el paro principal, y el selector
+comprobó paros y cargador antes de las fases.
 
 Comando versionado `bash scripts/hands/cambiar_efector.sh --to v4 --apply`,
-sesión `20261105T112001Z-ea4e3075`, ejecutor PTY aún activo en PC. Tras
-inventario, confirmación del usuario y nuevas lecturas de HOME/batería, está
-en la pregunta `PARO PRINCIPAL PULSADO`; no se ha respondido. No ha ejecutado
-backup, parada, instalación, recreación ni HOME. No iniciar otra sesión; si
-el proceso termina, no inventar su continuidad: revisar su evidencia y
-`active.json` antes de decidir cómo proceder. Al reanudar, el propio script
-verifica paros y cargador y respalda ambos hosts antes de tocar servicios.
+sesión `20261105T112001Z-ea4e3075`, ejecutor PTY aún activo en PC. Copias
+externas verificadas antes de parar servicios: Motion 9 archivos, SHA256
+`27a64220861fa9f2f783ed8f6dc7d5811fcaef473d01a2044a2f1f1e63c2c485`;
+Vision 1 archivo, SHA256
+`c18f0d109bbbaf19a5b5079b4a7f63c9cd851fe430e43339b3af9cd834f340de`.
+Se aplicó el plan, se recrearon y arrancaron nueve servicios Motion y CC bajo
+paro. Hw, aplicación y CC inspeccionados muestran `HW_TYPE=cruzr_s2_v1_sps`,
+running y restart0. CC alcanzó WaitEStopRelease. El selector espera
+`PARO LIBERADO`; aún no se ha respondido ni comprobado HOME/dedos posteriores.
+No iniciar otra sesión; si termina, revisar evidencia y `active.json`.
 Evidencia privada `../Humanoide-vla-evidence/EFFECTOR-20261105T112001Z-ea4e3075/`;
 fuentes y check previo en `../Humanoide-vla-evidence/20261105_EFFECTOR_V4_PREP/`.
 Receta: [cambio supervisado](guides/CAMBIO_EFECTOR_ABRAZADERAS_MANOS_V4.md).
-Activación, HOME tras liberación y estados frescos de dedos PENDIENTES.
+HOME tras liberación, estados frescos de dedos y ensayo físico PENDIENTES.
 
 ## EFFECTOR-V4-PREP-20261105
 
-05-11-2026, Europe/Madrid — **preparado y comprobado en lectura; perfil v4
-no instalado ni cargado en esta intervención**. El usuario informa que ha
+05-11-2026, Europe/Madrid — **preparación anterior a la activación**. El usuario informa que ha
 cambiado las abrazaderas por manos y solicita configurar el robot. Motion
 `192.168.11.2` comunica en Ethernet `eno1`; Vision `192.168.11.3` también.
 Logs HW registran dos manos versión4, siete servos por mano; montaje, objetos,
 postura y seguridad física no se han inspeccionado. Los contenedores Motion
 `hw`, `mc_common`, `t800_mc_server` y `manipulation_robot_app`, y Control Center
-de Vision, siguen con `HW_TYPE=cruzr_s2_v1`. La lista de topics no muestra los
-estados articulares MC v4. Se conserva el estado remoto sin recrear ni mover.
+de Vision tenían `HW_TYPE=cruzr_s2_v1`. La lista de topics no mostraba los
+estados articulares MC v4. Esa preparación no recreó ni movió el robot; el
+estado posterior se registra en EFFECTOR-V4-ACTIVATION-20261105.
 
 Fuente reproducible: `scripts/hands/cambiar_efector.sh`, `switch_effector.py`,
 `effector_profile_config.py`, `effector_profile_remote.py`,
@@ -44,7 +48,7 @@ sobrescribir archivos previos. Receta y reversión en la
 recrea servicios Motion/CC, hace backups externos verificados antes de parar y
 puede activar HOME al liberar el paro: sólo con verificación física y
 autorización explícita de ese movimiento. No sustituir los respaldos ni copiar
-configuración antigua íntegra. No se aplicó ningún perfil en esta intervención.
+configuración antigua íntegra. No se aplicó ningún perfil durante la preparación.
 
 Verificado: 42 pruebas offline; `--check --to v4` real informa procesos y
 archivos no coincidentes, sin movimiento. ENI Motion SHA

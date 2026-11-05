@@ -1,16 +1,16 @@
 # Demostraciones de manos Cruzr S2
 
 **05-11-2026 — cambio supervisado en pausa.** Sesión
-`EFFECTOR-20261105T112001Z-ea4e3075`: HOME20D medido y condiciones declaradas;
-el selector espera confirmación del paro principal. No ha aplicado cambios ni
-movido el robot. No lanzar otra sesión; revisar la
+`EFFECTOR-20261105T112001Z-ea4e3075`: respaldos verificados, perfiles SPS
+instalados/cargados y CC en `WaitEStopRelease`; HOME y dedos tras recarga
+PENDIENTES. No liberar hasta comprobar condiciones ni lanzar otra sesión; revisar la
 [ficha de activación](../../docs/SYSTEM_CUSTOMIZATIONS.md#effector-v4-activation-20261105).
 
-**05-11-2026 — manos v4 comunicadas como instaladas; perfil aún de abrazaderas.**
-El log actual de Motion identifica versión4 a ambos lados, pero Motion y
-Control Center conservan `HW_TYPE=cruzr_s2_v1`. El selector supervisado se ha
-incorporado a esta rama y su `--check` confirmó que el cambio queda pendiente;
-ningún cambio se ha aplicado al robot. La activación puede iniciar HOME y
+**05-11-2026 — preparación anterior al cambio de perfil.**
+El log de Motion identificó versión4 a ambos lados, mientras Motion y
+Control Center conservaban `HW_TYPE=cruzr_s2_v1`. El selector supervisado se
+incorporó a esta rama y su `--check` confirmó entonces que faltaba el cambio.
+Ver arriba el estado posterior. La activación puede iniciar HOME y
 requiere las condiciones físicas y autorización correspondientes. Consultar
 la [guía de cambio](../../docs/guides/CAMBIO_EFECTOR_ABRAZADERAS_MANOS_V4.md).
 
