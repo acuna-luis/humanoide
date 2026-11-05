@@ -1,5 +1,28 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## EFFECTOR-V4-ACTIVATION-20261105
+
+05-11-2026, Europe/Madrid — **sesión interactiva en espera; sin aplicación**.
+El usuario confirmó las condiciones y autorizó recarga con posible HOME.
+Lectura independiente anterior: HOME20D=1, velocidad0, máximo0,003068rad,
+paros principal/servo0/0, cargador0 y baterías89,5/89,5 %. Son observaciones
+de ese instante, no pruebas de zona, objeto ni inmovilidad actuales. El
+operador confirmó verbalmente el montaje y recorrido; estado de ruedas y
+accionamiento efectivo del paro principal siguen PENDIENTES de confirmación.
+
+Comando versionado `bash scripts/hands/cambiar_efector.sh --to v4 --apply`,
+sesión `20261105T112001Z-ea4e3075`, ejecutor PTY aún activo en PC. Tras
+inventario, confirmación del usuario y nuevas lecturas de HOME/batería, está
+en la pregunta `PARO PRINCIPAL PULSADO`; no se ha respondido. No ha ejecutado
+backup, parada, instalación, recreación ni HOME. No iniciar otra sesión; si
+el proceso termina, no inventar su continuidad: revisar su evidencia y
+`active.json` antes de decidir cómo proceder. Al reanudar, el propio script
+verifica paros y cargador y respalda ambos hosts antes de tocar servicios.
+Evidencia privada `../Humanoide-vla-evidence/EFFECTOR-20261105T112001Z-ea4e3075/`;
+fuentes y check previo en `../Humanoide-vla-evidence/20261105_EFFECTOR_V4_PREP/`.
+Receta: [cambio supervisado](guides/CAMBIO_EFECTOR_ABRAZADERAS_MANOS_V4.md).
+Activación, HOME tras liberación y estados frescos de dedos PENDIENTES.
+
 ## EFFECTOR-V4-PREP-20261105
 
 05-11-2026, Europe/Madrid — **preparado y comprobado en lectura; perfil v4

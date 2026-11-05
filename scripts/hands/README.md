@@ -1,5 +1,11 @@
 # Demostraciones de manos Cruzr S2
 
+**05-11-2026 — cambio supervisado en pausa.** Sesión
+`EFFECTOR-20261105T112001Z-ea4e3075`: HOME20D medido y condiciones declaradas;
+el selector espera confirmación del paro principal. No ha aplicado cambios ni
+movido el robot. No lanzar otra sesión; revisar la
+[ficha de activación](../../docs/SYSTEM_CUSTOMIZATIONS.md#effector-v4-activation-20261105).
+
 **05-11-2026 — manos v4 comunicadas como instaladas; perfil aún de abrazaderas.**
 El log actual de Motion identifica versión4 a ambos lados, pero Motion y
 Control Center conservan `HW_TYPE=cruzr_s2_v1`. El selector supervisado se ha

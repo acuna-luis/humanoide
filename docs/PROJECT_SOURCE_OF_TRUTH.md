@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**05-11-2026 — EFFECTOR-V4-ACTIVATION-20261105: espera de paro físico.**
+El usuario confirmó las condiciones solicitadas y autorizó la recarga con
+posible HOME. Preflight de lectura: HOME20D=1, velocidad0, máximo0,003068rad;
+paros0/0, cargador0, batería89,5/89,5 %. Luego `--apply --to v4` reconfirmó
+postura/batería y espera la indicación de paro principal pulsado. Aún no se ha
+ejecutado backup, parada, instalación, recreación ni movimiento. El estado de
+ruedas y el accionamiento del paro quedan pendientes de confirmación física.
+Sesión interactiva en pausa; no iniciar otra aplicación ni borrar su evidencia.
+[Ficha y punto de reanudación](SYSTEM_CUSTOMIZATIONS.md#effector-v4-activation-20261105).
+
 **05-11-2026 — EFFECTOR-V4-PREP-20261105: manos instaladas, perfil pendiente.**
 El usuario informa de la sustitución de abrazaderas por manos. Lectura del
 arranque de Motion identifica dos manos de versión4 y siete servos por mano;
