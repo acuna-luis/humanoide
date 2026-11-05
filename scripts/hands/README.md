@@ -1,10 +1,15 @@
 # Demostraciones de manos Cruzr S2
 
-**05-11-2026 — cambio supervisado en pausa.** Sesión
+**05-11-2026 — cambio supervisado terminado.** Sesión
 `EFFECTOR-20261105T112001Z-ea4e3075`: respaldos verificados, perfiles SPS
-instalados/cargados y CC en `WaitEStopRelease`; HOME y dedos tras recarga
-PENDIENTES. No liberar hasta comprobar condiciones ni lanzar otra sesión; revisar la
+instalados/cargados, HOME20D y estados de siete ejes por mano verificados.
+Las demostraciones de dedos y la comprobación visual final quedan pendientes;
+las lecturas no autorizan un movimiento nuevo. Ver la
 [ficha de activación](../../docs/SYSTEM_CUSTOMIZATIONS.md#effector-v4-activation-20261105).
+El `check_hands.sh` posterior detectó ambas manos y validó 16 tareas, pero
+terminó rc40 porque `cruzr/home.xml` es el HOME v8 adaptado del proyecto, no
+el hash de fábrica fijado en el manifiesto. No se cambió ni se dio por válida
+su compatibilidad para estas demos; revisar antes de ejecutarlas.
 
 **05-11-2026 — preparación anterior al cambio de perfil.**
 El log de Motion identificó versión4 a ambos lados, mientras Motion y

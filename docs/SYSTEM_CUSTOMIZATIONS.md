@@ -2,14 +2,14 @@
 
 ## EFFECTOR-V4-ACTIVATION-20261105
 
-05-11-2026, Europe/Madrid — **perfil instalado/cargado; espera de liberación**.
+05-11-2026, Europe/Madrid — **perfil v4 instalado/cargado; HOME y estados verificados**.
 El usuario confirmó las condiciones y autorizó recarga con posible HOME.
 Lectura independiente anterior: HOME20D=1, velocidad0, máximo0,003068rad,
 paros principal/servo0/0, cargador0 y baterías89,5/89,5 %. Son observaciones
 de ese instante, no pruebas de zona, objeto ni inmovilidad actuales. El
 operador confirmó verbalmente el montaje y recorrido; el estado de ruedas sigue
-PENDIENTE. Después informó de que pulsó el paro principal, y el selector
-comprobó paros y cargador antes de las fases.
+PENDIENTE en ese instante. Después informó de que pulsó el paro principal, y
+el selector comprobó paros y cargador antes de las fases.
 
 Comando versionado `bash scripts/hands/cambiar_efector.sh --to v4 --apply`,
 sesión `20261105T112001Z-ea4e3075`, ejecutor PTY aún activo en PC. Copias
@@ -19,13 +19,32 @@ Vision 1 archivo, SHA256
 `c18f0d109bbbaf19a5b5079b4a7f63c9cd851fe430e43339b3af9cd834f340de`.
 Se aplicó el plan, se recrearon y arrancaron nueve servicios Motion y CC bajo
 paro. Hw, aplicación y CC inspeccionados muestran `HW_TYPE=cruzr_s2_v1_sps`,
-running y restart0. CC alcanzó WaitEStopRelease. El selector espera
-`PARO LIBERADO`; aún no se ha respondido ni comprobado HOME/dedos posteriores.
-No iniciar otra sesión; si termina, revisar evidencia y `active.json`.
+running y restart0. CC alcanzó WaitEStopRelease. El usuario confirmó ruedas
+libres, brazos estables y zona despejada; liberó el paro y lo comunicó. Durante
+el arranque se observó movimiento y el selector esperó el reposo. Finalizó con
+`PERFIL_Y_HOME_VERIFICADOS=v4`: dos muestras avanzantes HOME20D, velocidad0,
+posición máxima0,002972rad y delta consigna0,002972rad; paros0/0 y cargador0.
+`dexterous_hand_controller`, manipulación y fuerza/par running. Dos muestras
+avanzantes por mano pasan el gate v4 de siete ejes. No se envió HOME adicional.
+La fase `complete` terminó con rc0 en ambos hosts, cerrando sus sesiones.
 Evidencia privada `../Humanoide-vla-evidence/EFFECTOR-20261105T112001Z-ea4e3075/`;
 fuentes y check previo en `../Humanoide-vla-evidence/20261105_EFFECTOR_V4_PREP/`.
 Receta: [cambio supervisado](guides/CAMBIO_EFECTOR_ABRAZADERAS_MANOS_V4.md).
-HOME tras liberación, estados frescos de dedos y ensayo físico PENDIENTES.
+PENDIENTES: inspección visual final del operador, movimiento de dedos, agarre,
+ciclo de cajas con manos y teleoperación. Las lecturas son históricas, no
+autorizan movimientos posteriores; las recetas de abrazaderas no se reutilizan.
+
+El postcheck de lectura `timeout 90 bash scripts/hands/check_hands.sh --model auto`
+identificó v4, ambos topics frescos, servidor activo/sin objetivo, paros0/0,
+cargador fuera y SOC88,0/88,4 %. Validó 16 tareas de fábrica, pero terminó con
+rc40 antes de `CHECK_OK`: `cruzr/home.xml` instalado SHA
+`d9e9462792b41300d352604b53ea2a4890a9382e942321990708f6ded2e26ccb`, en lugar
+del SHA de fábrica `50d819d6d6190280c6efee1dc275877362c3f7c807ec733fbc3c7ed217daed88`.
+El primero es HOME v8 registrado del proyecto; no se sustituye ni se declara
+validado para toda tarea de manos. Diferencia y compatibilidad PENDIENTES de
+revisión. Resumen saneado transcrito del postcheck:
+`hands-postcheck-summary.json` en la evidencia, SHA256
+`6be3d1bba9f0a4cf3236fd703627dd979f131535b80d4be46588e793fa7dbf32`.
 
 ## EFFECTOR-V4-PREP-20261105
 

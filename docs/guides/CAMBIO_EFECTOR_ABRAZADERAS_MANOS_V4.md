@@ -1,5 +1,15 @@
 # Cambio entre abrazaderas y manos v4
 
+**05-11-2026 — cambio a v4 terminado.** En la sesión
+`EFFECTOR-20261105T112001Z-ea4e3075` se respaldaron Motion y Vision, se cargó
+el perfil SPS y, tras liberación del paro por el usuario, se verificaron HOME20D,
+reposo, controladores y dos estados avanzantes de siete ejes por mano. Las dos
+sesiones remotas se cerraron correctamente. La inspección visual final y las
+pruebas de movimiento de dedos siguen pendientes. [Ficha y respaldos](../SYSTEM_CUSTOMIZATIONS.md#effector-v4-activation-20261105).
+El postcheck de tareas terminó rc40 por HOME v8 no coincidente con el hash de
+fábrica del manifiesto; 16 tareas de manos sí se validaron. El HOME no se
+sustituyó y su compatibilidad para demos de manos queda pendiente de revisión.
+
 **Entrada única:** `scripts/hands/cambiar_efector.sh`. Fecha: 15-10-2026.
 
 Automatiza la configuración y recarga de Motion y Control Center para esta unidad

@@ -1,15 +1,23 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
-**05-11-2026 — EFFECTOR-V4-ACTIVATION-20261105: espera de liberación.**
+**05-11-2026 — EFFECTOR-V4-ACTIVATION-20261105: perfil y HOME verificados.**
 El usuario confirmó las condiciones y autorizó la recarga con posible HOME.
 Preflight: HOME20D=1, velocidad0, máximo0,003068rad; paros0/0, cargador0 y
 batería89,5/89,5 %. Después confirmó paro principal pulsado. El selector
 comprobó paros, respaldó ambos hosts y recreó Motion/CC; hw, manipulación y CC
 muestran `HW_TYPE=cruzr_s2_v1_sps`, running y restart0. CC llegó a
-`WaitEStopRelease`. La sesión espera: no se ha liberado el paro ni comprobado
-HOME/dedos después de recargar. Ruedas, estabilidad y recorrido actual
-PENDIENTES de confirmación. No iniciar otra aplicación ni borrar evidencia.
-Perfil instalado/cargado no equivale a validación física.
+`WaitEStopRelease`. El usuario indicó ruedas libres, brazos estables y zona
+despejada, y confirmó la liberación del paro. La secuencia de arranque produjo
+movimiento; después el selector verificó dos muestras avanzantes HOME20D,
+velocidad0, máximo0,002972rad y controlador `dexterous_hand_controller`
+running. Ambos estados v4 publican dos muestras avanzantes de siete ejes.
+`PERFIL_Y_HOME_VERIFICADOS=v4` y cierre de sesión correctos en ambos hosts;
+paros0/0 y cargador0 en la verificación. El `check_hands.sh` posterior detecta
+v4, estados frescos y valida 16 tareas, pero termina rc40 porque HOME instalado
+`d9e946…` no coincide con el hash de fábrica `50d819…`; se mantiene el HOME
+adaptado y su compatibilidad con movimientos de manos queda por revisar. No se probaron movimientos de dedos,
+agarre, ciclo de cajas ni teleoperación. No usar recetas de abrazaderas con
+manos ni inferir condiciones físicas actuales de esta evidencia histórica.
 [Ficha y punto de reanudación](SYSTEM_CUSTOMIZATIONS.md#effector-v4-activation-20261105).
 
 **05-11-2026 — EFFECTOR-V4-PREP-20261105: preparación anterior a la recarga.**
