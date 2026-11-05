@@ -1,5 +1,13 @@
 # Demostraciones de manos Cruzr S2
 
+**05-11-2026 — manos v4 comunicadas como instaladas; perfil aún de abrazaderas.**
+El log actual de Motion identifica versión4 a ambos lados, pero Motion y
+Control Center conservan `HW_TYPE=cruzr_s2_v1`. El selector supervisado se ha
+incorporado a esta rama y su `--check` confirmó que el cambio queda pendiente;
+ningún cambio se ha aplicado al robot. La activación puede iniciar HOME y
+requiere las condiciones físicas y autorización correspondientes. Consultar
+la [guía de cambio](../../docs/guides/CAMBIO_EFECTOR_ABRAZADERAS_MANOS_V4.md).
+
 Estos scripts orquestan exclusivamente tareas de fábrica ya instaladas en el
 robot. No instalan XML, no activan GR00T/VLA y no convierten las secuencias en
 manipulación autónoma. Antes de cualquier movimiento identifican las manos por

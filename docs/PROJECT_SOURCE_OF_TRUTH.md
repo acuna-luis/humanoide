@@ -1,5 +1,20 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**05-11-2026 — EFFECTOR-V4-PREP-20261105: manos instaladas, perfil pendiente.**
+El usuario informa de la sustitución de abrazaderas por manos. Lectura del
+arranque de Motion identifica dos manos de versión4 y siete servos por mano;
+su montaje físico fue comunicado, no inspeccionado por este diagnóstico.
+Motion y Control Center siguen cargados con `HW_TYPE=cruzr_s2_v1`; no se
+publican los dos estados articulares `/mc/*_hand/joint_states` propios de v4.
+El ENI revisado y el guard CC coinciden con los hashes de la receta anterior.
+Se incorporó desde la rama `feat/pico-v4-workflows-and-scenario-fixes` la
+herramienta de cambio supervisado: 42 pruebas offline correctas; `--check`
+real confirma que los procesos y archivos aún no corresponden a v4.
+Sin modificación remota ni movimiento; activación y HOME PENDIENTES. No usar
+el ciclo de cajas de abrazaderas ni inferir postura o seguridad físicas.
+[Receta, condiciones y recuperación](guides/CAMBIO_EFECTOR_ABRAZADERAS_MANOS_V4.md),
+[ficha y evidencia](SYSTEM_CUSTOMIZATIONS.md#effector-v4-prep-20261105).
+
 **04-11-2026 — BOX-CYCLE-VOICE-REMOVAL-20261104: avisos adicionales retirados.**
 Por petición del usuario se retira del CLI del ciclo la voz asíncrona añadida
 el 22-10: módulo, integración y opciones de audio. Se conservan los eventos

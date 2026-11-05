@@ -1,5 +1,40 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## EFFECTOR-V4-PREP-20261105
+
+05-11-2026, Europe/Madrid — **preparado y comprobado en lectura; perfil v4
+no instalado ni cargado en esta intervención**. El usuario informa que ha
+cambiado las abrazaderas por manos y solicita configurar el robot. Motion
+`192.168.11.2` comunica en Ethernet `eno1`; Vision `192.168.11.3` también.
+Logs HW registran dos manos versión4, siete servos por mano; montaje, objetos,
+postura y seguridad física no se han inspeccionado. Los contenedores Motion
+`hw`, `mc_common`, `t800_mc_server` y `manipulation_robot_app`, y Control Center
+de Vision, siguen con `HW_TYPE=cruzr_s2_v1`. La lista de topics no muestra los
+estados articulares MC v4. Se conserva el estado remoto sin recrear ni mover.
+
+Fuente reproducible: `scripts/hands/cambiar_efector.sh`, `switch_effector.py`,
+`effector_profile_config.py`, `effector_profile_remote.py`,
+`prepare_v4_bus_profile.py` y `scripts/teleoperation/check_pico_v4_hand_states.py`;
+port selectivo de commit `412415a084615eedd1cb158b82ffbd20641497ab`, sin
+sobrescribir archivos previos. Receta y reversión en la
+[guía de cambio](guides/CAMBIO_EFECTOR_ABRAZADERAS_MANOS_V4.md). La aplicación
+recrea servicios Motion/CC, hace backups externos verificados antes de parar y
+puede activar HOME al liberar el paro: sólo con verificación física y
+autorización explícita de ese movimiento. No sustituir los respaldos ni copiar
+configuración antigua íntegra. No se aplicó ningún perfil en esta intervención.
+
+Verificado: 42 pruebas offline; `--check --to v4` real informa procesos y
+archivos no coincidentes, sin movimiento. ENI Motion SHA
+`678c7d6bae1608709400383d85c6e0e5edae7032b365d11977cb56bc984250e8` y guard
+CC SHA `9f3f2e8363358c0fdb83486153f80145fddb3278ec6332bbf2425dbe8db993c7`.
+Fuentes/hashes, plan y evidencia privada:
+`../Humanoide-vla-evidence/20261105_EFFECTOR_V4_PREP/`; documentos anteriores
+en `docs-before/`. La instantánea contiene configuración privada, fuera de Git.
+Reversión de esta preparación: retirar únicamente los archivos incorporados
+y estas entradas; para revertir una futura aplicación seguir la sesión y
+respaldos propios de la guía. HOME, paros, cargador, batería, zona, otros mandos,
+activación de perfil, homing de dedos y ensayos físicos: PENDIENTES.
+
 ## BOX-CYCLE-VOICE-REMOVAL-20261104
 
 04-11-2026, Europe/Madrid — **cambio local; prueba física PENDIENTE**. El
