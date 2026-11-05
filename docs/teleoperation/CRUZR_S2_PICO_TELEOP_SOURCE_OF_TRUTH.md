@@ -1,5 +1,13 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**05-11-2026 — PICO-V4-TAKE14-PREP-20261105.** Preparada sin reproducción la
+captura `prueba_v4_14_20261105T125040Z_791094` completa a velocidad normal.
+Derivado geométrico de59,384299 s, sin cortar espera ni final, con todas sus
+muestras conservadas respecto al derivado lento. Mano derecha presenta tasa
+discreta calculada de hasta5,399 rad/s; ni esta tasa ni la trayectoria están
+validadas para el player. No se reproducen fuerza/corriente ni modos originales.
+[Rutas y evidencia](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-take14-prep-20261105--toma-14-completa-a-1).
+
 **05-11-2026 — PICO-V4-TAKE12-PREP-20261105.** Preparada sin movimiento la
 captura `prueba_v4_12_20261105T123819Z_762106` a velocidad normal. La versión
 completa dura52,325945 s; una copia comienza en el primer cambio y dura

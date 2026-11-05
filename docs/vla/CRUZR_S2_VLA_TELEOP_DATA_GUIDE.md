@@ -1,5 +1,10 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**05-11-2026 — PICO-V4-TAKE14-PREP-20261105.** Se inspeccionó el bag de la
+toma14 y se generó una copia geométrica completa a1×, sin reproducción y sin
+recortar. Los datos convertidos no reproducen las fuerzas/modos de mano y no
+constituyen un dataset validado. [Procedencia](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-take14-prep-20261105--toma-14-completa-a-1).
+
 **05-11-2026 — PICO-V4-TAKE12-PREP-20261105.** La toma12 se inspeccionó y
 se generaron derivados geométricos completos y sin espera a 1×. Los cinco
 canales usados por el conversor no presentan valores inválidos ni marcas

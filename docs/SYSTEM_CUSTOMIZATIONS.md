@@ -2696,6 +2696,48 @@ XML o entradas de `task_list.yaml` no están instalados/cargados en Motion.
   fuerza/corriente/modos5/7. Los archivos `/tmp` pueden desaparecer al recrear
   el contenedor. Conservar bag y retirar sólo derivados si se revierte.
 
+### PICO-V4-TAKE14-PREP-20261105 — Toma 14 completa a 1×
+
+- **05-11-2026 Europe/Madrid; derivado preparado, reproducción PENDIENTE.**
+  Petición explícita: preparar la captura completa sin recortar y dar comando;
+  no se inició player, START, movimiento ni cambio de modo. Backup documental
+  previo `../Humanoide-vla-evidence/20261105_PICO_V4_CAPTURE14_PREP/`.
+- **Original e inspección:** bag host y contenedor ROS
+  `prueba_v4_14_20261105T125040Z_791094/rosbag/rosbag_0.db3` SHA256
+  `d23e63c9a18b37b81d7366c3d0f8a55d6398c86f1b21620c7299bfab7a802b5a`
+  coinciden antes/después. SQLite íntegro, duración de recepción59,392314 s y
+  213398 mensajes. Cinco canales usados en conversión sin valores inválidos ni
+  marcas repetidas/regresivas; whole contiene30 cabeceras repetidas y no se usa
+  como origen de conversión. Evidencia
+  `../Humanoide-vla-evidence/PICO-V4-TAKE14-REVIEW-20261105T125258.109471Z/`.
+- **Recetas existentes:**
+  [`prepare_pico_v4_geometric_replay.py`](../scripts/teleoperation/prepare_pico_v4_geometric_replay.py)
+  con capture `prueba_v4_14_20261105T125040Z_791094`, SHA del bag anterior y
+  `--time-scale 2`; derivado lento SHA256
+  `74bc1d6cdc523f60e2c041214c090b0d26f8462f8db4591052d80f38f0617e17`, evidencia
+  `../Humanoide-vla-evidence/PICO-V4-DERIVATIVE-20261105T125252Z_6818905a/`.
+  Después [`prepare_pico_v4_normal_speed.py`](../scripts/teleoperation/prepare_pico_v4_normal_speed.py)
+  con SHA/archivo/recibo del derivado lento produjo la versión1×. Comparación
+  independiente: 100794 muestras conservadas y cada tiempo dividido entre2;
+  los cinco grupos comienzan en0 y terminan en59,384298505 s de cabeceras.
+  La duración de recepción del bag y la de cabeceras de movimiento son distintas.
+- **Destino y verificación:** SHA del derivado completo
+  `a24eb717a8a94c397418aa99e11dd496f3d05b80cdb65e7b8af30a3a5aa9cc67`.
+  Host Motion:
+  `/home/walker/grabaciones_v4_completas/prueba_v4_14_20261105T125040Z_791094/derived_normal_20261105T125329Z_046e723e/geometry_normal.motion`;
+  Motion app:
+  `/tmp/pico_v4_app_normal_20261105T125329Z_046e723e/geometry_normal.motion`;
+  PC y recibos:
+  `../Humanoide-vla-evidence/PICO-V4-NORMAL-DERIVATIVE-20261105T125329Z_046e723e/`.
+  Las tres copias coinciden por SHA; no se aplicó recorte.
+- **Límites y reversión:** rangos observados: codo yaw derecho1,836 rad, índice
+  derecho1,640 rad y cabeza yaw0,700 rad. Tasas discretas máximas calculadas:
+  mano derecha5,399 rad/s y brazo derecho2,762 rad/s; no son velocidades medidas
+  del player ni validación de límites. No se reconstruyen fuerza, corriente ni
+  modos5/7. No se han validado postura inicial real, trayectoria, velocidad ni
+  espacio libre. `/tmp` puede desaparecer al recrear contenedor. Para revertir,
+  conservar bag original y retirar selectivamente sólo derivados deseados.
+
 ### MOT-04 — READY, recovery y tareas auxiliares
 
 - **2026-09-14 — uso de tarea existente, sin adaptación persistente:**
