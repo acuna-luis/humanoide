@@ -1,5 +1,15 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**05-11-2026 — PICO-V4-CAPTURE-PORT-20261105: grabador de manos v4.**
+Se incorpora [record_pico_v4_complete.sh](../../scripts/teleoperation/record_pico_v4_complete.sh).
+El `--check` real verifica el contenedor ROS actual, rosbag y tipos de órdenes
+y estados de ambas manos; no se grabó una toma en esta intervención. El bag
+contiene canales de estado y órdenes y complementa la grabación SDK `.motion`;
+no demuestra por sí solo cobertura, sincronización ni aptitud para entrenar.
+La captura histórica de `.motion` mantuvo dedos constantes pese al modo de
+corriente, por lo que conviene revisar rangos y recuentos en cada piloto.
+[Uso y evidencia](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-capture-port-20261105--grabador-pasivo-v4).
+
 **22-10-2026 — VLA-PASSIVE-EPISODE-CAPTURE-20261022: capturador pasivo disponible.**
 PC captura RGB PNG, posiciones20D, consignas `cmd_pos` y fuerzas con sellos
 originales y recepción común Vision, sin control/movimiento ni arranque VLA.

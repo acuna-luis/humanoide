@@ -1,5 +1,12 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**05-11-2026 12:53 CET — PICO-V4-CAPTURE-PORT-20261105: grabador incorporado.**
+Se trajo a PC `scripts/teleoperation/record_pico_v4_complete.sh` desde la rama
+PICO v4. Se redescubrió `walker-ros.ros2-1` en Motion y `--check` confirmó
+rosbag y los tipos de órdenes/estados de ambas manos. No se inició grabación ni
+movimiento. Graba un ROS bag complementario, no un `.motion` ni datos listos
+para entrenamiento. [Estado y receta](SYSTEM_CUSTOMIZATIONS.md#pico-v4-capture-port-20261105--grabador-pasivo-v4).
+
 **05-11-2026 12:43 CET — PICO-V4-PORT-20261105: tarea v4 cargada.**
 Tras autorización y confirmación física, se solicitó una vez el cambio de
 `joystick` a `teleop`; CC aceptó y el usuario observó el robot estable. Tarea

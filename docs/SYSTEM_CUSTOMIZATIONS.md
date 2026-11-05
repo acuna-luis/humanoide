@@ -2464,6 +2464,39 @@ XML o entradas de `task_list.yaml` no están instalados/cargados en Motion.
   condiciones físicas; el lanzador repetirá los gates. Ensayo físico de control
   mediante grips y gatillos durante esta intervención PENDIENTE.
 
+### PICO-V4-CAPTURE-PORT-20261105 — Grabador pasivo v4
+
+- **05-11-2026 12:53 CET; instalado en fuentes del PC, `--check` VERIFICADO.**
+  Se trae de `feat/pico-v4-workflows-and-scenario-fixes` commit
+  `412415a084615eedd1cb158b82ffbd20641497ab` el archivo nuevo
+  [`record_pico_v4_complete.sh`](../scripts/teleoperation/record_pico_v4_complete.sh),
+  SHA256 `dc6735d24ec3dba975f8e4f2d97f1c2773c1352e3c48120e39c65f4e9678fde8`.
+  Fuente reproducible: archivo versionado del repositorio. No había archivo
+  previo; respaldo de la documentación anterior en
+  `../Humanoide-vla-evidence/20261105_PICO_V4_RECORD_PORT/`.
+- **Destino y dependencias:** PC, lanzador Bash; conecta por SSH a Motion
+  `walker@192.168.11.2`, contenedor `walker-ros.ros2-1`, ROS 2 y rosbag sqlite3.
+  El contenedor fue descubierto activo durante esta intervención; redescubrir
+  tras cambio de versión o conexión. El script usa SSH interactivo y host key
+  existente; `--check` real se ejecutó con el proveedor local SSH_ASKPASS.
+  No se modificaron el SDK, la configuración remota ni los parámetros del robot.
+- **Aplicación y verificación:** `bash -n` y `--help` correctos; `--check`
+  confirmó herramientas y tipos `/mc/{left,right}_hand/{command,joint_states}`
+  (`V4_CAPTURE_TOOLS_OK=1`). Se verificó que nombres inválidos y `--record` sin
+  terminal se rechazan antes de conectar. No se inició ninguna grabación, START,
+  transición de modo ni movimiento. `shellcheck` no disponible. El check no
+  garantiza que todos los canales tengan mensajes o que la sesión sea válida.
+- **Uso:** en otra terminal, `bash scripts/teleoperation/record_pico_v4_complete.sh
+  --record prueba_v4_02`. Esperar `Subscribed`; Ctrl+C guarda el bag y **no**
+  detiene la teleoperación. Crea archivos de sesión bajo `/tmp/` del contenedor
+  ROS y copia al host Motion `/home/walker/grabaciones_v4_completas/` sin
+  sobrescribir. El ROS bag complementa al `.motion` del grabador SDK y no es
+  directamente un dataset validado; auditar cobertura y rangos, especialmente
+  dedos, antes de utilizarlo. Una toma durante teleoperación con esta copia
+  queda PENDIENTE. No reproducir canales de mando directamente.
+- **Reversión:** retirar únicamente el lanzador PC tras conservar las capturas
+  deseadas; no borrar grabaciones remotas ni restaurar estados de control.
+
 ### MOT-04 — READY, recovery y tareas auxiliares
 
 - **2026-09-14 — uso de tarea existente, sin adaptación persistente:**

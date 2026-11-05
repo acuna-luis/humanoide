@@ -1,5 +1,16 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**05-11-2026 12:53 CET — PICO-V4-CAPTURE-PORT-20261105.** Incorporado el
+[grabador pasivo v4](../../scripts/teleoperation/record_pico_v4_complete.sh)
+desde la rama PICO. `--check` verificó el contenedor ROS actual, herramientas
+rosbag y tipos de órdenes/estados de ambas manos; no se inició grabación.
+En otra terminal: `bash scripts/teleoperation/record_pico_v4_complete.sh
+--record prueba_v4_02`. Esperar `Subscribed` antes de demostrar. Ctrl+C detiene
+el grabador, **no** la teleoperación; copia a
+`/home/walker/grabaciones_v4_completas/` en Motion. Produce ROS bag adicional,
+no el archivo `.motion`. Validar recuentos y rangos antes de usar una toma.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-capture-port-20261105--grabador-pasivo-v4).
+
 **05-11-2026 12:43 CET — PICO-V4-PORT-20261105: tarea cargada y check correcto.**
 Con autorización expresa, física reconfirmada y preflight fresco, se pasó de
 `joystick` a `teleop` mediante una única llamada supervisada. El usuario observó
