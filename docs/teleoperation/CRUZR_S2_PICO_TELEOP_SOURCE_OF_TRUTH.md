@@ -1,5 +1,12 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**05-11-2026 13:38 CET — PICO-V4-TRIM-20261105.** La toma10 a 1× tiene
+una copia que elimina 25,971776308 s iniciales constantes y dura35,574191931 s.
+Usa un solo corte para cabeza, ambos brazos y manos; conserva las posiciones
+iniciales y las muestras posteriores con tiempos relativos. No se inició
+player ni se ha validado la trayectoria; comprobar postura inicial, controles y
+entorno en el momento de uso. [Ruta y procedencia](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-trim-20261105--toma-10-sin-espera-inicial).
+
 **05-11-2026 13:33 CET — PICO-V4-NORMAL-SPEED-20261105.** A petición del
 usuario se preparó la toma10 a velocidad original: 61,545968 s, mismo orden y
 posiciones que la versión 2× lenta, tiempos divididos entre dos. Copias en PC,

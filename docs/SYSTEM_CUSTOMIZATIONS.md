@@ -2606,6 +2606,46 @@ XML o entradas de `task_list.yaml` no están instalados/cargados en Motion.
   inicial, espacio libre, seguridad, trayectoria y velocidades físicas siguen
   PENDIENTES; no se ha enviado movimiento ni se inició player.
 
+### PICO-V4-TRIM-20261105 — Toma 10 sin espera inicial
+
+- **05-11-2026 13:38 CET; derivado generado y copiado, replay PENDIENTE.**
+  A petición del usuario se elimina el intervalo inicial de la toma10 a escala
+  1×. Análisis en lectura: todas las muestras de los cinco grupos mantienen su
+  posición inicial hasta 25,971776308 s, última marca de cabeza antes de su
+  primer cambio numérico. El primer cambio de brazos de ≥0,002 rad aparece en
+  25,974051736 s. Corte común 25,971776308 s para conservar las transiciones;
+  duración35,574191931 s. No se inició player ni se movió el robot.
+- **Fuente reproducible:**
+  [`prepare_pico_v4_trimmed.py`](../scripts/teleoperation/prepare_pico_v4_trimmed.py),
+  SHA256 `9b101ea92f566c7945fa1087483f324f04cd15f96653392b6e7aeeae99dd253b`,
+  y [pruebas](../scripts/teleoperation/test_prepare_pico_v4_trimmed.py).
+  `python3 scripts/teleoperation/prepare_pico_v4_trimmed.py --capture
+  prueba_v4_10_20261105T121633Z_710745 --bag-sha256
+  e08915a949cf4e415d483eae874609b8fae766d027905d2c1082cc8fd69d5169
+  --motion-sha256 b3197fb87f99f06527be17646cf5ebef726ad8ff81f7ae53d88688b3a31c1034
+  --motion ../Humanoide-vla-evidence/PICO-V4-NORMAL-DERIVATIVE-20261105T123303Z_6629bb3e/geometry_normal.motion
+  --receipt ../Humanoide-vla-evidence/PICO-V4-NORMAL-DERIVATIVE-20261105T123303Z_6629bb3e/result.json
+  --cut 25.971776308`. El script usa la última muestra de cada grupo anterior
+  al corte como punto inicial y conserva el resto con una única referencia de
+  tiempo; la interpolación del player no se ha demostrado equivalente.
+- **Destino y comprobaciones:** host Motion
+  `/home/walker/grabaciones_v4_completas/prueba_v4_10_20261105T121633Z_710745/derived_trimmed_20261105T123812Z_059f78a6/geometry_trimmed.motion`;
+  Motion app
+  `/tmp/pico_v4_app_trimmed_20261105T123812Z_059f78a6/geometry_trimmed.motion`;
+  PC y recibos `../Humanoide-vla-evidence/PICO-V4-TRIMMED-DERIVATIVE-20261105T123812Z_059f78a6/`.
+  Las tres copias SHA256
+  `84787261f017c9d4b3364de8521facb0e733937ce8be090cd7a08da74809c979`;
+  originales intactos. Comparación independiente: posición inicial igual en
+  los cinco grupos y 60421 muestras posteriores conservadas exactamente con
+  tiempos desplazados; 16 pruebas offline de las tres recetas pasan. Backup de
+  documentación previa `../Humanoide-vla-evidence/20261105_PICO_V4_TRIM/`.
+- **Límites y reversión:** se conserva escala 1×, pero no fuerza/corriente ni
+  modos de las manos. El primer intervalo de los grupos asíncronos puede verse
+  afectado por la interpolación del player. No se han validado velocidades,
+  recorrido, seguridad ni coincidencia con postura real actual. El archivo en
+  `/tmp` puede desaparecer al recrear el contenedor. Para revertir, conservar
+  el bag y otros derivados y retirar sólo esta copia y la receta si se desea.
+
 ### MOT-04 — READY, recovery y tareas auxiliares
 
 - **2026-09-14 — uso de tarea existente, sin adaptación persistente:**

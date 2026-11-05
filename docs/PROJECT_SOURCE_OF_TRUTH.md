@@ -1,5 +1,12 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**05-11-2026 13:38 CET — PICO-V4-TRIM-20261105: toma 10 desde primer cambio.**
+Se preparó una copia 1× eliminando 25,971776308 s iniciales constantes; dura
+35,574191931 s. La postura inicial coincide con la versión completa y las
+muestras posteriores conservan sus posiciones y tiempos relativos. Copias PC,
+host Motion y app verificadas por SHA. No se reprodujo; la postura física,
+trayectoria y velocidades siguen pendientes de validación. [Ficha y límites](SYSTEM_CUSTOMIZATIONS.md#pico-v4-trim-20261105--toma-10-sin-espera-inicial).
+
 **05-11-2026 13:33 CET — PICO-V4-NORMAL-SPEED-20261105: toma 10 a 1×.**
 Preparada una segunda versión geométrica de 61,545968 s, con posiciones
 idénticas y tiempos a la mitad de la versión lenta. Copias en PC, host Motion

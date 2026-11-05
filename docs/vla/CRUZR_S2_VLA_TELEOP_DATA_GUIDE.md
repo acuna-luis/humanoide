@@ -1,5 +1,12 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**05-11-2026 — PICO-V4-TRIM-20261105.** Derivado geométrico de la toma10 sin
+los primeros 25,971776308 s constantes, a escala 1×, duración35,574191931 s.
+Las muestras posteriores y la postura inicial coinciden con el derivado 1×.
+No se modificó el bag ni se reprodujo; el recorte no certifica sincronización
+del player, seguridad física ni aptitud para entrenamiento.
+[Procedencia](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-trim-20261105--toma-10-sin-espera-inicial).
+
 **05-11-2026 — PICO-V4-NORMAL-SPEED-20261105.** Preparado derivado geométrico
 de la toma10 con escala temporal 1, sin reproducción ni validación física.
 Mantiene los mismos puntos que el derivado lento; no reconstruye esfuerzos ni
