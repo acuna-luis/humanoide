@@ -1,5 +1,31 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**05-11-2026 12:43 CET — PICO-V4-PORT-20261105: tarea v4 cargada.**
+Tras autorización y confirmación física, se solicitó una vez el cambio de
+`joystick` a `teleop`; CC aceptó y el usuario observó el robot estable. Tarea
+viva `teleoperation/cruzr_v4_pico_teleoperation`, manos `v4`, cintura0 y
+elevador0; ambas manos publican estados frescos. Check completo con PICO por
+USB/loopback, tracking1, backend STOP y Ethernet `eno1` pasó. Dos muestras
+20D finales sin faults, velocidad0 y delta máximo0,003422 rad. La postura es
+PICO, **no HOME** (`MEASURED_HOME=0`). No se envió START ni se probó movimiento
+mediante grips/gatillos en esta intervención. Mantener un solo cliente y no
+inferir seguridad física actual de esta evidencia. Reanudación y evidencias en
+[ficha PICO v4](SYSTEM_CUSTOMIZATIONS.md#pico-v4-port-20261105--lanzador-pico-v4-en-pc).
+
+**05-11-2026 — PICO-V4-PORT-20261105: lanzador incorporado; activación pendiente.**
+El soporte PICO v4 se ha traído selectivamente desde
+`feat/pico-v4-workflows-and-scenario-fixes` sin importar los ciclos de mesa.
+En la primera comprobación el YAML v4 de sólo brazos tenía el hash esperado, pero su tarea no se
+ha observado cargada; tampoco se ha detectado un flujo XR en 63901. Ethernet a
+Motion usa `eno1` y origen `192.168.11.250`. Tras conectar el visor se preparó
+el túnel ADB reversible para `127.0.0.1:63901`, con backend STOP y tracking
+`vr_status=1`. El usuario autorizó cargar PICO v4; el timeout inicial de
+actuadores se debió a QoS y el lector best-effort verificó HOME, reposo y manos.
+CC informó modo `joystick`; ver arriba la transición posterior autorizada.
+La carga TeleopMode puede mover el robot y requiere nueva verificación física.
+Detalles,
+respaldo y punto de reanudación en [PICO-V4-PORT-20261105](SYSTEM_CUSTOMIZATIONS.md#pico-v4-port-20261105--lanzador-pico-v4-en-pc).
+
 **05-11-2026 — EFFECTOR-V4-ACTIVATION-20261105: perfil y HOME verificados.**
 El usuario confirmó las condiciones y autorizó la recarga con posible HOME.
 Preflight: HOME20D=1, velocidad0, máximo0,003068rad; paros0/0, cargador0 y

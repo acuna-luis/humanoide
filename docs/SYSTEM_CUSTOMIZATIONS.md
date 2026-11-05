@@ -2373,6 +2373,97 @@ XML o entradas de `task_list.yaml` no están instalados/cargados en Motion.
   tras restaurar**, especialmente con brazos elevados. Seguir guía actual.
 - **Detalle:** [fuente PICO](teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md).
 
+### PICO-V4-PORT-20261105 — Lanzador PICO v4 en PC
+
+- **05-11-2026, 12:35 CET; instalado en fuentes del PC; carga física posterior
+  registrada abajo.** Objetivo: ejecutar el lanzador v4 con cámara apagada, loopback
+  PICO y Ethernet `eno1`. Fuente reproducible: rama
+  `feat/pico-v4-workflows-and-scenario-fixes` commit
+  `412415a084615eedd1cb158b82ffbd20641497ab`, copia selectiva de los archivos
+  versionados de esta ficha. 74/90 cm no añaden dependencias PICO. No se tocó
+  el SDK ni las configuraciones del robot.
+- **Destino:** PC, repositorio `scripts/teleoperation/`:
+  `probar_pico_v4.sh` SHA256 `af37630f1ad51dec64435eca7cc9f2c6319b5b1d00b9f8a0a5bf0a35bfe17abe`;
+  `pico_effector_profile.sh` SHA256 `f199f70f92d2897cef159f36c5e523377df25a90afdfa32fcf5c0cac9c1d328f`;
+  `configure_pico_xr_usb.sh` SHA256 `7967cf6b5090ee15f3c71658f33f3de231741e668b95bfaeecb27fc79cd83be5`;
+  `pico_cc_mode.py` SHA256 `47b6c54386091109dea7dbc78b023d50422d0d287e383e707cdde7d791fdcbbe`;
+  `load_pico_v4_from_home.py` SHA256 `0f80a9c0b7aefbf62313f8dba3e3cfc98970b59e7a203c6306bd5723d4320439`;
+  `cruzr_pico_teleop_pc.sh` SHA256 `9976baee75df4c91d25187cc3c81132c2923f2c4a204701fb10f19dae5104c71`;
+  `install_cruzr_pico_arms_only.sh` SHA256 `483c1044ed0a824331b7fb43fe4486be54b8dc243d3f2a410b084a6f56756087`.
+  Incluye pruebas offline de descubrimiento XR y preflight Motion. Requiere el
+  lector `check_pico_v4_hand_states.py` ya incorporado y el entorno vendor PICO.
+- **Backup y reversión:** anteriores fuentes y documentación en
+  `../Humanoide-vla-evidence/20261105_PICO_V4_PORT/`, conservadas con sus rutas;
+  scripts anteriores SHA256 `ef378faf7bcf6c189e34181de85177b7f6e804945cfe2bb8710da7c7689dc6e3`
+  y `8a7a4736021ad4bb0a9de985d88b2755ad7e38a58d345e2c00009ea81fb33e62`.
+  Para revertir este port restaurar esos dos scripts y retirar sólo los archivos
+  nuevos de esta ficha y sus dos pruebas; revisar cambios posteriores antes de
+  hacerlo. No restaurar estados transitorios de control.
+- **Verificación:** `bash -n`, ayuda, selección clamp/v4, rechazo de perfiles no
+  soportados, 19 pruebas offline PICO y 42 del selector de efectores pasan;
+  `shellcheck` no disponible. `PICO_EFFECTOR=v4 ... --check` del instalador
+  observa YAML arms-only SHA `01a5ca8acba16bbe136a3bdbcb4a593667d672f8ee9613b98631699fc429b582`
+  pero `ARMS_ONLY_LOADED=0`. `probar_pico_v4.sh --check-arms-only` también
+  rechaza perfil vivo no demostrado. Check con las variables solicitadas falla
+  por ausencia de peer XR 63901; `lsusb` no detecta visor en ese momento.
+  Ruta observada: Motion `192.168.11.2` vía `eno1`, origen `192.168.11.250`.
+  No hubo START, instalación remota ni cambio de modo. Las consultas ADB
+  arrancaron temporalmente el daemon del PC; se detuvo y se verificó ausente.
+- **05-11-2026 12:36 CET, transporte USB:** tras conectar el usuario el visor,
+  ADB reconoce `PA94Y0MGKB070822G`; daemon ADB local arrancado. El estado previo
+  de `adb reverse --list` era vacío. Con STOP pasivo confirmado se aplicó la
+  receta versionada `bash scripts/teleoperation/configure_pico_xr_usb.sh
+  --configure`: `tcp:63901 → tcp:63901`, verificado con `--check`. El túnel es
+  temporal y se retira con el mismo script `--remove` con STOP confirmado; para
+  restaurar el estado previo del PC detener también el daemon con `adb kill-server`.
+  La aplicación XR estaba abierta, pero aún no había stream ni tracking probado.
+- **05-11-2026 12:37 CET:** XRoboToolkit conecta por loopback y envía tracking
+  `vr_status=1`; el backend confirma STOP. Se corrigió en ambos descubrimientos
+  la fecha de inicio del servicio: `journalctl` rechazaba el texto de systemd
+  con día y zona CET. Se normaliza con `date` conservando la hora de inicio;
+  test offline de regresión y comprobación real pasan. El `--check` avanza hasta
+  rechazar `ACTIVE_TASK_ERROR=cruzr/home`, como corresponde antes de la carga.
+  El usuario autorizó explícitamente cargar modo PICO v4, pero en el preflight
+  `/mc/actuator_state` agotó su tiempo: evidencia
+  `../Humanoide-vla-evidence/20261105T113719.084828Z_PICO-HOME-CHECK/`.
+  Las baterías eran 87,0/87,3 %, paros 0/0 y cargador desconectado; los estados
+  de manos v4 se recibían. El chequeo de fábrica retorna rc40 por el HOME v8
+  adaptado ya registrado, no se restauró ni omitió. No se ha cambiado de modo.
+- **05-11-2026 12:38 CET, aclaración preflight:** el topic sí publica y el
+  timeout anterior correspondía al QoS del comprobador (publisher BEST_EFFORT).
+  Con el lector best-effort de `switch_effector.pose`, dos muestras avanzantes
+  confirmaron HOME20D, velocidad0, máximo0,002109 rad y delta consigna0,002109;
+  manos de siete ejes con muestras avanzantes, módulos desbloqueados, baterías
+  86,7/87,3 %, paros0/0 y cargador desconectado. Motion y Vision CC usan
+  `HW_TYPE=cruzr_s2_v1_sps`; Motion `TELE_DEVICE=pico`, `transmit=local`.
+  CC respondió modo `joystick`. Evidencia privada
+  `../Humanoide-vla-evidence/PICO-V4-PREFLIGHT-20261105T113849Z/`.
+  Pueden quedar obsoletas antes de la transición y deben revalidarse.
+- **05-11-2026 12:42–12:43 CET; carga supervisada VERIFICADA:** tras la
+  autorización expresa y nueva confirmación del usuario de manos vacías, HOME,
+  cargador fuera, paros liberados, zona libre y persona junto al paro, el
+  preflight de `load_pico_v4_from_home.py` confirmó modo anterior `joystick`,
+  HOME20D, paros0/0, manos, acción inactiva, YAML y tracking. La receta
+  versionada `python3 scripts/teleoperation/load_pico_v4_from_home.py --run
+  --physical-confirmation 'MANOS VACIAS HOME ZONA LIBRE PAROS PERSONA'` envió
+  una sola llamada `cc.api.work_mode.switch` a `teleop`; CC devolvió `accept`.
+  Estado anterior respaldado como evidencia; es un estado de control transitorio
+  y no se restaura automáticamente. En caso de salida o recuperación, revisar
+  físicamente la trayectoria y usar el procedimiento vigente, pues cambiar de
+  modo puede mover el robot. No enviar HOME automático.
+  El usuario confirmó robot estable; monitores de app y HW no encontraron los
+  patrones vigilados. Check final: tarea v4 viva, manos frescas, `waist:0`,
+  `leg:0`, PC STOP, tracking1, paros0/0, baterías86,0/86,6 %, cargador fuera.
+  Dos muestras finales 20D inmóviles, sin faults, delta de consigna0,003422 rad;
+  `MEASURED_HOME=0`: está en postura PICO. No hubo START del cliente ni prueba
+  de grips/gatillos. Evidencia externa
+  `../Humanoide-vla-evidence/PICO-V4-MODE-20261105T114230.741869Z/`.
+  El monitor sólo observa y no garantiza parada física ni cobertura total.
+- **Reanudación:** el usuario puede ejecutar el comando solicitado en terminal
+  local con el PICO despierto, sin otro cliente y tras confirmar de nuevo sus
+  condiciones físicas; el lanzador repetirá los gates. Ensayo físico de control
+  mediante grips y gatillos durante esta intervención PENDIENTE.
+
 ### MOT-04 — READY, recovery y tareas auxiliares
 
 - **2026-09-14 — uso de tarea existente, sin adaptación persistente:**

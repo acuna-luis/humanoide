@@ -1,5 +1,49 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**05-11-2026 12:43 CET — PICO-V4-PORT-20261105: tarea cargada y check correcto.**
+Con autorización expresa, física reconfirmada y preflight fresco, se pasó de
+`joystick` a `teleop` mediante una única llamada supervisada. El usuario observó
+estabilidad. Check posterior: PICO USB/loopback `vr_status=1`, PC STOP, Motion
+`cruzr_s2_v1_sps`, tarea `teleoperation/cruzr_v4_pico_teleoperation`, hash
+arms-only `01a5ca8a…`, `hand:v4,waist:0,leg:0` y dos estados frescos por mano;
+paros0/0, cargador fuera, baterías86,0/86,6 %. Dos muestras20D en reposo, sin
+fallos y delta máximo0,003422 rad; postura PICO, **no HOME**. Se vigiló Motion
+app y HW, sin patrones de fallo observados, sin garantía de parada por monitor.
+No se envió START ni se ensayaron grips/gatillos. El comando del usuario puede
+ejecutarse desde su terminal con los gates y confirmación física del lanzador.
+No iniciar otros clientes simultáneos ni enviar HOME automáticamente al salir.
+[Receta, reversión y evidencia](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-port-20261105--lanzador-pico-v4-en-pc).
+
+**05-11-2026 12:35 CET — PICO-V4-PORT-20261105: instalado en PC; PICO pendiente.**
+Se incorporan el lanzador `probar_pico_v4.sh`, su perfil y los cambios del
+cliente e instalador desde `feat/pico-v4-workflows-and-scenario-fixes`
+`412415a084615eedd1cb158b82ffbd20641497ab`; las ramas de mesas de 74/90 cm no
+aportan dependencias PICO. Se preserva el perfil clamp por defecto. El comando
+solicitado fija `PICO_TELEOP_CAMERA=off`, `PICO_PC_IP=127.0.0.1`, `CRUZR_IFACE=eno1`
+y `CRUZR_PC_IP=192.168.11.250`. La ruta Ethernet fue observada correcta.
+Motion tiene `HW_TYPE=cruzr_s2_v1_sps` y YAML v4 de sólo brazos con SHA
+`01a5ca8acba16bbe136a3bdbcb4a593667d672f8ee9613b98631699fc429b582`; el
+`--check-arms-only` falla porque no se confirma la tarea viva y sus modos.
+El `--check` con las variables exactas falla por ausencia de peer XR 63901;
+USB tampoco mostraba el visor. No hubo START, recarga de modo ni movimiento.
+Después el usuario conectó el visor y se confirmó ADB USB. Con STOP pasivo se
+configuró y verificó el túnel reversible `tcp:63901 → tcp:63901` mediante
+`configure_pico_xr_usb.sh --configure`. Después se verificaron flujo loopback,
+tracking `vr_status=1` y STOP. Corregida la conversión de fecha de systemd a
+formato aceptado por `journalctl`, sin debilitar el discovery. El usuario
+autorizó cargar PICO v4; la lectura de actuadores agotó su tiempo en preflight y
+después el lector BEST_EFFORT confirmó dos muestras HOME, sin movimiento, con
+manos y paros correctos. CC respondió modo `joystick`; ver arriba la posterior
+transición y los resultados de verificación.
+El usuario confirmó manos vacías, HOME, cargador fuera, paros liberados, ruedas
+libres, zona despejada y persona junto al paro; recomprobar al realizar cualquier
+movimiento. Para esa IP de loopback se necesita el transporte XR correspondiente
+(históricamente ADB reverse), tracking activo y tarea v4 cargada de forma
+supervisada. La carga puede iniciar movimiento; no saltar los gates. El perfil
+también puede afectar a la cabeza; la cintura y elevador permanecen excluidos.
+Pruebas offline y detalle de backup/rollback en
+[PICO-V4-PORT-20261105](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-port-20261105--lanzador-pico-v4-en-pc).
+
 **30-09-2026 17:47 CEST — VOICE-TELEOP-CHARGE-08: voz instalada, carga pendiente.**
 Control Center traduce entrada/salida de modo, pero `tele_device_mapper_base.cpp`
 anuncia por separado inicialización, recepción/pérdida de datos, activación,

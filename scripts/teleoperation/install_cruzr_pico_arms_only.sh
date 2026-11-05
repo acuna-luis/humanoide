@@ -5,10 +5,12 @@ set -Eeuo pipefail
 readonly MOTION_HOST="${CRUZR_MOTION_IP:-192.168.11.2}"
 readonly ROBOT_USER="${CRUZR_ROBOT_USER:-walker}"
 readonly CONTAINER="walker-motion.manipulation_robot_app-1"
-readonly CONFIG_PATH="/opt/walker/manipulation_meta_tasks/share/manipulation_meta_tasks/config/meta_teleoperation/cruzr_clamp_pico_tele.yaml"
-readonly TASK_NAME="teleoperation/cruzr_clamp_pico_teleoperation"
-readonly ORIGINAL_SHA256="5f08b30cd5032a9fccd6b3becd933ff3884d9795d02f98cc2433fc0da33fc62a"
-readonly ARMS_ONLY_SHA256="4e8d79a40e8b1f1fa5915de27ef60676fce4c9b5cec41cacfc0a1d9a7d117a44"
+readonly PROFILE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$PROFILE_DIR/pico_effector_profile.sh"
+readonly CONFIG_PATH="$arms_only_config_path"
+readonly TASK_NAME="$expected_teleop_task"
+readonly ORIGINAL_SHA256="$vendor_full_body_config_sha256"
+readonly ARMS_ONLY_SHA256="$arms_only_config_sha256"
 readonly BACKEND_UNIT="ubt-controller.service"
 readonly BACKEND_LOG="/opt/ubt/ubt_controller/logs/ubt_controller.log"
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -26,11 +28,12 @@ Uso:
 --check     Sólo lectura. Informa si la tarea PICO instalada y la tarea viva
             tienen cintura/elevador desactivados.
 --install   Con el backend PC en STOP, conserva un backup persistente y cambia
-            exclusivamente waist_mode 1->0 y leg_mode 2->0 en la tarea clamp
+            exclusivamente waist_mode 1->0 y leg_mode 2->0 en la tarea seleccionada
             PICO. No reinicia contenedores, no cambia de modo y no mueve.
 --rollback  Restaura byte a byte el YAML vendor respaldado. Tampoco reinicia
             ni mueve.
 
+PICO_EFFECTOR=v4 selecciona las manos v4; por defecto conserva clamp.
 La instalación no afecta una tarea ya cargada. Después hace falta salir de
 TeleopMode y volver a entrar, con preflight físico, para que Motion decodifique
 los modos nuevos. El lanzador físico exige evidencia del YAML cargado. El
@@ -137,7 +140,7 @@ fi
 
 ssh_motion bash -s -- \
   "$mode" "$CONTAINER" "$CONFIG_PATH" "$TASK_NAME" \
-  "$ORIGINAL_SHA256" "$ARMS_ONLY_SHA256" <<'REMOTE'
+  "$ORIGINAL_SHA256" "$ARMS_ONLY_SHA256" "$expected_motion_hand" <<'REMOTE'
 set -Eeuo pipefail
 
 mode="$1"
@@ -146,9 +149,11 @@ config_path="$3"
 task_name="$4"
 original_sha="$5"
 arms_only_sha="$6"
+expected_hand="$7"
 state_dir="$HOME/.local/share/cruzr-pico-arms-only"
-backup="$state_dir/cruzr_clamp_pico_tele.vendor.yaml"
-overlay="$state_dir/cruzr_clamp_pico_tele.arms-only.yaml"
+profile_base="$(basename "$config_path" .yaml)"
+backup="$state_dir/$profile_base.vendor.yaml"
+overlay="$state_dir/$profile_base.arms-only.yaml"
 
 [[ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null)" == "true" ]] || {
   printf 'CONTAINER_NOT_RUNNING=%s\n' "$container" >&2
@@ -165,7 +170,7 @@ verify_overlay_semantics() {
   [[ "$(grep -c '^    leg_mode: 0$' "$file")" == "1" ]]
   [[ "$(grep -c '^    limb_mode: 2$' "$file")" == "1" ]]
   [[ "$(grep -c '^  collision_detection: true$' "$file")" == "1" ]]
-  [[ "$(grep -c '^  hand_type: "clamp"' "$file")" == "1" ]]
+  [[ "$(grep -c "^  hand_type: \"$expected_hand\"" "$file")" == "1" ]]
 }
 
 current_sha="$(container_sha)"
