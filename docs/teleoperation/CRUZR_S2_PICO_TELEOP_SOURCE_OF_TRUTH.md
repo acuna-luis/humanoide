@@ -1,5 +1,97 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+## Preparación full v4 sólo PC — 05-11-2026
+
+**17:17 Europe/Madrid — check real sólo lectura; rechazo esperado.** El nuevo
+wrapper `--check` terminó rc1 al contrastar el hash instalado arms-only
+`01a5ca8acba16bbe136a3bdbcb4a593667d672f8ee9613b98631699fc429b582` con el
+vendor v4 full esperado
+`48d2ee0f61ab3dddaceec31e7468d0a764ef0900b2e09b687281b5e02465e74e`. El
+rechazo verifica el gate de hash; no valida carga full ni autoriza recarga,
+independientemente de la sugerencia genérica que muestra el error. No se
+cambió el robot. Evidencia:
+`../Humanoide-vla-evidence/20261105_PICO_V4_FULL_PREP/full-check-reject.txt`.
+
+**Actualización de diagnóstico, 05-11-2026, Europe/Madrid — sólo lectura.**
+`timeout 90 bash scripts/hands/recover_hands_home.sh --check --model v4` terminó
+rc1 con `No se detectó una pareja inequívoca y activa...`. Una investigación
+ROS independiente observó estado de acción `2` (EXECUTING), que bloquea este
+check antes de la detección de manos; ambos topics `hand/joint_states` eran
+visibles. No se identificó la acción ni se concluye que falten las manos. En
+esa lectura, baterías93,8/94,5 %, paros0/0 y cargador desconectado; son valores
+históricos, no una declaración del estado actual. El intento no llegó a
+comprobar el hash de HOME; compatibilidad HOME v4 sigue PENDIENTE. No se
+solicitó cambio de modo, STOP ni HOME. **Retoma:** actualizar pasivamente la
+lectura de la acción y revisar la compatibilidad HOME antes de preparar recuperación;
+no repetir movimiento ni inferir la postura a partir de esta consulta.
+
+**Correlación posterior — OBSERVADO, consultas sólo lectura.** El objetivo ROS
+con estado2 (EXECUTING), UUID `9ca00d0c-73f2-47e2-b3f6-d7844f8174d5` y sello
+`2026-11-05 16:07:32.660 UTC`, coincide con el registro Motion `User interfaces
+client action uuid` del `2026-11-06 00:07:32.659988 UTC+8`. Unos30 ms después
+el log inicia `teleoperation/cruzr_v4_pico_teleoperation` y reporta v4,
+`waist=0`, `leg=0`, `collision=1`. Esta correlación resuelve la identidad que
+en la consulta anterior era desconocida, pero estado2 no demuestra movimiento
+físico ni enable. No se canceló la acción ni se solicitó cambio de modo, STOP o
+HOME. La compatibilidad del HOME v4 y el procedimiento de recuperación siguen
+PENDIENTES y requieren estado físico fresco.
+
+**Geometría v4 para PICO→HOME — OBSERVADO, búsqueda acotada sólo lectura.**
+En Motion no se localizó en lo inspeccionado un URDF con dedos v4 articulados.
+`/opt/walker/manipulation_platforms/share/manipulation_platforms/config/urdf/cruzr_s2.urdf`
+representa las manos como enlaces fijos de muñeca con `L_hand_link.STL` y
+`R_hand_link.STL`, sin ejes `thumb`, `index`, `middle`, `ring` ni `little`.
+El `avatar_v4_spherical.urdf` bajo `/opt/walker` también tiene manos fijas y
+es un modelo `avatar_description`. Esta búsqueda no acredita inexistencia en
+otros lugares. El auditor/modelo histórico HOME usa abrazaderas y no valida
+volúmenes de manos v4. Sigue PENDIENTE obtener o reconstruir y verificar la
+geometría, pose de los dedos y montaje antes de analizar la trayectoria
+PICO→HOME. No se enviaron comandos de control.
+
+**PICO-V4-FULL-PREP-20261105 — fuentes PC preparadas y verificadas offline;
+perfil full no instalado ni cargado, ensayo físico PENDIENTE.** El usuario pidió
+habilitar el torso y conoció que el perfil completo permite activar el chasis
+mediante `X`. Comunicó manos v4 libres y postura PICO, no HOME. Estas
+observaciones no permiten inferir el estado físico de una sesión posterior.
+
+Una consulta de sólo lectura inicial redescubrió contenedores y comprobó la tarea
+`teleoperation/cruzr_v4_pico_teleoperation`, hash arms-only `01a5ca8a…`,
+`hand:v4,waist:0,leg:0`, baterías94,6/95,2 %, paros0/0, cargador desconectado,
+velocidades estacionarias, ruta Motion por `eno1` y ausencia de `pico_control`.
+`--check-reload-ready` no midió ni confirmó HOME. Todas las condiciones deben
+recomprobarse inmediatamente antes de un cambio o movimiento.
+
+Se preparó `scripts/teleoperation/probar_pico_v4_full.sh`, separado del lanzador
+arms-only, y se extendió el gate común para comprobar el hash vendor v4, la tarea
+viva y `v4/waist=1/leg=2`, además de manos, neutralidad, supervisión y STOP.
+Preflight, instalación de YAML, recarga y movimiento son fases distintas. Un
+fallo de la nueva ruta antes de iniciar su cliente no envía STOP ni detiene una
+UI ajena. El STOP se reconstruye del último evento explícito del log desde el
+arranque del backend: **no certifica frescura ni ausencia de todos los clientes**.
+La opción `--check` nueva es sólo lectura y se ejecutó con rechazo esperado;
+`--prepare-full` modificaría el YAML de Motion y `--teleoperate` iniciaría
+control. Estas dos opciones no se ejecutaron aquí.
+
+El mapa del SOP y del lanzador full existente indica, en modo en sitio, joystick
+izquierdo para cintura y derecho para elevador; grips para brazos, gatillos para
+manos y `Y` izquierdo para habilitar. `X` conmuta al modo móvil del chasis; no
+pulsar los clics de joystick, que conmutan protección de fuerza. **La dirección,
+escala y comportamiento físico de estos controles con manos v4 no están
+verificados en esta unidad; no usar este mapa como autorización de movimiento.**
+
+**Punto de reanudación:** preparar y revisar un procedimiento completo para
+volver desde la postura PICO a HOME con manos v4, sin asumir compatibilidad del
+HOME/gate de abrazaderas; comprobar trayectoria y entorno. Después resolver una
+recarga full v4 supervisada desde HOME con conexión Motion por Wi-Fi y PICO/XR
+inalámbrico, mantener los paros y controles, verificar carga `v4/1/2` y preparar
+ensayo, seguimiento y recuperación. La recarga tiene `init_reset` y puede mover;
+no ejecutarla con sólo un check de inmovilidad. Antes de cualquier maniobra,
+recomprobar efector, objeto, postura, batería/cargador, paros, ruedas, zona,
+persona junto al paro y control exclusivo. No iniciar simultáneamente otro
+cliente ni desactivar protecciones. El perfil anterior sigue vigente hasta que
+se aplique y cargue otro. Evidencia, hashes y reversión selectiva en
+[la ficha](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-full-prep-20261105).
+
 **05-11-2026 — PICO-V4-TAKE14-PREP-20261105.** Preparada sin reproducción la
 captura `prueba_v4_14_20261105T125040Z_791094` completa a velocidad normal.
 Derivado geométrico de59,384299 s, sin cortar espera ni final, con todas sus

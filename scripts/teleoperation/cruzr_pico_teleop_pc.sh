@@ -35,6 +35,7 @@ camera_pid=""
 camera_ready_file=""
 official_client_pid=""
 official_cleanup_done=0
+official_v4_start_committed=0
 motion_safety_monitor_pid=""
 motion_safety_monitor_file=""
 robot_user="${CRUZR_ROBOT_USER:-walker}"
@@ -232,6 +233,12 @@ check_robot_full_body_loaded() {
     "vendor-full-body" "$vendor_full_body_config_sha256" 1 2
 }
 
+check_robot_v4_full_loaded() {
+  [[ "$pico_effector" == "v4" ]] || die "El perfil v4 full requiere manos v4."
+  check_robot_teleop_profile_loaded \
+    "vendor-full-body-v4" "$vendor_full_body_config_sha256" 1 2
+}
+
 start_motion_safety_monitor() {
   [[ -z "$motion_safety_monitor_pid" ]] ||
     die "El monitor Motion ya estaba iniciado."
@@ -339,10 +346,13 @@ Uso:
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check-arms-only
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check-full-body
+  ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check-v4-full
+  ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check-v4-control-available
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check-reload-ready
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --check-motion-ready
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --teleoperate
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --teleoperate-full
+  ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --teleoperate-v4-full
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --open-ui
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --gate-local
   ./scripts/teleoperation/cruzr_pico_teleop_pc.sh --move-left-arm
@@ -357,6 +367,12 @@ Uso:
 --check-full-body
            Sólo lectura; exige el YAML vendor exacto y demuestra que la tarea
            viva cargó clamp, waist_mode=1 y leg_mode=2.
+--check-v4-full
+           Con PICO_EFFECTOR=v4, comprueba hash vendor y tarea viva v4/1/2.
+           Sólo lectura; no autoriza por sí mismo una prueba física.
+--check-v4-control-available
+           Sólo lectura: requiere UI y cliente inactivos y último estado
+           explícito del backend STOP, reconstruido del log del servicio.
 --check-reload-ready
            Sólo lectura; comprueba seguridad Motion sin depender del visor.
 --check-motion-ready
@@ -372,6 +388,10 @@ Uso:
            probar_pico_full.sh. Exige el perfil vendor exacto clamp/1/2 y
            habilita cabeza, brazos, cintura, elevador y chasis. Los clicks de
            joystick siguen prohibidos porque conmutan protección de fuerza.
+--teleoperate-v4-full
+           Ventana full separada para v4. Exige perfil vendor y tarea viva
+           v4/1/2, manos frescas, Wi-Fi, confirmación física y monitor full.
+           Puede mover chasis; la carga y prueba física siguen pendientes.
 --open-ui  Abre la interfaz después del backend. No inicia la publicación.
 --gate-local
            Gate interactivo local recomendado. Exige confirmación física,
@@ -951,7 +971,13 @@ if snapshot is None:
 
 content = snapshot.setdefault("content", {})
 if operation_type is None:
-    operation_type = content.get("operation_type", 1)
+    if os.environ.get("PICO_PASSIVE_REQUIRE_EXPLICIT_STOP") == "1":
+        operation_type = content.get("operation_type")
+        if operation_type is None:
+            print("No explicit current backend operation state", file=sys.stderr)
+            raise SystemExit(2)
+    else:
+        operation_type = content.get("operation_type", 1)
 content["operation_type"] = operation_type
 if operation_type == 1:
     content["robot_sn"] = ""
@@ -1340,12 +1366,40 @@ cleanup_official_teleop() {
   info "OFFICIAL_TELEOP_STOP_CONFIRMED=$([[ "$operation_type" == "1" ]] && printf 1 || printf 0)"
 }
 
+cleanup_v4_full() {
+  # Before starting our client, clean up only resources owned by this session.
+  # In particular, a rejected preflight must never stop someone else's UI or
+  # issue STOP to a different controller. Once START is attempted, retain the
+  # same fail-safe STOP path as the existing official full-body gate.
+  if ((official_v4_start_committed == 1)); then
+    cleanup_official_teleop
+  else
+    stop_motion_safety_monitor
+    stop_pico_camera
+    info "V4_FULL_PRESTART_NO_CONTROL_SENT=1"
+  fi
+}
+
+assert_v4_full_control_available() {
+  local rc=0 detect_json operation_type
+  pgrep -x pico_control >/dev/null 2>&1 || rc=$?
+  [[ "$rc" == "1" ]] || die "Hay otro pico_control o su estado es desconocido; no se enviará START."
+  rc=0
+  systemctl --user is-active --quiet "$ui_unit" || rc=$?
+  [[ "$rc" == "3" ]] || die "UI activa o estado desconocido; no se enviará START."
+  detect_json="$(PICO_PASSIVE_REQUIRE_EXPLICIT_STOP=1 backend_passive_state_json)" ||
+    die "No se pudo comprobar STOP explícito pasivamente."
+  operation_type="$(jq -r '.content.operation_type // "unknown"' <<<"$detect_json")"
+  [[ "$operation_type" == "1" ]] || die "Backend no está en STOP; no se enviará START."
+}
+
 run_official_teleop() {
   local teleop_profile="${1:-arms-only}"
   local full_body=0
   case "$teleop_profile" in
     arms-only) ;;
     vendor-full-body) full_body=1 ;;
+    vendor-full-body-v4) full_body=1 ;;
     *) die "Perfil de teleoperación interno no admitido: $teleop_profile" ;;
   esac
 
@@ -1359,7 +1413,12 @@ run_official_teleop() {
     die "PICO_ALLOW_BIMANUAL debe ser 0 o 1."
 
   official_cleanup_done=0
-  trap cleanup_official_teleop EXIT
+  if [[ "$teleop_profile" == "vendor-full-body-v4" ]]; then
+    official_v4_start_committed=0
+    trap cleanup_v4_full EXIT
+  else
+    trap cleanup_official_teleop EXIT
+  fi
   trap 'printf "\nABORT_REQUESTED=INT\n" >&2; exit 130' INT
   trap 'printf "\nABORT_REQUESTED=TERM\n" >&2; exit 143' TERM
 
@@ -1367,9 +1426,16 @@ run_official_teleop() {
   # 30 s por Working cuando el YAML y la tarea viva no coinciden con el modo
   # solicitado por el lanzador.
   if ((full_body == 1)); then
-    check_robot_full_body_loaded
+    if [[ "$teleop_profile" == "vendor-full-body-v4" ]]; then
+      check_robot_v4_full_loaded
+    else
+      check_robot_full_body_loaded
+    fi
   else
     check_robot_arms_only_loaded
+  fi
+  if [[ "$teleop_profile" == "vendor-full-body-v4" ]]; then
+    assert_v4_full_control_available
   fi
   wait_for_pico_tracking_ready
   check_pc
@@ -1390,7 +1456,7 @@ al conmutar X, el chasis. Empiece en modo en sitio y pruebe primero un único
 eje con recorridos mínimos. No pulse los clicks de los joysticks: conmutan la
 protección de fuerza y este lanzador solicitará STOP si los detecta.
 
-Antes de continuar confirme AHORA: abrazaderas vacías; robot estable y en
+Antes de continuar confirme AHORA: $effector_description vacías; robot estable y en
 home; cargador, Ethernet y cualquier otro cable retirados; ambos paros
 liberados; ruedas preparadas; suelo llano; envolvente completa y recorrido
 360 grados despejados; una persona junto al paro y otra en el terminal.
@@ -1436,6 +1502,11 @@ EOF
 
   local start_line enable_line deadline next_progress detect_json operation_type
   start_line="$(($(wc -l < "$backend_log") + 1))"
+  if [[ "$teleop_profile" == "vendor-full-body-v4" ]]; then
+    check_robot_v4_full_loaded
+    assert_v4_full_control_available
+    official_v4_start_committed=1
+  fi
   "$pico_control_executable" \
     --websocket_url ws://127.0.0.1:8082 \
     --arm_type "$required_arm" --enable_hand_pose 0 --push_rate 90 &
@@ -1472,8 +1543,8 @@ EOF
   info "ENABLE_OFICIAL_CONFIRMADO=1"
   info "BIMANUAL_CONTROL_ENABLED=$allow_bimanual"
   if ((full_body == 1)); then
+    printf 'FULL_BODY_CONTROL_ENABLED=%s,waist:1,leg:2\n' "$expected_motion_hand"
     cat <<'EOF'
-FULL_BODY_CONTROL_ENABLED=clamp,waist:1,leg:2
 CONTROLES_FULL:
 - cabeza: seguimiento suave de cabeza;
 - grips: seguimiento de cada brazo;
@@ -1483,6 +1554,9 @@ CONTROLES_FULL:
 - B: conmuta captura; púlselo por pares si decide usarla.
 PROHIBIDO: clicks de joystick/protección de fuerza.
 EOF
+    if [[ "$pico_effector" == "v4" ]]; then
+      info "GATILLOS_MANOS_V4=apertura/cierre según perfil vendor; prueba física pendiente"
+    fi
   elif [[ "$allow_bimanual" == "1" ]]; then
     info "UNO_O_AMBOS_BRAZOS=1; mantenga cada grip sólo durante su movimiento"
   else
@@ -1539,7 +1613,11 @@ EOF
     sleep 0.5
   done
 
-  cleanup_official_teleop
+  if [[ "$teleop_profile" == "vendor-full-body-v4" ]]; then
+    cleanup_v4_full
+  else
+    cleanup_official_teleop
+  fi
   if ((full_body == 1)); then
     info "FULL_BODY_TELEOP_WINDOW_COMPLETED=${official_teleop_seconds}s"
   fi
@@ -2285,7 +2363,7 @@ EOF
 mode="${1:---check}"
 if [[ "$pico_effector" == "v4" ]]; then
   case "$mode" in
-    --check|--check-arms-only|--check-motion-ready|--check-reload-ready|--teleoperate|--stop|--help|-h) ;;
+    --check|--check-arms-only|--check-motion-ready|--check-reload-ready|--check-v4-full|--check-v4-control-available|--teleoperate|--teleoperate-v4-full|--stop|--help|-h) ;;
     *) die "Modo no habilitado para manos v4: $mode" ;;
   esac
 fi
@@ -2298,6 +2376,14 @@ case "$mode" in
     ;;
   --check-full-body)
     check_robot_full_body_loaded
+    ;;
+  --check-v4-full)
+    check_robot_v4_full_loaded
+    ;;
+  --check-v4-control-available)
+    [[ "$pico_effector" == "v4" ]] || die "La comprobación v4 requiere manos v4."
+    assert_v4_full_control_available
+    info "V4_CONTROL_AVAILABLE_FROM_LOG=1; no se envió ningún comando."
     ;;
   --check-reload-ready)
     check_robot_teleop_safety
@@ -2317,6 +2403,10 @@ case "$mode" in
     ;;
   --teleoperate-full)
     run_official_teleop vendor-full-body
+    ;;
+  --teleoperate-v4-full)
+    [[ "$pico_effector" == "v4" ]] || die "El perfil v4 full requiere manos v4."
+    run_official_teleop vendor-full-body-v4
     ;;
   --open-ui)
     open_ui

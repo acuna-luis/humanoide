@@ -1,5 +1,57 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**05-11-2026 — PICO-V4-FULL-PREP-20261105: soporte full v4 preparado sólo en PC.**
+El usuario solicita preparar el torso y conoce que `X` puede habilitar el modo
+de chasis. Se documentan manos v4 libres y postura PICO comunicadas, sin inferir
+estado físico actual. La lectura inicial confirmó tarea v4 `waist=0,leg=0`,
+hash arms-only `01a5ca8a…`; las fuentes PC ahora incluyen un lanzador full v4
+separado, 31 pruebas offline y revisión independiente. **No se cambió Motion,
+no se cargó el perfil full y no hubo START ni movimiento.** El YAML vendor
+habilitaría cintura/elevador y posibilidad de chasis; la recarga contiene
+`init_reset` y puede mover. Falta procedimiento supervisado compatible con manos
+v4 para retorno/recarga desde HOME, trayectorias, Wi-Fi y XR inalámbrico, y
+comprobar de nuevo estado físico y control exclusivo. El preflight de recarga no
+demuestra HOME. Los controles full proceden del SOP; su efecto físico con v4
+sigue PENDIENTE. [Ficha, límites y reversión](SYSTEM_CUSTOMIZATIONS.md#pico-v4-full-prep-20261105),
+[controles y punto de reanudación](teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md#preparación-full-v4-sólo-pc--05-11-2026).
+
+**05-11-2026 — PICO-V4-FULL-PREP-20261105: recuperación HOME aún sin validar.**
+Una comprobación `recover_hands_home.sh --check --model v4` salió con rc1 y
+mensaje de pareja de manos no inequívoca. Lectura ROS independiente encontró
+un estado de acción `2` (EXECUTING), que bloquea el check antes de detectar las
+manos; ambos topics `hand/joint_states` eran visibles. No se identificó cuál
+acción era ni se demostró ausencia de manos. Baterías93,8/94,5 %, paros0/0 y
+cargador desconectado observados en esa consulta; no describen el estado físico
+posterior. El intento no comprobó el hash HOME: compatibilidad v4 PENDIENTE.
+Sin orden de modo, STOP ni HOME. Actualizar la lectura de la acción y revisar la
+compatibilidad antes de preparar cualquier recuperación.
+
+**05-11-2026 — acción activa identificada por correlación, OBSERVADO.** El UUID
+ROS `9ca00d0c-73f2-47e2-b3f6-d7844f8174d5`, estado2 y sello
+`2026-11-05 16:07:32.660 UTC`, coincide con `User interfaces client action
+uuid` de Motion `2026-11-06 00:07:32.659988 UTC+8`; unos30 ms después el log
+inicia `teleoperation/cruzr_v4_pico_teleoperation`, `v4/waist=0/leg=0` y
+`collision=1`. Esto identifica la acción que antes quedaba pendiente; estado2 no
+demuestra movimiento físico ni enable, y no autoriza cancelarla. Consultas sólo
+de lectura; verificar de nuevo antes de preparar la recuperación.
+
+**05-11-2026 — geometría de dedos v4 para HOME PENDIENTE.** Una búsqueda acotada
+de sólo lectura en Motion no localizó un URDF articulado de los dedos v4. El
+`cruzr_s2.urdf` de `manipulation_platforms` representa las manos como enlaces
+fijos de muñeca con mallas `L_hand_link.STL`/`R_hand_link.STL`, sin ejes de
+dedos; `avatar_v4_spherical.urdf`, bajo `/opt/walker`, también presenta manos
+fijas y corresponde a `avatar_description`. Esto no demuestra que no existan
+otros modelos. El modelo/auditor histórico de HOME usa abrazaderas y no valida
+los volúmenes de las manos v4. Para analizar PICO→HOME faltan geometría y pose
+de dedos y montaje. Sin comandos de control. [Detalle](SYSTEM_CUSTOMIZATIONS.md#pico-v4-full-prep-20261105).
+
+**05-11-2026 17:17 Europe/Madrid — check full v4 rechazado como se esperaba.**
+La nueva opción `--check`, sólo lectura, devolvió rc1: el hash real arms-only
+`01a5ca8a…` no coincide con el vendor v4 full esperado `48d2ee0f…`. Evidencia
+`../Humanoide-vla-evidence/20261105_PICO_V4_FULL_PREP/full-check-reject.txt`.
+El rechazo confirma que no se acepta este perfil como full; no autoriza recarga
+ni implica que ésta sea segura. No se cambió el robot.
+
 **05-11-2026 — VLA-PASSIVE-HANDS-20261105: captura pasiva de manos añadida.**
 El mismo capturador RGB/20D descubre por separado estados y órdenes de ambas
 manos v4 y conserva los mensajes disponibles; la captura base sigue funcionando

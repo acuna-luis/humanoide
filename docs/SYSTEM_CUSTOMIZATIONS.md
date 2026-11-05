@@ -1,5 +1,60 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## PICO-V4-FULL-PREP-20261105
+
+**05-11-2026, Europe/Madrid — fuentes PC preparadas y comprobadas offline;
+perfil full remoto no instalado/cargado, funcionamiento físico PENDIENTE.**
+
+**17:17 Europe/Madrid — check real sólo lectura, rechazo esperado.** El wrapper
+`--check` devolvió rc1 porque el hash real arms-only `01a5ca8a…` difiere del
+vendor v4 full requerido `48d2ee0f…`. Evidencia:
+`../Humanoide-vla-evidence/20261105_PICO_V4_FULL_PREP/full-check-reject.txt`.
+Esto verifica el rechazo, no valida carga ni autoriza recarga; no se cambió el
+robot. La sugerencia genérica del error no sustituye los gates pendientes.
+
+**Diagnóstico posterior de recuperación, 05-11-2026 — OBSERVADO, sólo lectura.**
+`timeout 90 bash scripts/hands/recover_hands_home.sh --check --model v4`
+terminó rc1 con `No se detectó una pareja inequívoca y activa...`. La consulta
+ROS independiente observó estado de acción `2` (EXECUTING), que bloquea el
+check antes de la detección; ambos `hand/joint_states` eran visibles. No se
+identificó cuál acción estaba activa ni se demostró ausencia de manos. La lectura
+informó baterías93,8/94,5 %, paros0/0 y cargador desconectado, sin afirmar
+estado posterior. El hash HOME no se comprobó; compatibilidad v4 PENDIENTE.
+Sin cambio de modo, STOP ni HOME. Retomar actualizando la lectura de la acción y
+revisando compatibilidad, postura y trayectoria antes de planificar recuperación.
+
+**Correlación posterior — OBSERVADO, sin cambios de control.** La acción ROS en
+estado2 (EXECUTING), UUID `9ca00d0c-73f2-47e2-b3f6-d7844f8174d5`, tiene sello
+`2026-11-05 16:07:32.660 UTC`. El mismo UUID aparece como `User interfaces client
+action uuid` en Motion a `2026-11-06 00:07:32.659988 UTC+8`; unos30 ms después
+registra el inicio de `teleoperation/cruzr_v4_pico_teleoperation`, v4,
+`waist=0`, `leg=0`, `collision=1`. Resuelve la identidad entonces desconocida;
+estado2 no demuestra movimiento físico ni enable. Sin cancelación, cambio de
+modo, STOP ni HOME. No asumir vigencia de esa lectura: compatibilidad HOME v4,
+postura y trayectoria siguen por verificar antes de preparar recuperación.
+
+**Geometría para HOME v4 — OBSERVADO, búsqueda Motion acotada y sólo lectura.**
+No se encontró un URDF articulado de dedos v4 dentro del alcance inspeccionado.
+El `/opt/walker/manipulation_platforms/share/manipulation_platforms/config/urdf/cruzr_s2.urdf`
+modela `left_hand`/`right_hand` como enlaces fijos de muñeca con mallas
+`L_hand_link.STL`/`R_hand_link.STL` y sin ejes de dedos. El
+`avatar_v4_spherical.urdf` inspeccionado bajo `/opt/walker` también presenta
+manos fijas y pertenece a `avatar_description`. No se descarta un modelo en
+otros sitios. El auditor histórico HOME usa abrazaderas y no valida volúmenes
+v4: faltan geometría, pose de dedos y montaje para analizar PICO→HOME. Ningún
+comando de control enviado. Reanudar buscando y verificando esa geometría antes
+de proponer trayectoria o recuperación física.
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo/alcance | Preparar soporte reproducible para usar cintura/elevador en PICO con manos v4, por solicitud del usuario; se explicó que el perfil full también permite chasis con `X`. Manos vacías y postura PICO comunicadas en esta intervención; no inferir el estado posterior. |
+| Destino/fuentes | Sólo repositorio/PC: `scripts/teleoperation/cruzr_pico_teleop_pc.sh` SHA256 `24bf05118be24a59bcd40b8dd1cf6fa04ad4c3368a05bb04d938df23a09becbb`; nuevo `probar_pico_v4_full.sh` `184d00fbde1e69f1f75396c5b2e9cedcaedb30a49976732f3d2f69fec875a0f3`; nuevo `test_pico_v4_full.py` `adc18a4794bdcce3a6ae15e8f4f314a417b5ba6a34e018db455bac64cf591064`. Depende del perfil y gestor existentes `pico_effector_profile.sh` e `install_cruzr_pico_arms_only.sh`, ROS, backend oficial4.7.0 y controladores Motion. |
+| Diseño/receta | `bash scripts/teleoperation/probar_pico_v4_full.sh --help` explica fases y peligros; `--check` sólo lee hash/modos. `--prepare-full` restauraría YAML vendor en Motion, sujeto a terminal, STOP reconstruido, UI/cliente y preflight; **no se ejecutó**. Cargar el modo es una acción física separada, no automatizada por el wrapper. `--teleoperate` sólo tras completar procedimiento y gates pendientes, no es un comando actualmente habilitado para el operador. `--restore-arms-only` reinstalaría el overlay sin recargar; no se ejecutó. |
+| Controles/protecciones | Exige tarea v4 y hash vendor `48d2ee0f…`, modos cintura1/elevador2, manos frescas, ruta Wi-Fi, confirmación local, monitor Motion, neutralidad, Y y STOP; repite hash y disponibilidad antes del START. V4 full permite chasis por `X`; clics de joystick prohibidos porque conmutan control de fuerza. Si falla antes de iniciar su cliente no detiene UI ni envía STOP ajeno. El STOP procede del último evento explícito del log del backend: sin garantía de frescura ni de ausencia de todos los clientes. |
+| Verificación | 31 pruebas offline correctas y revisión independiente; `bash -n` en los dos scripts. Registro privado `../Humanoide-vla-evidence/20261105_PICO_V4_FULL_PREP/tests-v4-full.txt`. Lectura inicial: perfil activo v4 arms-only SHA `01a5ca8a…`, cintura/elevador0/0, baterías94,6/95,2 %, paros0/0, cargador0, articulaciones estacionarias, Motion por `eno1`, sin `pico_control`. No se ha enviado START, cambiado YAML remoto, recargado ni movido. |
+| Pendientes y riesgo | `--check-reload-ready` no demuestra HOME. Se necesita procedimiento de retorno desde PICO con manos v4, HOME y trayectoria válidos, recarga full con `init_reset` potencialmente móvil, Wi-Fi y XR inalámbrico, supervisión, paro y control exclusivo. La física v4 full, dirección/escala de controles, captura de demostración y recuperación siguen PENDIENTES. No usar configuración histórica como estado actual. |
+| Respaldo/reversión | Copia previa `../Humanoide-vla-evidence/20261105_PICO_V4_FULL_PREP/before/`; índice `before.sha256` SHA256 `602c37e2fa2c35f7f0a31dafad5adccc8805066c2fe09a01ac4edac92c48db10`. Para revertir las fuentes PC, comparar cambios posteriores, restaurar selectivamente el gate desde `before/` y retirar sólo los dos archivos nuevos y estas referencias; conservar trabajo ajeno. No hay cambio remoto de esta intervención que revertir. |
+
 ## VLA-PASSIVE-HANDS-20261105
 
 **05-11-2026, Europe/Madrid — fuentes PC instaladas; nodo temporal cargado y
