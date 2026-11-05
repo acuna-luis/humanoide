@@ -1,0 +1,73 @@
+name: app2-training
+
+x-training: &training
+  image: app2-rfdetr:1.11.2-torch2.10.0-cu128
+  build:
+    context: .
+  user: "10001:10001"
+  init: true
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 512
+  cpus: 8.0
+  mem_limit: 32g
+  shm_size: 2g
+  tmpfs:
+    - /tmp:rw,nosuid,nodev,size=4g,mode=1777
+  environment:
+    NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    HF_HUB_OFFLINE: "1"
+    TRANSFORMERS_OFFLINE: "1"
+    HF_HUB_DISABLE_TELEMETRY: "1"
+    DO_NOT_TRACK: "1"
+    WANDB_MODE: disabled
+    WANDB_DISABLED: "true"
+    TORCHINDUCTOR_CACHE_DIR: /cache/inductor
+  volumes:
+    - training_cache:/cache
+    - datasets:/datasets:ro
+    - checkpoints:/checkpoints
+  restart: "no"
+
+services:
+  training:
+    <<: *training
+    network_mode: none
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${APP2_GPU_DEVICE:-0}"]
+              capabilities: [gpu]
+    command: [python, smoke.py, gpu, --output-root, /checkpoints/smoke]
+
+  # Explicit one-shot public downloads. No GPU or dataset mount is necessary.
+  precache:
+    <<: *training
+    profiles: [online]
+    network_mode: bridge
+    environment:
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      DO_NOT_TRACK: "1"
+      WANDB_MODE: disabled
+      WANDB_DISABLED: "true"
+    volumes:
+      - training_cache:/cache
+      - checkpoints:/checkpoints
+    command: [python, smoke.py, precache, --output-root, /checkpoints/smoke]
+
+volumes:
+  training_cache:
+    name: app2_training_cache
+    labels:
+      app2.purpose: public-model-and-library-cache
+  datasets:
+    name: app2_datasets
+    labels:
+      app2.purpose: local-coco-datasets
+  checkpoints:
+    name: app2_checkpoints
+    labels:
+      app2.purpose: local-models-and-evidence

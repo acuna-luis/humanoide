@@ -2738,6 +2738,57 @@ XML o entradas de `task_list.yaml` no están instalados/cargados en Motion.
   espacio libre. `/tmp` puede desaparecer al recrear contenedor. Para revertir,
   conservar bag original y retirar selectivamente sólo derivados deseados.
 
+### APP2-VISION-PORT-20261105 — Fuentes APP2
+
+- **05-11-2026 14:37 CET; fuentes incorporadas, despliegue PENDIENTE.** Se
+  importaron 74 archivos de `docs/app2/` y `scripts/app2/`, más el incidente
+  histórico del SSD, desde `vision-reconoce` commit
+  `daa4cf43c70aced0def10d31a98faf04b33d56bc`. Inventario de rutas, modos y
+  SHA de cada archivo de origen:
+  `../Humanoide-vla-evidence/20261105_APP2_VISION_PORT/source-manifest.json`.
+  La integración añade avisos de vigencia a las guías/incidente, índices y
+  esta ficha. No se mezclaron cambios antiguos de PICO/manos/ciclos de caja ni
+  `80066a2` de movimiento de cabeza. Código existente y archivos ignorados se
+  conservaron. Antes de escribir se respaldaron README y documentación previa
+  en `../Humanoide-vla-evidence/20261105_APP2_VISION_PORT/`.
+- **Destino y receta:** archivos versionados del repositorio PC, punto de
+  entrada [`docs/app2/README.md`](app2/README.md), herramientas de visión en
+  [`scripts/app2/workflow/`](../scripts/app2/workflow/), servidor/CVAT y
+  entrenamiento en [`scripts/app2/server/`](../scripts/app2/server/). No se
+  instaló software ni se ejecutaron instalaciones, entrenamientos, servicios,
+  funciones de recuperación o cambios en robot, servidor, red o PICO. Algunos
+  scripts importados sí pueden modificar el servidor: revisar su modo y alcance
+  antes de ejecutarlos; `--verify` crea recursos y entrena. La interfaz de
+  inferencia importada trabaja sobre archivos, no consume cámara/ROS en vivo.
+- **Comprobación 05-11:** workflow offline: 38 pruebas, 33 correctas y cinco
+  omitidas por `pycocotools` ausente. Pruebas del código de servidor con mocks y
+  archivos temporales: 73 pruebas, 72 correctas y una omitida. `bash -n` de los
+  lanzadores y `run_local.sh --help` correctos. PIL/NumPy presentes en este PC;
+  faltan cv2, pycocotools, zxingcpp, torch y rfdetr. Pruebas de QR simuladas;
+  no demuestran decodificación real en este entorno.
+- **Datos privados:** checksum de las seis fotos/referencias iniciales y cuatro
+  capturas posteriores y sus manifiestos pasa; documento rev001 SHA
+  `261f5e378c4edfd79cad190d0bfc9a1caf6dc274e2cce0895a4ed763c16605f5` coincide.
+  Los originales permanecen fuera de Git, bajo `../Humanoide-vla-evidence/app2/`.
+  Copiarlos selectivamente al migrar y no publicar sin revisión. Esos datos no
+  certifican más de una escena física independiente ni una referencia real.
+- **Estado del servidor:** el 05-11, ruta a `192.168.1.43` vía `wlo1`, SSH
+  `:2649` agotó la conexión y no había listener en `127.0.0.1:18080`. No permite
+  distinguir desconexión de servidor, ruta o firewall ni validar hoy CVAT,
+  modelos, GPU o datos en servidor. El estado operativo del20-10 es histórico.
+- **Hipótesis y pendientes:** APP2 es nombre interno de ITR; identificar la
+  pieza concreta y referencias confundibles, recibir ejemplos y contrato de
+  etiqueta, asociación caja/piezas y riesgos de mezcla. La segmentación 2D no
+  da pose/agarre ni identifica por sí misma material ID. CVAT y RF-DETR Seg
+  Nano fueron elegidos localmente; anotaciones, dataset diverso, entrenamiento
+  real, evaluación, paridad ONNX/TensorRT8.6 en Orin, calibración y conexión
+  industrial están PENDIENTES. No asumir que el detector vendor de cajas o
+  el checkpoint sintético reconocen estas piezas.
+- **Reversión:** conservar datos privados, retirar sólo los archivos APP2
+  importados conforme al manifiesto y revertir selectivamente los índices/avisos
+  de esta intervención tras comprobar cambios posteriores; no alterar los
+  archivos ignorados preexistentes, robot ni servicios del servidor.
+
 ### MOT-04 — READY, recovery y tareas auxiliares
 
 - **2026-09-14 — uso de tarea existente, sin adaptación persistente:**

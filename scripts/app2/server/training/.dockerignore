@@ -1,0 +1,7 @@
+__pycache__
+*.pyc
+*.pt
+*.pth
+*.ckpt
+.git
+results

@@ -20,12 +20,17 @@ identifica qué conservar, sus fuentes, respaldos y comprobaciones. La
 ordena el respaldo y la reaplicación selectiva. Mantener ambos forma parte de
 la política obligatoria de `AGENTS.md`.
 
+La aplicación [APP2 de visión de piezas](docs/app2/README.md) reúne requisitos,
+datos y herramientas de percepción local; la integración física de la detección
+y el modelo de piezas reales continúan pendientes.
+
 ## Estructura
 
 ```text
 .
 ├── docs/
 │   ├── PROJECT_SOURCE_OF_TRUTH.md # Relevo técnico global
+│   ├── app2/         # Visión de piezas, datos y entrenamiento local
 │   ├── guides/       # Guías de operación y documentos generados
 │   ├── reports/      # Revisión técnica, inventario y matriz de capacidades
 │   ├── support/      # Preguntas y seguimiento con UBTECH

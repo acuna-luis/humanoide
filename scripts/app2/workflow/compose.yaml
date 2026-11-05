@@ -1,0 +1,56 @@
+name: app2-workflow
+x-workflow: &workflow
+  image: app2-workflow:1.0-rfdetr1.11.2
+  build:
+    context: .
+  user: "10001:10001"
+  init: true
+  read_only: true
+  network_mode: none
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  cpus: 8.0
+  mem_limit: 32g
+  pids_limit: 512
+  shm_size: 2g
+  tmpfs:
+    - /tmp:rw,nosuid,nodev,size=4g,mode=1777
+  environment:
+    HF_HUB_OFFLINE: "1"
+    TRANSFORMERS_OFFLINE: "1"
+    HF_HUB_DISABLE_TELEMETRY: "1"
+    DO_NOT_TRACK: "1"
+    WANDB_MODE: disabled
+    TORCHINDUCTOR_CACHE_DIR: /cache/inductor
+    APP2_CODE_VERSION: local-source-manifest
+  volumes:
+    - cache:/cache
+    - datasets:/datasets:ro
+    - checkpoints:/checkpoints
+  restart: "no"
+services:
+  gpu:
+    <<: *workflow
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${APP2_GPU_DEVICE:-0}"]
+              capabilities: [gpu]
+  tools:
+    <<: *workflow
+    volumes:
+      - cache:/cache
+      - datasets:/datasets
+      - checkpoints:/checkpoints
+volumes:
+  cache:
+    external: true
+    name: app2_training_cache
+  datasets:
+    external: true
+    name: app2_datasets
+  checkpoints:
+    external: true
+    name: app2_checkpoints

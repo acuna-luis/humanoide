@@ -1,5 +1,18 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**05-11-2026 — APP2-VISION-PORT-20261105: fuentes APP2 incorporadas.**
+Se importaron selectivamente las guías y herramientas APP2 de
+`vision-reconoce` `daa4cf43c70aced0def10d31a98faf04b33d56bc`, preservando
+PICO, manos y escenarios de esta rama. El objetivo es detección/segmentación
+de piezas de dirección y lectura de la etiqueta de la caja; referencia exacta,
+asociación caja/piezas, calibración y aceptación siguen pendientes. El flujo
+de infraestructura se probó históricamente con datos sintéticos; no hay un
+detector APP2 real validado ni integración de agarre. Las fotos privadas de
+referencia y la especificación se comprobaron por SHA. El servidor histórico
+`192.168.1.43:2649` no respondió desde la red actual y no hay listener local
+`18080`: no se puede confirmar el estado actual de CVAT. Sin instalaciones,
+servicios, publicación o movimiento. [Ficha](SYSTEM_CUSTOMIZATIONS.md#app2-vision-port-20261105--fuentes-app2).
+
 **05-11-2026 — PICO-V4-TAKE14-PREP-20261105: toma 14 completa a 1×.**
 Se preparó sin recortes un `.motion` geométrico de 59,384299 s desde
 `prueba_v4_14_20261105T125040Z_791094`, sin reproducir. Copias PC, host y app

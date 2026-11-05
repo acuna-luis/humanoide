@@ -1,0 +1,15 @@
+# PyTorch/CUDA already supplied by the pinned official base image.
+torch==2.10.0
+torchvision==0.25.0
+# RF-DETR 1.11.2 tag: 7433d5919d0f7e72cc6cb78663e0a731afd499e0.
+rfdetr[train,onnx]==1.11.2
+numpy==2.2.6
+# Newer HF Hub requires Click>=8.4, incompatible with the base's spin tool.
+transformers==5.17.0
+huggingface-hub==1.16.0
+pytorch-lightning==2.6.6
+torchmetrics==1.8.2
+peft==0.21.2
+supervision==0.31.0
+# The official base includes spin 0.16, which requires click<8.4,!=8.3.0.
+click==8.3.1

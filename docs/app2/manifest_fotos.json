@@ -1,0 +1,76 @@
+{
+  "application": "app2",
+  "date_zone": "2026-10-19 Europe/Madrid",
+  "archive_from_repo": "../Humanoide-vla-evidence/app2/reference/2026-10-19",
+  "files": [
+    {
+      "filename": "piezas_cabeza_rectificada.png",
+      "sha256": "736d1a523055e2e729e600a05096e3b4b0759c0f3121b4bcb4f47cce146e99ac",
+      "bytes": 967671,
+      "width": 960,
+      "height": 576,
+      "source_from_repo_parent": "Humanoide-vla-evidence/20261019T084059Z_CAR_PART_VISIBLE_READONLY/head_rgb.png",
+      "kind": "original_camera_png_no_annotations"
+    },
+    {
+      "filename": "piezas_cabeza_raw.png",
+      "sha256": "3599fbdf60f43ab538e526a37fdcb8fa1be21cbb958e88c95f2fb10000048ea6",
+      "bytes": 4816526,
+      "width": 1920,
+      "height": 1536,
+      "source_from_repo_parent": "Humanoide-vla-evidence/20261019T084059Z_CAR_PART_VISIBLE_READONLY/head_left.png",
+      "kind": "original_camera_png_no_annotations"
+    },
+    {
+      "filename": "vista_cintura.png",
+      "sha256": "bfc67a51d8d44176e8fad1931fe3c5149d2b0687b7dd99ec773e968e600cc9f2",
+      "bytes": 352142,
+      "width": 640,
+      "height": 360,
+      "source_from_repo_parent": "Humanoide-vla-evidence/20261019T084059Z_CAR_PART_VISIBLE_READONLY/waist_rgb.png",
+      "kind": "original_camera_png_no_annotations"
+    },
+    {
+      "filename": "vista_chasis.png",
+      "sha256": "6269c794afef02ba2e6058add2684fd5fe80a3b86b03920f43544a60b7b4338a",
+      "bytes": 342776,
+      "width": 640,
+      "height": 360,
+      "source_from_repo_parent": "Humanoide-vla-evidence/20261019T084059Z_CAR_PART_VISIBLE_READONLY/chassis_rgb.png",
+      "kind": "original_camera_png_no_annotations"
+    },
+    {
+      "filename": "encuadre_previo_cabeza.png",
+      "sha256": "5a6e3dac5b9f40a22bd5fb39e589f2995e9dd0692f0a3c0c3e3fbe72020bb06f",
+      "bytes": 989830,
+      "width": 960,
+      "height": 576,
+      "source_from_repo_parent": "Humanoide-vla-evidence/20261019T080612Z_CAR_PART_VISION_READONLY/head_rgb.png",
+      "kind": "original_camera_png_no_annotations"
+    },
+    {
+      "filename": "lamina_fabrica_real_ITR_OTR.png",
+      "sha256": "e5b22e092e9daedbb3e1591b97e8f1f660ff3a164fa73bd159f908247fdd764e",
+      "bytes": 827330,
+      "width": 2189,
+      "height": 630,
+      "kind": "original_client_factory_slide_png_no_reencoding",
+      "source": "User attachment; recovered as image/png from current clipboard and visually matched",
+      "metadata_filename": "lamina_fabrica_real_ITR_OTR.json"
+    }
+  ],
+  "client_slide": {
+    "status": "ORIGINAL_PNG_ARCHIVED_AND_VISUALLY_MATCHED",
+    "filename": "lamina_fabrica_real_ITR_OTR.png",
+    "sha256": "e5b22e092e9daedbb3e1591b97e8f1f660ff3a164fa73bd159f908247fdd764e",
+    "conversation_reference": "Factory ITR/OTR slide reattached by user on 2026-10-19 with explicit request to save",
+    "original_dimensions_in_chat": [
+      2189,
+      630
+    ],
+    "preserved_as": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/app2/reference/2026-10-19/lamina_fabrica_real_ITR_OTR.png",
+    "interpretation_document": "docs/app2/REQUISITOS_CLIENTE.md",
+    "original_document_version": "PENDING",
+    "transformation": "none; PNG bytes saved without re-encoding"
+  }
+}

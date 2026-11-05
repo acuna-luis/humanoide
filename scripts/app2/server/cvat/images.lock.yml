@@ -1,0 +1,37 @@
+services:
+  cvat_clickhouse:
+    image: docker.io/clickhouse/clickhouse-server:23.11-alpine@sha256:731d490d85e5572ad2f519f0e467d8dc604bf692cb52541434e612a9747c1cf4
+  cvat_db:
+    image: docker.io/library/postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81
+  cvat_grafana:
+    image: docker.io/grafana/grafana-oss:10.1.2@sha256:63854c5592bab6c7b8ac2ceb35b420925465eb24ef05f2402e4cb805253efb46
+  cvat_opa:
+    image: docker.io/openpolicyagent/opa:1.12.2@sha256:b1400dba9c2356292d8229cbceddcd95158c7d2a8e1f53947ae3bd8e70478b61
+  cvat_redis_inmem:
+    image: docker.io/library/redis:7.2.11-alpine@sha256:1a34bdba051ecd8a58ec8a3cc460acef697a1605e918149cc53d920673c1a0a7
+  cvat_redis_ondisk:
+    image: docker.io/apache/kvrocks:2.15.0@sha256:0192707bd335ad546d8ec7826b1553b674fff27d6cea4195e22c0f1adbdbea40
+  cvat_server:
+    image: docker.io/cvat/server:v2.79.0@sha256:4ed4d6bca5c023cfe1ade131625c0008d52bc0a8e6a940cb76b0213b156bde1e
+  cvat_ui:
+    image: docker.io/cvat/ui:v2.79.0@sha256:d7f5132a2d2160465619e59c62a02a0ec4b5b856314cdbd1fbb22066b7d09939
+  cvat_vector:
+    image: docker.io/timberio/vector:0.26.0-alpine@sha256:13779856a8afe8240a1549208040dec12a50cd9b9d98b577d9327d2c212499d8
+  cvat_worker_annotation:
+    image: docker.io/cvat/server:v2.79.0@sha256:4ed4d6bca5c023cfe1ade131625c0008d52bc0a8e6a940cb76b0213b156bde1e
+  cvat_worker_chunks:
+    image: docker.io/cvat/server:v2.79.0@sha256:4ed4d6bca5c023cfe1ade131625c0008d52bc0a8e6a940cb76b0213b156bde1e
+  cvat_worker_consensus:
+    image: docker.io/cvat/server:v2.79.0@sha256:4ed4d6bca5c023cfe1ade131625c0008d52bc0a8e6a940cb76b0213b156bde1e
+  cvat_worker_export:
+    image: docker.io/cvat/server:v2.79.0@sha256:4ed4d6bca5c023cfe1ade131625c0008d52bc0a8e6a940cb76b0213b156bde1e
+  cvat_worker_import:
+    image: docker.io/cvat/server:v2.79.0@sha256:4ed4d6bca5c023cfe1ade131625c0008d52bc0a8e6a940cb76b0213b156bde1e
+  cvat_worker_quality_reports:
+    image: docker.io/cvat/server:v2.79.0@sha256:4ed4d6bca5c023cfe1ade131625c0008d52bc0a8e6a940cb76b0213b156bde1e
+  cvat_worker_utils:
+    image: docker.io/cvat/server:v2.79.0@sha256:4ed4d6bca5c023cfe1ade131625c0008d52bc0a8e6a940cb76b0213b156bde1e
+  cvat_worker_webhooks:
+    image: docker.io/cvat/server:v2.79.0@sha256:4ed4d6bca5c023cfe1ade131625c0008d52bc0a8e6a940cb76b0213b156bde1e
+  traefik:
+    image: docker.io/library/traefik:v3.6@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d

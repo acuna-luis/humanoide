@@ -1,0 +1,16 @@
+{
+  "id": "APP2-REV001-WORKFLOW-20261019",
+  "date_zone": "2026-10-19 Europe/Madrid",
+  "image": "app2-workflow:1.0-rfdetr1.11.2",
+  "image_id": "sha256:fb2c1b830588d81634af285a6886519b5c201492fb265b71d3a01fc33d43704c",
+  "parent_image_id": "sha256:af168d95cd04b99fc107652ec11834d69f5dfdf75f98e5bf568cf758eb928ba0",
+  "added_packages": {
+    "zxing-cpp": "3.1.1",
+    "tensorboard": "2.20.0",
+    "cvat-sdk-isolated": "2.79.0",
+    "opencv-python-headless": "5.0.0.93"
+  },
+  "code_and_data_license_review": "See README.md; no dataset rights inferred",
+  "checkpoint_smoke_sha256": "77f128367c8a82fa41870ee51b13fe716d1f318544d6ef7908374b2f1801f737",
+  "robot_control_connected": false
+}
