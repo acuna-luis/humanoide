@@ -2646,6 +2646,56 @@ XML o entradas de `task_list.yaml` no están instalados/cargados en Motion.
   `/tmp` puede desaparecer al recrear el contenedor. Para revertir, conservar
   el bag y otros derivados y retirar sólo esta copia y la receta si se desea.
 
+### PICO-V4-TAKE12-PREP-20261105 — Toma 12 a 1×
+
+- **05-11-2026 Europe/Madrid; archivos preparados, reproducción PENDIENTE.**
+  A solicitud del usuario se convirtió la captura
+  `prueba_v4_12_20261105T123819Z_762106` a velocidad normal. También se preparó
+  una copia sin espera inicial siguiendo la petición previa para la toma10;
+  ambas versiones se conservan. Sin player, START, movimiento ni cambios de
+  modo. Backup documental previo en
+  `../Humanoide-vla-evidence/20261105_PICO_V4_CAPTURE12_PREP/`.
+- **Original e inspección:** bag host y ROScontainer SHA256
+  `7f4cd628f75f1b9f95b59e4a0a8b03a43f4218749b96af44b45475d2f642ddda`,
+  comprobados antes/después. SQLite íntegro, duración52,314 s,188084 mensajes;
+  los cinco canales usados en conversión sin valores inválidos, marcas repetidas
+  ni regresivas. Whole tiene38 cabeceras repetidas, no usado para la conversión.
+  Evidencia `../Humanoide-vla-evidence/PICO-V4-TAKE12-REVIEW-20261105T124017.559140Z/`.
+- **Recetas:** se utilizaron los scripts versionados
+  [`prepare_pico_v4_geometric_replay.py`](../scripts/teleoperation/prepare_pico_v4_geometric_replay.py),
+  [`prepare_pico_v4_normal_speed.py`](../scripts/teleoperation/prepare_pico_v4_normal_speed.py)
+  y [`prepare_pico_v4_trimmed.py`](../scripts/teleoperation/prepare_pico_v4_trimmed.py),
+  con capture `prueba_v4_12_20261105T123819Z_762106` y SHA del bag anterior.
+  El primer script produjo derivado lento SHA
+  `e462a2f0841d2d29a038589d801291f8849036902f71abff9afd6aaf557bdb17`
+  en `../Humanoide-vla-evidence/PICO-V4-DERIVATIVE-20261105T124013Z_f800eb75/`;
+  su versión con rutas ROS/app distintas, corregida para `/tmp` compartido, pasó
+  aquí en ejecución real. El segundo lo convirtió a 1× con tiempos/2; comparación
+  independiente confirma 88856 posiciones idénticas y tiempos divididos por2.
+- **Versión completa 1×:** duración52,325944728 s; SHA256
+  `3a432d42bd9687e1f92a385abcb0ec3fb5dc9898fb71b962a9fea9701ab7cfe2`.
+  Host Motion
+  `/home/walker/grabaciones_v4_completas/prueba_v4_12_20261105T123819Z_762106/derived_normal_20261105T124047Z_5cafefe7/geometry_normal.motion`;
+  app `/tmp/pico_v4_app_normal_20261105T124047Z_5cafefe7/geometry_normal.motion`;
+  copia PC/recibos
+  `../Humanoide-vla-evidence/PICO-V4-NORMAL-DERIVATIVE-20261105T124047Z_5cafefe7/`.
+- **Versión sin espera 1×:** corte común12,223750768 s, inmediatamente antes del
+  primer cambio de cabeza y de los brazos; duración40,102193960 s. SHA256
+  `88995d0c2457c370a8c7e4ace67fda9f5114444434363921b25f3688bb1e8703`.
+  Host Motion
+  `/home/walker/grabaciones_v4_completas/prueba_v4_12_20261105T123819Z_762106/derived_trimmed_20261105T124120Z_41e3b873/geometry_trimmed.motion`;
+  app `/tmp/pico_v4_app_trimmed_20261105T124120Z_41e3b873/geometry_trimmed.motion`;
+  PC/recibos `../Humanoide-vla-evidence/PICO-V4-TRIMMED-DERIVATIVE-20261105T124120Z_41e3b873/`.
+  Comparación independiente: posición inicial igual y68109 muestras posteriores
+  conservadas con tiempos desplazados. La interpolación del player en el primer
+  intervalo no está demostrada. Tres copias de cada derivado verificadas por SHA.
+- **Límites y reversión:** velocidades discretas máximas calculadas: brazo
+  derecho5,385 rad/s, mano derecha5,237 rad/s, cabeza2,007 rad/s. No certifican
+  velocidades aplicadas ni límites seguros; trayectoria, postura real y
+  envolvente requieren evaluación antes del player. La conversión no reproduce
+  fuerza/corriente/modos5/7. Los archivos `/tmp` pueden desaparecer al recrear
+  el contenedor. Conservar bag y retirar sólo derivados si se revierte.
+
 ### MOT-04 — READY, recovery y tareas auxiliares
 
 - **2026-09-14 — uso de tarea existente, sin adaptación persistente:**

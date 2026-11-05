@@ -1,5 +1,14 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**05-11-2026 — PICO-V4-TAKE12-PREP-20261105.** Preparada sin movimiento la
+captura `prueba_v4_12_20261105T123819Z_762106` a velocidad normal. La versión
+completa dura52,325945 s; una copia comienza en el primer cambio y dura
+40,102194 s, con la misma postura inicial. La toma tiene movimientos amplios;
+la tasa discreta máxima calculada es5,385 rad/s en brazo derecho y5,237 rad/s
+en mano derecha, sin validación de límites ni del player. No reproduce fuerza
+o modos de las manos. Antes del player verificar postura real, condiciones y
+exclusividad de control. [Archivos y evidencia](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-take12-prep-20261105--toma-12-a-1).
+
 **05-11-2026 13:38 CET — PICO-V4-TRIM-20261105.** La toma10 a 1× tiene
 una copia que elimina 25,971776308 s iniciales constantes y dura35,574191931 s.
 Usa un solo corte para cabeza, ambos brazos y manos; conserva las posiciones

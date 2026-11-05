@@ -1,5 +1,13 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**05-11-2026 — PICO-V4-TAKE12-PREP-20261105: toma 12 preparada a 1×.**
+Bag íntegro convertido a `.motion` geométrico completo de 52,325945 s y a
+versión sin espera inicial de 40,102194 s. Ambas están verificadas por SHA en
+PC, host y app Motion; no se reprodujeron. Se conservaron el bag y la postura
+inicial. La trayectoria, la postura real previa, las velocidades y el entorno
+no están validados; el derivado no reproduce fuerza/modos originales.
+[Ficha y rutas](SYSTEM_CUSTOMIZATIONS.md#pico-v4-take12-prep-20261105--toma-12-a-1).
+
 **05-11-2026 13:38 CET — PICO-V4-TRIM-20261105: toma 10 desde primer cambio.**
 Se preparó una copia 1× eliminando 25,971776308 s iniciales constantes; dura
 35,574191931 s. La postura inicial coincide con la versión completa y las

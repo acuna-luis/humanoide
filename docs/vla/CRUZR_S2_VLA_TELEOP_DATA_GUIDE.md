@@ -1,5 +1,12 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**05-11-2026 — PICO-V4-TAKE12-PREP-20261105.** La toma12 se inspeccionó y
+se generaron derivados geométricos completos y sin espera a 1×. Los cinco
+canales usados por el conversor no presentan valores inválidos ni marcas
+regresivas/repetidas; el bag permanece intacto. Los derivados no reproducen
+los esfuerzos/modos originales y no están validados física ni como dataset de
+entrenamiento. [Datos y procedencia](../SYSTEM_CUSTOMIZATIONS.md#pico-v4-take12-prep-20261105--toma-12-a-1).
+
 **05-11-2026 — PICO-V4-TRIM-20261105.** Derivado geométrico de la toma10 sin
 los primeros 25,971776308 s constantes, a escala 1×, duración35,574191931 s.
 Las muestras posteriores y la postura inicial coinciden con el derivado 1×.
