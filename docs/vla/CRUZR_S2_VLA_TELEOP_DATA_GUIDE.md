@@ -1,5 +1,14 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**09-11-2026 — VLA-BALL-OFFLINE-20261109.** Dos capturas de pelota
+interrumpidas se segmentaron en 12 tramos; dos candidatos visuales de una
+misma toma se prepararon para estudio. Motor→articulación usa hipótesis de
+transmisión histórica y agarre usa etiquetas provisionales; ninguna señal se
+declara cualificada ni se envió control. SmolVLA entrenado 1.000 pasos offline;
+en 60 muestras de entrenamiento,58 etiquetas de mano coinciden y hay dos
+falsos cierres. Trayectoria desde HOME, altura20cm y generalización
+PENDIENTES. [Recetas y evidencia](PELOTA_SMOLVLA_PILOTO_20261109.md).
+
 **05-11-2026 — VLA-PASSIVE-HANDS-20261105: manos v4 opcionales en el capturador RGB.**
 Los estados y las órdenes de cada mano se descubren por separado; las órdenes
 crudas sólo se guardan cuando llegan y no se han cualificado como acción de

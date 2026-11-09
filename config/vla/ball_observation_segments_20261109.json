@@ -1,0 +1,112 @@
+{
+  "segments": [
+    {
+      "id": "toma1_370_389",
+      "source_dir": "../Humanoide-vla-evidence/20261109T183246Z_EPISODE_7abf3106",
+      "start_frame": 370,
+      "end_frame": 389,
+      "status": "failed",
+      "split": "inspection_test",
+      "notes": "Inspección fotograma a fotograma: cierre y apertura sin elevación sostenida. No es un ciclo completo."
+    },
+    {
+      "id": "toma1_390_414",
+      "source_dir": "../Humanoide-vla-evidence/20261109T183246Z_EPISODE_7abf3106",
+      "start_frame": 390,
+      "end_frame": 414,
+      "status": "failed",
+      "split": "inspection_test",
+      "notes": "Inspección fotograma a fotograma: pelota separada hacia 402; humano recoloca 408-414; no es ciclo completo."
+    },
+    {
+      "id": "toma2_150_185",
+      "source_dir": "../Humanoide-vla-evidence/20261109T183726Z_EPISODE_879a137d",
+      "start_frame": 150,
+      "end_frame": 185,
+      "status": "unreviewed",
+      "split": "inspection_train",
+      "notes": "Muestreo visual: cierre breve, no se observa ciclo completo; revisión densa pendiente."
+    },
+    {
+      "id": "toma2_230_290",
+      "source_dir": "../Humanoide-vla-evidence/20261109T183726Z_EPISODE_879a137d",
+      "start_frame": 230,
+      "end_frame": 290,
+      "status": "unreviewed",
+      "split": "inspection_train",
+      "notes": "Muestreo visual: agarre con posible intervención humana cerca de 280; revisión densa pendiente."
+    },
+    {
+      "id": "toma2_315_335",
+      "source_dir": "../Humanoide-vla-evidence/20261109T183726Z_EPISODE_879a137d",
+      "start_frame": 315,
+      "end_frame": 335,
+      "status": "unreviewed",
+      "split": "inspection_train",
+      "notes": "Muestreo visual: cierre breve; revisión densa pendiente."
+    },
+    {
+      "id": "toma2_450_525",
+      "source_dir": "../Humanoide-vla-evidence/20261109T183726Z_EPISODE_879a137d",
+      "start_frame": 450,
+      "end_frame": 525,
+      "status": "unreviewed",
+      "split": "inspection_train",
+      "notes": "Muestreo visual: persona manipula el aro cerca de 490; revisión densa pendiente."
+    },
+    {
+      "id": "toma2_579_633",
+      "source_dir": "../Humanoide-vla-evidence/20261109T183726Z_EPISODE_879a137d",
+      "start_frame": 579,
+      "end_frame": 633,
+      "status": "candidate_success",
+      "split": "inspection_train",
+      "notes": "Inspección de todos los fotogramas: agarre y depósito visibles sin intervención humana visible dentro del tramo; persona recoloca pelota 575-577; mano comienza junto a pelota, no HOME. Altura 20 cm y sincronización no verificadas."
+    },
+    {
+      "id": "toma2_640_662",
+      "source_dir": "../Humanoide-vla-evidence/20261109T183726Z_EPISODE_879a137d",
+      "start_frame": 640,
+      "end_frame": 662,
+      "status": "unreviewed",
+      "split": "inspection_train",
+      "notes": "Muestreo visual: cierres breves; revisión densa pendiente."
+    },
+    {
+      "id": "toma2_675_830",
+      "source_dir": "../Humanoide-vla-evidence/20261109T183726Z_EPISODE_879a137d",
+      "start_frame": 675,
+      "end_frame": 830,
+      "status": "unreviewed",
+      "split": "inspection_train",
+      "notes": "Muestreo visual: posible intervención humana cerca de 710 y 820; revisión densa pendiente."
+    },
+    {
+      "id": "toma2_935_1008",
+      "source_dir": "../Humanoide-vla-evidence/20261109T183726Z_EPISODE_879a137d",
+      "start_frame": 935,
+      "end_frame": 1008,
+      "status": "candidate_success",
+      "split": "inspection_train",
+      "notes": "Inspección de todos los fotogramas: aproximación, agarre y depósito visibles sin intervención humana visible; pelota parcialmente ocluida; comienza fuera de HOME; altura 20 cm y sincronización no verificadas."
+    },
+    {
+      "id": "toma2_1010_1075",
+      "source_dir": "../Humanoide-vla-evidence/20261109T183726Z_EPISODE_879a137d",
+      "start_frame": 1010,
+      "end_frame": 1075,
+      "status": "assisted",
+      "split": "inspection_train",
+      "notes": "Inspección de todos los fotogramas: persona recoloca aro 1033-1036 mientras mano sostiene pelota; posible oclusión. No es demostración sin ayuda; inicio fuera de HOME y altura no verificada."
+    },
+    {
+      "id": "toma2_1125_1175",
+      "source_dir": "../Humanoide-vla-evidence/20261109T183726Z_EPISODE_879a137d",
+      "start_frame": 1125,
+      "end_frame": 1175,
+      "status": "unreviewed",
+      "split": "inspection_train",
+      "notes": "Muestreo visual: intervención humana cerca de 1160, después pelota fuera de mesa; no se conoce causa; revisión densa pendiente."
+    }
+  ]
+}

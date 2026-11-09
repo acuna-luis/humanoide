@@ -1,5 +1,11 @@
 # Captura pasiva de episodios RGB y movimiento
 
+**09-11-2026 — piloto pelota:** las dos tomas interrumpidas se conservaron y
+segmentaron en 12 tramos para inspección; dos candidatos visuales de la misma
+toma tienen objetivos de motor transformados sólo como hipótesis offline.
+La captura sigue sin cualificar acciones, sincronía o control físico y las
+salidas se marcan `training_ready=false`. [Resultados y recetas](PELOTA_SMOLVLA_PILOTO_20261109.md).
+
 ## Manos v4 — 05-11-2026
 
 **VLA-PASSIVE-HANDS-20261105 — fuentes PC instaladas; nodo de lectura temporal

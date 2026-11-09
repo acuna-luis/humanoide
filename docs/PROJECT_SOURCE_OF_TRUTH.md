@@ -1,5 +1,20 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**09-11-2026 — VLA-BALL-OFFLINE-20261109: piloto pelota en preparación.**
+Dos capturas interrumpidas se segmentaron en 12 tramos: dos candidatos visuales
+de agarre/depósito en la misma toma, sin HOME ni altura20cm verificados, y
+un tramo asistido. Copias observacionales y objetivos experimentales de motor
+con transmisiones históricas: `training_ready=false`, sin control físico ni
+órdenes al robot. Las consignas y sincronía siguen sin cualificar. Servidor Ada
+con imagen aislada y CUDA verificados; dataset experimental de dos episodios y
+60 muestras auditado con estadísticas corregidas. Entrenamiento offline de
+1.000 pasos completado en390,12 s; evaluación sobre los mismos datos:58/60
+etiquetas de mano coinciden, con dos falsos cierres al umbral exploratorio0,5.
+No es evaluación independiente ni autoriza control; HOME y 20 cm no están
+demostrados. Sin órdenes al robot. Estado y reversión en
+[ficha](SYSTEM_CUSTOMIZATIONS.md#vla-ball-offline-20261109); detalle y recetas
+en [piloto pelota](vla/PELOTA_SMOLVLA_PILOTO_20261109.md).
+
 **09-11-2026 — PICO-XR-USB-RECONNECT-20261109: XR USB reconectado.**
 El usuario comunicó `connect_error` al reconectar el visor. Se detectaron PICO
 por USB y el servicio XR escuchando en el PC; inicialmente no había socket XR
