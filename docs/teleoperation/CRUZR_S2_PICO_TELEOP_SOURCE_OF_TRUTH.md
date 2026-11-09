@@ -1,5 +1,13 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**09-11-2026 — HEAD-PICO-SCRIPT-20261109.** Para la postura física PICO y
+modo joystick solicitados se ha preparado un diagnóstico local en
+`scripts/mover_cabeza_desde_pico.py`, sin control físico: `--run` siempre
+rechaza la ejecución. La geometría y recorrido con manos v4, la exclusividad
+de control y la supervisión y parada están pendientes de cualificación. La
+referencia histórica de cabeza no garantiza que se vea el aro. No se consultó
+ni movió el robot en esta preparación. [Ficha](../SYSTEM_CUSTOMIZATIONS.md#head-pico-script-20261109).
+
 **09-11-2026 — HEAD-PICO-READONLY-20261109.** El usuario informa que el
 robot está en postura PICO pero ya no teleopera y confirma manos vacías y
 condiciones físicas para cabeza. Lecturas de21:29 Europe/Madrid: goal previo

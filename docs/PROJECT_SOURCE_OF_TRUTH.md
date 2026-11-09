@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**09-11-2026 — HEAD-PICO-SCRIPT-20261109: preparación local, movimiento
+PENDIENTE.** El usuario pidió un script para mover la cabeza desde la postura
+física PICO en modo joystick y guardarlo en `scripts/`. Se preparó
+`scripts/mover_cabeza_desde_pico.py`: sólo analiza capturas históricas y su
+`--run` está bloqueado incondicionalmente. No se consultó ni movió el robot.
+Faltan cualificar la geometría de manos v4 y el recorrido desde esa postura,
+el control exclusivo y la supervisión y parada del movimiento. Una lectura
+histórica no acredita el estado actual. [Ficha y verificaciones](SYSTEM_CUSTOMIZATIONS.md#head-pico-script-20261109).
+
 **09-11-2026 — HEAD-PICO-READONLY-20261109: cambio de modo confirmado.**
 Tras solicitud de ejecutar y orientar cabeza, usuario indica que no está en
 teleoperación y confirma manos vacías, zona libre, ruedas bloqueadas, cargador

@@ -1,5 +1,21 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## HEAD-PICO-SCRIPT-20261109
+
+**09-11-2026, Europe/Madrid — diagnóstico local VERIFICADO; ejecutor físico
+PENDIENTE.** El usuario solicitó preparar y guardar en `scripts/` un script
+para mover la cabeza desde la postura física PICO en modo joystick. No se
+consultó el robot, ni se envió movimiento o cambio de modo.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | El ejecutor histórico de cabeza exige HOME y perfil de abrazaderas; no cualifica postura PICO con manos v4. El estado físico actual no se ha comprobado en esta intervención. |
+| Destino y fuente | PC/repositorio: `scripts/mover_cabeza_desde_pico.py`, SHA256 `d2d2c044533ffdc30ae4d843a9b487481bb8892b1990bd610e33640bb269b595`; prueba `scripts/test_mover_cabeza_desde_pico.py`, SHA256 `0692a4b7afcfd42d7af7f0ed8947bb9f7f77bc8b4d3f3631525c00cfd569e092`. Python 3 y biblioteca estándar; no requiere ROS ni red. |
+| Aplicación y activación | Script nuevo en repositorio, sin instalación ni cambios remotos. `python3 -B scripts/mover_cabeza_desde_pico.py --help` muestra opciones; `--check` informa preparación pendiente y devuelve 1; `--estado RUTA/control-read.json` analiza sólo una captura anterior; `--run` devuelve 2 sin conectarse ni enviar órdenes. Ninguna opción habilita movimiento. La referencia histórica yaw0/pitch−0,43 rad en2s y el hash XML no verifican la versión instalada ni el encuadre de la pelota. |
+| Verificación | Pruebas locales `python3 -B -m unittest scripts/test_mover_cabeza_desde_pico.py`: bloqueo de ejecución sin archivos/red/procesos/ROS y rechazo de captura incompleta, duplicada o no finita. Una captura puntual no prueba modo, reposo ni condiciones actuales. No probado físicamente. |
+| Respaldo y reversión | Los cuatro documentos previos están en `../Humanoide-vla-evidence/20261109_HEAD_PICO_SCRIPT_PREP/before-docs/`; índice `before-docs.sha256` SHA256 `1c10acae9e4a5f6ec95e3ab3e24c5044c6cef9c6a1ba48226f059003ad4c66e6`. Para retirar la preparación, comparar cambios posteriores y revertir selectivamente el script, su prueba y estas entradas; no tocar locks preexistentes. No hay cambios remotos que revertir. |
+| Deuda | Identificar modelo o envolvente conservadora de las manos v4 y cualificar postura, escena y recorrido de cabeza; comprobar que la cámara ve la zona. Diseñar comprobaciones actuales y exclusividad durante todo el movimiento, seguimiento y parada física verificada. Antes de cualquier movimiento repetir condiciones presenciales y lecturas de salud y modo. No reutilizar ni el guard de HOME como certificación PICO ni la captura histórica como estado actual. |
+
 ## HEAD-PICO-READONLY-20261109
 
 **09-11-2026, Europe/Madrid — VERIFICADO sólo lectura; cabeza no movida.**

@@ -1,5 +1,15 @@
 # Evaluación offline de SmolVLA y revisión de cabeza — 09-11-2026
 
+**HEAD-PICO-SCRIPT-20261109 — preparación local VERIFICADA; movimiento
+PENDIENTE.** A petición del usuario se guardó
+`scripts/mover_cabeza_desde_pico.py` para estudiar la cabeza desde postura
+PICO en modo joystick. Analiza una captura histórica, pero no se conecta al
+robot ni ejecuta movimiento; `--run` está bloqueado incondicionalmente. La
+referencia histórica `cruzr/move_head_lower` no garantiza que se vea la pelota.
+Faltan una trayectoria cualificada para manos v4 y postura PICO, la supervisión
+y la parada; el VLA tiene además sus propios requisitos. Esta intervención no
+consultó ni movió el robot. [Ficha y receta](../SYSTEM_CUSTOMIZATIONS.md#head-pico-script-20261109).
+
 **VLA-BALL-SHADOW-20261109 — VERIFICADO sin movimiento; control físico
 PENDIENTE.** El usuario solicitó instalar y ejecutar el SmolVLA de pelota en
 el robot y autorizó expresamente mover sólo la cabeza para ver el aro. Confirmó
