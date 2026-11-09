@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**09-11-2026 — VLA-BALL-SHADOW-20261109: inferencia sin movimiento.** El
+usuario autorizó ejecución física y mover cabeza; no se ejecutó: goal de
+manipulación activo, postura PICO fuera de HOME y no existe puente cualificado
+para SmolVLA/mano. Captura pasiva:23 imágenes,22 pares y mano derecha completa;
+el aro no se distingue claramente pese a que el usuario confirma pelota
+colocada. Cinco predicciones de escena actual aisladas muestran una diferencia
+máxima propuesta−estado de1,167653rad; son propuestas, no movimientos ni cota
+de seguridad. Siete ejemplos fallidos: máximo0,688391rad. Cabeza/robot no
+movidos y sin cambios de modo. [Detalle, evidencia y reversión](vla/SMOLVLA_PELOTA_EVALUACION_20261109.md).
+
 **09-11-2026 — VLA-BALL-OFFLINE-20261109: piloto pelota en preparación.**
 Dos capturas interrumpidas se segmentaron en 12 tramos: dos candidatos visuales
 de agarre/depósito en la misma toma, sin HOME ni altura20cm verificados, y

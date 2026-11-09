@@ -4,8 +4,10 @@
 solicita experimentar con las dos grabaciones existentes; orden futura: tomar
 la pelota con mano derecha, elevarla aproximadamente 20 cm, bajarla y soltarla.
 La trayectoria debe empezar en HOME y depender de la posición observada. El
-usuario autoriza preparar datos y servidor/entrenamiento offline; no autoriza
-enviar órdenes al robot. No se ha inferido el estado físico actual.
+usuario autorizó inicialmente datos y entrenamiento offline. Posteriormente
+solicitó ejecución física y autorizó mover la cabeza; no se ejecutó por los
+bloqueos técnicos y resultados de [evaluación posterior](SMOLVLA_PELOTA_EVALUACION_20261109.md).
+No se ha inferido el estado físico actual.
 El usuario aclaró que la pelota comenzará siempre sobre el aro fijo; la pose
 del robot respecto de la mesa al iniciar desde HOME queda PENDIENTE.
 
@@ -109,7 +111,7 @@ coinciden al umbral exploratorio0,5, con dos falsos cierres. La revisión
 independiente encontró un error puntual máximo0,55891rad; las salidas de mano
 no son probabilidades calibradas. Se usan datos de entrenamiento y etiquetas
 hipotéticas, no es una cota de movimiento o eficacia. No hay prueba
-independiente ni autorización de control físico. Se corrigieron dos etiquetas de suelta
+independiente ni cualificación de control físico. Se corrigieron dos etiquetas de suelta
 contrastando la última orden cruda antes de la consigna del motor. No se
 afirman relojes físicos sincronizados. El estado y reversión del servidor se
 registran en la ficha de `docs/SYSTEM_CUSTOMIZATIONS.md`. No usar

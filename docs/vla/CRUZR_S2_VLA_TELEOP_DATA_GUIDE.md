@@ -1,5 +1,13 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**09-11-2026 — VLA-BALL-SHADOW-20261109.** Inferencia offline aislada con
+cinco observaciones actuales y siete de otra captura fallida; las mayores
+diferencias propuesta−estado son1,167653rad y0,688391rad respectivamente,
+sin envío físico ni cota de seguridad. El usuario autorizó cabeza y ejecución,
+pero el goal activo y gates de HOME/control impiden la tarea de cabeza; falta
+puente cualificado de SmolVLA/mano. Captura pasiva completa, aro no distinguido;
+sin cambio de modo ni movimiento. [Evidencia y reproducción](SMOLVLA_PELOTA_EVALUACION_20261109.md).
+
 **09-11-2026 — VLA-BALL-OFFLINE-20261109.** Dos capturas de pelota
 interrumpidas se segmentaron en 12 tramos; dos candidatos visuales de una
 misma toma se prepararon para estudio. Motor→articulación usa hipótesis de

@@ -1,5 +1,19 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## VLA-BALL-SHADOW-20261109
+
+**09-11-2026, Europe/Madrid — captura temporal y evaluación offline
+VERIFICADAS; movimiento autorizado por el usuario pero NO ejecutado.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo | Evaluar SmolVLA pelota y estudiar orientar la cabeza. El usuario autorizó ejecución física y cabeza y confirmó manos vacías, zona despejada, ruedas bloqueadas, cargador desconectado, paros accesibles y persona junto al paro; confirmó pelota sobre aro. No extrapolar estado posterior. |
+| Estado previo | Acción de manipulación `EXECUTING` y postura PICO fuera de HOME. XML de cabeza existente sólo para cabeza, pero ejecutor exige HOME; otro flujo requiere ausencia de goal y hardware de abrazaderas. No se cambió modo, canceló goal, envió HOME ni movió robot. |
+| Destino/fuentes | PC: `scripts/vla/prepare_ball_current_observations.py` SHA256 `06ac413e74a83e7d6e5ad368c443e911535563058615c6dc8ef34216ab96c0fe`, `scripts/vla/prepare_ball_failed_observations.py` SHA256 `2782c0f277eee4ab02f0da9b90ac143ceef4a019d1f2fd1fda5aedb238cb4119`, pruebas y evaluadores/wrappers bajo `scripts/vla/smolvla_ball_server/`. `evaluate_failed_offline.py` SHA256 `03a30ae8808e9091a24f3f1c4dd31f00bdd5e1f84d556e7aa07f9397ab10f837`; `evaluate_current_offline.py` SHA256 `98155fd99570d4f63239527ae3c4f656c56452850ab0448ce921fd6582df50bb`. Receta [offline](../scripts/vla/smolvla_ball_server/EVALUATION_HELD_OUT_AND_CURRENT.md) y [detalle](vla/SMOLVLA_PELOTA_EVALUACION_20261109.md). Robot Vision `walker-ros.ros2-1`: colector pasivo temporal de5s finalizado rc0, sin persistencia en robot. |
+| Aplicación/verificación | Captura23 imágenes,22 pares y132 estados de mano derecha; QC base/mano true. Aro no claramente visible en captura. Evaluación aislada en `aisrv`, sin red ni ROS, 5 observaciones actuales y7 fallidas: máximo propuesta−estado1,167653 y0,688391rad. 17 tests locales y auditoría independiente de hashes y84 diferencias; no califican control o movimiento. |
+| Evidencia/servidor | `../Humanoide-vla-evidence/20261109_BALL_SHADOW_ASSESSMENT/`, reporte de procedencia `server/assessment-provenance.json` SHA256 `8b493e5fd7d9b7df98e5eb36386ff7ff925333967fc2c44d32d301a6f2f5f960`. Servidor `aisrv`: `/home/luisacuna/cruzr-smolvla-ball-20261109/assessment-20261109-shadow/` nuevo, privado. Contenedores efímeros terminados, GPU volvió a5.500MiB; no se modificaron servicios previos ni checkpoint. |
+| Reversión/deuda | Sin archivo o configuración persistente del robot que revertir. Respaldo documental en `../Humanoide-vla-evidence/20261109_BALL_SHADOW_ASSESSMENT/before-docs/`, índice SHA256 `37ef71561af90afe6a3a2685f02d0bbfb2c6153136b4c8dabe48ff6727acfd4e`. Preservar resultados antes de retirar sólo carpeta propia de servidor/fuentes nuevas; no borrar datos ni servicios ajenos. Falta puente cualificado mano, observaciones con aro visible, validación de parada y trayectoria; ni autorización ni shadow aislado sustituyen esos gates. |
+
 ## VLA-BALL-OFFLINE-20261109
 
 **09-11-2026, Europe/Madrid — datos y entrenamiento piloto offline OBSERVADOS;
