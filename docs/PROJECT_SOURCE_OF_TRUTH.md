@@ -1,5 +1,12 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**09-11-2026 — PC-ROUTE-20261109: acceso web por Wi-Fi restaurado.** El perfil
+Wi-Fi actual recibió la ruta persistente `.11.0/24` vía `.42.2` y
+`never-default=yes`; aplicada con reapply. Motion y Vision respondieron a ping,
+Vision devolvió HTTP 200 y la salida general siguió por DSA CORPORATE. Ethernet
+`eno1` sin portadora; estabilidad, UI completa y persistencia tras reinicio
+pendientes. Sin cambios al robot ni comandos de control. [Receta y reversión](guides/PC_RUTA_WIFI_CRUZR.md).
+
 **05-11-2026 — PICO-V4-FULL-PREP-20261105: diagnóstico de la vía inalámbrica.**
 El operador confirma manos v4 vacías y libres; no se infiere el estado físico
 posterior. Lecturas en el PC muestran `wlo1` en `Cruzr S2-0669`, IP

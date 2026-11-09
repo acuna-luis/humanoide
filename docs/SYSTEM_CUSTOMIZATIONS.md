@@ -2962,6 +2962,14 @@ XML o entradas de `task_list.yaml` no están instalados/cargados en Motion.
 
 ### PC-01 — Red de trabajo
 
+- **PC-ROUTE-20261109, instalado y aplicado:** perfil NetworkManager actual
+  `Cruzr S2-0669 2` UUID `5a526476-8ad8-4946-84e2-57f158fe0a77`, interfaz
+  `wlxd40dab0b5b8e`: ruta `.11.0/24` vía `.42.2` y `never-default=yes`.
+  Motion/Vision respondieron y web devolvió HTTP 200; DSA conserva salida
+  general. Persistencia tras reinicio y prioridad con Ethernet pendientes.
+  Estado anterior, evidencia, receta y reversión selectiva:
+  [PC-ROUTE-20261109](guides/PC_RUTA_WIFI_CRUZR.md).
+
 - **VERIFICADO histórico 2026-08-26:** perfil Ethernet `cruzr-s2`, `eno1`,
   `192.168.11.250/24`, autonegociación 1 Gb/s full duplex, never-default.
   Wi-Fi USB `wlx80afcad40bd6`, perfil observado `Cruzr S2-0669 1`:

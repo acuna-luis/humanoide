@@ -1,5 +1,10 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**09-11-2026 — PC-ROUTE-20261109:** el perfil activo `Cruzr S2-0669 2` usa
+la ruta `.11.0/24` vía `.42.2`; Motion y Vision respondieron y la web devolvió
+HTTP 200. Internet sigue por DSA CORPORATE. Ethernet sin portadora y estabilidad
+de Wi-Fi sin probar; esto no habilita teleoperación. [Detalle y reversión](../guides/PC_RUTA_WIFI_CRUZR.md).
+
 ## Preparación full v4 sólo PC — 05-11-2026
 
 **Diagnóstico de red e inicialización, 05-11-2026, Europe/Madrid — sólo lectura.**
