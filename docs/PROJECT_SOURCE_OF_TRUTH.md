@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**09-11-2026 — SMOLVLA-BALL-LIVE-SHADOW-20261109: inferencia en vivo
+VERIFICADA sin movimiento.** El checkpoint de pelota se cargó en GPU Ada en
+contenedor aislado y procesó nueve observaciones pasivas recientes de cámara,
+20 articulaciones y siete dedos derechos obtenidas de Vision. Se recibieron
+nueve propuestas; la mayor diferencia propuesta−estado fue 1,165707 rad en
+`R_elbow_yaw_joint`. No es movimiento, error de trayectoria ni límite seguro.
+Contenedor y colector temporal terminados, sin órdenes a actuadores. Esto no
+prueba ejecución física ni ejecución del modelo dentro del robot. Acción de
+mano, puente, supervisión y parada siguen PENDIENTES. [Ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-ball-live-shadow-20261109).
+
 **09-11-2026 — HEAD-PICO-SCRIPT-20261109: preparación local, movimiento
 PENDIENTE.** El usuario pidió un script para mover la cabeza desde la postura
 física PICO en modo joystick y guardarlo en `scripts/`. Se preparó

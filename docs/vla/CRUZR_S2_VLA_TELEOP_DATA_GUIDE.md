@@ -1,5 +1,12 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**09-11-2026 — SMOLVLA-BALL-LIVE-SHADOW-20261109.** Shadow en vivo del
+checkpoint de pelota: nueve observaciones Vision y nueve propuestas en GPU
+Ada, sin control físico. La mayor diferencia propuesta−estado fue 1,165707 rad
+en un eje de codo; no es trayectoria ejecutada. El modelo no se ha probado a
+bordo. No se ha cualificado acción de mano ni puente de control; relojes y
+latencia física siguen sin calibrar. [Detalle y receta](../../scripts/vla/SMOLVLA_BALL_LIVE_SHADOW.md).
+
 **09-11-2026 — HEAD-PICO-READONLY-20261109.** La acción PICO antes observada
 pasó a cancelada y el log posterior indica `JoystickMode`, de acuerdo con el
 usuario. Postura sigue PICO; actuadores y salud se leyeron puntualmente sin

@@ -1,5 +1,20 @@
 # Evaluación offline de SmolVLA y revisión de cabeza — 09-11-2026
 
+**SMOLVLA-BALL-LIVE-SHADOW-20261109 — VERIFICADO en vivo, sin movimiento.**
+El usuario pidió avanzar hacia una prueba física. Se conectó el colector
+pasivo de Vision a un modelo aislado en GPU Ada, no a los actuadores: en 20 s
+a 0,5 Hz se procesaron nueve observaciones con imagen, 20 articulaciones y
+siete dedos derechos y se obtuvieron nueve propuestas. Inferencia individual
+0,169–0,601 s; del adaptador en PC a recibir la predicción 0,297–0,955 s,
+excluyendo el transporte Vision→PC y sin calibración de relojes. Diferencia
+máxima propuesta−estado 1,165707 rad en `R_elbow_yaw_joint`; salida escalar de
+mano 0,667–0,986 no calibrada. No son movimientos ni límites de seguridad. No
+se conservó una imagen de esta prueba para comprobar si el aro era visible.
+El colector y contenedor propios finalizaron; no se enviaron órdenes de
+movimiento. El modelo sigue en el servidor, no se ha probado a bordo. Para
+conectar al robot faltan semántica de mano, transformación y límites de brazo,
+control exclusivo, supervisión y parada. [Ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-ball-live-shadow-20261109).
+
 **HEAD-PICO-SCRIPT-20261109 — preparación local VERIFICADA; movimiento
 PENDIENTE.** A petición del usuario se guardó
 `scripts/mover_cabeza_desde_pico.py` para estudiar la cabeza desde postura

@@ -1,5 +1,22 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-BALL-LIVE-SHADOW-20261109
+
+**09-11-2026, Europe/Madrid — shadow en vivo VERIFICADO sin movimiento;
+puente físico PENDIENTE.** Por solicitud del usuario se avanzó hacia la prueba
+del SmolVLA de pelota con robot: Vision suministró observaciones pasivas y el
+checkpoint calculó propuestas en el servidor Ada. No se conectaron salidas a
+actuadores ni se cambió modo o configuración del robot.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | Checkpoint piloto y entorno Ada ya existentes; sólo inferencia offline previa. Órdenes de mano y objetivos de motor hipotéticos, no cualificados. La prueba usa imagen y estado actuales sin inferir condiciones físicas. |
+| Destino y fuentes | PC: `scripts/vla/run_ball_live_shadow.py` SHA256 `2608483d7e3c447ea5f859879a6c5cedfecb1c18888b809d5cd9365f99d87894` y `scripts/vla/live_ball_observation_adapter.py` SHA256 `7d9407a6519fd9d587542b62e51f4da1fe8d2438c6c6ff68368cd2210f07e675`, pruebas y [receta](../scripts/vla/SMOLVLA_BALL_LIVE_SHADOW.md). Vision: proceso temporal dentro de `walker-ros.ros2-1`, fuente `scripts/vla/passive_episode_remote.py` SHA256 `36dc07fd01b17ccb43b2d450fa9e0de47eb5e8bdc000ae68ccca8d8452d28f77`; sin archivos persistentes en robot. Ada: `/home/luisacuna/cruzr-smolvla-ball-20261109/live-shadow-20261109-2144/` con cinco fuentes comprobadas por SHA. `shadow_live_inference.py` SHA256 `1a21a9a7069e06aab11c8f5eaa79ca7ea481d03f017f6f1ea22698efa051c2f5`; wrapper SHA256 `9dbb8628e802a1085e7d3d551ffe681c565baefd3bb636bc5d918926a62396cf`. Imagen `sha256:4d15e9e6c5a1071bfe522a5258a8db07b448bc29f698c4a48c43c252754f36fa`, checkpoint `e707eea07b58e14b979e78463b94ba75a52b1c18abf8076aebc8aa34ac77f8da`; normalización del entrenamiento verificada. |
+| Aplicación y resultado | Inicio de modelo en Docker propio sin red ni ROS; capturador por suscripción durante20 s a0,5 Hz, emparejamiento nominal de imagen/20D/mano derecha y nueve inferencias. Nueve propuestas, cero descartes en adaptador y relay; máximo propuesta−estado1,165707 rad en `R_elbow_yaw_joint`. Inferencias0,169–0,601 s y tiempo desde adaptador PC hasta predicción0,297–0,955 s: este último excluye transporte Vision→PC y no es latencia física completa. Sin registro visual de encuadre. No se demuestra tarea, movimiento, seguridad o estado físico. |
+| Comprobación y reversión | 13 pruebas locales pasaron, más prueba real de arranque y sesión integrada rc0. Al terminar, `docker top` en Vision mostró sólo bash en el contenedor ROS y no había contenedores con la etiqueta propia `cruzr.shadow.owner` en Ada; GPU volvió a5.500 MiB. No se modificaron archivos del robot. La carpeta nueva de Ada se puede retirar selectivamente tras preservar evidencia y verificar que ninguna sesión la use; no borrar checkpoint, dataset ni servicios previos. |
+| Evidencia y respaldo | `../Humanoide-vla-evidence/20261109_SMOLVLA_LIVE_SHADOW/`: `live-run.jsonl` SHA256 `5be819ea4a7941c3b136c40aa66494bbda42c5b6b116fbe431686cf2b85e8131`, `live-run.log` SHA256 `2b3545cfc2785402435fc1dd838f791e7e432656a1f7b6cf59d43d9b183c24c0`; copias documentales previas en `before-docs/`, índice `before-docs.sha256` SHA256 `848d0964340eccc03656de46c84aa8195c4bfb5bcb4d4cbfd8ba20ecb622fee6`. Los hashes de las imágenes se conservan, no sus píxeles. |
+| Deuda | Modelo aún no ejecutado en ordenador del robot. La mano produce un escalar con semántica de control no validada; 5/7 son correlaciones históricas, no receta de fuerza. Los ejes del SDK tienen otro orden y exigen mapping por nombre. Verificar controlador, handoff y parada independiente: dejar de publicar no demuestra parada. Cualificar límites, sincronía, zona y trayectoria PICO/v4. Sólo después preparar prueba física escalonada con condiciones actuales y exclusividad. |
+
 ## HEAD-PICO-SCRIPT-20261109
 
 **09-11-2026, Europe/Madrid — diagnóstico local VERIFICADO; ejecutor físico
