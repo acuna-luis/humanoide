@@ -1,5 +1,16 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**09-11-2026 — HEAD-PICO-READONLY-20261109.** El usuario informa que el
+robot está en postura PICO pero ya no teleopera y confirma manos vacías y
+condiciones físicas para cabeza. Lecturas de21:29 Europe/Madrid: goal previo
+`status=5` cancelado; último log de Control Center registra transición
+`TeleopMode→JoystickMode`. Una muestra de20 motores corporales está habilitada,
+sin errores ni velocidad; paros0/0, cargador0 y batería96,7/97,1 %. No
+extrapolar esas lecturas a un estado posterior ni identificar un movimiento
+físico por status. El ejecutor de cabeza actual requiere HOME y abrazaderas;
+no hay trayectoria de cabeza cualificada desde PICO con manos v4. No se envió
+movimiento, cambio de modo, HOME ni cancelación. [Evidencia](../vla/SMOLVLA_PELOTA_EVALUACION_20261109.md#lectura-posterior--solicitud-de-cabeza).
+
 **09-11-2026 — PICO-XR-USB-RECONNECT-20261109: reconexión USB preparada.**
 El usuario comunicó `connect_error` al reconectar. Antes de intervenir, el
 PICO aparecía por USB, el PC escuchaba63901, no se observaba conexión XR ni

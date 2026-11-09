@@ -10,6 +10,44 @@ confirmaciones son del momento, no acreditan el estado físico posterior.
 
 ## Lectura y observación pasiva
 
+### Lectura posterior — solicitud de cabeza
+
+Tras la lectura de status2 descrita más abajo, el usuario comunicó que ya no
+estaba en teleoperación y confirmó que la postura seguía siendo PICO, ambas
+manos estaban vacías, cabeza despejada, ruedas bloqueadas, cargador fuera y
+persona junto a paros accesibles. A las21:29 Europe/Madrid, nueva lectura
+guardada en `../Humanoide-vla-evidence/20261109_HEAD_REQUEST_READONLY/control-read.json`
+(SHA256 `5fbe738a752c31d3bc040f7c265522cec0e881531b74dabbc4663f4440464335`)
+encontró el mismo goal `status=5` (cancelado). El último log de Control Center
+registra `TeleopMode→JoystickMode` y fin de acción sin error. El robot y la
+cabeza se leen inmóviles en una muestra, con brazos en postura PICO; los20
+motores corporales presentan status0x1237, error0 y velocidad0. Con QoS
+best-effort se obtuvo la lectura de actuadores, que antes había agotado el
+timeout. Lecturas puntuales: paros0/0, cargador0, batería96,7/97,1 %. No son
+monitoreo continuo ni describen un estado físico posterior.
+Una segunda lectura a las21:31 Europe/Madrid mostró paros0/0, cargador0 y
+baterías96,5/96,6 %; se conserva en `health-read.json` SHA256
+`0864b39dbfa087ccc00b3ef2f1162e2f6cc9ee6839636ae2f7b92dd950c051bf`.
+
+Se verificó en código que `run_metamove_head_probe.py` y su preflight canónico
+exigen HOME20D y perfil `cruzr_s2_v1` de abrazaderas, mientras la configuración
+detectada es `cruzr_s2_v1_sps` con manos. El objetivo XML sólo mueve cabeza,
+pero no hay un plan/ejecutor cualificado para esa tarea desde PICO con manos
+v4; una revisión nueva necesita geometría o envolvente de manos, seguimiento,
+parada y control exclusivo. El modelo de dedos articulados v4 no está
+demostrado. No se ejecutó `--check` del wrapper porque truncaría el lock
+preexistente del usuario. La autorización existe; el impedimento sigue siendo
+técnico. No se enviaron cabeza, HOME, control VLA, cancelación ni cambios de
+modo en esta intervención.
+
+Documentos previos conservados en
+`../Humanoide-vla-evidence/20261109_HEAD_REQUEST_READONLY/before-docs/`, índice
+`before-docs-v2.sha256` SHA256
+`61758ca20793ee58bfb23eedc11f7e44450971b9ab22f8f7fdf18bd814aca90b`.
+La consulta no cambió archivos ni configuración del robot; no hay un estado
+remoto que revertir. Repetir condiciones físicas y lecturas antes de un
+eventual movimiento, y no enviar HOME sin revisión de su trayectoria.
+
 Motion/Vision respondieron por la red; Motion anunció configuración
 `HW_TYPE=cruzr_s2_v1_sps` y PICO, con mano derecha publicando siete ejes.
 La telemetría puntual registró paros 0/0, cargador0 y baterías98,2/98,3 %;

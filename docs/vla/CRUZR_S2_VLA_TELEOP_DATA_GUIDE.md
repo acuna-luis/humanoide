@@ -1,5 +1,12 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**09-11-2026 — HEAD-PICO-READONLY-20261109.** La acción PICO antes observada
+pasó a cancelada y el log posterior indica `JoystickMode`, de acuerdo con el
+usuario. Postura sigue PICO; actuadores y salud se leyeron puntualmente sin
+órdenes. La cabeza sigue bloqueada por falta de trayectoria y ejecutor
+cualificados para esta postura/manos; el SmolVLA de pelota sigue limitado a
+offline. [Lectura actualizada](SMOLVLA_PELOTA_EVALUACION_20261109.md#lectura-posterior--solicitud-de-cabeza).
+
 **09-11-2026 — VLA-BALL-SHADOW-20261109.** Inferencia offline aislada con
 cinco observaciones actuales y siete de otra captura fallida; las mayores
 diferencias propuesta−estado son1,167653rad y0,688391rad respectivamente,

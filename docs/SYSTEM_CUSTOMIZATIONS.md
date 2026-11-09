@@ -1,5 +1,27 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## HEAD-PICO-READONLY-20261109
+
+**09-11-2026, Europe/Madrid — VERIFICADO sólo lectura; cabeza no movida.**
+Usuario autorizó mover cabeza y probar SmolVLA, y confirmó manos vacías, zona
+libre, ruedas bloqueadas, cargador fuera y persona junto a paros. Informó que
+el robot estaba en postura PICO y ya no en teleoperación. Lectura 21:29 del
+goal previo `status=5` (cancelado) y log `TeleopMode→JoystickMode` lo respaldan;
+20 motores corporales con status0x1237, errores0 y velocidad0 en una muestra.
+El ejecutor versionado de cabeza exige HOME y perfil de abrazaderas y no está
+cualificado desde PICO con manos v4. No se envió movimiento, HOME, cambio de
+modo o control VLA. Para retomar se necesitan una trayectoria y un supervisor
+específicos cualificados, además de los gates propios de SmolVLA; no desactivar
+las guardas actuales. [Detalle y lectura](vla/SMOLVLA_PELOTA_EVALUACION_20261109.md#lectura-posterior--solicitud-de-cabeza).
+
+Evidencia privada `../Humanoide-vla-evidence/20261109_HEAD_REQUEST_READONLY/`:
+`control-read.json` SHA256 `5fbe738a752c31d3bc040f7c265522cec0e881531b74dabbc4663f4440464335`;
+`health-read.json` SHA256 `0864b39dbfa087ccc00b3ef2f1162e2f6cc9ee6839636ae2f7b92dd950c051bf`;
+respaldo `before-docs/` y `before-docs-v2.sha256` SHA256
+`61758ca20793ee58bfb23eedc11f7e44450971b9ab22f8f7fdf18bd814aca90b`.
+No se modificaron archivos o configuraciones del robot; para revertir el
+registro comparar cambios posteriores y restaurar selectivamente documentos.
+
 ## VLA-BALL-SHADOW-20261109
 
 **09-11-2026, Europe/Madrid — captura temporal y evaluación offline

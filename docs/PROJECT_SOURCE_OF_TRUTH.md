@@ -1,5 +1,18 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**09-11-2026 — HEAD-PICO-READONLY-20261109: cambio de modo confirmado.**
+Tras solicitud de ejecutar y orientar cabeza, usuario indica que no está en
+teleoperación y confirma manos vacías, zona libre, ruedas bloqueadas, cargador
+fuera, paros accesibles y persona junto al paro; postura PICO. A las21:29
+Europe/Madrid, lectura ROS muestra el goal antes activo `status=5` (cancelado)
+y log Control Center confirma transición `TeleopMode→JoystickMode`, corrigiendo
+el dato anterior de goal activo. En una muestra los20 motores corporales
+estaban habilitados, sin error ni velocidad; batería96,7/97,1 %, paros0/0,
+cargador0. Esto no certifica estado posterior ni trayectoria. No se envió
+movimiento: el ejecutor existente de cabeza exige HOME20D y perfil de
+abrazaderas, sin plan cualificado para postura PICO con manos v4; SmolVLA aún
+no tiene puente físico cualificado. [Evidencia y punto de reanudación](vla/SMOLVLA_PELOTA_EVALUACION_20261109.md#lectura-posterior--solicitud-de-cabeza).
+
 **09-11-2026 — VLA-BALL-SHADOW-20261109: inferencia sin movimiento.** El
 usuario autorizó ejecución física y mover cabeza; no se ejecutó: goal de
 manipulación activo, postura PICO fuera de HOME y no existe puente cualificado
