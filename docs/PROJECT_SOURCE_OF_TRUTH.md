@@ -1,5 +1,20 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**09-11-2026 — PICO-XR-USB-RECONNECT-20261109: XR USB reconectado.**
+El usuario comunicó `connect_error` al reconectar el visor. Se detectaron PICO
+por USB y el servicio XR escuchando en el PC; inicialmente no había socket XR
+establecido ni daemon ADB escuchando. Con STOP reconstruido del log y sin
+`pico_control` ni UI observados, el check inició el daemon ADB y mostró que no
+existía `adb reverse` para63901. Se aplicó la receta versionada `--configure`
+y se verificó `tcp:63901 → tcp:63901`. El último destino Unity observado era
+`127.0.0.1:63901`, sin demostrar su frescura. Inmediatamente después del cambio
+no se observó conexión XR. Después el usuario reconectó y comunicó
+`Conectado/Working`; se observó socket loopback establecido y la transición
+del backend a `vr_status=1,operation_type=1` a las19:26:53. El STOP procede del
+log y no prueba el estado físico. No se cambió el modo del robot ni se envió
+movimiento; la carga de la tarea PICO sigue pendiente por separado.
+[Ficha, evidencia y reversión](SYSTEM_CUSTOMIZATIONS.md#pico-xr-usb-reconnect-20261109).
+
 **09-11-2026 — PC-ROUTE-20261109: acceso web por Wi-Fi restaurado.** El perfil
 Wi-Fi actual recibió la ruta persistente `.11.0/24` vía `.42.2` y
 `never-default=yes`; aplicada con reapply. Motion y Vision respondieron a ping,

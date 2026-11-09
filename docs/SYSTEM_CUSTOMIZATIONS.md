@@ -1,5 +1,20 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## PICO-XR-USB-RECONNECT-20261109
+
+**09-11-2026, Europe/Madrid — túnel USB transitorio instalado/verificado;
+flujo XR y `vr_status=1` OBSERVADOS tras reconexión.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo | Recuperar la conexión de XRoboToolkit después de `connect_error`, por solicitud del operador, como paso previo a la teleoperación solicitada. La reconexión no envió movimiento. |
+| Estado previo | PICO detectado físicamente por USB; daemon ADB sin listener5037, servicio XR escuchando63901 y sin conexión XR establecida. El listado de reverse estaba vacío. El último destino Unity leído era `127.0.0.1:63901`, sin prueba de frescura. Último STOP reconstruido del log, sin `pico_control` ni UI observados; esto no certifica todos los clientes ni el estado físico. |
+| Destino y dependencias | PC Linux: daemon ADB iniciado por el check. Visor PICO por USB: entrada ADB reverse `tcp:63901 → tcp:63901`. Requiere identidad USB del visor, servicio XR del PC, ADB y STOP comprobado por el helper. No se modificaron archivos persistentes ni parámetros del robot. |
+| Fuente reproducible | `scripts/teleoperation/configure_pico_xr_usb.sh`, SHA256 `7967cf6b5090ee15f3c71658f33f3de231741e668b95bfaeecb27fc79cd83be5`; helper `cruzr_pico_teleop_pc.sh`, SHA256 `24bf05118be24a59bcd40b8dd1cf6fa04ad4c3368a05bb04d938df23a09becbb`. `--check` también invoca ADB y puede arrancar su daemon; `--configure` instala el reverse y no envía movimiento. |
+| Aplicación y verificación | Con identidad USB y STOP desde el log, `--configure` devolvió `XR_USB_REVERSE_OK=1`; `reverse-after.txt` confirma el par de puertos. Tras un primer check sin socket, el operador reconectó e informó `Conectado/Working`: `xr-sockets-connected.txt` recoge socket loopback establecido y `backend-connection-latest.txt` la transición a `vr_status=1,operation_type=1` a las19:26:53. Esto no verifica estado físico ni tarea PICO cargada. No se cambió el modo del robot ni se enviaron órdenes de control. |
+| Evidencia y respaldo | `../Humanoide-vla-evidence/20261109_XR_USB_RECONNECT_HilbsQyO/` conserva `check-before.txt`, `reverse-before.txt`, `configure.txt`, `reverse-after.txt`, sockets y diagnóstico; el respaldo de estos tres documentos está en `before-docs/`, con índice `before-docs.sha256` SHA256 `9976fca410c942bf9b715706dd00480f6da06b058b8368c4a9bb99c1129b1d95`. Sin credenciales en Git. |
+| Reversión y deuda | Con STOP comprobado y sin usuarios del transporte, `configure_pico_xr_usb.sh --remove` retira sólo el reverse63901 creado aquí; verificar después. El daemon ADB estaba detenido antes; sólo detenerlo tras confirmar que nadie lo necesita y registrar el resultado. No se ha ejecutado la reversión. Confirmar identidad, socket XR, tracking y condiciones físicas antes de teleoperar. |
+
 ## PICO-V4-FULL-PREP-20261105
 
 **05-11-2026, Europe/Madrid — diagnóstico complementario OBSERVADO; sólo lectura.**

@@ -1,5 +1,21 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**09-11-2026 — PICO-XR-USB-RECONNECT-20261109: reconexión USB preparada.**
+El usuario comunicó `connect_error` al reconectar. Antes de intervenir, el
+PICO aparecía por USB, el PC escuchaba63901, no se observaba conexión XR ni
+daemon ADB en5037, y el último destino Unity leído era `127.0.0.1:63901` sin
+garantía de frescura. STOP se reconstruyó del log; no se observaron
+`pico_control` ni UI. El check de `configure_pico_xr_usb.sh` inició el daemon
+ADB y no encontró reverse. Con identidad USB y STOP comprobados se aplicó
+`--configure`; `adb reverse --list` confirmó `tcp:63901 → tcp:63901`.
+Inmediatamente después no se observó socket XR. Tras reconectar, el operador
+comunicó `Conectado/Working` y se observó socket loopback establecido hacia
+63901; a las19:26:53 el log backend pasó a `vr_status=1,operation_type=1`.
+Esto acredita la conexión observada, no el estado físico ni la carga de la
+tarea PICO. Sin START, movimiento ni cambio de modo del robot. Para revertir, revisar STOP y
+usuarios del transporte y retirar únicamente el reverse creado; no detener el
+daemon ADB si otra actividad lo usa. [Evidencia, fuentes y reversión](../SYSTEM_CUSTOMIZATIONS.md#pico-xr-usb-reconnect-20261109).
+
 **09-11-2026 — PC-ROUTE-20261109:** el perfil activo `Cruzr S2-0669 2` usa
 la ruta `.11.0/24` vía `.42.2`; Motion y Vision respondieron y la web devolvió
 HTTP 200. Internet sigue por DSA CORPORATE. Ethernet sin portadora y estabilidad
