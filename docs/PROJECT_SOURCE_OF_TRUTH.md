@@ -1,5 +1,11 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-LEASE-BRIDGE-20261110: puente pasivo comprobado.**
+El monitor y coordinador de lease intercambiaron UUID sintético en Motion y
+revocaron lease al terminar guardia, sin crear meta ni enviar movimiento.
+Cliente ROSA real y detención física siguen sin probar en esta integración;
+no existe habilitación de movimiento. [Ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-lease-bridge-20261110).
+
 **10-11-2026 — ARM-PICO-NATIVE-PREP-20261110: prueba nativa en PC.** Se
 preparó una tarea local de muñeca derecha desde una muestra PICO, con
 comprobaciones URDF/SPS y plan de instalación sin efectuar. No instala ni

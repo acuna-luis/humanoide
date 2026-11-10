@@ -193,5 +193,63 @@ class ArmActionTests(unittest.TestCase):
         self.assertLess(events.index('OPERATOR_ALERT'), events.index('cancel_uuid_requested'))
 
 
+class ContinuousGuardTests(unittest.TestCase):
+    def simulate_guard(self, scenario):
+        fake = FakeArmRun('success')
+        original_spin = fake.spin
+        def spin(node, timeout_sec=0):
+            original_spin(node, timeout_sec)
+            if scenario == 'foreign' and any(x['event'] == 'goal_uuid_ready' for x in fake.emitted):
+                status = types.SimpleNamespace(status=2, goal_info=types.SimpleNamespace(
+                    goal_id=types.SimpleNamespace(uuid=list(b'z'*16))))
+                fake.subs['/mc/manipulation/action/_action/status'](types.SimpleNamespace(status_list=[status]))
+        fake.spin = spin
+        read_count = 0
+        def write(fd, data): fake.emitted.append(json.loads(data)); return len(data)
+        def read(fd, size):
+            nonlocal read_count
+            read_count += 1
+            if read_count == 1:
+                ready = next(x for x in reversed(fake.emitted) if x['event'] == 'pre_dispatch_ready')
+                return (json.dumps({'schema': 'cruzr_head_pico_handoff_v1', 'session_id': 'a'*32,
+                                    'challenge': ready['challenge'], 'inventory_age_s': 3.0})+'\n').encode()
+            guard = next(x for x in reversed(fake.emitted) if x['event'] == 'ARM_GUARD_READY')
+            command = {'event': 'prepare_goal_uuid', 'session_id': 'a'*32,
+                       'guard_id': guard['goal_uuid'], 'goal_id': '12345678-1234-1234-1234-123456789abc',
+                       'challenge': 'c'*32}
+            if read_count == 2 or scenario == 'duplicate':
+                return (json.dumps(command)+'\n').encode()
+            return (json.dumps({'event':'stop_guard', 'session_id':'a'*32})+'\n').encode()
+        with patch.object(head_tests, 'subject', arm):
+            session = head_tests.proof()
+        session['mode'] = 'check'; session['operator_confirmed'] = False
+        with patch.object(head_tests, 'sample', sample), patch.dict(sys.modules, fake.install()), \
+             patch.object(arm.time, 'monotonic', side_effect=lambda: fake.now), \
+             patch.object(arm.os, 'set_blocking'), patch.object(arm.os, 'write', side_effect=write), \
+             patch.object(arm.os, 'read', side_effect=read), \
+             patch.object(arm.select, 'select', side_effect=lambda r,w,x,timeout:(r,[],[])):
+            if scenario == 'success':
+                self.assertEqual(arm.main(session, dry_run=True, monitor_only=True), 0)
+            elif scenario == 'duplicate':
+                with self.assertRaisesRegex(ValueError, 'invalid_guard_uuid_handshake'):
+                    arm.main(session, dry_run=True, monitor_only=True)
+            else:
+                with self.assertRaisesRegex(ValueError, 'foreign_action_active'):
+                    arm.main(session, dry_run=True, monitor_only=True)
+        self.assertEqual(fake.send_count, 0)
+        return fake.emitted
+
+    def test_guard_whitelists_one_uuid_then_stops_without_dispatch(self):
+        events = self.simulate_guard('success')
+        self.assertIn('goal_uuid_ready', [row['event'] for row in events])
+        self.assertIn('ARM_GUARD_STOPPED', [row['event'] for row in events])
+
+    def test_second_uuid_request_is_rejected(self):
+        self.simulate_guard('duplicate')
+
+    def test_foreign_action_remains_blocked_after_uuid_ack(self):
+        self.simulate_guard('foreign')
+
+
 if __name__ == '__main__':
     unittest.main()

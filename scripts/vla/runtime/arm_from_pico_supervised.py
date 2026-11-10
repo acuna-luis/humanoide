@@ -190,9 +190,11 @@ def build_trial_args(q):
             'mode': 0, 'durations': [4.0]}
 
 
-def main(preflight, *, dry_run):
+def main(preflight, *, dry_run, monitor_only=False):
     if type(dry_run) is not bool:
         raise ValueError('dry_run_must_be_explicit_boolean')
+    if type(monitor_only) is not bool or (monitor_only and not dry_run):
+        raise ValueError('continuous_monitor_requires_dry_run')
     if not dry_run:
         physical_release_gate()
     local_started = time.monotonic()
@@ -457,6 +459,56 @@ def main(preflight, *, dry_run):
             raise ValueError('posture_changed_before_dispatch')
         if time.monotonic()-started_handshake > 3:
             raise ValueError('pre_dispatch_handoff_expired')
+        if monitor_only:
+            # This passive mode never dispatches or cancels. It publishes only
+            # checked observations and learns one ROSA UUID before that client
+            # sends; any other active action remains foreign. It must not be
+            # mistaken for physical release or evidence of braking.
+            initial = q
+            emit('ARM_GUARD_READY', session_id=preflight['session_id'],
+                 movement_commands=0, physical_control_qualified=False)
+            buffer = bytearray()
+            while True:
+                rclpy.spin_once(node, timeout_sec=.01)
+                checked(initial)
+                if not select.select([input_fd], [], [], 0)[0]:
+                    continue
+                try:
+                    block = os.read(input_fd, 4096)
+                except BlockingIOError:
+                    continue
+                if not block:
+                    raise ValueError('guard_input_closed')
+                buffer.extend(block)
+                if len(buffer) > 4096:
+                    raise ValueError('guard_input_oversize')
+                while b'\n' in buffer:
+                    line, _, remainder = bytes(buffer).partition(b'\n')
+                    buffer = bytearray(remainder)
+                    command = json.loads(line)
+                    if not isinstance(command, dict):
+                        raise ValueError('invalid_guard_command')
+                    if command == {'event': 'stop_guard', 'session_id': preflight['session_id']}:
+                        emit('ARM_GUARD_STOPPED', movement_commands=0,
+                             physical_stop_confirmed=False)
+                        return 0
+                    if (set(command) != {'event', 'session_id', 'guard_id', 'goal_id', 'challenge'}
+                            or command['event'] != 'prepare_goal_uuid'
+                            or command['session_id'] != preflight['session_id']
+                            or command['guard_id'] != uuid_bytes.hex()
+                            or not isinstance(command['goal_id'], str)
+                            or not re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', command['goal_id'])
+                            or not isinstance(command['challenge'], str)
+                            or not re.fullmatch('[0-9a-f]{32}', command['challenge'])
+                            or state['own'] is not None):
+                        raise ValueError('invalid_guard_uuid_handshake')
+                    # The absence of other actions is rechecked before granting
+                    # exactly one UUID; no catch-all exemption is created.
+                    checked(initial)
+                    state['own'] = uuid.UUID(command['goal_id']).bytes
+                    emit('goal_uuid_ready', session_id=command['session_id'],
+                         guard_id=command['guard_id'], goal_id=command['goal_id'],
+                         challenge=command['challenge'])
         if dry_run:
             emit('PICO_ARM_SUPERVISED_DRY_RUN_PASSED', movement_commands=0,
                  physical_control_qualified=False)

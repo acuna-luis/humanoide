@@ -1,5 +1,18 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-LEASE-BRIDGE-20261110
+
+**10-11-2026, Europe/Madrid — puente de guardia COMPROBADO sin meta en Motion;
+cliente real y control físico PENDIENTES.** Sin órdenes de movimiento.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | `3458756`: preparación estática local, monitor de perfil SPS en observación; la salida física seguía bloqueada. |
+| Fuentes | `scripts/vla/arm_native_lease_bridge.py` SHA256 `14a5b017e173df3e6968ec75941740222bf5b1fa5511253d246dc8a333ab0ed6`; test `5597b71adf95721ece62eb6809961d2162c76124c1e1f872530a57fbc485cfcc`. Monitor `scripts/vla/runtime/arm_from_pico_supervised.py` `2ddc7b2869578e349d8be00633be2bdec7669b676d01997280c8ccd60c41c67f`; test `a22b6567ded611ca950363afd74461a730983910f11029e7d6f765a800051ec5`. Comprobador local `scripts/vla/check_arm_native_bridge_live.py` `aacd2dbda7bb70525cbc095b4d71432018523bfc302c45c4c879171e48d3745b`, remoto `scripts/vla/runtime/arm_native_bridge_check_remote.py` `ce6f8d13c693cfb94a3286104c7fcd82859d5ee5452441c1d656d7f8e40198d2`, test `ff96dd28eb220f3d22c36971e0679fb029c6c7b7f0b2534128f61b2c55878f7b`. Reutiliza cliente ROSA y verifica sus huellas; no modifica SDK. |
+| Verificación | 14 tests del monitor, 17 del puente y cinco del comprobador pasan en simulación. En Motion guardia y coordinador intercambiaron UUID sintético y revocaron lease al terminar guardia; cero metas y órdenes. Evidencia `../Humanoide-vla-evidence/ARM_NATIVE_BRIDGE_CHECK/check-83127cadbf8e4e579c29d1931cebc92d/`, `stdout.log` SHA256 `3df383804eb9f97ffd6ff66b8f9399996dcf741abf52ef11de21642f4960100f`, fuentes `f3a9a8266fe32adfa5dd7b1d79e3885bd9b23efc1b4a0dfceaad550c5f2416eb`. Se eliminó directorio temporal y no quedaron procesos observados. [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#puente-de-supervisión-y-cliente-nativo--10-11-2026). |
+| Ruta y reloj | `scripts/vla/check_motion_lease_shared.py` SHA256 `beeda6bf63ed0a509396ca3d50ef6afe7dc31cced66f495e00144d03d60aaa9b`. Creó y retiró un marcador privado temporal en `/tmp` de Motion: ambos contenedores lo leyeron, compartían el namespace de tiempo con el host y las lecturas monotónicas quedaban dentro del intervalo de consulta. Evidencia `shared-tmp-clock.json` SHA256 `4feec448cbe6faf4149bc1742a02ee5c6a111feaea9b19078064728e46148f38`. Resultado puntual, no prueba el lease entre contenedores. |
+| Deuda y reversión | No se usó cliente ROSA real ni objetivo físico; falta lanzador y ensayo del lease entre contenedores, escena v4, trayectoria y parada. Lease y cancelación no prueban frenado ni detienen por sí solos si muere el cliente. Revertir selectivamente código y notas frente a `3458756`; se retiró el estado temporal remoto. |
+
 ## ARM-PICO-NATIVE-PREP-20261110
 
 **10-11-2026, Europe/Madrid — prueba estática PREPARADA en PC; instalación y

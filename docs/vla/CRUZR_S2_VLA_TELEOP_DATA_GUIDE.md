@@ -1,5 +1,9 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-LEASE-BRIDGE-20261110.** Puente de lease y UUID
+probado con monitor real en Motion, sin meta ni control físico.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#puente-de-supervisión-y-cliente-nativo--10-11-2026).
+
 **10-11-2026 — ARM-PICO-NATIVE-PREP-20261110.** Preparada una tarea local
 de prueba de muñeca, sin instalar ni ejecutar; el cliente nativo y el
 monitor activo aún no están conectados. [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#preparación-nativa-de-muñeca--10-11-2026).

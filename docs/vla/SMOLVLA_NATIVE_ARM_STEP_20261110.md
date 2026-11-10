@@ -1,5 +1,60 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Puente de supervisión y cliente nativo — 10-11-2026
+
+`arm_native_lease_bridge.py` prepara un lease de duración experimental 0,5 s,
+renovado sólo con telemetría válida, y una asociación del UUID al guardia antes
+de devolver la petición al cliente ROSA. La fuente archivada del SDK muestra que
+`create_goal_request` termina antes de `call_async`; se conserva el cotejo de
+huellas del cliente de cajas. El puente pide ACK del UUID exacto antes del
+envío, y si falla el intercambio retira la referencia local y no envía.
+
+El monitor funciona ahora como proceso pasivo continuo, acepta un UUID exacto
+antes de la comunicación de una meta y continúa rechazando otras acciones.
+Un comprobador ejecutó monitor y coordinador en Motion, usando el mismo reloj
+monotónico: un UUID sintético obtuvo ACK y, al terminar el monitor, se observó
+la revocación del lease. No se creó ni envió una meta, ni se instaló tarea.
+Procesos y directorio temporal terminaron. Evidencia privada
+`../Humanoide-vla-evidence/ARM_NATIVE_BRIDGE_CHECK/check-83127cadbf8e4e579c29d1931cebc92d/`:
+`stdout.log` SHA256 `3df383804eb9f97ffd6ff66b8f9399996dcf741abf52ef11de21642f4960100f`,
+`sources-sha256.json` `f3a9a8266fe32adfa5dd7b1d79e3885bd9b23efc1b4a0dfceaad550c5f2416eb`.
+Pasan 14 tests de monitor, 17 de puente y cinco de comprobador con procesos o
+ROS simulados. `physical_release_gate` sigue bloqueando el acceso físico.
+La prueba no usa el cliente ROSA real ni comprueba un lease entre contenedores,
+la trayectoria, cancelación o frenado de un objetivo físico.
+
+Una comprobación separada creó un marcador privado temporal en `/tmp` de Motion:
+los contenedores ROS2 y de manipulación lo leyeron correctamente, sus namespaces
+de reloj monotónico coincidieron con el host y la lectura de cada reloj quedó
+entre las dos lecturas locales que acotaban su consulta. El marcador se retiró.
+Es una observación puntual de ruta y reloj, no una prueba del lease o cliente
+ROSA entre contenedores. Receta: `python3 -B scripts/vla/check_motion_lease_shared.py --check`.
+Evidencia `shared-tmp-clock.json`, SHA256
+`4feec448cbe6faf4149bc1742a02ee5c6a111feaea9b19078064728e46148f38`, en
+el mismo directorio de evidencia.
+
+Receta de la comprobación pasiva, con la muestra archivada; una repetición debe
+volver a verificar la postura actual y no convierte esa muestra en permiso:
+
+```bash
+python3 -B scripts/vla/check_arm_native_bridge_live.py --check \
+  --manifest ../Humanoide-vla-evidence/PICO_WRIST_PREP_20261110T103237Z_078897/candidate/manifest.json \
+  --urdf ../Humanoide-vla-evidence/PICO_WRIST_PREP_20261110T103237Z_078897/runtime.urdf \
+  --transmissions ../Humanoide-vla-evidence/PICO_WRIST_PREP_20261110T103237Z_078897/transmissions.yaml
+```
+
+La comprobación mantiene guardia y coordinador en un contenedor; se observó
+por separado ruta temporal y reloj compartidos con el contenedor nativo, pero
+el lease todavía no se ha probado entre los dos. La
+detección 0,5 s, ACK 0,4 s y expiración
+son valores experimentales, no límites de parada. `GuardPipe.exchange` limita
+la escritura al pipe y la espera del ACK, con prueba simulada de pipe lleno;
+la interfaz genérica acepta otros callbacks y no puede imponerles ese plazo.
+Si muere el cliente ROSA, un
+lease que éste deja de leer no cancela por sí solo una consigna aceptada. La
+cancelación y la respuesta del servidor no certifican frenado; continuar
+requiere supervisión física y tratamiento de resultado incierto.
+
 ## Preparación nativa de muñeca — 10-11-2026
 
 Con el patrón del ensayo de brazo de cajas se preparó una sola acción
@@ -34,9 +89,9 @@ python3 -B scripts/vla/prepare_pico_wrist_native_probe.py --check \
   --transmissions ../Humanoide-vla-evidence/PICO_WRIST_PREP_20261110T103237Z_078897/transmissions.yaml
 ```
 
-El cliente de cajas y el monitor de corredor todavía no disponen de una
-conexión de supervisión/lease comprobada; falta ese lanzador, así como revisar
-despeje real de mano v4, trayectoria y parada. Ningún parámetro `--run` de
+El cliente de cajas y el monitor de corredor aún no se han probado juntos con
+una meta real; falta ese lanzador, así como revisar despeje real de mano v4,
+trayectoria y parada. Ningún parámetro `--run` de
 estas piezas habilita el movimiento. La preparación no cumple por sí sola los
 gates del VLA físico.
 
