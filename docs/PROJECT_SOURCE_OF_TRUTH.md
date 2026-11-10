@@ -1,5 +1,16 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-731084-ARCHIVE-PREP-20261110: recuperación preparada,
+no ejecutada.** Nueva herramienta específica del intento cancelado valida el
+UUID y la evidencia histórica, y conserva un bloqueo duradero aunque archive
+el marker. Pasan diez tests y revisión independiente. No existe aún transporte
+revisado de la evidencia a Motion; no hubo check remoto, archivado ni movimiento.
+Una consulta puntual observó marker y XML intactos, UUID en estado 5, velocidades
+cero y 20 actuadores sin error; no demuestra parada física ni exclusividad. El
+fallo de supervisión y el despacho físico de SmolVLA siguen pendientes.
+[Ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-731084-archive-prep-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#recuperación-preparada-de-731084--10-11-2026).
+
 **10-11-2026 — ARM-PICO-GUARD-PASSIVE-20261110: check pasivo en Motion.**
 La guardia con capacidad de cancelación permaneció activa mientras se enviaron
 30 latidos en 3 s, sin UUID, goals ni cancelaciones; terminó limpiamente y

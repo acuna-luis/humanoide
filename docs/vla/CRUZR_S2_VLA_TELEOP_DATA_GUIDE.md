@@ -1,5 +1,15 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-731084-ARCHIVE-PREP-20261110.** Preparada una
+recuperación específica del intento 731084 que exige evidencia histórica del
+UUID cancelado y mantiene un bloqueo para nuevas órdenes. Diez tests y revisión
+independiente pasan; sin transporte revisado, check remoto, archivado ni
+movimiento. Una consulta puntual observó marker/XML intactos, UUID estado 5 y
+velocidades cero; no acredita parada física ni exclusividad. Supervisión y
+despacho físico SmolVLA siguen pendientes.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#recuperación-preparada-de-731084--10-11-2026),
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-731084-archive-prep-20261110).
+
 **10-11-2026 — ARM-PICO-GUARD-PASSIVE-20261110.** Un check pasivo en Motion
 envió 30 latidos en 3 s, sin UUID, goal ni cancelación, y terminó con guardia
 cerrada y lease revocado. Marker/XML del intento 731084 siguen presentes. No

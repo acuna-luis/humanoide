@@ -1,5 +1,21 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-731084-ARCHIVE-PREP-20261110
+
+**10-11-2026, Europe/Madrid — PREPARADO EN PC; NO EJECUTADO EN MOTION.** La
+consulta puntual descrita abajo es OBSERVADA, sin evidencia privada guardada.
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo/destino | Herramienta PC pendiente de transporte y revisión para Motion; identifica exclusivamente la sesión `731084b3e4f94527a37de07297724bf1`, cuyo goal `2e20ea8d-34d9-4e4d-9192-e5e0c11e921d` fue observado cancelado. No instala ni envía goals o cancelaciones. |
+| Fuentes | `scripts/vla/runtime/archive_canceled_pico_wrist_731084.py`, SHA256 `d178a43a77b711246f7c56edb2acd4354d6d28c8467f01934b2927573f0e7146`; pruebas `scripts/vla/test_archive_canceled_pico_wrist_731084.py`, SHA256 `2b2da91ceff1425761a0c1ad871e0c731617723b741c1c02842197b834ddb2a8`. Son archivos nuevos locales; revertirlos selectivamente sin tocar los anteriores. |
+| Receta prevista | `python3 -B archive_canceled_pico_wrist_731084.py --check --terminal-evidence <state.json>` en el host Motion adecuado. Valida journal y marker con hashes fijados, lease revocado, XML/identidad, estado e inventario puntuales, y prueba histórica del UUID exacto status 5. El `state.json` de referencia permanece en PC en `../Humanoide-vla-evidence/SMOLVLA_CURRENT_READONLY_20261110T123648Z/`, SHA256 `62da2f4a136218f7de18829ef2dd296b9b825714f812f60b3a6e15e09d2f6db9`; falta transporte revisado y verificable de script y evidencia a Motion. No confundir la ausencia actual del UUID en un topic con prueba de cancelación. |
+| Archivado futuro | El modo `--archive` está preparado, no ejecutado. Deja una intención `RECOVERY-...-intent.json` duradera que el coordinador cooperante rechaza aunque el marker y el XML se archiven. No habilita por sí solo un movimiento; requiere revisión independiente de ejecución y recuperación posterior. |
+| Verificación | Diez tests locales pasan; se comprobó offline el parser del status con la evidencia fijada y el journal conservado. Revisión independiente del SHA/UUID, bloqueo retenido y ausencia de goal/cancelación sin hallazgo concreto. No se ha probado `--check` ni `--archive` en Motion. |
+| Lectura puntual | OBSERVADO: marker de 731084 y XML con SHA esperado intactos; status del UUID anterior 5; `docker top` mostraba `rosa`/`robot_app` en app y `bash` en ROS; 22 velocidades articulares cero y 20 actuadores sin error, estado 4663 y velocidad máxima 0. No se guardó la salida de esta consulta puntual y no demuestra parada física ni exclusividad futura. |
+| Backup | Documentos previos con trabajo local existente: `../Humanoide-vla-evidence/ARM_PICO_731084_ARCHIVE_PREP_20261110/before-docs.tar`, SHA256 `cd8004626352f27d44da5ef1624a9bddf56b0db62a2350c459ad2cea397371e0`. No hubo modificación remota, retirada de marker/XML o movimiento. |
+| Pendiente | Causa de pérdida de guardia desconocida; revisión de cancelación y coordinación con envío en vuelo, transporte de evidencia, recuperación específica y habilitación del despacho SmolVLA. Ninguna lectura, test local ni estado terminal sustituye comprobación física vigente. |
+
 ## ARM-PICO-GUARD-PASSIVE-20261110
 
 **10-11-2026, Europe/Madrid — OBSERVADO EN MOTION SIN GOAL NI MOVIMIENTO.**
