@@ -1,5 +1,24 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-GUARD-PASSIVE-20261110: check pasivo en Motion.**
+La guardia con capacidad de cancelación permaneció activa mientras se enviaron
+30 latidos en 3 s, sin UUID, goals ni cancelaciones; terminó limpiamente y
+revocó el lease. Marker y XML de 731084 siguen presentes. No hay ACK por pulso;
+la caducidad del watchdog, la cancelación y la trayectoria no se probaron.
+Esto no explica 731084 ni autoriza movimiento o ejecución física de SmolVLA.
+[Ficha y evidencia](SYSTEM_CUSTOMIZATIONS.md#arm-pico-guard-passive-20261110).
+
+**10-11-2026 — SMOLVLA-WRIST-ONESHOT-20261110: preparación y supervisión
+comprobadas en simulación.** El relay admite una única predicción y prepara un
+artefacto acotado de muñeca; el binding con evidencia del modelo bloquea el
+despacho físico. El supervisor resume feedback, probado en simulación; el check
+de latido sin goal también pasó posteriormente en Motion. La causa de la pérdida de
+guardia de 731084 sigue pendiente; XML y marker permanecen, sin movimiento
+nuevo ni ejecución física de SmolVLA. El binding antiguo sin evidencia de
+modelo no identifica la procedencia de su candidato.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#predicción-única-y-supervisión--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-wrist-oneshot-20261110).
+
 **10-11-2026 — ARM-PICO-GUARD-DIAGNOSTICS-20261110: diagnóstico local
 preparado.** La guardia conserva el primer aviso y eventos recientes para
 registrarlos y emitir un resumen después del intento de cancelación. Pasan

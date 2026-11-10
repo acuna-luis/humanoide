@@ -409,6 +409,7 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
     stage_seen = dispatched = accepted = result_ok = finished = worker_result = False
     goal_id = None
     failure = None
+    feedback_count = 0
     deadline = time.monotonic()+timeout
     buffer = bytearray()
     try:
@@ -432,10 +433,25 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
             if len(buffer) > MAX_LINE: raise ValueError('worker_output_excessive')
             while b'\n' in buffer:
                 progress.beat()
+                if guard_pipe.failure or not lease.guard_alive():
+                    raise RuntimeError('guard_lost_during_trial')
+                native.check_lease(lease.path, time.monotonic())
                 line, _, rest = bytes(buffer).partition(b'\n')
                 buffer = bytearray(rest)
                 row = native.object_json(line.decode('utf-8'))
                 event = row.get('event')
+                if event == 'feedback':
+                    # Retain a count, not a high-rate disk/console write. The
+                    # independent guard and the lease are still checked for
+                    # every message, and bad UUIDs still fail closed.
+                    if not dispatched or result_ok or row.get('goal_id') != goal_id:
+                        raise ValueError('foreign_worker_action_event')
+                    feedback_count += 1
+                    continue
+                if feedback_count:
+                    journal.write(json.dumps({'event': 'feedback_summary', 'goal_id': goal_id,
+                                              'count': feedback_count})+'\n')
+                    feedback_count = 0
                 journal.write(json.dumps(row, allow_nan=False)+'\n'); journal.flush(); os.fsync(journal.fileno())
                 progress.beat()
                 if event_sink(row) is not True:
@@ -482,7 +498,7 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
                     if (not accepted or row.get('goal_id') != goal_id or
                             type(row.get('status')) is not int or row['status'] not in (0, 1, 2)):
                         raise ValueError('invalid_pending_result')
-                elif event in ('feedback', 'status'):
+                elif event == 'status':
                     if not dispatched or row.get('goal_id') != goal_id:
                         raise ValueError('foreign_worker_action_event')
                 elif event == 'worker_finished':
@@ -571,6 +587,9 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
         except Exception:
             pass
         try:
+            if feedback_count:
+                journal.write(json.dumps({'event': 'feedback_summary', 'goal_id': goal_id,
+                                          'count': feedback_count})+'\n')
             for row in records:
                 journal.write(json.dumps(row)+'\n')
             journal.flush(); os.fsync(journal.fileno())

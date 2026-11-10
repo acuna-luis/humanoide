@@ -1,5 +1,6 @@
 """Local pipe tests; no ROS, SSH, task installation or robot movement."""
 import contextlib
+import hashlib
 import io
 import json
 from pathlib import Path
@@ -33,6 +34,14 @@ class FullPassiveTests(unittest.TestCase):
         calls = [node.func.attr for node in ast.walk(outer) if isinstance(node, ast.Call)
                  and isinstance(node.func, ast.Attribute)]
         self.assertFalse(forbidden.intersection(calls))
+
+    def test_heartbeat_uses_exact_bound_guard_bundle(self):
+        host, guard, worker, hashes = subject.source_bundle(guard_heartbeat=True)
+        _, bound_guard, _ = subject.trial.source_bundle()
+        self.assertEqual(guard, bound_guard)
+        self.assertIn('guard_can_cancel=True', guard)
+        self.assertIn('__pico_verified_stream__', guard)
+        for source in (host, guard, worker): compile(source, '<passive-source>', 'exec')
 
     def test_host_modules_import_without_pc_binding_on_motion(self):
         host, _, _, hashes = subject.source_bundle()
@@ -86,7 +95,7 @@ print(json.dumps({'status':'PASS_PC_HOST_GUARD_READONLY_NATIVE','movement_comman
             if process.poll() is None: process.kill(); process.wait()
             for stream in (process.stdin, process.stdout, process.stderr): stream.close()
 
-    def run_fake_host(self, *, bad_worker=False):
+    def run_fake_host(self, *, bad_worker=False, guard_heartbeat=False, drop_heartbeat=False):
         token = uuid.uuid4().hex
         arm = remote.arm
         session = {'schema':'cruzr_head_pico_preflight_v1', 'task_sha256':arm.TASK_SHA,
@@ -98,6 +107,9 @@ print(json.dumps({'status':'PASS_PC_HOST_GUARD_READONLY_NATIVE','movement_comman
                    'candidate':{'goal':{'task_name':'synthetic','yaml_args':'{}'}}},
                    'urdf_text':'', 'transmissions_text':'',
                    'guard_source':'pass', 'worker_source':'pass'}
+        if guard_heartbeat:
+            payload.update(guard_heartbeat=True,
+                           guard_sha256=hashlib.sha256(b'pass').hexdigest())
 
         class Pc:
             def __init__(self, *args, **kwargs): pass
@@ -112,6 +124,7 @@ print(json.dumps({'status':'PASS_PC_HOST_GUARD_READONLY_NATIVE','movement_comman
 
         guard_source = '''import json,select,sys,time
 session=json.loads(sys.argv[1]); pos=json.loads(sys.argv[2]); gid='a'*32
+diagnostic=json.loads(sys.argv[3]); drop_heartbeat=json.loads(sys.argv[4]); heartbeat_count=0
 def send(event,**fields):
  print(json.dumps(dict(event=event,monotonic=time.monotonic(),goal_uuid=gid,**fields)),flush=True)
 def telemetry():
@@ -129,8 +142,15 @@ while True:
  line=sys.stdin.readline()
  if not line: break
  command=json.loads(line)
+ if command['event']=='supervisor_heartbeat':
+  if drop_heartbeat: sys.exit(9)
+  assert diagnostic and command['sequence']==heartbeat_count
+  heartbeat_count+=1
+  continue
  if command['event']=='stop_guard':
+  assert not diagnostic or heartbeat_count>=2
   send('ARM_GUARD_STOPPED',movement_commands=0,physical_stop_confirmed=False); break
+ assert not diagnostic
  assert command['event']=='prepare_goal_uuid'
  send('goal_uuid_ready',session_id=command['session_id'],guard_id=command['guard_id'],
       goal_id=command['goal_id'],challenge=command['challenge'])
@@ -142,10 +162,14 @@ print(json.dumps({'event':'NATIVE_READONLY_READY','fingerprints':hashes,
  'goal_format_valid':True,'lease_fresh':True,'monotonic':time.monotonic()}),flush=True)
 '''
         started = []
-        def start(container, setup, source, data, *, stderr):
+        def start(container, setup, source, data, *, stderr, verified=None):
             if container == 'ros':
+                if guard_heartbeat:
+                    assert verified == {'role':'guard', 'session_id':token,
+                                        'source_sha256':payload['guard_sha256']}
                 command = [sys.executable, '-u', '-c', guard_source,
-                           json.dumps(data), json.dumps(reference)]
+                           json.dumps(data), json.dumps(reference), json.dumps(guard_heartbeat),
+                           json.dumps(drop_heartbeat)]
             else:
                 hashes = {} if bad_worker else remote.native.SUPPORTED_NATIVE_CLASSES
                 command = [sys.executable, '-u', '-c', worker_source,
@@ -182,6 +206,32 @@ print(json.dumps({'event':'NATIVE_READONLY_READY','fingerprints':hashes,
 
     def test_bad_native_fingerprint_fails_before_uuid_handshake(self):
         self.run_fake_host(bad_worker=True)
+
+    def test_cancel_capable_heartbeat_without_uuid_or_cancel(self):
+        with patch.object(remote.bridge.GuardLease, 'synchronize_uuid',
+                          side_effect=AssertionError('UUID handoff is forbidden')), \
+             patch.object(remote.bridge.GuardPipe, 'cancel_goal',
+                          side_effect=AssertionError('cancellation is forbidden')):
+            result = self.run_fake_host(guard_heartbeat=True)
+        self.assertEqual(result['status'], 'PASS_PC_HOST_GUARD_HEARTBEAT_NO_GOAL')
+        self.assertGreaterEqual(result['heartbeat_pulses_sent'], 2)
+        self.assertEqual(result['uuid_handshakes'], 0)
+        self.assertEqual(result['cancel_requests'], 0)
+        self.assertFalse(result['physical_control_qualified'])
+        self.assertIn('does not reproduce the original trajectory', result['limitations'])
+
+    def test_heartbeat_requires_binding_before_live_preflight(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/'input'
+            path.write_text('{}')
+            with patch.object(subject.probe, 'validate'), \
+                 patch.object(subject.preflight, 'preflight', side_effect=AssertionError('must not connect')), \
+                 self.assertRaisesRegex(ValueError, 'heartbeat_check_requires_review_binding'):
+                subject.check(path, path, path, guard_heartbeat=True)
+
+    def test_heartbeat_guard_failure_cannot_pass(self):
+        with self.assertRaises((RuntimeError, TimeoutError)):
+            self.run_fake_host(guard_heartbeat=True, drop_heartbeat=True)
 
 
 if __name__ == '__main__':

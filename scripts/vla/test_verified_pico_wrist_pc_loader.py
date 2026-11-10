@@ -15,9 +15,85 @@ import pico_wrist_review_binding as binding
 import verified_pico_wrist_pc_loader as loader
 import prepare_pico_wrist_native_probe as probe
 from test_prepare_pico_wrist_native_probe import state, urdf, transmissions
+import test_prepare_ball_native_arm_step as model_fixture
+import prepare_ball_native_arm_step as model
+from audit_ball_arm_proposals import MODEL_SHA256
 
 
 class VerifiedPcLoaderTests(unittest.TestCase):
+    def create_model_binding(self, root):
+        root = Path(root)
+        row, _, options = model_fixture.NativeArmDraftTests().paired_case()
+        row.update(event='prediction', image_sha256='a'*64, physical_control_qualified=False)
+        row['prediction'][6] += .1
+        row['proposed_minus_observed_rad'][6] += .1
+        candidate = model.model_wrist_candidate(row, verified_model_sha256=MODEL_SHA256, **options)
+        artifact = root/'artifact'
+        receipt = model.save_model_wrist_artifact(artifact, candidate, options['urdf_text'],
+                                                   options['transmissions_text'])
+        (root/'review').write_text('Test review: no physical dispatch.')
+        bound = root/'bound'
+        info = binding.create(bound, artifact/'manifest.json', artifact/'robot.urdf',
+                              artifact/'transmissions.yaml', root/'review',
+                              model_artifact=artifact, model_receipt_sha256=receipt['receipt_sha256'])
+        return bound, info['binding_sha256']
+
+    def test_model_binding_retains_evidence_and_run_is_blocked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory, digest = self.create_model_binding(tmp)
+            self.assertIn('model_wrist_evidence', binding.verify(directory, digest))
+            checked = self.invoke(directory, digest)
+            self.assertEqual(checked.returncode, 0, checked.stderr)
+            result = subprocess.run([sys.executable, '-I', '-B', str(Path(loader.__file__).resolve()),
+                        '--run', '--physical-confirmed', '--binding', str(directory),
+                        '--binding-sha256', digest], capture_output=True, text=True, timeout=15)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('model_wrist_dispatch_not_enabled', result.stderr)
+
+    def test_model_tamper_fails_even_with_recomputed_hashes(self):
+        for mutation in ('prediction', 'joint_order', 'target'):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as tmp:
+                directory, _ = self.create_model_binding(tmp)
+                decision_path = directory/'decision.json'
+                decision = json.loads(decision_path.read_bytes())
+                if mutation == 'prediction':
+                    decision['model_action_original'][6] -= .2
+                elif mutation == 'joint_order':
+                    decision['applied_arm_joint_order'].reverse()
+                else:
+                    decision['applied_arm_target_rad'][0] += .01
+                decision_path.write_text(json.dumps(decision))
+                receipt_path = directory/'receipt.json'
+                receipt = json.loads(receipt_path.read_bytes())
+                receipt['sha256']['decision.json'] = hashlib.sha256(decision_path.read_bytes()).hexdigest()
+                receipt_path.write_text(json.dumps(receipt))
+                binding_path = directory/'review-binding.json'
+                meta = json.loads(binding_path.read_bytes())
+                meta['model_wrist_evidence']['decision_sha256'] = hashlib.sha256(decision_path.read_bytes()).hexdigest()
+                meta['model_wrist_evidence']['receipt_sha256'] = hashlib.sha256(receipt_path.read_bytes()).hexdigest()
+                binding_path.write_text(json.dumps(meta))
+                digest = hashlib.sha256(binding_path.read_bytes()).hexdigest()
+                result = self.invoke(directory, digest)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('model_wrist_projection_mismatch', result.stderr)
+                with self.assertRaises(ValueError):
+                    binding.verify(directory, digest)
+    def test_model_binding_rejects_receipt_or_candidate_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory, digest = self.create_model_binding(tmp)
+            altered_urdf = Path(tmp)/'altered.urdf'
+            altered_urdf.write_text('<robot/>')
+            artifact = Path(tmp)/'artifact'
+            receipt_digest = hashlib.sha256((artifact/'receipt.json').read_bytes()).hexdigest()
+            with self.assertRaisesRegex(ValueError, 'model_candidate_input_changed'):
+                binding.create(Path(tmp)/'other', artifact/'manifest.json', altered_urdf,
+                               artifact/'transmissions.yaml', Path(tmp)/'review',
+                               model_artifact=artifact, model_receipt_sha256=receipt_digest)
+            self.assertFalse((Path(tmp)/'other').exists())
+            (directory/'receipt.json').write_bytes(b'{}')
+            self.assertNotEqual(self.invoke(directory, digest).returncode, 0)
+            with self.assertRaises(ValueError):
+                binding.verify(directory, digest)
     def test_valid_isolated_context_reaches_mock_preflight_without_network(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

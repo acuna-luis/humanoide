@@ -123,6 +123,50 @@ print(json.dumps({"event":"done","physical_control_qualified":False,"samples":co
                   self.assertRaisesRegex(TimeoutError, 'collector source upload stalled')):
                 relay.run(args)
 
+    def test_one_shot_drains_later_observations_after_server_exits(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            (directory / 'passive_episode_remote.py').write_text('# synthetic source\n')
+            (directory / 'live_ball_observation_adapter.py').write_text(
+                'import sys\nfor line in sys.stdin: print(line, end="", flush=True)\n')
+            ready = {'event':'ready', 'schema':'cruzr_ball_live_shadow_v1',
+                     'physical_control_qualified':False, 'model_sha256':relay.MODEL_SHA256}
+            server = '''import json,sys
+print(json.dumps(READY),flush=True)
+row=json.loads(sys.stdin.readline())
+print(json.dumps({'event':'prediction','physical_control_qualified':False,'prediction':[0.0]*8,'proposed_minus_observed_rad':[0.0]*7,'image_sha256':row['image_sha256'],'image_source_ns':row['image_source_ns']}),flush=True)
+print(json.dumps({'event':'done','physical_control_qualified':False,'samples':1}),flush=True)
+'''.replace('READY', repr(ready))
+            source = '''import json,sys,time
+sys.stdin.buffer.read()
+for i in range(3):
+    if i: time.sleep(.15)
+    row={'schema':'cruzr_ball_live_observation_v1','image_sha256':'a'*64,'image_source_ns':123+i,'pc_received_monotonic_ns':time.monotonic_ns()}
+    print(json.dumps(row),flush=True)
+'''
+            args = SimpleNamespace(startup_timeout=5, seconds=2, fps=.5, one_shot=True)
+            with (patch.object(relay, 'HERE', directory),
+                  patch.object(relay, 'discover_vision', return_value='fake'),
+                  patch.object(relay, 'collector_command', return_value=[sys.executable, '-u', '-c', source]),
+                  patch.object(relay, 'server_command', return_value=[sys.executable, '-u', '-c', server]),
+                  contextlib.redirect_stdout(io.StringIO()) as output):
+                relay.run(args)
+            events = [json.loads(line) for line in output.getvalue().splitlines()]
+            self.assertEqual([e['event'] for e in events], ['model_ready', 'prediction', 'done', 'summary'])
+            self.assertEqual(events[-1]['observations_sent'], 1)
+            self.assertEqual(events[-1]['observations_dropped'], 2)
+            self.assertEqual(events[-1]['predictions'], 1)
+
+    def test_one_shot_parameters_allow_exactly_one_sample(self):
+        required = ['relay', '--host', 'user@host', '--runner', '/runner', '--train', '/train',
+                    '--volume', 'vol', '--checkpoint', '/checkpoint', '--one-shot', '--max-samples', '1']
+        with patch.object(sys, 'argv', required), patch.object(relay, 'run') as run:
+            self.assertEqual(relay.main(), 0)
+            self.assertTrue(run.call_args.args[0].one_shot)
+        with patch.object(sys, 'argv', required[:-1] + ['2']), \
+             contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            relay.main()
+
 
 if __name__ == '__main__':
     unittest.main()

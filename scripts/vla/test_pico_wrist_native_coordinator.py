@@ -93,10 +93,14 @@ if mode=='crash_before_dispatched':sys.exit(9)
 emit(event='dispatched',goal_id=req['goal_id'])
 if mode=='crash':sys.exit(9)
 emit(event='accepted',goal_id=req['goal_id'],accepted=True)
+if mode in ('feedback_many','feedback_bad'):
+ for i in range(120):
+  emit(event='feedback',goal_id=('00000000-0000-0000-0000-000000000000' if mode=='feedback_bad' and i==5 else req['goal_id']),feedback={'n':i})
 if mode=='bad_pending':
  emit(event='result_pending',goal_id='00000000-0000-0000-0000-000000000000',status=2,result={});sys.exit(9)
 emit(event='result_pending',goal_id=req['goal_id'],status=2,result={})
 emit(event='result',goal_id=req['goal_id'],status=4,result={'state':{'state':1101001,'desc':'SUCCEED'}})
+if mode=='feedback_after_result':emit(event='feedback',goal_id=req['goal_id'],feedback={'n':1})
 emit(event='worker_finished',session_id=session)
 emit(event='worker_result',returncode=0)
 ''' % GOAL
@@ -303,6 +307,197 @@ class CoordinatorTests(unittest.TestCase):
         # Its internal preflight/handoff still enforces the separate 30 s TTL.
         self.assertEqual(coordinator.GUARD_READY_TIMEOUT_S, 26.0)
         self.assertLess(coordinator.GUARD_READY_TIMEOUT_S, 30.0)
+
+    def test_feedback_is_counted_without_per_message_disk_sync(self):
+        manifest = prep.prepare(state(), urdf(), transmissions())
+        with tempfile.TemporaryDirectory() as directory:
+            control = Path(directory)/'stable-control'
+            control.mkdir(mode=0o700)
+            lease = bridge.GuardLease(directory, manifest['input']['reference_20d'], lambda: True)
+            guard = FakeGuard(lease)
+            processes, sync_counts, output = [], [], []
+            uuid_committed = threading.Event()
+            original_fsync = os.fsync
+            def count_sync(fd):
+                try: name = os.readlink('/proc/self/fd/' + str(fd))
+                except OSError: name = ''
+                data = ''
+                if '/worker-events-' in name:
+                    data = Path(name).read_text()
+                    sync_counts.append(len(data.splitlines()))
+                result = original_fsync(fd)
+                if '"event": "uuid_request"' in data:
+                    uuid_committed.set()
+                return result
+            original_exchange = guard.exchange
+            def exchange(request, timeout):
+                self.assertTrue(uuid_committed.is_set(), 'UUID handshake preceded durable receipt')
+                return original_exchange(request, timeout)
+            guard.exchange = exchange
+            def spawn(_, intent, uid):
+                process = worker_process(manifest, lease.session_id, 'feedback_many')
+                processes.append(process)
+                return process
+            try:
+                with patch.object(bridge.arm, 'physical_release_gate'), \
+                     patch.object(coordinator, 'GLOBAL_RECEIPT_DIR', control), \
+                     patch.object(coordinator.os, 'fsync', side_effect=count_sync):
+                    result = coordinator.coordinate(lease, guard, manifest, urdf(), transmissions(),
+                        spawn, control, timeout=5, event_sink=lambda row: output.append(row) or True)
+                events = [json.loads(line) for line in
+                          (control/('worker-events-'+lease.session_id+'.jsonl')).read_text().splitlines()]
+                self.assertEqual([e['count'] for e in events if e['event']=='feedback_summary'], [120])
+                self.assertNotIn('feedback', [e['event'] for e in events])
+                self.assertNotIn('feedback', [e['event'] for e in output])
+                self.assertEqual(len(sync_counts), 10)  # eight critical events + two postflight commits
+                self.assertEqual(events[1]['event'], 'uuid_request')
+                self.assertGreaterEqual(sync_counts[1], 2)
+                # The PC consumes only the sink, not the on-disk summaries.
+                import run_pico_wrist_native_trial as pc
+                evidence = pc.SuccessEvidence(lease.session_id)
+                for row in output: evidence.accept(row)
+                evidence.accept(result)
+                self.assertEqual(evidence.phase, 9)
+            finally:
+                guard.close()
+                for process in processes:
+                    if process.poll() is None: process.terminate()
+                    process.wait(timeout=3)
+                    for stream in (process.stdin, process.stdout, process.stderr): stream.close()
+
+    def test_bad_feedback_still_cancels_exact_goal(self):
+        manifest = prep.prepare(state(), urdf(), transmissions())
+        with tempfile.TemporaryDirectory() as directory:
+            control = Path(directory)/'stable-control'
+            control.mkdir(mode=0o700)
+            lease = bridge.GuardLease(directory, manifest['input']['reference_20d'], lambda: True)
+            guard = FakeGuard(lease)
+            processes = []
+            def spawn(_, intent, uid):
+                process = worker_process(manifest, lease.session_id, 'feedback_bad')
+                processes.append(process)
+                return process
+            try:
+                with patch.object(bridge.arm, 'physical_release_gate'), \
+                     patch.object(coordinator, 'GLOBAL_RECEIPT_DIR', control):
+                    with self.assertRaisesRegex(ValueError, 'foreign_worker_action_event'):
+                        coordinator.coordinate(lease, guard, manifest, urdf(), transmissions(),
+                                               spawn, control, timeout=5)
+                self.assertEqual(guard.cancelled, [GOAL])
+                self.assertTrue(lease.failed)
+                self.assertTrue((control/'PENDING_OR_UNRESOLVED.json').is_file())
+                events = [json.loads(line) for line in
+                          (control/('worker-events-'+lease.session_id+'.jsonl')).read_text().splitlines()]
+                self.assertEqual([e['count'] for e in events if e['event']=='feedback_summary'], [5])
+            finally:
+                guard.close()
+                for process in processes:
+                    if process.poll() is None: process.terminate()
+                    process.wait(timeout=3)
+                    for stream in (process.stdin, process.stdout, process.stderr): stream.close()
+
+    def test_feedback_after_result_fails_closed(self):
+        manifest = prep.prepare(state(), urdf(), transmissions())
+        with tempfile.TemporaryDirectory() as directory:
+            control = Path(directory)/'stable-control'
+            control.mkdir(mode=0o700)
+            lease = bridge.GuardLease(directory, manifest['input']['reference_20d'], lambda: True)
+            guard = FakeGuard(lease)
+            processes = []
+            def spawn(_, intent, uid):
+                process = worker_process(manifest, lease.session_id, 'feedback_after_result')
+                processes.append(process)
+                return process
+            try:
+                with patch.object(bridge.arm, 'physical_release_gate'), \
+                     patch.object(coordinator, 'GLOBAL_RECEIPT_DIR', control):
+                    with self.assertRaisesRegex(ValueError, 'foreign_worker_action_event'):
+                        coordinator.coordinate(lease, guard, manifest, urdf(), transmissions(),
+                                               spawn, control, timeout=5)
+                self.assertTrue(lease.failed)
+                self.assertTrue((control/'PENDING_OR_UNRESOLVED.json').is_file())
+            finally:
+                guard.close()
+                for process in processes:
+                    if process.poll() is None: process.terminate()
+                    process.wait(timeout=3)
+                    for stream in (process.stdin, process.stdout, process.stderr): stream.close()
+
+    def test_guard_failure_during_feedback_cancels_exact_goal(self):
+        manifest = prep.prepare(state(), urdf(), transmissions())
+        with tempfile.TemporaryDirectory() as directory:
+            control = Path(directory)/'stable-control'
+            control.mkdir(mode=0o700)
+            lease = bridge.GuardLease(directory, manifest['input']['reference_20d'], lambda: True)
+            guard = FakeGuard(lease)
+            processes, count = [], [0]
+            original_decode = coordinator.native.object_json
+            def decode(raw):
+                row = original_decode(raw)
+                if row.get('event') == 'feedback':
+                    count[0] += 1
+                    if count[0] == 40: guard.failure = 'simulated_guard_fault'
+                return row
+            def spawn(_, intent, uid):
+                process = worker_process(manifest, lease.session_id, 'feedback_many')
+                processes.append(process)
+                return process
+            try:
+                with patch.object(bridge.arm, 'physical_release_gate'), \
+                     patch.object(coordinator, 'GLOBAL_RECEIPT_DIR', control), \
+                     patch.object(coordinator.native, 'object_json', side_effect=decode):
+                    with self.assertRaisesRegex(RuntimeError, 'guard_lost_during_trial'):
+                        coordinator.coordinate(lease, guard, manifest, urdf(), transmissions(),
+                                               spawn, control, timeout=5)
+                self.assertEqual(count[0], 40)
+                self.assertEqual(guard.cancelled, [GOAL])
+                self.assertTrue(lease.failed)
+                events = [json.loads(line) for line in
+                          (control/('worker-events-'+lease.session_id+'.jsonl')).read_text().splitlines()]
+                self.assertEqual([e['count'] for e in events if e['event']=='feedback_summary'], [40])
+            finally:
+                guard.close()
+                for process in processes:
+                    if process.poll() is None: process.terminate()
+                    process.wait(timeout=3)
+                    for stream in (process.stdin, process.stdout, process.stderr): stream.close()
+
+    def test_uuid_disk_failure_prevents_guard_handshake_and_worker_ack(self):
+        manifest = prep.prepare(state(), urdf(), transmissions())
+        with tempfile.TemporaryDirectory() as directory:
+            control = Path(directory)/'stable-control'
+            control.mkdir(mode=0o700)
+            lease = bridge.GuardLease(directory, manifest['input']['reference_20d'], lambda: True)
+            guard = FakeGuard(lease)
+            processes = []
+            original_fsync = os.fsync
+            def fail_uuid_fsync(fd):
+                try: name = os.readlink('/proc/self/fd/' + str(fd))
+                except OSError: name = ''
+                if '/worker-events-' in name and '"event": "uuid_request"' in Path(name).read_text():
+                    raise OSError('simulated_uuid_disk_failure')
+                return original_fsync(fd)
+            def spawn(_, intent, uid):
+                process = worker_process(manifest, lease.session_id, 'success')
+                processes.append(process)
+                return process
+            try:
+                with patch.object(bridge.arm, 'physical_release_gate'), \
+                     patch.object(coordinator, 'GLOBAL_RECEIPT_DIR', control), \
+                     patch.object(coordinator.os, 'fsync', side_effect=fail_uuid_fsync):
+                    with self.assertRaisesRegex(OSError, 'simulated_uuid_disk_failure'):
+                        coordinator.coordinate(lease, guard, manifest, urdf(), transmissions(),
+                                               spawn, control, timeout=5)
+                self.assertFalse(guard.goal_acknowledged.is_set())
+                self.assertIsNone(lease.goal_id)
+                self.assertEqual(guard.cancelled, [])
+                self.assertTrue((control/'PENDING_OR_UNRESOLVED.json').is_file())
+            finally:
+                guard.close()
+                for process in processes:
+                    if process.poll() is None: process.terminate()
+                    process.wait(timeout=3)
+                    for stream in (process.stdin, process.stdout, process.stderr): stream.close()
 
     def test_blocked_journal_fsync_expires_lease_and_keeps_receipt(self):
         manifest = prep.prepare(state(), urdf(), transmissions())

@@ -134,6 +134,7 @@ def cleanup(process):
 
 
 def run(args):
+    one_shot = getattr(args, 'one_shot', False)
     container = discover_vision()
     server = subprocess.Popen(server_command(args), stdin=subprocess.PIPE,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
@@ -171,10 +172,11 @@ def run(args):
             if current is not None and not any(k.data == 'model_input' for k in selector.get_map().values()):
                 os.set_blocking(server.stdin.fileno(), False)
                 selector.register(server.stdin, selectors.EVENT_WRITE, 'model_input')
-            if finished_input and current is None and pending is None and not server.stdin.closed:
+            if ((finished_input or (one_shot and sent == 1)) and current is None
+                    and pending is None and not server.stdin.closed):
                 server.stdin.close()
             if server.poll() is not None:
-                if ready and not finished_input:
+                if ready and not finished_input and not (one_shot and sent == 1):
                     raise RuntimeError('model exited before passive capture completed')
                 if not selector.get_map():
                     break
@@ -295,6 +297,9 @@ def run(args):
                         received_pc_ns = row.get('pc_received_monotonic_ns')
                         if type(received_pc_ns) is not int or not 0 < received_pc_ns <= time.monotonic_ns():
                             raise ValueError('observation without valid PC receipt timestamp')
+                        if one_shot and (sent or current is not None):
+                            dropped += 1
+                            continue
                         if pending is not None:
                             dropped += 1
                         pending = {'bytes': line + b'\n', 'offset': 0, 'state': observation_state(row),
@@ -323,10 +328,13 @@ def main():
     p.add_argument('--seconds', type=int, default=20)
     p.add_argument('--fps', type=float, default=.5)
     p.add_argument('--max-samples', type=int, default=100)
+    p.add_argument('--one-shot', action='store_true',
+                   help='send at most one observation and drain capture before summary')
     p.add_argument('--startup-timeout', type=int, default=120)
     args = p.parse_args()
     if not (1 <= args.port <= 65535 and 1 <= args.seconds <= 60 and .5 <= args.fps <= 2
-            and math.ceil(args.seconds * args.fps) + 4 <= args.max_samples <= 1000
+            and ((args.one_shot and args.max_samples == 1) or
+                 (not args.one_shot and math.ceil(args.seconds * args.fps) + 4 <= args.max_samples <= 1000))
             and 1 <= args.startup_timeout <= 120
             and 0 <= args.seed <= 2**31 - 1):
         p.error('invalid bounded parameters')

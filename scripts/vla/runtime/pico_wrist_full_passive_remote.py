@@ -2,9 +2,11 @@
 """Motion-host integration check: PC heartbeat, real guard and read-only worker.
 
 Never starts the wrist coordinator, stages a task, constructs an action goal or
-calls an action server. A synthetic UUID exercises the guard handshake only.
-It does not prove physical braking or qualify VLA control.
+calls an action server. Ordinary mode hands a synthetic UUID to the guard;
+heartbeat mode hands over no UUID and never requests cancellation. Neither
+mode proves physical braking or qualifies VLA control.
 """
+import hashlib
 import json
 import math
 import os
@@ -52,8 +54,14 @@ def _worker_line(process, timeout):
 
 def check(payload):
     required = {'session', 'manifest', 'urdf_text', 'transmissions_text', 'guard_source', 'worker_source'}
-    if not isinstance(payload, dict) or set(payload) != required:
+    diagnostic = isinstance(payload, dict) and set(payload) == required | {'guard_heartbeat', 'guard_sha256'}
+    if not isinstance(payload, dict) or (set(payload) != required and not diagnostic):
         raise ValueError('invalid_passive_payload')
+    if diagnostic and (payload['guard_heartbeat'] is not True or
+                       not isinstance(payload['guard_source'], str) or
+                       not isinstance(payload['guard_sha256'], str) or
+                       hashlib.sha256(payload['guard_source'].encode('utf-8')).hexdigest() != payload['guard_sha256']):
+        raise ValueError('passive_guard_digest_mismatch')
     session = payload['session']
     arm.validate_preflight(session, 0, dry_run=True)
     manifest = payload['manifest']
@@ -76,12 +84,26 @@ def check(payload):
         with tempfile.TemporaryDirectory(prefix='pico-full-passive-', dir='/tmp') as directory:
             try:
                 launch.verify_shared_tmp(directory, app)
-                guard = launch.start_streamed(ros, '/opt/ros/humble/setup.bash',
-                    payload['guard_source'], session, stderr=subprocess.DEVNULL)
+                scope = ({'role':'guard', 'session_id':session['session_id'],
+                          'source_sha256':payload['guard_sha256']} if diagnostic else None)
+                try:
+                    if diagnostic:
+                        guard = launch.start_streamed(ros, '/opt/ros/humble/setup.bash',
+                            payload['guard_source'], session, stderr=subprocess.DEVNULL, verified=scope)
+                    else:
+                        guard = launch.start_streamed(ros, '/opt/ros/humble/setup.bash',
+                            payload['guard_source'], session, stderr=subprocess.DEVNULL)
+                except launch.StreamStartUncertain as exc:
+                    # This process has never received a UUID. Preserve its
+                    # handle for best-effort cleanup; uncertain delivery is
+                    # still an error, not proof of remote termination.
+                    guard = exc.process
+                    raise
                 lease = bridge.GuardLease(directory, manifest['input']['reference_20d'],
                     lambda: guard.poll() is None and pc.alive() and not output.failed,
                     session_id=session['session_id'])
-                pipe = bridge.GuardPipe(guard, lease, time.monotonic()-session['age_at_handoff_s'])
+                pipe = bridge.GuardPipe(guard, lease, time.monotonic()-session['age_at_handoff_s'],
+                                        enable_guard_heartbeat=diagnostic)
                 pipe.await_ready(26)
                 request = {'lease_path': str(lease.path), 'goal': manifest['candidate']['goal']}
                 worker = launch.start_streamed(app, '/opt/walker/setup.bash',
@@ -97,17 +119,32 @@ def check(payload):
                     raise RuntimeError('native_worker_check_failed')
                 if worker.wait(timeout=2) != 0:
                     raise RuntimeError('native_readonly_worker_failed')
-                # UUID is never passed to ROS or an action client; only the
-                # passive guard receives it through its private pipe.
-                synthetic = str(uuid.uuid4())
-                lease.synchronize_uuid(synthetic, pipe.exchange)
+                if diagnostic:
+                    # No UUID is handed off: even a fault has no goal that the
+                    # guard could cancel. The heartbeat timeout is only enforced
+                    # after a UUID, so this is not a watchdog-expiry test.
+                    initial_sequence = pipe.heartbeat_sequence
+                    end = time.monotonic() + 3.0
+                    while time.monotonic() < end:
+                        if lease.goal_id is not None or not pc.alive() or output.failed:
+                            raise RuntimeError('passive_heartbeat_state_changed')
+                        pipe.checked_snapshot()
+                        time.sleep(.05)
+                    pulses = pipe.heartbeat_sequence - initial_sequence
+                    if pulses < 2 or lease.goal_id is not None:
+                        raise RuntimeError('passive_heartbeat_not_sustained')
+                else:
+                    # The ordinary passive mode exercises only a synthetic
+                    # guard handshake; it is never passed to ROS.
+                    synthetic = str(uuid.uuid4())
+                    lease.synchronize_uuid(synthetic, pipe.exchange)
                 if not pc.alive() or not lease.guard_alive() or output.failed:
                     raise RuntimeError('passive_connection_not_live')
                 native.check_lease(lease.path, time.monotonic())
-                pipe.stop()
+                stop_clean = pipe.stop()
                 guard.wait(timeout=4)
                 pipe.thread.join(3)
-                if pipe.thread.is_alive() or guard.returncode != 0 or not lease.failed:
+                if not stop_clean or pipe.thread.is_alive() or guard.returncode != 0 or not lease.failed:
                     raise RuntimeError('guard_did_not_stop_cleanly')
                 try:
                     native.check_lease(lease.path, time.monotonic())
@@ -115,6 +152,16 @@ def check(payload):
                     pass
                 else:
                     raise RuntimeError('lease_not_revoked')
+                if diagnostic:
+                    return {'status': 'PASS_PC_HOST_GUARD_HEARTBEAT_NO_GOAL',
+                            'movement_commands': 0, 'action_goals_created': 0,
+                            'uuid_handshakes': 0, 'cancel_requests': 0,
+                            'heartbeat_pulses_sent': pulses, 'physical_control_qualified': False,
+                            'physical_stop_verified': False,
+                            'limitations': ['no per-heartbeat acknowledgement',
+                                'heartbeat expiry enforcement requires a handed-off UUID',
+                                'no cancellation, action goal or physical movement',
+                                'does not reproduce the original trajectory']}
                 return {'status': 'PASS_PC_HOST_GUARD_READONLY_NATIVE',
                         'movement_commands': 0, 'action_goals_created': 0,
                         'physical_control_qualified': False,

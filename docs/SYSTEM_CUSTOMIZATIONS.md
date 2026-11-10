@@ -1,5 +1,37 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-GUARD-PASSIVE-20261110
+
+**10-11-2026, Europe/Madrid — OBSERVADO EN MOTION SIN GOAL NI MOVIMIENTO.**
+El check pasivo terminó con `PASS_PC_HOST_GUARD_HEARTBEAT_NO_GOAL`; no es
+una autorización de control ni identifica la causa del incidente 731084.
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo y destino | PC y procesos temporales en Motion: comprobar el canal de latido del supervisor con la guardia preparada para cancelar, sin entregar UUID, crear o enviar un goal ni solicitar cancelación. Se usó `scripts/vla/check_pico_wrist_full_passive.py --check --guard-heartbeat`, con su bundle y binding revisados. No se instaló código ni modificó configuración del robot. |
+| Preparación | El inventario puntual informó modo joystick, cero escritores SDK, estados de acción terminales o vacíos, sin PICO/UI local activo; app contenía `rosa` y `robot_app`, y ROS `bash`. La muestra articular capturada a las 12:49:22 UTC generó candidato local sin despacho. Sus endpoints nominales pasan pero no todos sus márgenes diagnósticos; solo se usó como referencia observacional. La guardia vuelve a comprobar telemetría y estado; ninguna captura prueba exclusividad futura. |
+| Versión y reproducción | `check_pico_wrist_full_passive.py` SHA256 `73ba91cbbd7677bc5fb0b9b8f22f1798139821d1a4e9d1380dc2042c29fef521`; `runtime/pico_wrist_full_passive_remote.py` `5e5ab7044b5861e570e222f177a3ababe114910bdba3a06cff7ad76248b733dd`. Candidato, revisión limitada y binding local están en `../Humanoide-vla-evidence/PICO_GUARD_HEARTBEAT_20261110T124926Z_d1e6f5b4/`; binding SHA256 `1fe61cbad20835f70e9592b5ddfa6c425b51dccb55d9a8310139cefe321e79fa`. El comando reproducible es `python3 -B scripts/vla/check_pico_wrist_full_passive.py --check --guard-heartbeat --binding <binding> --binding-sha256 <sha256> --manifest <manifest.json> --urdf <robot.urdf> --transmissions <transmissions.yaml>`; exige binding y referencia compatibles con el estado observado. No volver a ejecutarlo como sustituto de revisar el incidente. |
+| Resultado y restauración | La sesión `dac52eab0bf7461686df17f235aa5a35` informó 30 latidos enviados en 3 s, cero handshakes UUID, goals y cancelaciones. La ruta PASS exige ACK de parada de guardia, terminación de hilo/proceso y lease revocado; el directorio temporal del check se retiró. Lectura posterior no observó Python en app ni ROS, confirmó el marker de 731084 y el XML inode 3584597, SHA256 `d4c704e6ab369d250658a596cd6a5704258accf130971d3046748a8d132b616b`. No se retiraron marker ni XML. |
+| Evidencia | En `../Humanoide-vla-evidence/PICO_FULL_PASSIVE_CHECK/check-dac52eab0bf7461686df17f235aa5a35/`, `stdout.jsonl` SHA256 `e2b524c91bd092034e1a2e2de5c764667c1d5148667724ea2bca71ca0b03213b` y `sources-sha256.json` `9c45dbda8067c5a93ffecad19b67ee2aec3fa7a19b50f08fb5cd928979a7cb60`. En el directorio de preparación anterior, `joint-state-read.json` `f96fa1ad32c0bc411dd366459688ac2e8f68d33379979fec75dd7042265da11c` y `postcheck-readonly.json` `e7a2d1e454af7c380f1fab06f38b90791931ba1299675fd3c5c687393a65095d`. Backup previo de estos cuatro documentos, con cambios locales conservados: `before-check-docs.tar` en ese directorio, SHA256 `b1bbb53642e69df6e4be173f3322e7e2a9eb9eae6514c9d82b293c32591a977c`. |
+| Límites y deuda | Los pulsos enviados no tienen ACK individual; sin UUID la guardia no exige caducidad del watchdog. No se probó cancelación, frenado, trayectoria, firmware/runtime ni acción del modelo. El check no comparte el lock del ensayo ni consulta el marker; no lo elimina ni libera el bloqueo físico. La causa de 731084, recuperación selectiva y validación de SmolVLA permanecen pendientes. |
+
+## SMOLVLA-WRIST-ONESHOT-20261110
+
+**10-11-2026, Europe/Madrid — CAMBIOS LOCALES PROBADOS EN SIMULACIÓN;
+DESPACHO DE MODELO BLOQUEADO.** Hubo una consulta posterior de sólo lectura,
+sin movimiento nuevo.
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo/destino | PC/repositorio: preparar una sola predicción para el corredor nativo restringido de muñeca, conservar su evidencia y reducir E/S de feedback; no instala ni modifica código del robot. |
+| Fuentes | `scripts/vla/run_ball_live_shadow.py` SHA256 `44d3e19ca5c4783d3ea43f2ada129c7bc3d9e552e69bda1e926b77cb9d9e4be1`; `prepare_ball_native_arm_step.py` `270abd3cc13f9fcf6fa131e572dcd597676a0a32b062479f1bdab5ebeaf6ffc8`; `pico_wrist_review_binding.py` `645752b7f0a4ed481d0520a740d9cd97a2ecf6b0650559e4552f11ded4dbe898`; `verified_pico_wrist_pc_loader.py` `bf4c683b19d511f0987e9ce49bf4bf70a32b1a127a17ec42a28ac94630531f21`; `runtime/pico_wrist_native_coordinator.py` `34dd065eb49dda3730d6c97e201f8ac9b791324a4bfdb71851d998792b1be332`; `check_pico_wrist_full_passive.py` `73ba91cbbd7677bc5fb0b9b8f22f1798139821d1a4e9d1380dc2042c29fef521`; `runtime/pico_wrist_full_passive_remote.py` `5e5ab7044b5861e570e222f177a3ababe114910bdba3a06cff7ad76248b733dd`. Pruebas homónimas en `scripts/vla/`. Los cambios de fuentes invalidan bindings que las incluyan. |
+| Comportamiento | `--one-shot --max-samples 1` envía una observación y drena la captura; sólo un stream completo produce el artefacto con decisión original y adaptación +0,01 rad de muñeca, sin órdenes de mano. Receipt verifica consistencia con hash externo, no autenticidad ni frescura actual. El binding con evidencia del modelo bloquea `--run`; el binding antiguo sin evidencia no acredita procedencia y no debe eludir el bloqueo. El validador local del modelo no queda acreditado por el binding. |
+| Supervisión | El coordinador comprueba cada feedback y agrupa su registro, sin fsync por mensaje; esta ruta sigue probada en simulación. El check optativo de latido se realizó después en Motion sin goal ni cancelación: [ficha](#arm-pico-guard-passive-20261110). No prueba cada pulso, expiración watchdog, cancelación, trayectoria o firmware/runtime. |
+| Verificación | En pruebas locales: relay 8 y preparación 19; check pasivo 11, verificador de transporte 9, puente 30, coordinador 25 y lanzador PC 19. Auditoría independiente revisó la captura única y retención del candidato; no es validación física. |
+| Lectura posterior | `../Humanoide-vla-evidence/SMOLVLA_CURRENT_READONLY_20261110T123648Z/state.json`, SHA256 `62da2f4a136218f7de18829ef2dd296b9b825714f812f60b3a6e15e09d2f6db9`: UUID del intento 731084 con status 5 y marker retenido; muestra articular sin velocidades publicadas. La lectura es puntual y no acredita parada física ni prueba los cambios de control o el nuevo check de latido. |
+| Respaldo/reversión | Documentos previos, incluidos cambios locales anteriores, en `../Humanoide-vla-evidence/ARM_PICO_MODEL_ONESHOT_20261110/before-docs-working.tar`, SHA256 `f7cd67398412259f2a0cff4c172b472812c2529282b9c9a9d662bcacca8b6e4a`. Revertir selectivamente sólo los cambios de esta intervención mediante el control de versiones, sin sobrescribir trabajo previo. No restaurar estado transitorio ni limpiar el robot. |
+| Deuda | La causa de pérdida de guardia 731084 sigue sin demostrarse; ni el feedback ni fsync se han probado como causa. Su XML y marker siguen retenidos. No repetir, enviar HOME o limpiarlos automáticamente; falta recuperación específica y verificación física vigente. No se ha ejecutado SmolVLA en el robot ni validado la tarea completa. |
+
 ## ARM-PICO-GUARD-DIAGNOSTICS-20261110
 
 **10-11-2026, Europe/Madrid — VERIFICADO EN TESTS LOCALES; SIN NUEVA

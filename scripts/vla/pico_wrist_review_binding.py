@@ -12,11 +12,14 @@ import json
 import os
 from pathlib import Path
 import sys
+import tempfile
 
 import prepare_pico_wrist_native_probe as probe
 import run_pico_wrist_native_trial as launcher
 
 MAX_REVIEW_BYTES = 128 * 1024
+MODEL_FILES = ('manifest.json', 'task.xml', 'decision.json', 'robot.urdf',
+               'transmissions.yaml', 'receipt.json')
 
 
 def _hash(data):
@@ -34,12 +37,40 @@ def _write_new(path, data):
         raise RuntimeError('binding_readback_mismatch:' + path.name)
 
 
-def create(output, manifest_path, urdf_path, transmissions_path, review_path):
+def _model_snapshot(directory, receipt_sha256):
+    # Validate exactly the bytes subsequently retained, not paths that can
+    # change between verification and copying. The verifier is local code and
+    # is not itself attested by this binding.
+    import prepare_ball_native_arm_step as model
+    data = {}
+    for name in MODEL_FILES:
+        with (Path(directory)/name).open('rb') as stream:
+            data[name] = stream.read(16 * 1024 * 1024 + 1)
+        if len(data[name]) > 16 * 1024 * 1024:
+            raise ValueError('model_artifact_too_large:' + name)
+    with tempfile.TemporaryDirectory(prefix='wrist-model-verification-') as tmp:
+        for name, raw in data.items():
+            (Path(tmp)/name).write_bytes(raw)
+        model.verify_model_wrist_artifact(tmp, receipt_sha256)
+    return data
+
+
+def create(output, manifest_path, urdf_path, transmissions_path, review_path, *,
+           model_artifact=None, model_receipt_sha256=None):
     """Capture exact sources and the supplied review, without authorizing use."""
     output = Path(output)
     manifest_raw = Path(manifest_path).read_bytes()
     urdf_raw = Path(urdf_path).read_bytes()
     transmissions_raw = Path(transmissions_path).read_bytes()
+    if (model_artifact is None) != (model_receipt_sha256 is None):
+        raise ValueError('model_artifact_and_receipt_digest_required')
+    model_data = None
+    if model_artifact is not None:
+        model_data = _model_snapshot(model_artifact, model_receipt_sha256)
+        for name, raw in (('manifest.json', manifest_raw), ('robot.urdf', urdf_raw),
+                          ('transmissions.yaml', transmissions_raw)):
+            if model_data[name] != raw:
+                raise ValueError('model_candidate_input_changed:' + name)
     review_raw = Path(review_path).read_bytes()
     if not 0 < len(review_raw) <= MAX_REVIEW_BYTES or not review_raw.strip():
         raise ValueError('review_text_empty_or_too_large')
@@ -63,6 +94,15 @@ def create(output, manifest_path, urdf_path, transmissions_path, review_path):
         'loaded_runtime_or_firmware_verified': False,
         'movement_commands': 0,
     }
+    if model_data is not None:
+        for name in ('decision.json', 'receipt.json', 'task.xml'):
+            _write_new(output/name, model_data[name])
+        binding['model_wrist_evidence'] = {
+            'schema': 'pico_wrist_model_evidence_v1',
+            'receipt_sha256': model_receipt_sha256,
+            'decision_sha256': _hash(model_data['decision.json']),
+            'task_sha256': _hash(model_data['task.xml']),
+        }
     raw = (json.dumps(binding, sort_keys=True, indent=2, allow_nan=False) + '\n').encode('utf-8')
     _write_new(output/'review-binding.json', raw)
     fd = os.open(output, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
@@ -87,7 +127,8 @@ def verify(output, expected_binding_sha256):
     expected_fields = {'schema', 'bundle_evidence_sha256', 'review_sha256', 'scope',
                        'physical_control_qualified', 'reviewer_identity_authenticated',
                        'loaded_runtime_or_firmware_verified', 'movement_commands'}
-    if (not isinstance(binding, dict) or set(binding) != expected_fields or
+    if (not isinstance(binding, dict) or set(binding) not in
+            (expected_fields, expected_fields | {'model_wrist_evidence'}) or
             binding['schema'] != 'pico_wrist_technical_review_binding_v1' or
             binding['scope'] != 'retained_controlled_source_bytes_and_supplied_review_only' or
             binding['physical_control_qualified'] is not False or
@@ -98,6 +139,23 @@ def verify(output, expected_binding_sha256):
     if _hash((output/'technical-review.txt').read_bytes()) != binding['review_sha256']:
         raise ValueError('technical_review_changed')
     launcher.verify_bundle_evidence(output, binding['bundle_evidence_sha256'])
+    if 'model_wrist_evidence' in binding:
+        evidence = binding['model_wrist_evidence']
+        if (not isinstance(evidence, dict) or set(evidence) !=
+                {'schema', 'receipt_sha256', 'decision_sha256', 'task_sha256'} or
+                evidence['schema'] != 'pico_wrist_model_evidence_v1'):
+            raise ValueError('invalid_model_wrist_evidence')
+        data = _model_snapshot(output, evidence['receipt_sha256'])
+        if (_hash(data['decision.json']) != evidence['decision_sha256'] or
+                _hash(data['task.xml']) != evidence['task_sha256']):
+            raise ValueError('model_wrist_evidence_changed')
+        index_raw = (output/'bundle-evidence.json').read_bytes()
+        if _hash(index_raw) != binding['bundle_evidence_sha256']:
+            raise ValueError('bundle_evidence_index_changed_during_model_check')
+        indexed = json.loads(index_raw)['sha256']
+        for name in ('manifest.json', 'robot.urdf', 'transmissions.yaml'):
+            if _hash(data[name]) != indexed[name]:
+                raise ValueError('model_candidate_input_changed:' + name)
     return {'binding_sha256': expected_binding_sha256, **binding}
 
 
@@ -165,6 +223,8 @@ def main(argv=None):
     parser.add_argument('--urdf', type=Path)
     parser.add_argument('--transmissions', type=Path)
     parser.add_argument('--review', type=Path, help='existing UTF-8 technical review')
+    parser.add_argument('--model-artifact', type=Path, help='retain and verify model wrist decision artifact')
+    parser.add_argument('--model-receipt-sha256', help='independently held artifact receipt SHA-256')
     parser.add_argument('--expected-binding-sha256')
     parser.add_argument('--compare-current', action='store_true',
                         help='with --verify, compare current controlled sources and bundles')
@@ -177,8 +237,12 @@ def main(argv=None):
                 raise ValueError('expected_digest_only_for_verify')
             if args.compare_current:
                 raise ValueError('compare_current_only_for_verify')
-            result = create(args.create, args.manifest, args.urdf, args.transmissions, args.review)
+            result = create(args.create, args.manifest, args.urdf, args.transmissions, args.review,
+                            model_artifact=args.model_artifact,
+                            model_receipt_sha256=args.model_receipt_sha256)
         else:
+            if args.model_artifact is not None or args.model_receipt_sha256 is not None:
+                raise ValueError('model_artifact_only_for_create')
             if args.review is not None:
                 raise ValueError('review_path_only_for_create')
             inputs = (args.manifest, args.urdf, args.transmissions)

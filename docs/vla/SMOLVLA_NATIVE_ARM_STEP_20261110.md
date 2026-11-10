@@ -1,5 +1,63 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Latido de guardia sin goal — 10-11-2026
+
+**OBSERVADO EN MOTION; SIN UUID, GOAL, CANCELACIÓN NI MOVIMIENTO.** Con
+referencia articular leída y binding de revisión limitado, el check opcional
+`--guard-heartbeat` terminó con `PASS_PC_HOST_GUARD_HEARTBEAT_NO_GOAL`: envió
+30 pulsos en 3 s y exigió ACK de parada, fin de la guardia y revocación del
+lease. Después no se observaron procesos Python en los dos contenedores; el
+marker de 731084 y su XML conservaban identidad. El inventario y la muestra
+son puntuales, no garantizan exclusividad o estado físico futuro.
+
+No existe ACK por pulso y, sin un UUID entregado, el watchdog no exige
+caducidad de ese latido. No se comprobó cancelación, frenado ni trayectoria;
+la causa de 731084 sigue sin identificar y la política SmolVLA no se ejecutó.
+El check no toma el lock del ensayo ni retira el marker, que sigue bloqueando
+la vía de movimiento. Evidencia, SHA256 y reproducción en la
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-guard-passive-20261110).
+
+## Predicción única y supervisión — 10-11-2026
+
+**VERIFICADO EN SIMULACIÓN; DESPACHO FÍSICO DE SMOLVLA BLOQUEADO.**
+`run_ball_live_shadow.py --one-shot --max-samples 1` entrega como máximo una
+observación al modelo, cierra su entrada y drena la captura hasta su fin normal;
+el resumen sólo aparece si los procesos y las cuentas terminan correctamente.
+`prepare_ball_native_arm_step.py --stream --wrist-candidate --wrist-output`
+exige una predicción completa y un resumen coherente antes de publicar el
+directorio nuevo o mostrar el candidato. La adaptación conserva los otros seis
+ejes del brazo en la medición, limita `R_wrist_roll_joint` a +0,01 rad durante
+4 s y rechaza propuestas negativas o inferiores a +0,01 rad. No interpreta
+ni acciona la mano; registra la salida original y la aplicada. Esto no es la
+política íntegra ni la tarea de coger, elevar y soltar la pelota.
+
+El directorio contiene manifiesto, XML, URDF, transmisiones, decisión y receipt.
+Sus hashes y aritmética se pueden verificar con un SHA256 externo del receipt;
+el hash de imagen no conserva sus píxeles. Esta consistencia no autentica al
+productor ni demuestra frescura actual, sincronización con Vision o seguridad
+de trayectoria. El binding opcional conserva la evidencia exacta y rechaza
+`--run` cuando está presente. **Un binding antiguo sin evidencia de modelo no
+identifica la procedencia de su candidato** y no debe usarse para eludir ese
+bloqueo. La verificación del artefacto usa código local que el propio binding
+no acredita; tampoco acredita firmware ni runtime externos.
+
+El coordinador cuenta feedback y lo resume, evitando un `fsync` por mensaje,
+sin eliminar la comprobación por mensaje de guardia, lease y UUID. El check
+pasivo opcional `--guard-heartbeat` exige el binding revisado, usa clientes de
+descubrimiento y supervisa latido y cierre de la guardia sin crear goal ni
+solicitar cancelación. No demuestra que cada pulso se recibiera, el vencimiento
+del watchdog, una cancelación real ni la trayectoria. El resumen de feedback se
+ha probado en simulación; el check de latido pasó después en Motion sin goal.
+
+La causa de `guard_lost_during_trial` en 731084 permanece **PENDIENTE**;
+no se ha demostrado que el volumen del feedback ni un `fsync` fueran su causa.
+El XML y marker de esa sesión siguen retenidos; no repetir, enviar HOME o
+limpiarlos automáticamente. Una nueva consulta de sólo lectura observó el UUID
+con status 5 y marker retenido; la muestra articular no publicó velocidades.
+No hubo movimiento nuevo. Los cambios de control siguen sin prueba física;
+el check de latido tiene el alcance indicado arriba. Para evidencia, hashes, backup y deuda:
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-wrist-oneshot-20261110).
+
 ## Diagnóstico de pérdida de guardia — 10-11-2026
 
 **VERIFICADO EN TESTS LOCALES, no probado en Motion.** Tras el intento 731084,

@@ -15,6 +15,7 @@ import importlib.abc
 import importlib.machinery
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -52,6 +53,8 @@ BUNDLE_PATHS = {
     'pico_wrist_docker_launcher': 'scripts/vla/runtime/pico_wrist_docker_launcher.py',
 }
 BUNDLED_MODULES = frozenset(BUNDLE_PATHS)
+MODEL_ARM = ('R_shoulder_pitch_joint', 'R_shoulder_roll_joint', 'R_shoulder_yaw_joint',
+             'R_elbow_roll_joint', 'R_elbow_yaw_joint', 'R_wrist_pitch_joint', 'R_wrist_roll_joint')
 
 
 def _object(pairs):
@@ -96,6 +99,62 @@ def _exact_origin(origin_text, root, relative):
     return expected
 
 
+def _check_model_evidence(directory, evidence, files):
+    """Check retained model evidence; this does not attest its producer."""
+    if (not isinstance(evidence, dict) or set(evidence) !=
+            {'schema', 'receipt_sha256', 'decision_sha256', 'task_sha256'} or
+            evidence['schema'] != 'pico_wrist_model_evidence_v1'):
+        raise ValueError('invalid_model_wrist_evidence')
+    for name, field in (('receipt.json', 'receipt_sha256'),
+                        ('decision.json', 'decision_sha256'), ('task.xml', 'task_sha256')):
+        raw = _read(directory/name)
+        if _sha(raw) != evidence[field]:
+            raise ValueError('model_wrist_evidence_changed:' + name)
+        files[name] = raw
+    receipt, decision, manifest = (_json(files[name]) for name in
+                                    ('receipt.json', 'decision.json', 'manifest.json'))
+    names = {'manifest.json', 'task.xml', 'decision.json', 'robot.urdf', 'transmissions.yaml'}
+    if (not isinstance(receipt, dict) or set(receipt) !=
+            {'schema', 'sha256', 'model_sha256', 'image_sha256', 'image_bytes_retained',
+             'physical_control_qualified', 'physical_commands_sent'} or
+            receipt['schema'] != 'cruzr_model_wrist_artifact_v1' or
+            receipt['image_bytes_retained'] is not False or
+            receipt['physical_control_qualified'] is not False or
+            type(receipt['physical_commands_sent']) is not int or receipt['physical_commands_sent'] != 0 or
+            not isinstance(receipt['sha256'], dict) or set(receipt['sha256']) != names or
+            any(receipt['sha256'][name] != _sha(files[name]) for name in names)):
+        raise ValueError('invalid_model_wrist_receipt')
+    candidate, state = manifest['candidate'], manifest['input']['canonical_joint_state']
+    state_names, positions = state['name'], state['position']
+    if (not isinstance(state_names, list) or len(state_names) != 20 or
+            len(set(state_names)) != 20 or not isinstance(positions, list) or len(positions) != 20 or
+            not set(MODEL_ARM).issubset(state_names)):
+        raise ValueError('invalid_model_wrist_state')
+    initial = [positions[state_names.index(name)] for name in MODEL_ARM]
+    values, deltas = decision['model_action_original'], decision['model_arm_deltas_rad']
+    target = candidate['target_rad']
+    if (not isinstance(values, list) or len(values) != 8 or
+            not isinstance(deltas, list) or len(deltas) != 7 or
+            not isinstance(target, list) or len(target) != 7 or
+            any(type(x) not in (int, float) or not math.isfinite(x)
+                for x in values + deltas + target + initial) or
+            candidate['arm_joint_order'] != list(MODEL_ARM) or
+            decision['applied_arm_joint_order'] != list(MODEL_ARM) or
+            candidate['moved_axis'] != MODEL_ARM[-1] or candidate['step_rad_experimental'] != .01 or
+            decision['applied_arm_target_rad'] != target or
+            decision['adaptation'] != 'hold_six_arm_axes_clip_positive_wrist_to_0.01_rad_hand_unchanged' or
+            decision['physical_control_qualified'] is not False or
+            type(decision['physical_commands_sent']) is not int or decision['physical_commands_sent'] != 0 or
+            decision['model_sha256'] != receipt['model_sha256'] or decision['image_sha256'] != receipt['image_sha256'] or
+            files['task.xml'] != candidate['xml'].encode('utf-8') or
+            candidate['xml_sha256'] != _sha(files['task.xml']) or
+            any(not math.isclose(values[i]-initial[i], deltas[i], rel_tol=1e-6, abs_tol=1e-6)
+                for i in range(7)) or values[6]-initial[6] < .01 or
+            any(not math.isclose(target[i], initial[i]+(.01 if i == 6 else 0),
+                                 rel_tol=0, abs_tol=1e-12) for i in range(7))):
+        raise ValueError('model_wrist_projection_mismatch')
+
+
 def checked_snapshot(directory, expected_digest, *, root=ROOT, include_artifacts=False):
     """Verify the entire retained snapshot before compiling project modules."""
     if not isinstance(expected_digest, str) or not re.fullmatch('[0-9a-f]{64}', expected_digest):
@@ -108,7 +167,8 @@ def checked_snapshot(directory, expected_digest, *, root=ROOT, include_artifacts
     fields = {'schema', 'bundle_evidence_sha256', 'review_sha256', 'scope',
               'physical_control_qualified', 'reviewer_identity_authenticated',
               'loaded_runtime_or_firmware_verified', 'movement_commands'}
-    if (not isinstance(binding, dict) or set(binding) != fields or
+    if (not isinstance(binding, dict) or set(binding) not in
+            (fields, fields | {'model_wrist_evidence'}) or
             binding['schema'] != 'pico_wrist_technical_review_binding_v1' or
             binding['scope'] != 'retained_controlled_source_bytes_and_supplied_review_only' or
             binding['physical_control_qualified'] is not False or
@@ -146,6 +206,8 @@ def checked_snapshot(directory, expected_digest, *, root=ROOT, include_artifacts
         if _sha(raw) != digest:
             raise ValueError('bundle_evidence_changed:' + name)
         files[name] = raw
+    if 'model_wrist_evidence' in binding:
+        _check_model_evidence(directory, binding['model_wrist_evidence'], files)
     # Require the complete known local Python closure, not a selectable subset.
     if set(index['source_origins']) != BUNDLED_MODULES:
         raise ValueError('bundle_source_set_changed')
@@ -262,6 +324,8 @@ def main(argv=None):
     try:
         modules, files, index_raw, binding_raw = checked_snapshot(
             args.binding, args.binding_sha256, include_artifacts=True)
+        if args.run and 'receipt.json' in files:
+            raise RuntimeError('model_wrist_dispatch_not_enabled')
         with verified_pc_environment(modules, artifacts=(files, index_raw, binding_raw)) as (entrypoint, finder):
             if args.check:
                 print(json.dumps({'status': 'VERIFIED_PC_IMPORT_ONLY', 'modules_loaded': sorted(finder.loaded),

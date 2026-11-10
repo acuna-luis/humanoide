@@ -1,5 +1,22 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-GUARD-PASSIVE-20261110.** Un check pasivo en Motion
+envió 30 latidos en 3 s, sin UUID, goal ni cancelación, y terminó con guardia
+cerrada y lease revocado. Marker/XML del intento 731084 siguen presentes. No
+hay ACK individual ni prueba de vencimiento, cancelación o trayectoria; no se
+ha validado la tarea ni el control físico de SmolVLA.
+[Ficha y evidencia](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-guard-passive-20261110).
+
+**10-11-2026 — SMOLVLA-WRIST-ONESHOT-20261110.** Preparado en PC un flujo
+de una predicción con adaptación explícita a una sola muñeca. La evidencia
+del modelo puede vincularse a la revisión, pero ese binding bloquea `--run`;
+el binding antiguo sin esa evidencia no prueba procedencia. El resumen de
+feedback se probó con procesos simulados; el check de latido pasó posteriormente
+en Motion sin goal. No se validó la tarea de pelota ni el control físico SmolVLA. La
+causa de pérdida de guardia 731084 sigue pendiente y el marker/XML se conservan.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#predicción-única-y-supervisión--10-11-2026),
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-wrist-oneshot-20261110).
+
 **10-11-2026 — ARM-PICO-GUARD-DIAGNOSTICS-20261110.** Preparado diagnóstico
 de la primera alerta y eventos recientes de guardia para el journal y un aviso
 resumido tras solicitar cancelación; 76 tests locales pasan, sin check en

@@ -19,6 +19,7 @@ import uuid
 import check_arm_native_bridge_live as passive
 import check_arm_from_pico_supervised as preflight
 import pico_wrist_pc_heartbeat as heartbeat
+import pico_wrist_review_binding as review_binding
 import prepare_pico_wrist_native_probe as probe
 import run_head_from_pico_supervised as head
 import run_pico_wrist_native_trial as trial
@@ -30,7 +31,7 @@ BOX = ROOT / 'scripts/box_handling'
 EVIDENCE = ROOT.parent / 'Humanoide-vla-evidence' / 'PICO_FULL_PASSIVE_CHECK'
 
 
-def source_bundle():
+def source_bundle(*, guard_heartbeat=False):
     paths = {
         'metamove_head_probe': RUNTIME / 'metamove_head_probe.py',
         'head_from_pico_readonly': RUNTIME / 'head_from_pico_readonly.py',
@@ -53,6 +54,9 @@ def source_bundle():
               'session=json.loads(sys.stdin.readline())\n'
               'raise SystemExit(sys.modules["arm_from_pico_supervised"].main('
               'session,dry_run=True,monitor_only=True))\n')
+    if guard_heartbeat:
+        # Use exactly the guard bundle retained by the separate review binding.
+        _, guard, _ = trial.source_bundle()
     # This worker imports the native API for fingerprinting but never creates
     # an action client, calls rosa.init, or constructs/sends an action goal.
     worker = passive.module_code({name: sources[name] for name in
@@ -77,7 +81,7 @@ def source_bundle():
     return host, guard, worker, hashes
 
 
-def drive(process, session_id, preflight_started, outdir):
+def drive(process, session_id, preflight_started, outdir, *, guard_heartbeat=False):
     selector = selectors.DefaultSelector()
     for stream, name in ((process.stdout, 'stdout'), (process.stderr, 'stderr')):
         os.set_blocking(stream.fileno(), False)
@@ -134,7 +138,8 @@ def drive(process, session_id, preflight_started, outdir):
                             if pump is None:
                                 raise ValueError('challenge_before_heartbeat_ready')
                             pump.submit(row)
-                        elif row.get('status') == 'PASS_PC_HOST_GUARD_READONLY_NATIVE':
+                        elif row.get('status') == ('PASS_PC_HOST_GUARD_HEARTBEAT_NO_GOAL'
+                                                   if guard_heartbeat else 'PASS_PC_HOST_GUARD_READONLY_NATIVE'):
                             if result is not None:
                                 raise ValueError('duplicate_result')
                             result = row
@@ -145,6 +150,11 @@ def drive(process, session_id, preflight_started, outdir):
                 result.get('movement_commands') != 0 or result.get('action_goals_created') != 0 or
                 result.get('physical_control_qualified') is not False):
             raise RuntimeError('passive_integration_not_confirmed')
+        if guard_heartbeat and (result.get('uuid_handshakes') != 0 or
+                                result.get('cancel_requests') != 0 or
+                                type(result.get('heartbeat_pulses_sent')) is not int or
+                                result['heartbeat_pulses_sent'] < 2):
+            raise RuntimeError('passive_guard_heartbeat_not_confirmed')
         return result
     finally:
         if pump is not None:
@@ -152,13 +162,31 @@ def drive(process, session_id, preflight_started, outdir):
         selector.close()
 
 
-def check(manifest_path, urdf_path, transmissions_path):
-    manifest = json.loads(manifest_path.read_bytes())
-    urdf = urdf_path.read_bytes().decode('utf-8')
-    transmissions = transmissions_path.read_bytes().decode('utf-8')
+def check(manifest_path, urdf_path, transmissions_path, *, guard_heartbeat=False,
+          binding=None, binding_sha256=None):
+    manifest_raw = manifest_path.read_bytes()
+    urdf_raw = urdf_path.read_bytes()
+    transmissions_raw = transmissions_path.read_bytes()
+    manifest = json.loads(manifest_raw)
+    urdf = urdf_raw.decode('utf-8')
+    transmissions = transmissions_raw.decode('utf-8')
     probe.validate(manifest, urdf, transmissions)
+    guard_sha256 = None
+    if guard_heartbeat:
+        if binding is None or binding_sha256 is None:
+            raise ValueError('heartbeat_check_requires_review_binding')
+        verified = review_binding.compare_candidate_inputs(
+            binding, binding_sha256, manifest_raw, urdf_raw, transmissions_raw)
+        index_raw = (binding/'bundle-evidence.json').read_bytes()
+        if hashlib.sha256(index_raw).hexdigest() != verified['bundle_evidence_sha256']:
+            raise ValueError('binding_index_changed')
+        guard_sha256 = json.loads(index_raw)['sha256']['bundle-guard.py']
+    elif binding is not None or binding_sha256 is not None:
+        raise ValueError('binding_only_for_heartbeat_check')
     mode, started, _ = preflight.preflight()
-    host, guard, worker, hashes = source_bundle()
+    host, guard, worker, hashes = source_bundle(guard_heartbeat=guard_heartbeat)
+    if guard_heartbeat and hashlib.sha256(guard.encode('utf-8')).hexdigest() != guard_sha256:
+        raise ValueError('reviewed_guard_source_changed')
     token = uuid.uuid4().hex
     session = {'schema': 'cruzr_head_pico_preflight_v1', 'task_sha256': preflight.ARM_TASK_SHA,
                'pico_sha256': head.admission.PICO_SHA, 'work_mode': mode,
@@ -166,6 +194,8 @@ def check(manifest_path, urdf_path, transmissions_path):
                'age_at_handoff_s': time.monotonic()-started, 'session_id': token, 'mode': 'check'}
     payload = {'session': session, 'manifest': manifest, 'urdf_text': urdf,
                'transmissions_text': transmissions, 'guard_source': guard, 'worker_source': worker}
+    if guard_heartbeat:
+        payload.update(guard_heartbeat=True, guard_sha256=guard_sha256)
     sentinel = 'PICO_HOST_END_' + uuid.uuid4().hex
     if sentinel in host:
         raise ValueError('host_source_sentinel_collision')
@@ -182,7 +212,7 @@ def check(manifest_path, urdf_path, transmissions_path):
     try:
         trial.docker_launch.write_stream(process.stdin.fileno(),
             (host+'\n'+sentinel+'\n'+json.dumps(payload, allow_nan=False)+'\n').encode(), 10)
-        result = drive(process, token, started, outdir)
+        result = drive(process, token, started, outdir, guard_heartbeat=guard_heartbeat)
     finally:
         # This check never sends goals; terminate only its own SSH if stuck.
         if process.poll() is None:
@@ -192,8 +222,12 @@ def check(manifest_path, urdf_path, transmissions_path):
                 process.kill(); process.wait(timeout=3)
         for stream in (process.stdin, process.stdout, process.stderr):
             if stream is not None: stream.close()
-    print(json.dumps({'status': result['status'], 'evidence': str(outdir),
-                      'movement_commands': 0, 'physical_stop_verified': False}, allow_nan=False))
+    report = {'status': result['status'], 'evidence': str(outdir),
+              'movement_commands': 0, 'physical_stop_verified': False}
+    if guard_heartbeat:
+        report.update(heartbeat_pulses_sent=result['heartbeat_pulses_sent'],
+                      uuid_handshakes=0, cancel_requests=0, limitations=result['limitations'])
+    print(json.dumps(report, allow_nan=False))
 
 
 def main(argv=None):
@@ -204,6 +238,10 @@ def main(argv=None):
     parser.add_argument('--manifest', type=Path)
     parser.add_argument('--urdf', type=Path)
     parser.add_argument('--transmissions', type=Path)
+    parser.add_argument('--guard-heartbeat', action='store_true',
+                        help='check reviewed cancel-capable guard heartbeats without UUID or goal')
+    parser.add_argument('--binding', type=Path)
+    parser.add_argument('--binding-sha256')
     args = parser.parse_args(argv)
     if args.run:
         print('BLOCKED: passive check has no physical execution', file=sys.stderr)
@@ -211,7 +249,8 @@ def main(argv=None):
     try:
         if any(value is None for value in (args.manifest, args.urdf, args.transmissions)):
             raise ValueError('manifest_urdf_and_transmissions_required')
-        check(args.manifest, args.urdf, args.transmissions)
+        check(args.manifest, args.urdf, args.transmissions, guard_heartbeat=args.guard_heartbeat,
+              binding=args.binding, binding_sha256=args.binding_sha256)
         return 0
     except (OSError, ValueError, TypeError, KeyError, RuntimeError, subprocess.SubprocessError) as exc:
         print('FULL_PASSIVE_CHECK_FAILED: ' + str(exc), file=sys.stderr)
