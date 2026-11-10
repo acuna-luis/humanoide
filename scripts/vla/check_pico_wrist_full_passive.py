@@ -43,6 +43,7 @@ def source_bundle(*, guard_heartbeat=False):
         'pico_wrist_pc_heartbeat': VLA / 'pico_wrist_pc_heartbeat.py',
         'pico_wrist_verified_stream': VLA / 'pico_wrist_verified_stream.py',
         'pico_wrist_trial_admission': VLA / 'pico_wrist_trial_admission.py',
+        'archive_canceled_pico_wrist_731084': RUNTIME / 'archive_canceled_pico_wrist_731084.py',
         'pico_wrist_native_coordinator': RUNTIME / 'pico_wrist_native_coordinator.py',
         'pico_wrist_docker_launcher': RUNTIME / 'pico_wrist_docker_launcher.py',
         'pico_wrist_full_passive_remote': RUNTIME / 'pico_wrist_full_passive_remote.py',

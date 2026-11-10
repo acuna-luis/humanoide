@@ -78,6 +78,9 @@ HEAD_YAW_SPEED_RAD_S = .1
 SAMPLE_AGE_S = .5
 STOP_AGE_S = 6.0
 SUPERVISOR_HEARTBEAT_TIMEOUT_S = .6
+# A cancellation request is not an acknowledgement. While the exact UUID is
+# still observed active, retry only on a new status sample and at this rate.
+GUARD_CANCEL_RETRY_S = .5
 TASK = 'move_components_json'
 ACTIVE_STATUSES = frozenset((1, 2, 3))
 TASK_SHA = 'bfcfc097dfefb3e81fcb2acc913d7db55545b3ea3b853b345b9ba1836c01b797'
@@ -519,8 +522,8 @@ def main(preflight, *, dry_run, monitor_only=False, guard_can_cancel=False, veri
             guard_cancel_future = None
             guard_cancel_requested = False
             guard_cancel_count = 0
-            guard_first_cancel_sequence = None
-            guard_first_cancel_at = None
+            guard_last_cancel_sequence = None
+            guard_last_cancel_at = None
             guard_terminal_reported = False
             guard_fault = None
             guard_fault_at = None
@@ -557,8 +560,8 @@ def main(preflight, *, dry_run, monitor_only=False, guard_can_cancel=False, veri
                             # unknown if the call raises after sending.
                             guard_cancel_requested = True
                             guard_cancel_count = 1
-                            guard_first_cancel_sequence = state['status_sequence']
-                            guard_first_cancel_at = time.monotonic()
+                            guard_last_cancel_sequence = state['status_sequence']
+                            guard_last_cancel_at = time.monotonic()
                             guard_cancel_future = uuid_cancel_client.call_async(request)
                             emit('guard_auto_cancel_requested', reason=guard_fault,
                                  physical_stop_confirmed=False)
@@ -575,19 +578,23 @@ def main(preflight, *, dry_run, monitor_only=False, guard_can_cancel=False, veri
                              physical_stop_confirmed=False)
                     guard_cancel_future = None
                 guard_status = own_status(state['statuses'], state['own']) if state['own'] is not None else None
-                if (guard_cancel_count == 1 and state['status_sequence'] > guard_first_cancel_sequence
-                        and guard_status in ACTIVE_STATUSES
-                        and (guard_cancel_future is None or time.monotonic()-guard_first_cancel_at >= .5)):
+                if (guard_cancel_requested and guard_status in ACTIVE_STATUSES and
+                        state['status_sequence'] > guard_last_cancel_sequence and
+                        time.monotonic()-guard_last_cancel_at >= GUARD_CANCEL_RETRY_S):
                     try:
                         if uuid_cancel_client.service_is_ready():
                             request = CancelGoal.Request()
                             request.goal_info.goal_id.uuid = list(state['own'])
-                            # One bounded retry of cancellation, never movement,
-                            # only after a newer status shows this UUID active.
-                            guard_cancel_count = 2
+                            # Never retry movement. A freshly observed active
+                            # status for the exact UUID may indicate that an
+                            # earlier cancel raced with goal delivery. Continue
+                            # bounded-rate cancellation until terminal status.
+                            guard_cancel_count += 1
+                            guard_last_cancel_sequence = state['status_sequence']
+                            guard_last_cancel_at = time.monotonic()
                             guard_cancel_future = uuid_cancel_client.call_async(request)
                             emit('guard_auto_cancel_requested', reason='own_uuid_active_after_cancel',
-                                 attempt=2, physical_stop_confirmed=False)
+                                 attempt=guard_cancel_count, physical_stop_confirmed=False)
                     except Exception as exc:
                         emit('guard_auto_cancel_delivery_unknown', reason=str(exc),
                              physical_stop_confirmed=False)
@@ -662,12 +669,17 @@ def main(preflight, *, dry_run, monitor_only=False, guard_can_cancel=False, veri
                             # wildcard. An unknown goal and an ACK do not prove rest.
                             guard_cancel_requested = True
                             guard_cancel_count = 1
-                            guard_first_cancel_sequence = state['status_sequence']
-                            guard_first_cancel_at = time.monotonic()
+                            guard_last_cancel_sequence = state['status_sequence']
+                            guard_last_cancel_at = time.monotonic()
                             guard_cancel_future = uuid_cancel_client.call_async(request)
                             emit('guard_cancel_requested', session_id=command['session_id'],
                                  goal_id=command['goal_id'], challenge=command['challenge'],
                                  physical_stop_confirmed=False)
+                            # Cancellation is a fault transition, not normal
+                            # operation: do not accept a new command or stop
+                            # observing until this UUID is terminal and still.
+                            guard_fault = 'host_requested_cancel'
+                            guard_fault_at = time.monotonic()
                             continue
                         if (set(command) != {'event', 'session_id', 'guard_id', 'goal_id', 'challenge'}
                                 or command['event'] != 'prepare_goal_uuid'

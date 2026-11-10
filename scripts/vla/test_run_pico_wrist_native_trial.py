@@ -339,7 +339,7 @@ class LauncherTests(unittest.TestCase):
     def test_worker_bundle_keeps_raw_native_stdout_off_json_pipe(self):
         _, _, source = launcher.source_bundle()
         needle = ('channel=worker.WorkerChannel(sys.stdin.fileno(),event_fd,'
-                  'payload["session_id"])\n')
+                  'payload["session_id"],model_mode=payload.get("model_mode",False))\n')
         self.assertEqual(source.count(needle), 1)
         # Inject a local fake native write after the exact production setup.
         source = source.replace(needle, needle + 'os.write(1,b"I native simulated log\\n")\n')

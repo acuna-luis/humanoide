@@ -15,11 +15,59 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parent/'runtime'))
 import arm_native_lease_bridge as bridge
 import pico_wrist_native_coordinator as coordinator
+import pico_wrist_pc_heartbeat as pc_heartbeat
+import pico_wrist_model_decision as model_decision
 import prepare_pico_wrist_native_probe as prep
 from test_prepare_pico_wrist_native_probe import state, urdf, transmissions
 from test_arm_native_lease_bridge import telemetry
+from test_pico_wrist_model_decision import case as model_case, BOOT as MODEL_BOOT
 
 GOAL = '12345678-1234-1234-1234-123456789abc'
+
+
+class ModelPermissionTests(unittest.TestCase):
+    def test_wait_keeps_guard_and_lease_checked_until_matching_permission(self):
+        task = 'a'*64
+        permit = {'goal_id':GOAL, 'task_sha256':task, 'decision_sha256':'b'*64,
+                  'deadline_monotonic_ns':time.monotonic_ns()+2_000_000_000}
+        calls = []
+        pc = types.SimpleNamespace(begin_model_permit=lambda goal, sha: calls.append((goal, sha)))
+        pending = iter([None, None, permit])
+        pc.permit_snapshot = lambda: next(pending)
+        lease = types.SimpleNamespace(guard_alive=lambda: True, path='/no-io')
+        guard = types.SimpleNamespace(failure=None)
+        progress = types.SimpleNamespace(beat=lambda: calls.append('beat'))
+        with patch.object(coordinator.native, 'check_lease') as check, patch.object(coordinator.time, 'sleep'):
+            got = coordinator.await_model_permission(pc, lease, guard, progress, GOAL, task,
+                                                     time.monotonic()+1)
+        self.assertEqual(got, permit)
+        self.assertEqual(calls[0], (GOAL, task))
+        self.assertEqual(calls.count('beat'), 3)
+        self.assertEqual(check.call_count, 3)
+
+    def test_wait_rejects_foreign_or_expired_permit_and_guard_failure(self):
+        task = 'a'*64
+        lease = types.SimpleNamespace(guard_alive=lambda: True, path='/no-io')
+        guard = types.SimpleNamespace(failure=None)
+        progress = types.SimpleNamespace(beat=lambda: None)
+        for value in (
+            {'goal_id':'other', 'task_sha256':task, 'decision_sha256':'b'*64,
+             'deadline_monotonic_ns':time.monotonic_ns()+1_000_000_000},
+            {'goal_id':GOAL, 'task_sha256':task, 'decision_sha256':'b'*64,
+             'deadline_monotonic_ns':time.monotonic_ns()-1},
+        ):
+            pc = types.SimpleNamespace(begin_model_permit=lambda *_: None,
+                                       permit_snapshot=lambda: value)
+            with patch.object(coordinator.native, 'check_lease'):
+                with self.assertRaisesRegex(RuntimeError, 'invalid_or_expired_model_permission'):
+                    coordinator.await_model_permission(pc, lease, guard, progress, GOAL, task,
+                                                       time.monotonic()+1)
+        guard.failure = 'lost'
+        pc = types.SimpleNamespace(begin_model_permit=lambda *_: None,
+                                   permit_snapshot=lambda: None)
+        with self.assertRaisesRegex(RuntimeError, 'guard_lost_waiting_for_model'):
+            coordinator.await_model_permission(pc, lease, guard, progress, GOAL, task,
+                                               time.monotonic()+1)
 
 
 class FakeGuard:
@@ -80,7 +128,7 @@ class FakeGuard:
 
 def worker_process(manifest, session, mode):
     candidate = manifest['candidate']
-    code = '''import json,sys
+    code = '''import json,sys,time
 candidate=json.loads(sys.argv[1]);session=sys.argv[2];mode=sys.argv[3]
 def emit(**row):print(json.dumps(row),flush=True)
 emit(event='stage_receipt',session_id=session,receipt={
@@ -88,7 +136,12 @@ emit(event='stage_receipt',session_id=session,receipt={
  'sha256':candidate['xml_sha256'],'device':1,'inode':2,'movement_commands':0})
 req={'event':'uuid_request','session_id':session,'goal_id':%r,'challenge':'c'*32}
 emit(**req)
-ack=json.loads(sys.stdin.readline());assert ack==dict(req,event='uuid_ok')
+ack=json.loads(sys.stdin.readline())
+if mode=='hang_after_model_ack':
+ assert all(ack.get(k)==v for k,v in dict(req,event='uuid_ok').items())
+ assert set(ack)==set(req)|{'deadline_monotonic_ns','decision_sha256'}
+ time.sleep(2);sys.exit(9)
+assert ack==dict(req,event='uuid_ok')
 if mode=='crash_before_dispatched':sys.exit(9)
 emit(event='dispatched',goal_id=req['goal_id'])
 if mode=='crash':sys.exit(9)
@@ -108,11 +161,13 @@ emit(event='worker_result',returncode=0)
                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
 
 
-def real_worker_with_fake_transport(manifest, lease_path, intent, uid, session, mode='normal'):
+def real_worker_with_fake_transport(manifest, lease_path, intent, uid, session, mode='normal', model=False):
     """Real worker+lease+action state machine; local fake actuator and stage."""
     payload = {'manifest':manifest, 'urdf_text':urdf(), 'transmissions_text':transmissions(),
                'lease_path':str(lease_path), 'session_id':session,
                'intent_path':str(intent), 'intent_uid':uid}
+    if model:
+        payload['model_mode'] = True
     code = r'''
 import hashlib,json,os,socket,subprocess,sys,time,types
 sys.path.insert(0, sys.argv[1]);sys.path.insert(0, sys.argv[2]);sys.path.insert(0, sys.argv[3])
@@ -147,7 +202,7 @@ class FakeTransport:
  def cancel(self): pass
  def close(self): pass
 bridge.GuardedRosaTransport=FakeTransport
-channel=worker.WorkerChannel(sys.stdin.fileno(),sys.stdout.fileno(),payload['session_id'])
+channel=worker.WorkerChannel(sys.stdin.fileno(),sys.stdout.fileno(),payload['session_id'],model_mode=payload.get('model_mode',False))
 prov=('worker',payload['session_id'],'b'*64,'c'*64)
 rc=worker.run(payload,channel,verified_provenance=prov)
 channel.emit(event='worker_result',returncode=rc)
@@ -160,6 +215,99 @@ raise SystemExit(rc)
 
 
 class CoordinatorTests(unittest.TestCase):
+    def test_model_ack_starts_short_action_deadline_if_worker_blocks_in_send(self):
+        manifest = prep.prepare(state(), urdf(), transmissions())
+        with tempfile.TemporaryDirectory() as directory:
+            control = Path(directory)/'stable-control'; control.mkdir(mode=0o700)
+            lease = bridge.GuardLease(directory, manifest['input']['reference_20d'], lambda: True)
+            guard = FakeGuard(lease)
+            processes = []
+            def spawn(_, intent, uid):
+                process = worker_process(manifest, lease.session_id, 'hang_after_model_ack')
+                processes.append(process)
+                return process
+            permit = {'goal_id':GOAL, 'task_sha256':manifest['candidate']['xml_sha256'],
+                      'decision_sha256':'b'*64,
+                      'deadline_monotonic_ns':time.monotonic_ns()+5_000_000_000}
+            pc = types.SimpleNamespace(begin_model_permit=lambda *_: None, permit_snapshot=lambda: permit)
+            start = time.monotonic()
+            try:
+                with patch.object(bridge.arm, 'physical_release_gate'), \
+                     patch.object(coordinator, 'GLOBAL_RECEIPT_DIR', control), \
+                     patch.object(coordinator, 'MODEL_ACTION_TIMEOUT_S', .2):
+                    with self.assertRaisesRegex(RuntimeError, 'worker_terminal_evidence_incomplete'):
+                        coordinator.coordinate(lease, guard, manifest, urdf(), transmissions(), spawn,
+                                               control, timeout=5, model_permit=pc)
+                self.assertLess(time.monotonic()-start, 2)
+                self.assertEqual(guard.cancelled, [GOAL])
+                records = [json.loads(line) for line in
+                           (control/('worker-events-'+lease.session_id+'.jsonl')).read_text().splitlines()]
+                self.assertEqual([r['decision_sha256'] for r in records
+                                  if r.get('event') == 'model_permission_verified'], ['b'*64])
+            finally:
+                guard.close()
+                for process in processes:
+                    if process.poll() is None: process.terminate()
+                    process.wait(timeout=3)
+                    for stream in (process.stdin,process.stdout,process.stderr): stream.close()
+
+    def test_two_phase_model_decision_reaches_simulated_worker_only_when_fresh(self):
+        # Real coordinator, lease, heartbeat and worker IPC; the observation,
+        # action transport and actuator are local fakes, not ROS or a robot.
+        rows, _ = model_case()
+        manifest = prep.prepare(state(), urdf(), transmissions())
+        with tempfile.TemporaryDirectory() as directory:
+            control = Path(directory)/'stable-control'; control.mkdir(mode=0o700)
+            lease = bridge.GuardLease(directory, manifest['input']['reference_20d'], lambda: True)
+            guard = FakeGuard(lease)
+            read_fd, write_fd = os.pipe()
+            decision = [None]
+            seen = []
+            def permit(request):
+                return model_decision.make_dispatch_permission(decision[0], request['goal_id'],
+                    request['task_sha256'], boot_id=MODEL_BOOT, now_ns=time.monotonic_ns(),
+                    max_state_age_ns=10_000_000_000, max_prediction_age_ns=10_000_000_000)
+            pump = pc_heartbeat.PcHeartbeatPump(write_fd, lease.session_id, model_permit=permit)
+            def challenge(row):
+                pump.submit(row)
+                return True
+            pc = pc_heartbeat.PcHeartbeat(read_fd, lease.session_id, challenge, model_mode=True)
+            processes = []
+            def spawn(path, intent, uid):
+                process = real_worker_with_fake_transport(manifest, path, intent, uid, lease.session_id,
+                                                          model=True)
+                processes.append(process)
+                return process
+            def event(row):
+                seen.append(row.get('event'))
+                if row.get('event') == 'stage_receipt':
+                    now = time.monotonic_ns()
+                    rows[1]['paired_state20']['received_monotonic_ns'] = now-1_000_000
+                    rows[1]['prediction_received_monotonic_ns'] = now-500_000
+                    decision[0] = model_decision.decision_from_stream(rows, manifest,
+                                                                       now_ns=now, boot_id=MODEL_BOOT)
+                return True
+            try:
+                pc.await_ready(2)
+                with patch.object(bridge.arm, 'physical_release_gate'), \
+                     patch.object(coordinator, 'GLOBAL_RECEIPT_DIR', control):
+                    result = coordinator.coordinate(lease, guard, manifest, urdf(), transmissions(),
+                        spawn, control, timeout=8, model_permit=pc, event_sink=event)
+                self.assertEqual(result['status'], 'ACTION_SUCCEEDED_AND_POSTFLIGHT_OBSERVED')
+                self.assertIn('stage_receipt', seen)
+                self.assertIn('uuid_request', seen)
+                self.assertIn('dispatched', seen)
+                self.assertIsNotNone(decision[0])
+            finally:
+                pc.close(); pump.close(); guard.close()
+                for fd in (read_fd, write_fd):
+                    try: os.close(fd)
+                    except OSError: pass
+                for process in processes:
+                    if process.poll() is None: process.terminate()
+                    process.wait(timeout=3)
+                    for stream in (process.stdin,process.stdout,process.stderr): stream.close()
+
     def test_concurrent_guard_event_copy_failure_preserves_first_alert(self):
         class ChangedHistory:
             def __iter__(self):

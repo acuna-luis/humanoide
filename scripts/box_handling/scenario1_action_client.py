@@ -502,8 +502,11 @@ class RosaTransport:
 
 
 def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
-               lease_file=None, clock=time.monotonic, cancel_grace=8.0):
+               lease_file=None, clock=time.monotonic, cancel_grace=8.0,
+               deadline_after_send=False):
     """Transport state machine. A late success after interruption stays failure."""
+    if type(deadline_after_send) is not bool:
+        raise ValueError('deadline_after_send must be boolean')
     deadline = clock() + timeout
     accepted = False
     terminal = None
@@ -577,6 +580,11 @@ def run_action(transport, kind, goal, timeout, emit, interrupted=lambda: None,
             report_correction('armed')
         check_guards()
         goal_id = transport.send(goal)
+        if deadline_after_send:
+            # Some transports wait for a separately supervised, expiring
+            # pre-send permission. That wait is bounded by the transport;
+            # retain the normal action timeout after the send returns.
+            deadline = clock() + timeout
         emit(event='dispatched', goal_id=goal_id, endpoint=ENDPOINTS[kind])
         acceptance_deadline = min(deadline, clock() + 5.0)
         while terminal is None:

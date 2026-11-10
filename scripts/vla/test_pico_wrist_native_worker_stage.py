@@ -121,6 +121,48 @@ os.close(fd)
         thread.join(2)
         self.assertTrue(errors and 'coordinator_ack_mismatch' in str(errors[0]))
 
+    def test_model_ack_binds_deadline_and_is_checked_after_staging(self):
+        self.channel.model_mode = True
+        errors = []
+        def send():
+            try: self.channel.prepare_uuid(GOAL)
+            except BaseException as exc: errors.append(exc)
+        thread = threading.Thread(target=send); thread.start()
+        request = json.loads(os.read(self.out_read, 4096))
+        ack = dict(request, event='uuid_ok', decision_sha256='f'*64,
+                   deadline_monotonic_ns=time.monotonic_ns()+1_000_000_000)
+        os.write(self.in_write, (json.dumps(ack)+'\n').encode())
+        thread.join(2)
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(errors, [])
+        self.assertEqual(self.channel.model_decision_sha256, 'f'*64)
+        with tempfile.TemporaryDirectory() as directory:
+            lease = worker.LeaseProxy(Path(directory)/'lease.json', {}, self.channel, {})
+            with patch.object(self.channel, 'prepare_uuid'), patch.object(worker.native, 'check_lease'), \
+                 patch.object(worker.staging, 'verify_staged',
+                              side_effect=lambda *_: setattr(self.channel, 'model_deadline_monotonic_ns',
+                                                             time.monotonic_ns()-1)):
+                with self.assertRaisesRegex(RuntimeError, 'model_permission_missing_or_expired'):
+                    lease.synchronize_uuid(GOAL, None)
+
+    def test_model_ack_expired_or_for_other_goal_is_rejected(self):
+        for expired in (True, False):
+            self.channel.model_mode = True
+            errors = []
+            def send():
+                try: self.channel.prepare_uuid(GOAL)
+                except BaseException as exc: errors.append(exc)
+            thread = threading.Thread(target=send); thread.start()
+            request = json.loads(os.read(self.out_read, 4096))
+            ack = dict(request, event='uuid_ok', decision_sha256='a'*64,
+                       deadline_monotonic_ns=time.monotonic_ns()+(-1 if expired else 1_000_000_000))
+            if not expired:
+                ack['goal_id'] = '00000000-0000-0000-0000-000000000000'
+            os.write(self.in_write, (json.dumps(ack)+'\n').encode())
+            thread.join(2)
+            self.assertFalse(thread.is_alive())
+            self.assertTrue(errors, 'model ACK must be rejected')
+
     def test_missing_ack_is_bounded(self):
         started = time.monotonic()
         with self.assertRaisesRegex(TimeoutError, 'coordinator_ack_timeout'):

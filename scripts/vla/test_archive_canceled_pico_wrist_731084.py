@@ -121,6 +121,34 @@ class ArchiveTests(unittest.TestCase):
         with patch.object(m,'TERMINAL_EVIDENCE_SHA',m.sha(self.terminal.read_bytes())):
             with self.assertRaisesRegex(ValueError,'terminal_uuid_not_exact'): self.recover(archive=True)
 
+    def test_check_allows_only_independently_checked_daemon(self):
+        daemon={'pid':42,'rpc_socket_owned':True,'control_clients':0,'action_clients':0,
+                'publishers':['/parameter_events','/rosout']}
+        def run(argv, *, data=None):
+            if argv[1]=='ps': return (m.APP+'\n'+m.ROS+'\n').encode()
+            if argv[1]=='top':
+                return (b'PID COMMAND\n2 bash\n42 python3\n' if argv[2]==m.ROS
+                        else b'PID COMMAND\n2 robot_app\n')
+            if argv[1]=='exec' and 'python3' in argv: return json.dumps(daemon).encode()
+            return b'status_list: []\n'
+        observed=m.no_observed_activity(run,allow_ros_daemon=True)
+        self.assertEqual(observed['ros_cli_daemon'],daemon)
+        with self.assertRaisesRegex(RuntimeError,'python_process_in_trial_container'):
+            m.no_observed_activity(run,allow_ros_daemon=False)
+        daemon['action_clients']=1
+        with self.assertRaisesRegex(ValueError,'ros_daemon_identity_invalid'):
+            m.no_observed_activity(run,allow_ros_daemon=True)
+
+    def test_check_rejects_other_python_and_multiple_ros_python(self):
+        def run(argv, *, data=None):
+            if argv[1]=='ps': return (m.APP+'\n'+m.ROS+'\n').encode()
+            if argv[1]=='top':
+                return (b'PID COMMAND\n2 bash\n42 python3\n43 python3\n' if argv[2]==m.ROS
+                        else b'PID COMMAND\n2 robot_app\n')
+            raise AssertionError('must fail before ROS action read')
+        with self.assertRaisesRegex(RuntimeError,'multiple_ros_python_processes'):
+            m.no_observed_activity(run,allow_ros_daemon=True)
+
     def test_uncertain_archive_preserves_marker_and_block(self):
         def task(mode):
             if mode == 'archive': raise TimeoutError('uncertain_delivery')

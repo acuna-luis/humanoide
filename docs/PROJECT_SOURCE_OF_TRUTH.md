@@ -1,11 +1,28 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-SCOPED-731084-20261110: integración preparada en PC.**
+Una sola predicción puede vincularse al UUID y al XML de un paso acotado de
+muñeca; la admisión específica conserva el marker del intento 731084 y crea una
+intención nueva. Es una excepción explícita al bloqueo anterior, no recuperación
+ni causa resuelta. La integración y cambios de cancelación se probaron con
+procesos simulados; el gate físico permanece cerrado y no hubo movimiento.
+[Ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-scoped-731084-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#integración-de-modelo-y-admisión-731084--10-11-2026).
+
+**10-11-2026 — SMOLVLA-LIVE-ONESHOT-20261110: una inferencia en vivo sin
+movimiento.** El flujo completo recibió una imagen y estado, produjo una sola
+predicción y cerró con cero órdenes; informó checkpoint `e707eea0…` y delta
+de muñeca derecha +0,188971 rad. Latencia PC adaptador→predicción 0,960481 s;
+no mide el transporte desde Vision. La captura ya está caducada y no habilita
+control. Se observaron limpios los procesos temporales examinados en Vision y Ada.
+[Ficha y evidencia](SYSTEM_CUSTOMIZATIONS.md#smolvla-live-oneshot-20261110).
+
 **10-11-2026 — ARM-PICO-731084-ARCHIVE-PREP-20261110: recuperación preparada,
 no ejecutada.** Nueva herramienta específica del intento cancelado valida el
 UUID y la evidencia histórica, y conserva un bloqueo duradero aunque archive
-el marker. Pasan diez tests y revisión independiente. Un check remoto fue rechazado
-por detectar un Python en el contenedor ROS; se observó un daemon ROS. La
-evidencia temporal se retiró; no hubo archivado ni movimiento.
+el marker. Pasan diez tests y revisión independiente. El primer check remoto rechazó un proceso Python; otro check pasó al identificar
+el daemon ROS por socket y grafo, sin clientes de control observados. Ambos
+temporales se retiraron; no hubo archivado ni movimiento.
 Una consulta puntual observó marker y XML intactos, UUID en estado 5, velocidades
 cero y 20 actuadores sin error; no demuestra parada física ni exclusividad. El
 fallo de supervisión y el despacho físico de SmolVLA siguen pendientes.

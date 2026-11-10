@@ -172,10 +172,59 @@ def run_command(argv, *, data=None):
     return proc.stdout
 
 
-def no_observed_activity(run=run_command):
+# Read-only graph checks for the ROS CLI daemon.  The command name alone is
+# insufficient: daemonize.py can run an arbitrary deserialized callable.
+_ROS_DAEMON_CHECK = r"""import glob,json,os,re,socket,xmlrpc.client
+expected=['/usr/bin/python3','-c','from ros2cli.daemon.daemonize import main; main()',
+          '--name','ros2-daemon','--ros-domain-id','0','--rmw-implementation','rmw_cyclonedds_cpp']
+found=[]
+for path in glob.glob('/proc/[0-9]*/cmdline'):
+ try:
+  raw=open(path,'rb').read().split(b'\0'); args=[x.decode() for x in raw if x]
+  if args==expected:
+   pid=int(path.split('/')[2]); sockets=[]
+   for fd in glob.glob('/proc/'+str(pid)+'/fd/*'):
+    try:
+     target=os.readlink(fd)
+     if re.fullmatch(r'socket:\[\d+\]',target): sockets.append(target[8:-1])
+    except OSError: pass
+   found.append((pid,sockets))
+ except (OSError,UnicodeError): pass
+if len(found)!=1: raise ValueError('daemon_identity_not_unique')
+pid,sockets=found[0]
+listeners=[]
+for line in open('/proc/net/tcp').read().splitlines()[1:]:
+ fields=line.split()
+ if fields[1]=='0100007F:2CF7' and fields[3]=='0A': listeners.append(fields[9])
+if len(listeners)!=1 or listeners[0] not in sockets: raise ValueError('daemon_rpc_socket_not_owned')
+socket.setdefaulttimeout(3)
+rpc=xmlrpc.client.ServerProxy('http://127.0.0.1:11511/ros2cli/')
+methods=set(rpc.system.listMethods())
+expected_methods={'count_publishers','count_subscribers','get_action_client_names_and_types_by_node',
+'get_action_names_and_types','get_action_server_names_and_types_by_node','get_client_names_and_types_by_node',
+'get_name','get_namespace','get_node_names_and_namespaces','get_node_names_and_namespaces_with_enclaves',
+'get_publisher_names_and_types_by_node','get_publishers_info_by_topic','get_service_names_and_types',
+'get_service_names_and_types_by_node','get_subscriber_names_and_types_by_node','get_subscriptions_info_by_topic',
+'get_topic_names_and_types','system.listMethods','system.methodHelp','system.methodSignature','system.shutdown'}
+if methods != expected_methods: raise ValueError('daemon_rpc_methods_unexpected')
+name,namespace=rpc.get_name(),rpc.get_namespace()
+if namespace!='/' or not re.fullmatch(r'_ros2cli_daemon_0_[0-9a-f]{32}',name): raise ValueError('daemon_node_invalid')
+pubs=rpc.get_publisher_names_and_types_by_node(name,namespace)
+clients=rpc.get_client_names_and_types_by_node(name,namespace)
+actions=rpc.get_action_client_names_and_types_by_node(name,namespace)
+if sorted(pubs)!=sorted([['/parameter_events',['rcl_interfaces/msg/ParameterEvent']],['/rosout',['rcl_interfaces/msg/Log']]]) or clients or actions:
+ raise ValueError('daemon_node_controls_or_unexpected_publishers')
+print(json.dumps({'pid':pid,'node':name,'rpc_socket_owned':True,'control_clients':0,
+                  'action_clients':0,'publishers':['/parameter_events','/rosout'],
+                  'limits':'point-in-time graph only; daemon payload is not authenticated'}))
+"""
+
+
+def no_observed_activity(run=run_command, *, allow_ros_daemon=False):
     names = run(['docker','ps','--format','{{.Names}}']).decode().splitlines()
     if names.count(APP) != 1 or names.count(ROS) != 1:
         raise RuntimeError('containers_not_unique')
+    ros_python = 0
     for name in (APP, ROS):
         out = run(['docker','top',name,'-eo','pid,comm']).decode()
         rows = out.splitlines()
@@ -186,7 +235,19 @@ def no_observed_activity(run=run_command):
             if len(parts) != 2 or not parts[0].isdigit():
                 raise ValueError('invalid_process_row')
             if parts[1].lower().startswith('python'):
-                raise RuntimeError('python_process_in_trial_container')
+                if name != ROS or not allow_ros_daemon:
+                    raise RuntimeError('python_process_in_trial_container')
+                ros_python += 1
+    daemon = None
+    if ros_python:
+        if ros_python != 1:
+            raise RuntimeError('multiple_ros_python_processes')
+        raw = run(['docker','exec',ROS,'python3','-B','-c',_ROS_DAEMON_CHECK])
+        daemon = json.loads(raw)
+        if (not isinstance(daemon,dict) or daemon.get('rpc_socket_owned') is not True or
+                daemon.get('control_clients') != 0 or daemon.get('action_clients') != 0 or
+                daemon.get('publishers') != ['/parameter_events','/rosout']):
+            raise ValueError('ros_daemon_identity_invalid')
     command = ('source /opt/ros/humble/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; '
                'timeout 7 ros2 topic echo --once --no-daemon /mc/manipulation/action/_action/status')
     status = run(['docker','exec',ROS,'bash','-lc',command]).decode()
@@ -197,7 +258,7 @@ def no_observed_activity(run=run_command):
         raise ValueError('action_status_unparseable')
     if any(x not in (4,5,6) for x in states):
         raise RuntimeError('active_or_unknown_action_status')
-    return {'no_python_in_trial_containers':True,'observed_action_states':states,
+    return {'ros_cli_daemon':daemon,'observed_action_states':states,
             'does_not_establish_external_exclusivity_or_stop':True}
 
 
@@ -215,8 +276,12 @@ def container_task(mode, run=run_command):
 
 
 def recover(*, terminal_evidence, archive=False, control=CONTROL, lease_dir=LEASE_DIR,
-            inspect=no_observed_activity, task=container_task):
+            inspect=None, task=container_task):
     terminal = validate_terminal_evidence(terminal_evidence)
+    if inspect is None:
+        # Graph-verified ROS CLI daemon is tolerated for read-only check only;
+        # archival retains the prior all-Python rejection.
+        inspect = lambda: no_observed_activity(allow_ros_daemon=not archive)
     for root in (control, lease_dir):
         info = root.lstat()
         if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) & 0o077:

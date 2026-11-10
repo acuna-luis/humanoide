@@ -69,6 +69,22 @@ RESULT = {'event': 'result', 'status': 4, 'result': SUCCESS}
 
 
 class LifecycleTests(unittest.TestCase):
+    def test_explicit_post_send_deadline_separates_permission_wait(self):
+        class DelayedPermissionTransport(FakeTransport):
+            def send(self, goal):
+                self.clock.value += 3.0  # bounded pre-send permission wait
+                return super().send(goal)
+
+        for enabled, expected in ((False, 2), (True, 0)):
+            clock = FakeClock()
+            transport = DelayedPermissionTransport(clock, ((3.25, ACCEPT), (3.5, RESULT)))
+            code = action.run_action(transport, 'motion', {}, 2., lambda **row: None,
+                                     clock=clock, cancel_grace=.5,
+                                     deadline_after_send=enabled)
+            self.assertEqual(code, expected)
+            self.assertEqual(transport.sent, 1)
+            self.assertEqual(transport.canceled, [] if enabled else [GOAL_ID])
+
     def run_case(self, schedule=(), cancel_schedule=(), timeout=2., interrupt=lambda: None,
                  lease_file=None, available=True):
         clock = FakeClock()

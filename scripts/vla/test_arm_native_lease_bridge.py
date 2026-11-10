@@ -97,6 +97,29 @@ class LeaseTests(unittest.TestCase):
             self.assertTrue(gate.failed)
             self.assertEqual(json.loads(gate.path.read_text())['deadline'], 0)
 
+    def test_async_revocation_stops_renewal_even_if_write_is_in_flight(self):
+        clock = box_tests.FakeClock(); clock.value = 2.0
+        with tempfile.TemporaryDirectory() as directory:
+            gate = bridge.GuardLease(directory, dict(bridge.arm.BODY), lambda: True, clock=clock)
+            began, release = threading.Event(), threading.Event()
+            original = gate._write
+            def delayed(deadline):
+                if deadline > 0:
+                    began.set()
+                    if not release.wait(2): raise RuntimeError('test timed out')
+                original(deadline)
+            with patch.object(gate, '_write', side_effect=delayed):
+                writer = threading.Thread(target=gate.heartbeat, args=(telemetry(clock()),))
+                writer.start(); self.assertTrue(began.wait(2))
+                done = gate.fail_async()
+                self.assertTrue(gate.failed)
+                self.assertFalse(done.is_set())
+                self.assertIs(done, gate.fail_async())
+                release.set(); writer.join(2)
+                self.assertTrue(done.wait(2))
+            self.assertEqual(json.loads(gate.path.read_text())['deadline'], 0)
+            with self.assertRaises(RuntimeError): gate.heartbeat(telemetry(clock()))
+
     def test_invalid_sample_is_never_published_as_latest(self):
         clock = box_tests.FakeClock(); clock.value = 3.0
         with tempfile.TemporaryDirectory() as directory:
@@ -246,6 +269,24 @@ class HandshakeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'physical_dispatch_blocked'):
             bridge.run_guarded_once(None, None, None, None, None, lambda **row: None)
 
+    def test_model_mode_starts_action_timeout_after_permit_and_send(self):
+        manifest = {'candidate': {'goal': {'task_name':'probe', 'yaml_args':'{}'}},
+                    'input': {'reference_20d':dict(bridge.arm.BODY)}}
+        for model_mode in (False, True):
+            channel = types.SimpleNamespace(session_id='a'*32, model_mode=model_mode)
+            lease = types.SimpleNamespace(channel=channel, manifest=manifest,
+                                          initial=dict(bridge.arm.BODY), path='/tmp/lease',
+                                          fail=lambda:None)
+            transport = types.SimpleNamespace(close=lambda:None)
+            with self.subTest(model_mode=model_mode), \
+                 patch.object(bridge.probe, 'validate'), \
+                 patch.object(bridge.native, 'validate_goal', return_value=manifest['candidate']['goal']), \
+                 patch.object(bridge, 'GuardedRosaTransport', return_value=transport), \
+                 patch.object(bridge.native, 'run_action', return_value=0) as run:
+                bridge.run_guarded_once(lease, None, manifest, '', '', lambda **row:None,
+                    verified_provenance=('worker','a'*32,'b'*64,'c'*64))
+                self.assertEqual(run.call_args.kwargs.get('deadline_after_send', False), model_mode)
+
     def test_fake_lease_cannot_construct_native_transport(self):
         from types import SimpleNamespace
         provenance = ('worker', 'a'*32, 'b'*64, 'c'*64)
@@ -344,6 +385,42 @@ while True:
 
 
 class GuardPipeProcessTests(unittest.TestCase):
+    def test_blocked_lease_fsync_does_not_delay_cancel_request(self):
+        child = simulated_guard('d'*32, 'cancel')
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                lease = bridge.GuardLease(directory, dict(bridge.arm.BODY),
+                                          lambda: child.poll() is None, session_id='d'*32)
+                pipe = bridge.GuardPipe(child, lease, time.monotonic())
+                pipe.await_ready(3)
+                lease.synchronize_uuid(box_tests.GOAL_ID, pipe.exchange)
+                began, release = threading.Event(), threading.Event()
+                original = lease._write
+                def blocked(deadline):
+                    if deadline == 0:
+                        began.set()
+                        if not release.wait(3): raise RuntimeError('test timed out')
+                    original(deadline)
+                try:
+                    with patch.object(lease, '_write', side_effect=blocked):
+                        started = time.monotonic()
+                        result = pipe.cancel_goal(box_tests.GOAL_ID)
+                        self.assertTrue(began.wait(1))
+                        self.assertTrue(result['request_sent'])
+                        self.assertTrue(result['lease_revocation_pending'])
+                        self.assertLess(time.monotonic()-started, 1)
+                        self.assertFalse(result['physical_stop_verified'])
+                        release.set()
+                        self.assertTrue(lease._async_failure_done.wait(2))
+                finally:
+                    release.set()
+                self.assertEqual(json.loads(lease.path.read_text())['deadline'], 0)
+                pipe.stop()
+        finally:
+            if child.poll() is None: child.terminate()
+            child.wait(timeout=3)
+            for stream in (child.stdin, child.stdout, child.stderr): stream.close()
+
     def test_guard_fault_reason_survives_later_pipe_close(self):
         child = simulated_guard('d'*32, 'guard_fault')
         try:

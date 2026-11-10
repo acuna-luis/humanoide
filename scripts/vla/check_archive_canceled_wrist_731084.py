@@ -21,14 +21,14 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT/'scripts/vla/runtime/archive_canceled_pico_wrist_731084.py'
 EVIDENCE = ROOT.parent/'Humanoide-vla-evidence/SMOLVLA_CURRENT_READONLY_20261110T123648Z/state.json'
 OUTROOT = ROOT.parent/'Humanoide-vla-evidence/PICO_731084_ARCHIVE_CHECK'
-SOURCE_SHA = 'd178a43a77b711246f7c56edb2acd4354d6d28c8467f01934b2927573f0e7146'
+SOURCE_SHA = 'f66e1e5353b957310d8b3331e52323f98e6b9ef439933bb057ef21c8a1eed249'
 EVIDENCE_SHA = '62da2f4a136218f7de18829ef2dd296b9b825714f812f60b3a6e15e09d2f6db9'
 
 # Executed on Motion, not inside the manipulation container. Its sole input is
 # JSON on stdin, and its only permitted entrypoint is --check. The source and
 # historical observation are independently pinned before compilation/use.
 BOOTSTRAP = r'''import base64,contextlib,hashlib,io,json,os,pathlib,sys,tempfile,types
-source_sha = 'd178a43a77b711246f7c56edb2acd4354d6d28c8467f01934b2927573f0e7146'
+source_sha = 'f66e1e5353b957310d8b3331e52323f98e6b9ef439933bb057ef21c8a1eed249'
 evidence_sha = '62da2f4a136218f7de18829ef2dd296b9b825714f812f60b3a6e15e09d2f6db9'
 value=json.loads(sys.stdin.readline())
 if set(value)!={'source','evidence'}: raise ValueError('payload_shape')

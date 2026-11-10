@@ -227,6 +227,26 @@ assert finder not in sys.meta_path
         self.assertEqual(result.returncode, 2)
         self.assertIn('requires current operator-reported physical conditions', result.stderr)
 
+    def test_model_live_is_blocked_before_reading_binding_or_starting_network(self):
+        script = r'''
+import importlib.util,sys
+from unittest.mock import patch
+spec=importlib.util.spec_from_file_location('trusted_bootstrap',sys.argv[1])
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+with patch.object(module,'checked_snapshot',side_effect=AssertionError('binding_read')), \
+     patch('subprocess.Popen',side_effect=AssertionError('process_started')), \
+     patch('socket.socket.connect',side_effect=AssertionError('network_started')):
+ assert module.main(['--run','--model-live','--physical-confirmed','--binding','/unused',
+                     '--binding-sha256','a'*64])==1
+'''
+        result = subprocess.run([sys.executable, '-I', '-B', '-c', script,
+                                 str(Path(loader.__file__).resolve())],
+                                capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('model_wrist_dispatch_not_enabled', result.stderr)
+        for forbidden in ('binding_read','process_started','network_started'):
+            self.assertNotIn(forbidden, result.stderr)
+
     def test_run_passes_binding_paths_and_keeps_import_context_active(self):
         active = []
         entrypoint = Mock()

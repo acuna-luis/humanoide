@@ -224,7 +224,7 @@ class ContinuousGuardTests(unittest.TestCase):
 
     def simulate_guard(self, scenario):
         fake = FakeArmRun('success')
-        faults = ('guard_estop', 'guard_stale', 'guard_stdout', 'guard_eof', 'guard_badjson', 'guard_ros_error', 'cancel_unknown_then_active', 'supervisor_timeout', 'guard_stop_early')
+        faults = ('guard_estop', 'guard_stale', 'guard_stdout', 'guard_eof', 'guard_badjson', 'guard_ros_error', 'cancel_unknown_then_active', 'cancel_repeated_active', 'supervisor_timeout', 'guard_stop_early')
         if scenario in ('cancel', 'cancel_disabled') + faults:
             fake.goal_id = list(uuid.UUID('12345678-1234-1234-1234-123456789abc').bytes)
         original_spin = fake.spin
@@ -244,7 +244,10 @@ class ContinuousGuardTests(unittest.TestCase):
             if fake.cancelled and hasattr(fake, 'saved_body_callback'):
                 fake.subs['/mc/whole_joint_states'] = fake.saved_body_callback
             if fake.cancelled and scenario in faults + ('cancel',):
-                status = types.SimpleNamespace(status=5, goal_info=types.SimpleNamespace(
+                # Simulate a goal delivered after the first cancellation:
+                # it stays active across two retries before becoming terminal.
+                value = 2 if scenario == 'cancel_repeated_active' and fake.cancel_uuid_count < 3 else 5
+                status = types.SimpleNamespace(status=value, goal_info=types.SimpleNamespace(
                     goal_id=types.SimpleNamespace(uuid=fake.goal_id)))
                 fake.subs['/mc/manipulation/action/_action/status'](types.SimpleNamespace(status_list=[status]))
             if (scenario == 'cancel_unknown_then_active' and fake.cancel_uuid_count == 1
@@ -279,7 +282,7 @@ class ContinuousGuardTests(unittest.TestCase):
                                  'guard_id':guard['goal_uuid'], 'sequence':0}
                     return (json.dumps(heartbeat)+'\n'+json.dumps(command)+'\n').encode()
                 return (json.dumps(command)+'\n').encode()
-            if read_count == 3 and scenario in ('guard_eof', 'cancel_unknown_then_active'): return b''
+            if read_count == 3 and scenario in ('guard_eof', 'cancel_unknown_then_active', 'cancel_repeated_active'): return b''
             if read_count == 3 and scenario == 'guard_badjson': return b'{bad json}\n'
             if read_count == 3 and scenario in ('cancel', 'cancel_disabled'):
                 return (json.dumps({'event':'cancel_goal_uuid', 'session_id':'a'*32,
@@ -329,13 +332,17 @@ class ContinuousGuardTests(unittest.TestCase):
             elif scenario == 'cancel_service_lost_before_ack':
                 with self.assertRaisesRegex(ValueError, 'cancel_service_unavailable'):
                     arm.main(session, dry_run=True, monitor_only=True, guard_can_cancel=True)
-            elif scenario in ('success', 'cancel'):
+            elif scenario == 'success':
                 self.assertEqual(arm.main(session, dry_run=True, monitor_only=True,
-                                          guard_can_cancel=scenario == 'cancel'), 0)
+                                          guard_can_cancel=False), 0)
+            elif scenario == 'cancel':
+                self.assertEqual(arm.main(session, dry_run=True, monitor_only=True,
+                                          guard_can_cancel=True), 1)
             elif scenario in faults:
                 self.assertEqual(arm.main(session, dry_run=True, monitor_only=True,
                                           guard_can_cancel=True), 1)
-                self.assertEqual(fake.cancel_uuid_count, 2 if scenario == 'cancel_unknown_then_active' else 1)
+                expected = 3 if scenario == 'cancel_repeated_active' else 2 if scenario == 'cancel_unknown_then_active' else 1
+                self.assertEqual(fake.cancel_uuid_count, expected)
             elif scenario == 'cancel_disabled':
                 with self.assertRaisesRegex(ValueError, 'invalid_guard_cancel_request'):
                     arm.main(session, dry_run=True, monitor_only=True)
@@ -401,6 +408,15 @@ class ContinuousGuardTests(unittest.TestCase):
         retry = [x for x in events if x.get('attempt') == 2]
         self.assertEqual(len(retry), 1)
         self.assertFalse(retry[0]['physical_stop_confirmed'])
+
+    def test_delayed_active_goal_is_retried_until_terminal(self):
+        events = self.simulate_guard('cancel_repeated_active')
+        retries = [x for x in events if x.get('event') == 'guard_auto_cancel_requested'
+                   and x.get('reason') == 'own_uuid_active_after_cancel']
+        self.assertEqual([x['attempt'] for x in retries], [2, 3])
+        self.assertGreaterEqual(retries[1]['monotonic'] - retries[0]['monotonic'], arm.GUARD_CANCEL_RETRY_S)
+        self.assertTrue(any(x['event'] == 'guard_terminal_observed' and x['status'] == 5 for x in events))
+        self.assertFalse(any(x.get('physical_stop_confirmed') is True for x in events))
 
 
 if __name__ == '__main__':

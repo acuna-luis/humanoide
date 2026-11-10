@@ -66,6 +66,10 @@ class GuardLease:
         self.goal_id = None
         self.last_stamp = None
         self.failed = False
+        self._async_failure_lock = threading.Lock()
+        self._async_failure_done = threading.Event()
+        self._async_failure_thread = None
+        self._async_failure_error = None
         self.path = self.directory / ('arm-lease-' + self.session_id + '.json')
         # A zero deadline is fail-closed until valid telemetry arrives.
         self._write(0.0)
@@ -92,6 +96,30 @@ class GuardLease:
         with self.lock:
             self.failed = True
             self._write(0.0)
+
+    def fail_async(self):
+        """Stop renewals immediately; expire the lease on disk in background.
+
+        A heartbeat already inside its locked write may finish first. Its
+        deadline remains bounded by LEASE_S; this flag is not a disk receipt
+        and cannot retract a goal already in flight. The independent guard must
+        keep cancelling/reobserving that exact UUID. A stuck fsync can leave
+        the daemon thread pending and must not delay a cancel request.
+        """
+        self.failed = True
+        with self._async_failure_lock:
+            if self._async_failure_thread is None:
+                def persist():
+                    try:
+                        self.fail()
+                    except Exception as exc:
+                        self._async_failure_error = type(exc).__name__ + ':' + str(exc)
+                    finally:
+                        self._async_failure_done.set()
+                self._async_failure_thread = threading.Thread(target=persist, daemon=True,
+                                                              name='guard-lease-revocation')
+                self._async_failure_thread.start()
+        return self._async_failure_done
 
     def heartbeat(self, event):
         with self.lock:
@@ -450,15 +478,12 @@ class GuardPipe:
         """
         if self.channel_failed or self.process.poll() is not None or self.lease.goal_id != goal_id:
             raise RuntimeError('guard_cancel_identity_unavailable')
+        self.lease.fail_async()
         if self.auto_cancel_requested:
             return {'goal_id': goal_id, 'request_sent': True, 'automatic': True,
-                    'physical_stop_verified': False}
-        revocation_error = None
-        try:
-            self.lease.fail()
-        except Exception as exc:
-            # A disk/fsync failure must not suppress the independent cancel.
-            revocation_error = type(exc).__name__ + ':' + str(exc)
+                    'physical_stop_verified': False,
+                    'lease_revocation_pending':not self.lease._async_failure_done.is_set(),
+                    'lease_revocation_error':self.lease._async_failure_error}
         request = {'event': 'cancel_goal_uuid', 'session_id': self.lease.session_id,
                    'goal_id': goal_id, 'challenge': uuid.uuid4().hex}
         deadline = time.monotonic()+1.0
@@ -472,7 +497,8 @@ class GuardPipe:
                 or {k:ack[k] for k in expected} != expected or ack['goal_uuid'] != self.guard_id):
             raise RuntimeError('guard_cancel_ack_invalid')
         return {'goal_id': goal_id, 'request_sent': True, 'physical_stop_verified': False,
-                'lease_revocation_error': revocation_error}
+                'lease_revocation_pending':not self.lease._async_failure_done.is_set(),
+                'lease_revocation_error':self.lease._async_failure_error}
 
 
 def synchronized_client_class(base, to_string, handshake):
@@ -604,8 +630,10 @@ def run_guarded_once(lease, exchange, manifest, urdf_text, transmissions_text, e
         # ROSA initialization may overwrite process signal handlers. The worker
         # reinstalls its callbacks here before the native client can send.
         after_transport_ready()
+        model_options = ({'deadline_after_send': True}
+                         if getattr(lease.channel, 'model_mode', False) is True else {})
         return native.run_action(transport, 'motion', goal, timeout, emit,
-                                 interrupted=interrupted, lease_file=lease.path)
+                                 interrupted=interrupted, lease_file=lease.path, **model_options)
     finally:
         lease.fail()
         transport.close()

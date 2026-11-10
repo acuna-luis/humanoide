@@ -7,6 +7,7 @@ uncertain physical state, not a stopped robot. The pre-stage receipt is fsynced
 before the worker is created so a partial task write is never silently lost.
 """
 import json
+import hashlib
 import fcntl
 import math
 import os
@@ -22,6 +23,7 @@ import arm_native_lease_bridge as bridge
 import scenario1_action_client as native
 import prepare_pico_wrist_native_probe as probe
 import pico_wrist_trial_admission as admission
+import archive_canceled_pico_wrist_731084 as incident
 
 MAX_LINE = 65536
 # Application liveness threshold, not a physical stopping-time bound.
@@ -29,6 +31,7 @@ COORDINATOR_PROGRESS_TIMEOUT_S = 2.0
 # The guard needs two samples from event-driven E-stop topics. It continues to
 # enforce the existing 30 s preflight handoff deadline independently.
 GUARD_READY_TIMEOUT_S = 26.0
+MODEL_ACTION_TIMEOUT_S = 20.0
 GOAL_ID = re.compile(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\Z')
 # One stable host directory across sessions. /tmp is used only for the lease
 # and a mirror visible to the native container; it is not the durable record.
@@ -152,7 +155,43 @@ def require_no_pending_recovery(root):
             raise RuntimeError('recovery_requires_manual_review')
 
 
-def acquire_trial_lock():
+def _incident_status(raw):
+    """Check the pinned historical UUID status, not current physical stop."""
+    if (not isinstance(raw, bytes) or len(raw) > 65536 or
+            hashlib.sha256(raw).hexdigest() != incident.TERMINAL_EVIDENCE_SHA):
+        raise ValueError('incident_terminal_evidence_hash_mismatch')
+    value = json.loads(raw)['status']
+    if value.get('returncode') != 0 or value.get('stderr') != '':
+        raise ValueError('incident_terminal_observation_failed')
+    text = value['stdout']
+    lines = text.splitlines()
+    ids = [int(match.group(1)) for line in lines
+           if (match := re.fullmatch(r'      - (\d+)', line))]
+    if (lines.count('status_list:') != 1 or lines.count('  status: 5') != 1 or
+            len(re.findall(r'^  status:', text, flags=re.M)) != 1 or
+            ids != list(bytes.fromhex(incident.GOAL.replace('-', '')))):
+        raise ValueError('incident_terminal_uuid_or_status_mismatch')
+
+
+def _incident_static(evidence, *, allow_new_session=None):
+    """Recheck original marker, journal, revoked lease and exact staged XML."""
+    _incident_status(evidence)
+    root = GLOBAL_RECEIPT_DIR
+    for directory in (root, incident.LEASE_DIR):
+        info = directory.lstat()
+        if (not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid() or
+                stat.S_IMODE(info.st_mode) & 0o077 or directory.resolve() != directory):
+            raise ValueError('incident_directory_not_private_or_canonical')
+    pending = sorted(p.name for p in root.iterdir()
+                     if re.fullmatch(r'RECOVERY-[0-9a-f]{32}-intent\.json', p.name))
+    expected = [] if allow_new_session is None else ['RECOVERY-'+allow_new_session+'-intent.json']
+    if pending != expected:
+        raise RuntimeError('incident_recovery_intent_set_changed')
+    incident.validate_record(root, incident.LEASE_DIR)
+    incident.container_task('check')
+
+
+def acquire_trial_lock(*, incident_evidence=None):
     root = GLOBAL_RECEIPT_DIR
     info = root.lstat()
     if (not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid()
@@ -163,9 +202,17 @@ def acquire_trial_lock():
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         marker = root/'PENDING_OR_UNRESOLVED.json'
-        if marker.exists() or marker.is_symlink():
-            raise RuntimeError('previous_trial_requires_manual_review')
-        require_no_pending_recovery(root)
+        if incident_evidence is None:
+            if marker.exists() or marker.is_symlink():
+                raise RuntimeError('previous_trial_requires_manual_review')
+            require_no_pending_recovery(root)
+        else:
+            # Exact, historical 731084 only; no existing marker is removed.
+            # Admit only the specifically verified ROS CLI daemon; process
+            # inventory and its reported graph are point observations, not
+            # authentication or distributed exclusivity proofs.
+            _incident_static(incident_evidence)
+            incident.no_observed_activity(allow_ros_daemon=True)
         return fd
     except BaseException:
         os.close(fd)
@@ -213,6 +260,50 @@ def durable_intent(directory, manifest, session_id):
         # Any incomplete file is deliberately retained for manual review.
         raise
     return path
+
+
+def durable_incident_intent(directory, manifest, session_id, evidence):
+    """Create a separate durable intent while retaining incident 731084."""
+    if (not isinstance(session_id, str) or not re.fullmatch('[0-9a-f]{32}', session_id)
+            or session_id == incident.SESSION):
+        raise ValueError('invalid_new_incident_trial_session')
+    candidate = manifest['candidate']
+    if (candidate['runtime_path'] == incident.TASK_PATH or
+            candidate['xml_sha256'] == incident.TASK_SHA):
+        raise ValueError('incident_trial_must_use_new_task')
+    _incident_static(evidence)
+    root = Path(directory)
+    if root != GLOBAL_RECEIPT_DIR:
+        raise ValueError('incident_intent_requires_global_directory')
+    path = root/('RECOVERY-' + session_id + '-intent.json')
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | getattr(os, 'O_NOFOLLOW', 0)
+    fd = os.open(path, flags, 0o600)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+            json.dump({'session_id': session_id, 'task_path': candidate['runtime_path'],
+                       'task_sha256': candidate['xml_sha256'],
+                       'state': 'intent_before_stage_or_send'}, stream, allow_nan=False)
+            stream.write('\n'); stream.flush(); os.fsync(stream.fileno())
+        directory_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+        try: os.fsync(directory_fd)
+        finally: os.close(directory_fd)
+        # The mirror has the stage worker's existing strict schema. A
+        # separate durable binding retains the predecessor relationship.
+        incident.durable_new(root/('RECOVERY-' + session_id + '-incident-binding.json'),
+                             _incident_binding(session_id, candidate))
+    except BaseException:
+        # Existing marker and any partial new intent remain as blockers.
+        raise
+    return path
+
+
+def _incident_binding(session_id, candidate):
+    return {'schema': 'pico_wrist_731084_successor_v1',
+            'new_session_id': session_id, 'predecessor_session_id': incident.SESSION,
+            'predecessor_goal_id': incident.GOAL, 'predecessor_marker_sha256': incident.MARKER_SHA,
+            'predecessor_journal_sha256': incident.JOURNAL_SHA,
+            'historical_status_evidence_sha256': incident.TERMINAL_EVIDENCE_SHA,
+            'new_task_sha256': candidate['xml_sha256'], 'physical_control_qualified': False}
 
 
 def write_ack(process, row, timeout):
@@ -334,7 +425,8 @@ def failure_notice(diagnostics):
 
 def coordinate(lease, guard_pipe, manifest, urdf_text, transmissions_text,
                start_worker, evidence_dir, *, timeout=20.0, held_lock_fd=None,
-               event_sink=lambda row: True, verified_provenance=None):
+               event_sink=lambda row: True, verified_provenance=None, model_permit=None,
+               incident_evidence=None):
     """Run one worker under guard for a verified wrist-trial bootstrap.
 
     start_worker must start the reviewed native-container worker and supply its
@@ -347,9 +439,12 @@ def coordinate(lease, guard_pipe, manifest, urdf_text, transmissions_text,
         arm.require_verified_stream(verified_provenance, 'host', lease.session_id)
     if Path(evidence_dir) != GLOBAL_RECEIPT_DIR:
         raise ValueError('must_use_stable_global_receipt_directory')
+    if incident_evidence is not None and model_permit is None:
+        raise ValueError('incident_admission_requires_model_mode')
     owns_lock = held_lock_fd is None
     if owns_lock:
-        lock_fd = acquire_trial_lock()
+        lock_fd = (acquire_trial_lock() if incident_evidence is None else
+                   acquire_trial_lock(incident_evidence=incident_evidence))
     else:
         lock_fd = held_lock_fd
         if type(lock_fd) is not int:
@@ -362,9 +457,12 @@ def coordinate(lease, guard_pipe, manifest, urdf_text, transmissions_text,
         # Reassert non-blockingly on the exact shared open file description.
         fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         marker = GLOBAL_RECEIPT_DIR/'PENDING_OR_UNRESOLVED.json'
-        if marker.exists() or marker.is_symlink():
-            raise RuntimeError('previous_trial_requires_manual_review')
-        require_no_pending_recovery(GLOBAL_RECEIPT_DIR)
+        if incident_evidence is None:
+            if marker.exists() or marker.is_symlink():
+                raise RuntimeError('previous_trial_requires_manual_review')
+            require_no_pending_recovery(GLOBAL_RECEIPT_DIR)
+        else:
+            _incident_static(incident_evidence)
     # The guard's existing lease renewer also checks that this coordinator is
     # making progress. This remains permanently fail-closed after a stall.
     progress = CoordinatorProgress()
@@ -373,7 +471,8 @@ def coordinate(lease, guard_pipe, manifest, urdf_text, transmissions_text,
     try:
         result = _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_text,
                                     start_worker, timeout=timeout, event_sink=event_sink,
-                                    progress=progress, verified_provenance=verified_provenance)
+                                    progress=progress, verified_provenance=verified_provenance,
+                                    model_permit=model_permit, incident_evidence=incident_evidence)
         # The reader and progress watchdog share this transition: a telemetry
         # sample after progress.stop() must not be mistaken for a runtime fault.
         guard_pipe.prepare_normal_shutdown()
@@ -384,13 +483,43 @@ def coordinate(lease, guard_pipe, manifest, urdf_text, transmissions_text,
             os.close(lock_fd)
 
 
+def await_model_permission(pc, lease, guard_pipe, progress, goal_id, task_sha256, deadline):
+    """Wait for a fresh model permit while the existing guard remains live.
+
+    PC receipt freshness does not measure Vision-to-PC delay. The host and
+    worker must use the same monotonic clock, as required by the shared lease.
+    A permit never authorizes a physical run on its own.
+    """
+    pc.begin_model_permit(goal_id, task_sha256)
+    while time.monotonic() < deadline:
+        progress.beat()
+        if guard_pipe.failure or not lease.guard_alive():
+            raise RuntimeError('guard_lost_waiting_for_model')
+        native.check_lease(lease.path, time.monotonic())
+        permit = pc.permit_snapshot()
+        if permit is not None:
+            if (not isinstance(permit, dict) or set(permit) !=
+                    {'goal_id', 'task_sha256', 'decision_sha256', 'deadline_monotonic_ns'} or
+                    permit['goal_id'] != goal_id or permit['task_sha256'] != task_sha256 or
+                    not isinstance(permit['decision_sha256'], str) or
+                    not re.fullmatch('[0-9a-f]{64}', permit['decision_sha256']) or
+                    type(permit['deadline_monotonic_ns']) is not int or
+                    permit['deadline_monotonic_ns'] <= time.monotonic_ns()):
+                raise RuntimeError('invalid_or_expired_model_permission')
+            return permit
+        time.sleep(.05)
+    raise TimeoutError('model_permission_timeout')
+
+
 def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_text,
-                       start_worker, *, timeout, event_sink, progress, verified_provenance=None):
+                       start_worker, *, timeout, event_sink, progress, verified_provenance=None,
+                       model_permit=None, incident_evidence=None):
     if verified_provenance is None:
         arm.physical_release_gate()
     else:
         arm.require_verified_stream(verified_provenance, 'host', lease.session_id)
-    if type(timeout) not in (float, int) or not math.isfinite(timeout) or not 0 < timeout <= 20:
+    maximum = 150 if model_permit is not None else 20
+    if type(timeout) not in (float, int) or not math.isfinite(timeout) or not 0 < timeout <= maximum:
         raise ValueError('invalid_coordinator_timeout')
     probe.validate(manifest, urdf_text, transmissions_text)
     if manifest['input']['reference_20d'] != lease.initial:
@@ -398,7 +527,10 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
     guard_pipe.await_ready(GUARD_READY_TIMEOUT_S)
     native.check_lease(lease.path, time.monotonic())
     progress.start()
-    marker = durable_intent(GLOBAL_RECEIPT_DIR, manifest, lease.session_id)
+    if incident_evidence is None:
+        marker = durable_intent(GLOBAL_RECEIPT_DIR, manifest, lease.session_id)
+    else:
+        marker = durable_incident_intent(GLOBAL_RECEIPT_DIR, manifest, lease.session_id, incident_evidence)
     progress.beat()
     mirror = mirror_intent(marker, lease)
     progress.beat()
@@ -475,12 +607,56 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
                             or not isinstance(row.get('challenge'), str) or not re.fullmatch('[0-9a-f]{32}', row['challenge'])
                             or set(row) != {'event', 'session_id', 'goal_id', 'challenge'}):
                         raise ValueError('invalid_worker_uuid_request')
-                    # Before ACK, require a fresh guarded stationary snapshot
-                    # and check all seven targets and the whole-body envelope.
+                    permit = None
+                    if model_permit is not None:
+                        permit = await_model_permission(model_permit, lease, guard_pipe, progress,
+                                                        row['goal_id'], manifest['candidate']['xml_sha256'],
+                                                        min(deadline, time.monotonic()+120.0))
+                        permit_event = {'event':'model_permission_verified', 'session_id':lease.session_id,
+                                        'goal_id':row['goal_id'], 'task_sha256':permit['task_sha256'],
+                                        'decision_sha256':permit['decision_sha256'],
+                                        'deadline_monotonic_ns':permit['deadline_monotonic_ns'],
+                                        'physical_stop_verified':False}
+                        journal.write(json.dumps(permit_event, allow_nan=False)+'\n')
+                        journal.flush(); os.fsync(journal.fileno())
+                        progress.beat()
+                        if event_sink(permit_event) is not True:
+                            raise RuntimeError('operator_output_unavailable')
+                        if permit['deadline_monotonic_ns'] <= time.monotonic_ns():
+                            raise RuntimeError('model_permission_expired_after_journal')
+                    if incident_evidence is not None:
+                        _incident_static(incident_evidence, allow_new_session=lease.session_id)
+                        raw, _ = incident.read_regular(marker)
+                        if json.loads(raw) != {'session_id': lease.session_id,
+                                'task_path': manifest['candidate']['runtime_path'],
+                                'task_sha256': manifest['candidate']['xml_sha256'],
+                                'state': 'intent_before_stage_or_send'}:
+                            raise RuntimeError('new_incident_intent_changed')
+                        binding_raw, _ = incident.read_regular(GLOBAL_RECEIPT_DIR/
+                            ('RECOVERY-' + lease.session_id + '-incident-binding.json'))
+                        if json.loads(binding_raw) != _incident_binding(lease.session_id, manifest['candidate']):
+                            raise RuntimeError('incident_predecessor_binding_changed')
+                    if permit is not None and permit['deadline_monotonic_ns'] <= time.monotonic_ns():
+                        raise RuntimeError('model_permission_expired_after_incident_check')
+                    # The incident recheck can block on filesystem or docker
+                    # I/O. Take the guarded stationary sample only afterward,
+                    # immediately before the UUID handshake and model permit.
                     admission.check_guard_before_dispatch(manifest, lease, guard_pipe)
+                    if permit is not None and permit['deadline_monotonic_ns'] <= time.monotonic_ns():
+                        raise RuntimeError('model_permission_expired_before_handshake')
                     goal_id = row['goal_id']
                     lease.synchronize_uuid(goal_id, guard_pipe.exchange)
-                    write_ack(process, dict(row, event='uuid_ok'), bridge.HANDSHAKE_S)
+                    ack = dict(row, event='uuid_ok')
+                    if permit is not None:
+                        if permit['deadline_monotonic_ns'] <= time.monotonic_ns():
+                            raise RuntimeError('model_permission_expired_before_ack')
+                        ack.update(deadline_monotonic_ns=permit['deadline_monotonic_ns'],
+                                   decision_sha256=permit['decision_sha256'])
+                        # Bound the entire post-ACK interval, including an SDK
+                        # send that blocks before the worker can start its own
+                        # action timer. This is not a physical stopping bound.
+                        deadline = min(deadline, time.monotonic()+MODEL_ACTION_TIMEOUT_S)
+                    write_ack(process, ack, bridge.HANDSHAKE_S)
                 elif event == 'dispatched':
                     if dispatched or goal_id is None or row.get('goal_id') != goal_id:
                         raise ValueError('unexpected_dispatch')
@@ -566,19 +742,35 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
         failure = type(exc).__name__ + ': ' + str(exc)
         records = [{'event': 'coordinator_failure', 'reason': failure,
                     'physical_state': 'UNKNOWN_IF_DISPATCH_ATTEMPTED', 'no_retry': True}]
+        persisted = None
         try:
-            lease.fail()
+            # Revoke renewal in memory immediately, but never wait for the
+            # filesystem before asking the independent guard to cancel. An
+            # already in-flight write or goal remains a distinct uncertainty.
+            persisted = lease.fail_async()
+            records.append({'event': 'lease_revocation_started',
+                            'durable_write_completed': persisted.is_set()})
         except Exception as revoke_error:
             records.append({'event': 'lease_revocation_failed', 'reason': str(revoke_error)})
         # Neither a failed lease write nor failed journal storage can prevent
         # the independent guard from attempting the exact UUID cancellation.
+        cancel_records = []
         if goal_id is not None and lease.goal_id == goal_id and not result_ok:
             try:
                 canceled = guard_pipe.cancel_goal(goal_id)
-                records.append({'event': 'independent_cancel_requested', **canceled})
+                cancel_records.append({'event': 'independent_cancel_requested', **canceled})
             except Exception as cancel_error:
-                records.append({'event': 'independent_cancel_unconfirmed',
+                cancel_records.append({'event': 'independent_cancel_unconfirmed',
                     'reason': str(cancel_error), 'physical_stop_verified': False})
+        # Cancellation was attempted before this bounded observation. A
+        # still-pending revocation is not a durable receipt, and must not be
+        # silently reported as successful if the storage write stays blocked.
+        if persisted is not None:
+            persisted.wait(.05)
+            if persisted.is_set() and getattr(lease, '_async_failure_error', None):
+                records.append({'event': 'lease_revocation_failed',
+                                'reason': lease._async_failure_error})
+        records.extend(cancel_records)
         records.append(failure_diagnostics(guard_pipe, progress_state))
         # Operator output is best effort and occurs after cancellation was
         # attempted but before durable storage, which may block indefinitely.

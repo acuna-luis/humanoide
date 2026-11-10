@@ -1,21 +1,48 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Integración de modelo y admisión 731084 — 10-11-2026
+
+**PREPARADO EN PC; INTEGRACIÓN SOLO SIMULADA; GATE FÍSICO CERRADO.** El PC
+puede asociar un flujo completo de una predicción al objetivo fijo de muñeca,
+comprobando 20 ejes, dirección, amplitud, hashes declarados y presupuesto de
+edad en el reloj del PC. Un permiso se vincula a UUID y tarea; no establece
+antigüedad desde Vision, autenticidad del modelo, trayectoria o parada. El
+worker/coordinador consumieron este protocolo solo con transporte y actuador
+falsos. La predicción no acciona la mano ni demuestra la tarea de pelota.
+
+La admisión reservada para 731084 conserva el marker de aquel intento y crea
+un nuevo intent bajo el mismo lock. Se comprueba el UUID histórico cancelado,
+identidades y estado puntual; después de la consulta se exige una nueva muestra
+estacionaria y permiso vigente antes de ACK. Es una **excepción específica** al
+bloqueo anterior, no una recuperación completa: la causa sigue desconocida y
+los demás launchers siguen bloqueados por el marker. La nueva tarea usa staging
+`O_EXCL` con XML distinto; el XML de 731084 no se borra ni reutiliza.
+
+Se preparó revocación asíncrona y reintento de cancelación sobre estado activo
+del UUID propio. Su comportamiento físico, el envío en vuelo y el frenado no
+están verificados. La ruta `--model-live --incident-731084` termina todavía en
+`model_wrist_dispatch_not_enabled` antes de conexión. Los tests y la revisión
+no sustituyen habilitación ni condiciones actuales del operador.
+[Versiones, pruebas, backups y pendientes](../SYSTEM_CUSTOMIZATIONS.md#smolvla-scoped-731084-20261110).
+
 ## Recuperación preparada de 731084 — 10-11-2026
 
-**CHECK RECHAZADO EN MOTION; ARCHIVADO NO EJECUTADO.** Se preparó una herramienta para
+**CHECK EN MOTION PASÓ SIN CAMBIOS; ARCHIVADO NO EJECUTADO.** Se preparó una herramienta para
 la sesión 731084 que valida el UUID exacto y la evidencia histórica de status
 5, junto con marker, journal, lease y XML de esa sesión. La evidencia de
 cancelación está fijada por SHA; una lista actual vacía no se trata como
 cancelación. La variante antigua, ligada a la sesión previa sin UUID, no sirve
-para este caso. Pasan diez pruebas locales y revisión independiente sin hallazgo
+para este caso. Pasan doce pruebas locales y revisión independiente sin hallazgo
 concreto. La lectura histórica y los tests no certifican parada física.
 
 El archivador futuro mantiene el bloqueo duradero `RECOVERY-...-intent.json`
 que rechazan los lanzadores cooperantes, incluso si completa el archivado. No
-habilita por sí solo movimiento ni SmolVLA. **El check en Motion fue rechazado antes de comprobar el XML** porque detectó
-un proceso Python. Una lectura posterior identificó el daemon ROS; no se cambió
-ni se detuvo. El transporte verificó SHA y eliminó el temporal. No se ha
-ejecutado el archivado. Una consulta puntual posterior observó marker y XML
+habilita por sí solo movimiento ni SmolVLA. Un primer check en Motion fue rechazado por un proceso Python. Otro check pasó
+tras verificar el socket y grafo del daemon ROS, observando solo publishers
+estándar y sin clientes de acción o servicio; esta observación no autentica el
+proceso ni acredita exclusividad. Se verificó el XML exacto, sin archivarlo;
+el temporal del transporte se eliminó. `--archive` conserva el rechazo de todo
+Python y no se ha ejecutado. Una consulta puntual posterior observó marker y XML
 intactos, UUID estado 5, velocidades cero, sin errores de 20 actuadores y sin
 procesos adicionales en los dos contenedores; no se guardó esa salida y no
 acredita exclusividad ni parada física. No hubo nuevas órdenes de movimiento.

@@ -5,6 +5,7 @@ Starts a guard in ROS2 and a worker in the native app container only after
 verified bootstrap and preflight. No command-line release switch exists. This
 code has not been exercised on hardware and is not a certified stop mechanism.
 """
+import base64
 import hashlib
 import json
 import math
@@ -29,8 +30,19 @@ import scenario1_action_client as native
 def validate_payload(payload):
     required = {'session', 'manifest', 'urdf_text', 'transmissions_text',
                 'guard_source', 'worker_source', 'source_digests', 'operator_confirmed'}
-    if not isinstance(payload, dict) or set(payload) != required:
+    if (not isinstance(payload, dict) or set(payload) not in
+            (required, required | {'model_mode'}, required | {'model_mode', 'incident_evidence_b64'}) or
+            ('model_mode' in payload and payload['model_mode'] is not True)):
         raise ValueError('invalid_launcher_payload')
+    if 'incident_evidence_b64' in payload:
+        value = payload['incident_evidence_b64']
+        if not isinstance(value, str) or len(value) > 100000:
+            raise ValueError('invalid_incident_evidence')
+        try:
+            evidence = base64.b64decode(value, validate=True)
+        except (ValueError, TypeError) as exc:
+            raise ValueError('invalid_incident_evidence') from exc
+        coordinator._incident_status(evidence)
     if payload['operator_confirmed'] is not True:
         raise ValueError('current_operator_confirmation_required')
     session = payload['session']
@@ -357,7 +369,10 @@ def launch(payload, *, verified_provenance=None):
     # automatic rollback; an interrupted creation requires manual review.
     coordinator.ensure_control_root()
     # Acquired before either guard or worker is started; retained until return.
-    lock_fd = coordinator.acquire_trial_lock()
+    incident_evidence = (base64.b64decode(payload['incident_evidence_b64'], validate=True)
+                         if 'incident_evidence_b64' in payload else None)
+    lock_fd = (coordinator.acquire_trial_lock() if incident_evidence is None else
+               coordinator.acquire_trial_lock(incident_evidence=incident_evidence))
     child = pipe = lease = pc = None
     worker_holder = []
     uncertain_children = []
@@ -368,7 +383,10 @@ def launch(payload, *, verified_provenance=None):
         pc_preflight_handoff(session, output, sys.stdin.fileno())
         if not output.emit({'event':'HOST_HEARTBEAT_READY', 'session_id':session['session_id']}):
             raise RuntimeError('operator_output_unavailable')
-        pc = heartbeat.PcHeartbeat(sys.stdin.fileno(), session['session_id'], output.emit)
+        if payload.get('model_mode', False):
+            pc = heartbeat.PcHeartbeat(sys.stdin.fileno(), session['session_id'], output.emit, model_mode=True)
+        else:
+            pc = heartbeat.PcHeartbeat(sys.stdin.fileno(), session['session_id'], output.emit)
         pc.await_ready(3.0)
         app, ros = discover_containers()
         directory = tempfile.mkdtemp(prefix='pico-wrist-live-', dir='/tmp')
@@ -400,6 +418,8 @@ def launch(payload, *, verified_provenance=None):
                        'transmissions_text': payload['transmissions_text'], 'lease_path': str(lease_path),
                        'session_id': session['session_id'], 'intent_path': str(intent_path),
                        'intent_uid': intent_uid}
+            if payload.get('model_mode', False):
+                request['model_mode'] = True
             error_log = coordinator.GLOBAL_RECEIPT_DIR/('worker-stderr-'+session['session_id']+'.log')
             with error_log.open('x', encoding='utf-8') as errors:
                 worker = _track_stream_start('worker', uncertain_children, output,
@@ -408,10 +428,14 @@ def launch(payload, *, verified_provenance=None):
                               'session_id': session['session_id']})
             worker_holder.append(worker)
             return worker
+        model_options = ({'timeout':150.0, 'model_permit':pc} if payload.get('model_mode', False) else {})
+        if incident_evidence is not None:
+            model_options['incident_evidence'] = incident_evidence
         result = coordinator.coordinate(lease, pipe, payload['manifest'], payload['urdf_text'],
                                         payload['transmissions_text'], start_worker,
                                         coordinator.GLOBAL_RECEIPT_DIR, held_lock_fd=lock_fd,
-                                        event_sink=output.emit, verified_provenance=verified_provenance)
+                                        event_sink=output.emit, verified_provenance=verified_provenance,
+                                        **model_options)
         completed = True
         return result
     finally:

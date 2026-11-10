@@ -35,6 +35,21 @@ PC_MODULES = {
     'estop_reader': 'scripts/collect_estop_available_readonly.py',
     'pico_cc_mode': 'scripts/teleoperation/pico_cc_mode.py',
     'verified_pc_loader': 'scripts/vla/verified_pico_wrist_pc_loader.py',
+    'model_decision': 'scripts/vla/pico_wrist_model_decision.py',
+}
+PC_DATA_SOURCES = {
+    'model_live_relay': 'scripts/vla/run_ball_live_shadow.py',
+    'model_live_adapter': 'scripts/vla/live_ball_observation_adapter.py',
+    'model_live_guard': 'scripts/vla/ball_arm_preview_guard.py',
+    'model_live_collector': 'scripts/vla/passive_episode_remote.py',
+    'model_live_observations': 'scripts/vla/prepare_ball_observations.py',
+    'model_live_audit': 'scripts/vla/audit_ball_arm_proposals.py',
+    'model_live_profile': 'scripts/vla/runtime/cruzr_s2_vla_profile.json',
+    'model_server_wrapper': 'scripts/vla/smolvla_ball_server/shadow_live_inference.sh',
+    'model_server_inference': 'scripts/vla/smolvla_ball_server/shadow_live_inference.py',
+    'model_server_failed_eval': 'scripts/vla/smolvla_ball_server/evaluate_failed_offline.py',
+    'model_server_train_eval': 'scripts/vla/smolvla_ball_server/evaluate_train_offline.py',
+    'model_server_train': 'scripts/vla/smolvla_ball_server/train_offline.py',
 }
 BUNDLE_PATHS = {
     'metamove_head_probe': 'scripts/vla/runtime/metamove_head_probe.py',
@@ -47,6 +62,7 @@ BUNDLE_PATHS = {
     'pico_wrist_native_stage': 'scripts/vla/runtime/pico_wrist_native_stage.py',
     'pico_wrist_native_worker': 'scripts/vla/runtime/pico_wrist_native_worker.py',
     'pico_wrist_trial_admission': 'scripts/vla/pico_wrist_trial_admission.py',
+    'archive_canceled_pico_wrist_731084': 'scripts/vla/runtime/archive_canceled_pico_wrist_731084.py',
     'pico_wrist_native_coordinator': 'scripts/vla/runtime/pico_wrist_native_coordinator.py',
     'pico_wrist_pc_heartbeat': 'scripts/vla/pico_wrist_pc_heartbeat.py',
     'pico_wrist_verified_stream': 'scripts/vla/pico_wrist_verified_stream.py',
@@ -190,7 +206,7 @@ def checked_snapshot(directory, expected_digest, *, root=ROOT, include_artifacts
     required_files = ({'bundle-host.py', 'bundle-guard.py', 'bundle-worker.py',
                        'manifest.json', 'robot.urdf', 'transmissions.yaml',
                        'pc-source-askpass_script'} |
-                      {'pc-source-' + name for name in PC_MODULES} |
+                      {'pc-source-' + name for name in set(PC_MODULES) | set(PC_DATA_SOURCES)} |
                       {'source-' + name + '.py' for name in BUNDLED_MODULES})
     if set(index['sha256']) != required_files:
         raise ValueError('bundle_evidence_file_set_changed')
@@ -211,7 +227,7 @@ def checked_snapshot(directory, expected_digest, *, root=ROOT, include_artifacts
     # Require the complete known local Python closure, not a selectable subset.
     if set(index['source_origins']) != BUNDLED_MODULES:
         raise ValueError('bundle_source_set_changed')
-    expected_pc = set(PC_MODULES) | {'askpass_script'}
+    expected_pc = set(PC_MODULES) | set(PC_DATA_SOURCES) | {'askpass_script'}
     if set(index['pc_source_origins']) != expected_pc:
         raise ValueError('pc_source_set_changed')
     modules = {}
@@ -227,6 +243,8 @@ def checked_snapshot(directory, expected_digest, *, root=ROOT, include_artifacts
                 raise ValueError('bootstrap_file_changed')
             continue
         modules[origin.stem] = (raw, str(origin))
+    for key, rel in PC_DATA_SOURCES.items():
+        _exact_origin(index['pc_source_origins'][key], root, rel)
     _exact_origin(index['pc_source_origins']['askpass_script'], root, 'scripts/cruzr_recover_to_home.sh')
     for name, rel in BUNDLE_PATHS.items():
         raw = files.get('source-' + name + '.py')
@@ -316,12 +334,22 @@ def main(argv=None):
     parser.add_argument('--binding-sha256', required=True)
     parser.add_argument('--physical-confirmed', action='store_true',
                         help='operator reports current conditions; does not open a gate')
+    parser.add_argument('--model-live', action='store_true',
+                        help='reserved two-phase model path; physical dispatch remains blocked')
+    parser.add_argument('--incident-731084', action='store_true',
+                        help='reserved exact-predecessor admission; physical dispatch remains blocked')
     args = parser.parse_args(argv)
     if args.check and args.physical_confirmed:
         parser.error('--physical-confirmed is only supported with --run')
     if args.run and not args.physical_confirmed:
         parser.error('--run requires current operator-reported physical conditions')
+    if args.model_live and not args.run:
+        parser.error('--model-live is only supported with --run')
+    if args.incident_731084 and not args.model_live:
+        parser.error('--incident-731084 requires --model-live')
     try:
+        if args.model_live:
+            raise RuntimeError('model_wrist_dispatch_not_enabled')
         modules, files, index_raw, binding_raw = checked_snapshot(
             args.binding, args.binding_sha256, include_artifacts=True)
         if args.run and 'receipt.json' in files:
@@ -335,11 +363,14 @@ def main(argv=None):
                                              'no_preflight_or_robot_access',
                                   'direct_and_vla_dispatch_blocked']}))
             else:
+                model_options = {'model_mode': True} if args.model_live else {}
+                if args.incident_731084:
+                    model_options['incident_731084'] = True
                 result = entrypoint.run_candidate(args.binding/'manifest.json',
                     args.binding/'robot.urdf', args.binding/'transmissions.yaml', True,
                     binding_path=args.binding, binding_sha256=args.binding_sha256,
                     verified_pc={'finder':finder, 'files':files, 'index_raw':index_raw,
-                                 'binding_raw':binding_raw})
+                                 'binding_raw':binding_raw}, **model_options)
                 print(json.dumps(result, ensure_ascii=False, allow_nan=False))
         return 0
     except (OSError, ValueError, TypeError, KeyError, RuntimeError, ImportError, SyntaxError) as exc:

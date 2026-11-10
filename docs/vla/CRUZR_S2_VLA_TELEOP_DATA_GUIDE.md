@@ -1,11 +1,26 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — SMOLVLA-SCOPED-731084-20261110.** Preparada una conexión
+PC→permiso de una predicción→coordinador/worker para un paso acotado de muñeca,
+y una admisión explícita que conserva el marker 731084. La integración solo se
+probó con procesos simulados; no resuelve la causa previa, no valida cancelación
+física ni frescura Vision→PC, y el gate físico sigue cerrado.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-scoped-731084-20261110),
+[detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#integración-de-modelo-y-admisión-731084--10-11-2026).
+
+**10-11-2026 — SMOLVLA-LIVE-ONESHOT-20261110.** Un flujo one-shot real
+completó una inferencia con modelo `e707eea0…`, una imagen y estado, sin órdenes
+al robot. La propuesta de muñeca fue +0,188971 rad y la latencia observada
+adaptador→predicción en PC 0,960481 s; no incluye Vision→PC. La captura está
+caducada y no califica control físico.
+[Ficha y evidencia](../SYSTEM_CUSTOMIZATIONS.md#smolvla-live-oneshot-20261110).
+
 **10-11-2026 — ARM-PICO-731084-ARCHIVE-PREP-20261110.** Preparada una
 recuperación específica del intento 731084 que exige evidencia histórica del
 UUID cancelado y mantiene un bloqueo para nuevas órdenes. Diez tests y revisión
-independiente pasan. Un check remoto fue rechazado por detectar un proceso
-Python, identificado después como daemon ROS; el temporal se retiró. Sin
-archivado ni movimiento. Una consulta puntual observó marker/XML intactos, UUID estado 5 y
+independiente pasan. Tras un rechazo inicial por proceso Python, pasó un check
+remoto identificando el daemon de grafo y sus clientes observados. No acredita
+exclusividad; sin archivado ni movimiento. Una consulta puntual observó marker/XML intactos, UUID estado 5 y
 velocidades cero; no acredita parada física ni exclusividad. Supervisión y
 despacho físico SmolVLA siguen pendientes.
 [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#recuperación-preparada-de-731084--10-11-2026),

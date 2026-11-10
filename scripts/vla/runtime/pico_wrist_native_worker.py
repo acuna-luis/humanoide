@@ -81,10 +81,15 @@ def isolate_event_stdout():
 
 
 class WorkerChannel:
-    def __init__(self, input_fd, output_fd, session_id):
+    def __init__(self, input_fd, output_fd, session_id, *, model_mode=False):
         if not isinstance(session_id, str) or not ID.fullmatch(session_id):
             raise ValueError('invalid_worker_session')
+        if type(model_mode) is not bool:
+            raise ValueError('invalid_worker_model_mode')
         self.input_fd, self.output_fd, self.session_id = input_fd, output_fd, session_id
+        self.model_mode = model_mode
+        self.model_deadline_monotonic_ns = None
+        self.model_decision_sha256 = None
         self.failed = False
         self.signal_received = None
         os.set_blocking(input_fd, False)
@@ -103,7 +108,14 @@ class WorkerChannel:
             return 'worker_signal_' + str(self.signal_received)
         return 'worker_output_unavailable' if self.failed else None
 
-    def prepare_uuid(self, goal_id):
+    def check_model_permit(self):
+        if self.model_mode and (type(self.model_deadline_monotonic_ns) is not int or
+                                time.monotonic_ns() >= self.model_deadline_monotonic_ns or
+                                not isinstance(self.model_decision_sha256, str) or
+                                not re.fullmatch('[0-9a-f]{64}', self.model_decision_sha256)):
+            raise RuntimeError('model_permission_missing_or_expired')
+
+    def prepare_uuid(self, goal_id, *, check_live=None):
         if self.interrupted():
             raise RuntimeError(self.interrupted())
         nonce = uuid.uuid4().hex
@@ -112,14 +124,18 @@ class WorkerChannel:
         self.emit(**request)
         if self.failed:
             raise RuntimeError('uuid_request_not_delivered')
-        deadline = time.monotonic()+bridge.HANDSHAKE_S
+        # The model may need to start on Ada after the guard is already live.
+        # The lease is checked during this wait; it does not extend the lease.
+        deadline = time.monotonic()+(150.0 if self.model_mode else bridge.HANDSHAKE_S)
         buffer = bytearray()
         while time.monotonic() < deadline:
             if self.interrupted():
                 raise RuntimeError(self.interrupted())
-            readable, _, _ = select.select([self.input_fd], [], [], deadline-time.monotonic())
+            if check_live is not None:
+                check_live()
+            readable, _, _ = select.select([self.input_fd], [], [], min(.1, deadline-time.monotonic()))
             if not readable:
-                break
+                continue
             try:
                 data = os.read(self.input_fd, MAX_LINE+1)
             except BlockingIOError:
@@ -135,7 +151,18 @@ class WorkerChannel:
                     raise ValueError('coordinator_ack_extra_data')
                 ack = native.object_json(line.decode('utf-8'))
                 expected = dict(request, event='uuid_ok')
-                if ack != expected:
+                if self.model_mode:
+                    if (not isinstance(ack, dict) or set(ack) != set(expected) |
+                            {'deadline_monotonic_ns', 'decision_sha256'} or
+                            any(ack.get(k) != v for k, v in expected.items()) or
+                            type(ack.get('deadline_monotonic_ns')) is not int or
+                            not isinstance(ack.get('decision_sha256'), str) or
+                            not re.fullmatch('[0-9a-f]{64}', ack['decision_sha256'])):
+                        raise ValueError('coordinator_model_ack_mismatch')
+                    self.model_deadline_monotonic_ns = ack['deadline_monotonic_ns']
+                    self.model_decision_sha256 = ack['decision_sha256']
+                    self.check_model_permit()
+                elif ack != expected:
                     raise ValueError('coordinator_ack_mismatch')
                 if self.interrupted():
                     raise RuntimeError(self.interrupted())
@@ -154,7 +181,7 @@ class LeaseProxy:
         self.stage_receipt = None
 
     def synchronize_uuid(self, goal_id, _exchange):
-        self.channel.prepare_uuid(goal_id)
+        self.channel.prepare_uuid(goal_id, check_live=lambda: native.check_lease(self.path, time.monotonic()))
         native.check_lease(self.path, time.monotonic())
         if self.channel.interrupted(): raise RuntimeError(self.channel.interrupted())
         staging.verify_staged(self.manifest, self.stage_receipt)
@@ -163,6 +190,10 @@ class LeaseProxy:
         # create_goal_request. This does not make a later wire send atomic.
         if self.channel.interrupted(): raise RuntimeError(self.channel.interrupted())
         native.check_lease(self.path, time.monotonic())
+        # Same Motion clock is already required by the shared lease. This
+        # checks immediately before returning to ROSA; wire delivery is not
+        # atomic with this check and stopping is not certified.
+        self.channel.check_model_permit()
 
     def fail(self):
         # Do not write the host's lease: that could race with its renewer. The
@@ -176,8 +207,11 @@ def run(payload, channel, *, verified_provenance=None):
         arm.physical_release_gate()
     else:
         arm.require_verified_stream(verified_provenance, 'worker', channel.session_id)
-    if not isinstance(payload, dict) or set(payload) != {
-            'manifest', 'urdf_text', 'transmissions_text', 'lease_path', 'session_id', 'intent_path', 'intent_uid'}:
+    fields = {'manifest', 'urdf_text', 'transmissions_text', 'lease_path',
+              'session_id', 'intent_path', 'intent_uid'}
+    if (not isinstance(payload, dict) or set(payload) not in (fields, fields | {'model_mode'}) or
+            payload.get('model_mode', False) is not channel.model_mode or
+            ('model_mode' in payload and payload['model_mode'] is not True)):
         raise ValueError('invalid_worker_payload')
     if payload['session_id'] != channel.session_id:
         raise ValueError('worker_session_mismatch')

@@ -6,6 +6,7 @@ verified loader and current operator confirmation. The remote launcher has not
 been validated on the robot and cannot certify physical STOP.
 """
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -15,6 +16,7 @@ import selectors
 import shlex
 import subprocess
 import sys
+import threading
 import time
 import uuid
 
@@ -22,6 +24,7 @@ import check_arm_native_bridge_live as passive
 import run_head_from_pico_supervised as head
 import pico_wrist_pc_heartbeat as heartbeat
 import pico_wrist_verified_stream as verified_stream
+import pico_wrist_model_decision as model_decision
 import prepare_pico_wrist_native_probe as probe
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -47,6 +50,7 @@ def source_bundle(*, include_sources=False):
         'pico_wrist_native_stage': RUNTIME/'pico_wrist_native_stage.py',
         'pico_wrist_native_worker': RUNTIME/'pico_wrist_native_worker.py',
         'pico_wrist_trial_admission': VLA/'pico_wrist_trial_admission.py',
+        'archive_canceled_pico_wrist_731084': RUNTIME/'archive_canceled_pico_wrist_731084.py',
         'pico_wrist_native_coordinator': RUNTIME/'pico_wrist_native_coordinator.py',
         'pico_wrist_pc_heartbeat': VLA/'pico_wrist_pc_heartbeat.py',
         'pico_wrist_verified_stream': VLA/'pico_wrist_verified_stream.py',
@@ -68,7 +72,8 @@ def source_bundle(*, include_sources=False):
                'payload=json.loads(sys.stdin.readline())\n'
                'worker=sys.modules["pico_wrist_native_worker"]\n'
                'event_fd=worker.isolate_event_stdout()\n'
-               'channel=worker.WorkerChannel(sys.stdin.fileno(),event_fd,payload["session_id"])\n'
+               'channel=worker.WorkerChannel(sys.stdin.fileno(),event_fd,payload["session_id"],'
+               'model_mode=payload.get("model_mode",False))\n'
                'try:\n rc=worker.run(payload,channel,verified_provenance=globals().get("__pico_verified_stream__"))\n'
                'except BaseException as exc:\n'
                ' channel.emit(event="worker_error",reason=type(exc).__name__+": "+str(exc))\n rc=2\n'
@@ -98,6 +103,19 @@ def controlled_pc_sources():
         'estop_reader': ROOT/'scripts/collect_estop_available_readonly.py',
         'pico_cc_mode': ROOT/'scripts/teleoperation/pico_cc_mode.py',
         'askpass_script': ROOT/'scripts/cruzr_recover_to_home.sh',
+        'model_decision': VLA/'pico_wrist_model_decision.py',
+        'model_live_relay': VLA/'run_ball_live_shadow.py',
+        'model_live_adapter': VLA/'live_ball_observation_adapter.py',
+        'model_live_guard': VLA/'ball_arm_preview_guard.py',
+        'model_live_collector': VLA/'passive_episode_remote.py',
+        'model_live_observations': VLA/'prepare_ball_observations.py',
+        'model_live_audit': VLA/'audit_ball_arm_proposals.py',
+        'model_live_profile': RUNTIME/'cruzr_s2_vla_profile.json',
+        'model_server_wrapper': VLA/'smolvla_ball_server/shadow_live_inference.sh',
+        'model_server_inference': VLA/'smolvla_ball_server/shadow_live_inference.py',
+        'model_server_failed_eval': VLA/'smolvla_ball_server/evaluate_failed_offline.py',
+        'model_server_train_eval': VLA/'smolvla_ball_server/evaluate_train_offline.py',
+        'model_server_train': VLA/'smolvla_ball_server/train_offline.py',
     }
     return {name: (path.read_bytes(), str(path)) for name, path in paths.items()}
 
@@ -301,6 +319,164 @@ def verify_candidate_binding(binding_path, binding_sha256, manifest_raw, urdf_ra
         urdf_raw, transmissions_raw, source_snapshot=source_snapshot, pc_snapshot=pc_snapshot)
 
 
+MODEL_SERVER_DIR = '/home/luisacuna/cruzr-smolvla-ball-20261109/live-shadow-20261109-2144'
+MODEL_SERVER_HOST = 'luisacuna@192.168.1.43'
+INCIDENT_731084_EVIDENCE = ROOT.parent/'Humanoide-vla-evidence/SMOLVLA_CURRENT_READONLY_20261110T123648Z/state.json'
+INCIDENT_731084_EVIDENCE_SHA = '62da2f4a136218f7de18829ef2dd296b9b825714f812f60b3a6e15e09d2f6db9'
+MODEL_SERVER_FILES = {
+    'model_server_wrapper':'shadow_live_inference.sh',
+    'model_server_inference':'shadow_live_inference.py',
+    'model_server_failed_eval':'evaluate_failed_offline.py',
+    'model_server_train_eval':'evaluate_train_offline.py',
+    'model_server_train':'train_offline.py',
+}
+MODEL_LOCAL_FILES = {'model_live_relay', 'model_live_adapter', 'model_live_guard',
+                     'model_live_collector', 'model_live_observations', 'model_live_audit',
+                     'model_live_profile', *MODEL_SERVER_FILES}
+
+
+class LiveModelPermission:
+    """Collect one prediction while the existing Motion guard stays active.
+
+    Source hashes are compared, not a runtime attestation. Only the PC receipt
+    clock is measured. This class does not grant physical enablement.
+    """
+    def __init__(self, manifest, files, outdir):
+        self.manifest, self.files, self.outdir = manifest, files, Path(outdir)
+        self.lock = threading.Lock()
+        self.thread = None
+        self.process = None
+        self.closed = threading.Event()
+        self.decision = None
+        self.failure = None
+
+    def _verify_sources(self):
+        pc = controlled_pc_sources()
+        for key in MODEL_LOCAL_FILES:
+            if pc[key][0] != self.files['pc-source-'+key]:
+                raise RuntimeError('model_local_source_changed:' + key)
+        paths = [MODEL_SERVER_DIR+'/'+name for name in MODEL_SERVER_FILES.values()]
+        command = ['ssh','-T','-p','2649','-o','BatchMode=yes',
+                   '-o','StrictHostKeyChecking=yes','-o','ConnectTimeout=8',
+                   MODEL_SERVER_HOST, shlex.join(['sha256sum','--',*paths])]
+        result = subprocess.run(command, capture_output=True, text=True, timeout=15, check=False)
+        if result.returncode != 0:
+            raise RuntimeError('model_server_sources_unavailable')
+        lines = result.stdout.splitlines()
+        if len(lines) != len(paths):
+            raise RuntimeError('model_server_source_inventory_invalid')
+        for (key, _), path, line in zip(MODEL_SERVER_FILES.items(), paths, lines):
+            expected = hashlib.sha256(self.files['pc-source-'+key]).hexdigest() + '  ' + path
+            if line != expected:
+                raise RuntimeError('model_server_source_changed:' + key)
+
+    def _capture(self):
+        stdout = stderr = b''
+        returncode = None
+        try:
+            self._verify_sources()
+            if self.closed.is_set():
+                raise RuntimeError('model_capture_closed')
+            boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+            command = [sys.executable, '-B', str(VLA/'run_ball_live_shadow.py'),
+                '--host', MODEL_SERVER_HOST, '--port', '2649',
+                '--runner', MODEL_SERVER_DIR+'/shadow_live_inference.sh',
+                '--train', '/home/luisacuna/cruzr-smolvla-ball-20261109/dataset-v2/lerobot-experiment',
+                '--volume', 'cruzr-smolvla-ball-public-models-20261109',
+                '--checkpoint', '/home/luisacuna/cruzr-smolvla-ball-20261109/pilot-1000step/run/checkpoints/001000/pretrained_model',
+                '--device', 'cuda', '--seconds', '3', '--fps', '1', '--one-shot',
+                '--max-samples', '1', '--startup-timeout', '120']
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            with self.lock:
+                self.process = process
+                if self.closed.is_set():
+                    process.terminate()
+            try:
+                stdout, stderr = process.communicate(timeout=160)
+            except subprocess.TimeoutExpired:
+                process.terminate()
+                try:
+                    stdout, stderr = process.communicate(timeout=3)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    stdout, stderr = process.communicate(timeout=3)
+                raise RuntimeError('model_relay_timeout_remote_cleanup_uncertain')
+            finally:
+                with self.lock:
+                    self.process = None
+            returncode = process.returncode
+            if process.returncode != 0 or self.closed.is_set():
+                raise RuntimeError('model_live_relay_failed')
+            if Path('/proc/sys/kernel/random/boot_id').read_text().strip() != boot:
+                raise RuntimeError('model_pc_boot_changed')
+            self._verify_sources()
+            if self.closed.is_set():
+                raise RuntimeError('model_capture_closed')
+            decision = model_decision.decision_from_stream(stdout, self.manifest,
+                                                            now_ns=time.monotonic_ns(), boot_id=boot)
+            for name, raw in (('model-shadow.jsonl', stdout),
+                              ('model-shadow-stderr.log', stderr),
+                              ('model-decision.json', (json.dumps(decision, sort_keys=True,
+                                            allow_nan=False)+'\n').encode())):
+                fd = os.open(self.outdir/name, os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_CLOEXEC, 0o600)
+                with os.fdopen(fd, 'wb') as stream:
+                    stream.write(raw); stream.flush(); os.fsync(stream.fileno())
+            fd = os.open(self.outdir, os.O_RDONLY|os.O_DIRECTORY|os.O_CLOEXEC)
+            try: os.fsync(fd)
+            finally: os.close(fd)
+            with self.lock:
+                if not self.closed.is_set():
+                    self.decision = decision
+        except BaseException as exc:
+            reason = type(exc).__name__ + ':' + str(exc)
+            with self.lock:
+                # Publish failure before optional disk I/O: the heartbeat must
+                # stop rather than wait for the diagnostic file.
+                self.failure = reason
+            try:
+                info = {'reason':reason[:2048], 'relay_returncode':returncode,
+                        'stdout_tail':stdout[-16384:].decode('utf-8','replace'),
+                        'stderr_tail':stderr[-16384:].decode('utf-8','replace'),
+                        'remote_cleanup_verified':False}
+                with (self.outdir/'model-failure.json').open('x', encoding='utf-8') as stream:
+                    json.dump(info, stream, ensure_ascii=False, allow_nan=False)
+                    stream.write('\n')
+            except (OSError, ValueError, TypeError):
+                pass
+
+    def start(self):
+        with self.lock:
+            if self.thread is not None:
+                raise RuntimeError('model_capture_already_started')
+            self.thread = threading.Thread(target=self._capture, name='wrist-model-inference', daemon=True)
+            self.thread.start()
+
+    def permit(self, request):
+        with self.lock:
+            if self.closed.is_set():
+                raise RuntimeError('model_capture_closed')
+            if self.failure is not None:
+                raise RuntimeError('model_capture_failed:' + self.failure)
+            decision = self.decision
+        boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+        return model_decision.make_dispatch_permission(decision, request['goal_id'], request['task_sha256'],
+            boot_id=boot, now_ns=time.monotonic_ns(), max_state_age_ns=10_000_000_000,
+            max_prediction_age_ns=10_000_000_000)
+
+    def close(self):
+        self.closed.set()
+        with self.lock:
+            process, thread = self.process, self.thread
+            if process is not None and process.poll() is None:
+                try: process.terminate()
+                except ProcessLookupError: pass
+        if thread is not None:
+            thread.join(3)
+        # Termination of the local relay does not prove remote collector or
+        # Ada container cleanup, particularly after a transport failure.
+        return thread is None or not thread.is_alive()
+
+
 class SuccessEvidence:
     """Validate the coordinator's ordered success evidence for this session."""
     def __init__(self, session):
@@ -354,8 +530,22 @@ class SuccessEvidence:
 
 
 
+def model_release_gate():
+    """The two-phase model path remains unavailable for physical dispatch."""
+    raise RuntimeError('model_wrist_dispatch_not_enabled')
+
+
+def incident_evidence_b64(path=INCIDENT_731084_EVIDENCE):
+    """Read exact pinned historical status; never interpret it as current stop."""
+    raw = Path(path).read_bytes()
+    if len(raw) > 65536 or hashlib.sha256(raw).hexdigest() != INCIDENT_731084_EVIDENCE_SHA:
+        raise ValueError('incident_terminal_evidence_hash_mismatch')
+    return base64.b64encode(raw).decode('ascii')
+
+
 def run_candidate(manifest_path, urdf_path, transmissions_path, physical_confirmed,
-                  *, binding_path=None, binding_sha256=None, verified_pc=None):
+                  *, binding_path=None, binding_sha256=None, verified_pc=None, model_mode=False,
+                  incident_731084=False):
     # Only the isolated loader that imported this module from verified bytes
     # may use this one-wrist path. This is not a VLA control authorization.
     if (not isinstance(verified_pc, dict) or set(verified_pc) != {'finder','files','index_raw','binding_raw'}
@@ -375,6 +565,13 @@ def run_candidate(manifest_path, urdf_path, transmissions_path, physical_confirm
         raise RuntimeError('verified_pc_context_required')
     if physical_confirmed is not True:
         raise RuntimeError('current_physical_confirmation_required')
+    if type(model_mode) is not bool or type(incident_731084) is not bool:
+        raise ValueError('invalid_model_mode')
+    if incident_731084 and not model_mode:
+        raise ValueError('incident_admission_requires_model_mode')
+    if model_mode:
+        model_release_gate()
+    incident_value = incident_evidence_b64() if incident_731084 else None
     files = verified_pc['files']
     manifest_raw, urdf_raw, transmissions_raw = (files['manifest.json'], files['robot.urdf'],
                                                  files['transmissions.yaml'])
@@ -415,6 +612,10 @@ def run_candidate(manifest_path, urdf_path, transmissions_path, physical_confirm
                'worker_source':worker, 'operator_confirmed':True,
                'source_digests': {'guard': binding_hashes['bundle-guard.py'],
                                   'worker': binding_hashes['bundle-worker.py']}}
+    if model_mode:
+        payload['model_mode'] = True
+        if incident_731084:
+            payload['incident_evidence_b64'] = incident_value
     sentinel = 'PICO_HOST_END_' + uuid.uuid4().hex
     if sentinel in host: raise RuntimeError('host_source_sentinel_collision')
     env = dict(os.environ, CRUZR_INTERNAL_ASKPASS='1', SSH_ASKPASS=str(ROOT/'scripts/cruzr_recover_to_home.sh'),
@@ -435,10 +636,11 @@ def run_candidate(manifest_path, urdf_path, transmissions_path, physical_confirm
         if exc.source_may_have_executed or not exc.local_cleanup_observed:
             observe_uncertain_host(exc.process, outdir, exc.phase)
         raise RuntimeError('host_bootstrap_not_started_no_retry') from exc
-    return supervise_started_host(process, token, started, outdir)
+    model = LiveModelPermission(manifest, files, outdir) if model_mode else None
+    return supervise_started_host(process, token, started, outdir, model=model)
 
 
-def supervise_started_host(process, token, started, outdir):
+def supervise_started_host(process, token, started, outdir, *, model=None):
     """Supervise an existing host; retain observation on any unexpected failure."""
     selector = None
     pump = None; preflight_ack = False; heartbeat_started = False; buffer = bytearray()
@@ -490,7 +692,11 @@ def supervise_started_host(process, token, started, outdir):
                         elif event == 'HOST_HEARTBEAT_READY':
                             if not preflight_ack or heartbeat_started or row.get('session_id') != token:
                                 raise RuntimeError('host_heartbeat_handoff_invalid')
-                            pump = heartbeat.PcHeartbeatPump(process.stdin.fileno(), token)
+                            if model is None:
+                                pump = heartbeat.PcHeartbeatPump(process.stdin.fileno(), token)
+                            else:
+                                pump = heartbeat.PcHeartbeatPump(process.stdin.fileno(), token,
+                                                                 model_permit=model.permit)
                             heartbeat_started = True
                         elif event == 'pc_ping':
                             if pump is None:
@@ -498,6 +704,8 @@ def supervise_started_host(process, token, started, outdir):
                             pump.submit(row)
                         else:
                             evidence.accept(row)
+                            if event == 'stage_receipt' and model is not None:
+                                model.start()
                             if row.get('status') == 'ACTION_SUCCEEDED_AND_POSTFLIGHT_OBSERVED':
                                 final = row
                         if event not in ('BRIDGE_READY', 'pc_ping'):
@@ -523,6 +731,8 @@ def supervise_started_host(process, token, started, outdir):
     finally:
         if pump is not None: pump.close()
         if selector is not None: selector.close()
+        if model is not None and not model.close():
+            safe_alert('ALERTA: cierre del relay incierto; verificar recolector y contenedor remotos.')
         # Never signal or mistake a host exit for physical stopping.
 
 
