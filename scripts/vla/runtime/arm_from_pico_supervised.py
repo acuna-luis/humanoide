@@ -131,6 +131,15 @@ def physical_release_gate():
     raise RuntimeError('physical_dispatch_blocked_unqualified_arm_stop_and_trajectory')
 
 
+def motion_result_ok(response):
+    """Use the native box client's terminal-success contract for ArmTask."""
+    state = getattr(getattr(response, 'result', None), 'state', None)
+    status = getattr(response, 'status', None)
+    code = getattr(state, 'state', None)
+    return (type(status) is int and status == 4 and type(code) is int and
+            code == 1101001 and getattr(state, 'desc', None) == 'SUCCEED')
+
+
 def build_trial_args(q):
     names = ('R_shoulder_pitch_joint', 'R_shoulder_roll_joint',
              'R_shoulder_yaw_joint', 'R_elbow_roll_joint', 'R_elbow_yaw_joint',
@@ -519,10 +528,11 @@ def main(preflight, *, dry_run):
             if result_future is not None and result_future.done():
                 try:
                     response = result_future.result()
-                    succeeded = response.status == 4 and response.result.state.desc == 'SUCCEED'
+                    succeeded = motion_result_ok(response)
                     if not result_reported:
                         emit('action_result', status=int(response.status),
-                             desc=str(response.result.state.desc), physical_stop_confirmed=False)
+                             desc=str(response.result.state.desc),
+                             state_code=int(response.result.state.state), physical_stop_confirmed=False)
                         result_reported = True
                 except Exception as exc:
                     alert('action_result_exception:' + str(exc))

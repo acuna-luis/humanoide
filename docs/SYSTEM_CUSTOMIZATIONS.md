@@ -1,5 +1,19 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-BOX-REFERENCE-20261110
+
+**10-11-2026, Europe/Madrid — contrato de cajas REUTILIZADO en candidato;
+prueba física de SmolVLA PENDIENTE.** No se enviaron órdenes ni se cambiaron
+robot, modos o cliente de cajas. [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#referencia-del-ciclo-de-cajas--10-11-2026).
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | Commit `92ab056`, candidato de brazo y cancelación en simulación, salida física bloqueada. Ciclo de cajas mesa74 físicamente completado con abrazaderas y tareas concretas. |
+| Evidencia física adicional | Diagnóstico nativo derecho del22-10 completó MetaMove y retorno con SUCCEED, observado por el operador. Análisis de1.299 muestras: en una de ellas el mayor error de los siete ejes respecto al objetivo fijo fue0,002095673rad. Manifiesto SHA256 `8d2c823193c8e3bd7e0d83ee83740142e841ee97a452f750a66227c2465d329c`; traza `37d2a12618eb512f8f115759b56ccd210542d023c42565953f38e015ee7f0c48`. Es evidencia de ese XML estático y brazos con abrazaderas, no de argumentos dinámicos, PICO/v4 o frenado. |
+| Fuente y alcance | `scripts/vla/runtime/arm_from_pico_supervised.py` SHA256 `bbcde1926a6b8bbccb58f2e8e7fcea6a4d126408c2ef3f43b8e38d13b540b21b`; test `scripts/vla/test_arm_from_pico_supervised.py` `329be16e98bc8f3d64fb7e720b6837b33a5b5baaf052b382491925ed42409204`. Se adoptó criterio de éxito del cliente nativo de cajas (status4, SUCCEED, código1101001) y se comprobó allí el formato de la meta candidata. El transporte rclpy de brazo sigue distinto al ROSA de cajas. |
+| Verificación | Nueve tests de brazo y 37 del cliente de cajas pasan con datos simulados; sin movimiento. No prueba aceptación real de `move_components_json`, parada o trayectoria de mano v4. |
+| Reversión y deuda | Revertir cambios locales selectivamente frente a `92ab056`, sin afectar cliente de cajas o cambios ajenos. No hay cambios remotos a restaurar. Despacho físico bloqueado; pendientes geometría, movimiento y parada y gates VLA. |
+
 ## ARM-PICO-EXECUTOR-CANDIDATE-20261110
 
 **10-11-2026, Europe/Madrid — candidato de despacho y cancelación SIMULADO;

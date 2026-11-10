@@ -1,5 +1,49 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Referencia del ciclo de cajas — 10-11-2026
+
+Por indicación del usuario se consultó el ciclo de cajas ya probado. El
+[registro de mesa74](../guides/TRANSFERENCIA_CAJA_ENTRE_MESAS_CON_APRILTAG.md)
+describe un ciclo físico completo de 323,879 s con depósito, HOME y confirmación
+del operador. La prueba usaba abrazaderas y tareas concretas para cajas. El
+catálogo atribuye el agarre operativo a percepción 6D y tareas nativas; el
+proveedor afirma un VLA integrado en otro flujo, pero el XML examinado no
+identifica checkpoint ni demuestra que fuera el ejecutado en ese ciclo.
+
+Además, el [diagnóstico nativo de brazos](../box_handling/EMPTY_ARM_DIAGNOSTIC_20261022.md#preparación-nativa-completa-de-un-brazo)
+probó físicamente el brazo derecho por separado mediante dos `MetaMove` y
+retorno. Motion informó status 4, `SUCCEED`, código 1101001, y el operador
+observó movimiento normal. En la traza conservada hay 1.299 muestras 20D;
+el menor error máximo de los siete ejes respecto al objetivo fijo fue
+0,002095673 rad en una muestra. Esto respalda el orden y seguimiento de ese
+XML fijo en aquella postura con abrazaderas, no acredita objetivos dinámicos,
+parada ni la geometría de manos v4. Las tareas temporales del ensayo se
+retiraron: no ejecutar sus rutas históricas.
+
+La comparación lee `candidate.joint_order` y `candidate.outbound_joint_target_rad`
+del manifiesto `../Humanoide-vla-evidence/20261022T093744Z_EMPTY_ARM_CONTROL_DIAGNOSTIC/native-right-final/manifest.json`
+(SHA256 `8d2c823193c8e3bd7e0d83ee83740142e841ee97a452f750a66227c2465d329c`),
+busca cada muestra `/mc/whole_joint_states` por nombre en `native-right-trace.jsonl`
+(SHA256 `37d2a12618eb512f8f115759b56ccd210542d023c42565953f38e015ee7f0c48`),
+calcula el máximo error absoluto de los siete ejes por muestra y toma el mínimo.
+El resultado es una observación puntual, no una cota de seguimiento futuro.
+
+El cliente de cajas `scripts/box_handling/scenario1_action_client.py` usa la
+misma acción `/mc/manipulation/action` con `task_name` y `yaml_args`; comprueba
+aceptación, UUID, tiempo y cancelación, y declara que cancelar no certifica
+parada física. Su criterio de éxito exige status 4, `SUCCEED` y código
+1101001. El candidato de brazo ahora adopta ese criterio. Una prueba pasa su
+orden hipotética por `validate_goal` del cliente de cajas y compara criterios
+de resultado, además de las simulaciones anteriores: nueve tests de brazo y
+37 del cliente de cajas pasan. La aceptación del formato por ese validador
+no prueba que Motion acepte o ejecute la tarea dinámica.
+
+No se ejecutó movimiento ni se modificó el cliente de cajas. El candidato
+SmolVLA usa rclpy, no el cliente ROSA de cajas, por lo que sólo se reutilizó
+el contrato, no se afirma una validación física de su transporte. Permanecen
+abiertos geometría y trayectoria con mano v4, paso de argumentos al nodo,
+parada efectiva y gates de VLA; la salida física sigue bloqueada.
+
 ## Candidato de ejecución y cancelación — 10-11-2026
 
 Se amplió el runtime pasivo con una rama candidata: genera una meta desde

@@ -1,5 +1,10 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-BOX-REFERENCE-20261110.** Se aprovechó el cliente de
+acciones del ciclo de cajas físicamente comprobado para contrastar el formato
+y el criterio de éxito de la prueba candidata de brazo SmolVLA. No valida
+movimiento, parada o agarre con manos v4. [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#referencia-del-ciclo-de-cajas--10-11-2026).
+
 **10-11-2026 — ARM-PICO-EXECUTOR-CANDIDATE-20261110.** Preparado despacho
 candidato y cancelación por UUID, comprobados sólo con ROS simulado; salida
 física bloqueada. [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#candidato-de-ejecución-y-cancelación--10-11-2026).

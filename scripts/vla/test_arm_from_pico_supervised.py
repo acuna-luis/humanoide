@@ -1,7 +1,9 @@
 """Local tests of the passive arm monitor; no ROS or robot access."""
 import math
+import json
 from pathlib import Path
 import sys
+import types
 import unittest
 from unittest.mock import patch
 
@@ -9,6 +11,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / 'runtime'))
 import arm_from_pico_supervised as arm
 import check_arm_from_pico_supervised as runner
 import test_head_from_pico_supervised as head_tests
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'box_handling'))
+import scenario1_action_client as box_client
 
 
 def sample():
@@ -62,6 +66,23 @@ class ArmMonitorTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             arm.build_trial_args(dict(arm.BODY, R_wrist_roll_joint=math.inf))
 
+    def test_native_box_client_accepts_arm_goal_format(self):
+        goal = {'task_name': arm.TASK, 'yaml_args': json.dumps(arm.build_trial_args(dict(arm.BODY)))}
+        self.assertEqual(box_client.validate_goal('motion', json.dumps(goal)), goal)
+        args = json.loads(goal['yaml_args'])
+        self.assertEqual(args['component_names'], ['right_arm'])
+        self.assertEqual(len(args['goals'][0]), 7)
+
+    def test_native_box_terminal_success_contract(self):
+        def result(status, code, desc):
+            return types.SimpleNamespace(status=status,
+                result=types.SimpleNamespace(state=types.SimpleNamespace(state=code, desc=desc)))
+        for status, code, desc in ((4, 1101001, 'SUCCEED'), (4, 0, 'SUCCEED'),
+                                   (5, 1101001, 'SUCCEED'), (4, 1101001, 'FAILED')):
+            expected = box_client.result_succeeded('motion', status,
+                         {'state': {'state': code, 'desc': desc}})
+            self.assertEqual(arm.motion_result_ok(result(status, code, desc)), expected)
+
 
 class FakeArmRun(head_tests.FakeRun):
     def install(self):
@@ -71,7 +92,25 @@ class FakeArmRun(head_tests.FakeRun):
         class RecordingActionClient(original):
             def send_goal_async(self, goal, goal_uuid):
                 fake.request = goal
-                return super().send_goal_async(goal, goal_uuid)
+                future = super().send_goal_async(goal, goal_uuid)
+                class FutureProxy:
+                    def done(self): return future.done()
+                    def result(self):
+                        handle = future.result()
+                        class HandleProxy:
+                            accepted = handle.accepted
+                            def cancel_goal_async(self): return handle.cancel_goal_async()
+                            def get_result_async(self):
+                                result_future = handle.get_result_async()
+                                class ResultProxy:
+                                    def done(self): return result_future.done()
+                                    def result(self):
+                                        response = result_future.result()
+                                        response.result.state.state = 1101001 if response.status == 4 else 0
+                                        return response
+                                return ResultProxy()
+                        return HandleProxy()
+                return FutureProxy()
         modules['rclpy.action'].ActionClient = RecordingActionClient
         return modules
 
@@ -108,7 +147,6 @@ class ArmActionTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertEqual(fake.send_count, 1)
         self.assertEqual(fake.request.task_name, 'move_components_json')
-        import json
         self.assertEqual(json.loads(fake.request.yaml_args), arm.build_trial_args(dict(arm.BODY)))
         self.assertIn('ARM_SUCCEEDED_AND_STATIONARY', [row['event'] for row in fake.emitted])
 

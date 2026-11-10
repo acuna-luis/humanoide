@@ -1,5 +1,12 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-BOX-REFERENCE-20261110: contrato de cajas reutilizado.**
+El ciclo completo de caja de mesa74 fue comprobado físicamente con abrazaderas;
+se contrastó su interfaz ArmTask y se incorporó al candidato de brazo el mismo
+criterio de éxito. Pruebas simuladas pasan. No demuestra actuación de SmolVLA,
+mano v4 ni parada del nuevo movimiento. Sin órdenes. [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#referencia-del-ciclo-de-cajas--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-box-reference-20261110).
+
 **10-11-2026 — ARM-PICO-EXECUTOR-CANDIDATE-20261110: envío y cancelación
 simulados.** La versión candidata del supervisor incluye una meta de muñeca y
 cancelación por UUID; probadas con ROS simulado. La salida física permanece
