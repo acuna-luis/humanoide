@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 import run_pico_wrist_native_trial as launcher
 import pico_wrist_review_binding as binding
+import check_pico_wrist_full_passive as full_passive
 
 
 def execute_streamed(source, payload):
@@ -50,17 +51,17 @@ class LauncherTests(unittest.TestCase):
                 result = binding.create(retained, manifest, urdf, transmissions, review)
             args = ['--check', '--binding', str(retained), '--binding-sha256', result['binding_sha256'],
                     '--manifest', str(manifest), '--urdf', str(urdf), '--transmissions', str(transmissions)]
-            with patch.object(launcher.passive, 'main', return_value=0) as passive, \
+            with patch.object(full_passive, 'main', return_value=0) as passive, \
                  contextlib.redirect_stdout(io.StringIO()) as output:
                 self.assertEqual(launcher.main(args), 0)
                 passive.assert_called_once()
                 self.assertIn('BINDING_BYTES_MATCH', output.getvalue())
             urdf.write_bytes(b'<robot/>\n')  # Same logical XML, different bytes.
-            with patch.object(launcher.passive, 'main', side_effect=AssertionError('must not connect')), \
+            with patch.object(full_passive, 'main', side_effect=AssertionError('must not connect')), \
                  contextlib.redirect_stderr(io.StringIO()) as error:
                 self.assertEqual(launcher.main(args), 1)
                 self.assertIn('candidate_input_changed', error.getvalue())
-            with patch.object(launcher.passive, 'main', side_effect=AssertionError('must not connect')), \
+            with patch.object(full_passive, 'main', side_effect=AssertionError('must not connect')), \
                  contextlib.redirect_stderr(io.StringIO()) as error:
                 self.assertEqual(launcher.main(['--check', '--binding', str(retained)]), 1)
                 self.assertIn('binding_digest_and_all_candidate_inputs_required', error.getvalue())

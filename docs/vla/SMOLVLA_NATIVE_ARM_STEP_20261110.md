@@ -1,5 +1,38 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Revisión del lanzador — 10-11-2026
+
+El `--check` del lanzador llama ahora a la comprobación pasiva integrada PC→
+Motion→guardia y cliente nativo de lectura. Con las fuentes actualizadas pasó
+sin crear meta ni movimiento; el proceso y `/tmp` temporal no se observaron
+tras terminar. Evidencia privada
+`../Humanoide-vla-evidence/PICO_FULL_PASSIVE_CHECK/check-5377068e140c41adb7d978c292ef327a/`:
+`stdout.jsonl` SHA256 `bd2777d7ecc6eed971d23b1f1f3d3c6b57f9b0fb9f4408eb8e2af80c1af8f92a`,
+`sources-sha256.json` `fe925978f51d41ec10ae88dbfa549fdbc548ea3103f139c1b5d1655c21023a37`.
+
+Se corrigieron dos fallos observados al revisar la rama futura: si se bloquea
+el journal, el progreso del coordinador deja de renovar el lease; si la entrega
+de código o payload al proceso hijo puede haber sido parcial, se conserva su
+handle y resultado incierto, sin asumir que matarlo frene el robot. Una espera
+de guardia de hasta26 s respeta el TTL independiente de preflight30 s. La
+prueba local de disco bloqueado fue corregida para esperar el rechazo o
+expiración efectiva del archivo, sin confundir una bandera en memoria con una
+escritura ya terminada. Son pruebas con procesos simulados, no medidas de
+frenado o certificados de latencia.
+
+La copia vinculada `../Humanoide-vla-evidence/PICO_WRIST_REVIEW_BINDING_FINAL_20261110/`
+tiene binding SHA256 `734032a629b8fb5a16cd22118e879652b3f2acc3ebe8ace778d941045ad043b1`;
+una comparación local observó coincidencia de fuentes controladas y de los
+bytes del manifiesto, URDF y SPS. El texto vinculado es una instantánea de
+esta guía, no una aprobación ni una revisión integral del runtime. Una copia
+anterior queda histórica tras los cambios. El lanzador exige esa comprobación
+de integridad, pero `physical_release_gate` y la atestación técnica siguen
+bloqueados: no se ha instalado ni enviado la tarea, ni validado físicamente la
+trayectoria, mano v4, parada o aplicación de SmolVLA.
+
+112 tests locales de las familias wrist, guardia, lease y comprobación pasan;
+el código y el check pasivo no acreditan que la política alcance la pelota.
+
 ## Comprobación integrada pasiva — 10-11-2026
 
 Se ejecutó una única comprobación PC→host Motion con desafío y latido,

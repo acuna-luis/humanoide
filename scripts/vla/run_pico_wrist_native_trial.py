@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Candidate PC launcher for one native wrist probe; physical gate is closed.
 
---check delegates to the passive guard/lease test. --run rejects before any
+--check delegates to the integrated passive test. --run rejects before any
 file or network access. Source bundles are prepared for review only. The remote
 launcher has not been validated on the robot and cannot certify physical STOP.
 """
@@ -82,6 +82,7 @@ def controlled_pc_sources():
     paths = {
         'trial_launcher': VLA/'run_pico_wrist_native_trial.py',
         'review_binding': VLA/'pico_wrist_review_binding.py',
+        'full_passive_check': VLA/'check_pico_wrist_full_passive.py',
         'bridge_check': VLA/'check_arm_native_bridge_live.py',
         'arm_preflight': VLA/'check_arm_from_pico_supervised.py',
         'head_launcher': VLA/'run_head_from_pico_supervised.py',
@@ -333,7 +334,10 @@ def main(argv=None):
                           ('--transmissions', args.transmissions)):
         if value is not None:
             parameters.extend((option, str(value)))
-    return passive.main(parameters)
+    # Delayed import avoids the full check's intentional reference to this
+    # launcher's host bootstrap helpers. It never creates an action goal.
+    import check_pico_wrist_full_passive as full_passive
+    return full_passive.main(parameters)
 
 
 if __name__ == '__main__':

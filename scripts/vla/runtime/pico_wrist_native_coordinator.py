@@ -14,6 +14,7 @@ from pathlib import Path
 import re
 import select
 import stat
+import threading
 import time
 
 import arm_from_pico_supervised as arm
@@ -22,10 +23,64 @@ import scenario1_action_client as native
 import prepare_pico_wrist_native_probe as probe
 
 MAX_LINE = 65536
+# Application liveness threshold, not a physical stopping-time bound.
+COORDINATOR_PROGRESS_TIMEOUT_S = 2.0
+# The guard needs two samples from event-driven E-stop topics. It continues to
+# enforce the existing 30 s preflight handoff deadline independently.
+GUARD_READY_TIMEOUT_S = 26.0
 GOAL_ID = re.compile(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\Z')
 # One stable host directory across sessions. /tmp is used only for the lease
 # and a mirror visible to the native container; it is not the durable record.
 GLOBAL_RECEIPT_DIR = Path('/var/tmp/cruzr-pico-v4-wrist-control')
+
+
+class CoordinatorProgress:
+    """Permanently invalidate liveness if the coordinator loop stops advancing.
+
+    GuardLease checks this liveness while consuming telemetry. If the loop is
+    blocked in I/O, it stops renewing its lease; any last on-disk deadline then
+    expires. Neither expiry nor a cancellation request proves physical braking.
+    """
+    def __init__(self, *, clock=time.monotonic):
+        self.clock = clock
+        self.lock = threading.Lock()
+        self.started = False
+        self.failed = False
+        self.last = None
+
+    def start(self):
+        with self.lock:
+            if self.started or self.failed:
+                raise RuntimeError('coordinator_progress_not_startable')
+            now = self.clock()
+            if not math.isfinite(now):
+                raise ValueError('coordinator_clock_invalid')
+            self.last, self.started = now, True
+
+    def _alive_locked(self, now):
+        if self.failed:
+            return False
+        if not self.started:
+            return True
+        if not math.isfinite(now) or not 0 <= now-self.last <= COORDINATOR_PROGRESS_TIMEOUT_S:
+            self.failed = True
+            return False
+        return True
+
+    def alive(self):
+        with self.lock:
+            return self._alive_locked(self.clock())
+
+    def beat(self):
+        with self.lock:
+            now = self.clock()
+            if not self.started or not self._alive_locked(now):
+                raise RuntimeError('coordinator_progress_expired')
+            self.last = now
+
+    def stop(self):
+        with self.lock:
+            self.failed = True
 
 
 def ensure_control_root():
@@ -218,26 +273,36 @@ def coordinate(lease, guard_pipe, manifest, urdf_text, transmissions_text,
         marker = GLOBAL_RECEIPT_DIR/'PENDING_OR_UNRESOLVED.json'
         if marker.exists() or marker.is_symlink():
             raise RuntimeError('previous_trial_requires_manual_review')
+    # The guard's existing lease renewer also checks that this coordinator is
+    # making progress. This remains permanently fail-closed after a stall.
+    progress = CoordinatorProgress()
+    previous_guard_alive = lease.guard_alive
+    lease.guard_alive = lambda: previous_guard_alive() and progress.alive()
     try:
         return _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_text,
-                                  start_worker, timeout=timeout, event_sink=event_sink)
+                                  start_worker, timeout=timeout, event_sink=event_sink,
+                                  progress=progress)
     finally:
+        progress.stop()
         if owns_lock:
             os.close(lock_fd)
 
 
 def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_text,
-                       start_worker, *, timeout, event_sink):
+                       start_worker, *, timeout, event_sink, progress):
     arm.physical_release_gate()
     if type(timeout) not in (float, int) or not math.isfinite(timeout) or not 0 < timeout <= 20:
         raise ValueError('invalid_coordinator_timeout')
     probe.validate(manifest, urdf_text, transmissions_text)
     if manifest['input']['reference_20d'] != lease.initial:
         raise ValueError('reference_mismatch')
-    guard_pipe.await_ready(3)
+    guard_pipe.await_ready(GUARD_READY_TIMEOUT_S)
     native.check_lease(lease.path, time.monotonic())
+    progress.start()
     marker = durable_intent(GLOBAL_RECEIPT_DIR, manifest, lease.session_id)
+    progress.beat()
     mirror = mirror_intent(marker, lease)
+    progress.beat()
     journal_path = GLOBAL_RECEIPT_DIR/('worker-events-' + lease.session_id + '.jsonl')
     # If worker creation or evidence opening fails, marker remains.
     journal = journal_path.open('x', encoding='utf-8')
@@ -249,10 +314,12 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
     buffer = bytearray()
     try:
         process = start_worker(lease.path, mirror, os.geteuid())
+        progress.beat()
         if process.stdin is None or process.stdout is None:
             raise RuntimeError('worker_pipes_unavailable')
         os.set_blocking(process.stdout.fileno(), False)
         while time.monotonic() < deadline:
+            progress.beat()
             if guard_pipe.failure or not lease.guard_alive():
                 raise RuntimeError('guard_lost_during_trial')
             native.check_lease(lease.path, time.monotonic())
@@ -265,11 +332,13 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
             buffer.extend(chunk)
             if len(buffer) > MAX_LINE: raise ValueError('worker_output_excessive')
             while b'\n' in buffer:
+                progress.beat()
                 line, _, rest = bytes(buffer).partition(b'\n')
                 buffer = bytearray(rest)
                 row = native.object_json(line.decode('utf-8'))
                 event = row.get('event')
                 journal.write(json.dumps(row, allow_nan=False)+'\n'); journal.flush(); os.fsync(journal.fileno())
+                progress.beat()
                 if event_sink(row) is not True:
                     raise RuntimeError('operator_output_unavailable')
                 if event == 'BRIDGE_READY':
@@ -339,6 +408,7 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
         endpoint = manifest['candidate']['target_rad'][-1]
         since = None
         while time.monotonic() < deadline:
+            progress.beat()
             sample = guard_pipe.checked_snapshot()
             q = sample['position'][arm.ARM_AXIS]
             v = sample['velocity'][arm.ARM_AXIS]
@@ -352,6 +422,7 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
             raise RuntimeError('endpoint_not_settled')
         journal.write(json.dumps({'event': 'postflight_candidate', 'physical_stop_verified': False})+'\n')
         journal.flush(); os.fsync(journal.fileno())
+        progress.beat()
         # Recheck after the durable write; another thread may have observed a
         # guard or lease failure while storage was flushing.
         final = guard_pipe.checked_snapshot()
@@ -360,6 +431,7 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
             raise RuntimeError('postflight_changed_before_return')
         journal.write(json.dumps({'event': 'postflight_settled', 'physical_stop_verified': False})+'\n')
         journal.flush(); os.fsync(journal.fileno())
+        progress.beat()
         if event_sink({'event': 'postflight_settled', 'physical_stop_verified': False}) is not True:
             raise RuntimeError('operator_output_unavailable')
         final = guard_pipe.checked_snapshot()
@@ -372,6 +444,7 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
                 'goal_id': goal_id, 'intent_receipt': str(marker),
                 'physical_stop_verified': False, 'automatic_cleanup': False}
     except BaseException as exc:
+        progress.stop()
         failure = type(exc).__name__ + ': ' + str(exc)
         records = [{'event': 'coordinator_failure', 'reason': failure,
                     'physical_state': 'UNKNOWN_IF_DISPATCH_ATTEMPTED', 'no_retry': True}]

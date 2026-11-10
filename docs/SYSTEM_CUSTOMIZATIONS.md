@@ -1,5 +1,18 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-LAUNCHER-REVIEW-20261110
+
+**10-11-2026, Europe/Madrid — revisión y check pasivo OBSERVADOS; habilitación
+física PENDIENTE.** Sin instalación de tarea, cambios de controlador o metas.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | `53720df`, comprobación pasiva integrada y binding preliminar; gate cerrado. |
+| Fuentes | Lanzador `scripts/vla/run_pico_wrist_native_trial.py` SHA256 `59236f12151e58132fc55702ad6bd2d53a813d6181e63bbadfd27c0c7a31a9ec`, test `f597673e13e7f759c5d5ad0f8c9b7a36eb500c157cb0282263acbfe48ad54df6`; coordinator `scripts/vla/runtime/pico_wrist_native_coordinator.py` `16341517bab1baf17ebd8e1fb1c625c745e0e623879fe825fc2b330e32115ec3`, test `93b0c8535e9cae8e0120d17a9c35808ffb23ed855e048dd30cd0d39039df4f9d`; docker launcher `scripts/vla/runtime/pico_wrist_docker_launcher.py` `471f9351d5bf29ea76622d319b95d753da8ea01f54033b7b2aa8ecdc6aa3a5ba`, test `scripts/vla/test_pico_wrist_stream_start.py` `2d60b2339f4217d8291e1f36e959c85f76272387006f2cedaf540afaefaae466`. |
+| Verificación | 112 tests locales de familias wrist/guardia/lease/check pasan; check final en Motion `../Humanoide-vla-evidence/PICO_FULL_PASSIVE_CHECK/check-5377068e140c41adb7d978c292ef327a/`, `stdout.jsonl` SHA256 `bd2777d7ecc6eed971d23b1f1f3d3c6b57f9b0fb9f4408eb8e2af80c1af8f92a`, `sources-sha256.json` `fe925978f51d41ec10ae88dbfa549fdbc548ea3103f139c1b5d1655c21023a37`. Sin goal; procesos y directorio temporal no observados después. |
+| Binding y deuda | `../Humanoide-vla-evidence/PICO_WRIST_REVIEW_BINDING_FINAL_20261110/review-binding.json` SHA256 `734032a629b8fb5a16cd22118e879652b3f2acc3ebe8ace778d941045ad043b1`; fuentes/entradas coinciden puntualmente. La guía vinculada no es una aprobación de seguridad ni prueba runtime. Gate físico y revisión técnica completa, geometría de mano v4 y parada siguen pendientes. [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#revisión-del-lanzador--10-11-2026). |
+| Reversión | Revertir selectivamente las fuentes y notas frente a `53720df`, conservar cambios ajenos y evidencia privada; no hay configuración remota persistente a restaurar. |
+
 ## ARM-PICO-FULL-PASSIVE-20261110
 
 **10-11-2026, Europe/Madrid — integración pasiva OBSERVADA; control físico

@@ -1,6 +1,7 @@
 """Coordinator integration with fake processes only; no ROS or robot access."""
 import json
 import contextlib
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -23,6 +24,7 @@ GOAL = '12345678-1234-1234-1234-123456789abc'
 class FakeGuard:
     def __init__(self, lease):
         self.lease, self.failure, self.latest = lease, None, None
+        self.ready_timeout = None
         self.cancelled = []
         self.stop_event = threading.Event()
         self.thread = threading.Thread(target=self.pump)
@@ -39,6 +41,7 @@ class FakeGuard:
                 self.failure = str(exc); return
 
     def await_ready(self, timeout):
+        self.ready_timeout = timeout
         deadline = time.monotonic()+timeout
         while self.latest is None and time.monotonic() < deadline: time.sleep(.01)
         if self.latest is None: raise RuntimeError('fake_guard_not_ready')
@@ -91,6 +94,99 @@ emit(event='worker_result',returncode=0)
 
 
 class CoordinatorTests(unittest.TestCase):
+    def test_progress_timeout_cannot_rearm(self):
+        now = [10.0]
+        monitor = coordinator.CoordinatorProgress(clock=lambda: now[0])
+        self.assertTrue(monitor.alive())
+        monitor.start()
+        now[0] += coordinator.COORDINATOR_PROGRESS_TIMEOUT_S + .01
+        self.assertFalse(monitor.alive())
+        now[0] -= .01
+        with self.assertRaisesRegex(RuntimeError, 'coordinator_progress_expired'):
+            monitor.beat()
+        self.assertFalse(monitor.alive())
+
+    def test_guard_ready_timeout_covers_observed_stop_topic_cadence(self):
+        # Its internal preflight/handoff still enforces the separate 30 s TTL.
+        self.assertEqual(coordinator.GUARD_READY_TIMEOUT_S, 26.0)
+        self.assertLess(coordinator.GUARD_READY_TIMEOUT_S, 30.0)
+
+    def test_blocked_journal_fsync_expires_lease_and_keeps_receipt(self):
+        manifest = prep.prepare(state(), urdf(), transmissions())
+        with tempfile.TemporaryDirectory() as directory:
+            control = Path(directory)/'stable-control'
+            control.mkdir(mode=0o700)
+            lease = bridge.GuardLease(directory, manifest['input']['reference_20d'], lambda: True)
+            guard = FakeGuard(lease)
+            processes, errors = [], []
+            stalled, release = threading.Event(), threading.Event()
+            original_fsync = os.fsync
+            journal_calls = [0]
+
+            def delayed_fsync(fd):
+                try: name = os.readlink('/proc/self/fd/' + str(fd))
+                except OSError: name = ''
+                if '/worker-events-' in name:
+                    journal_calls[0] += 1
+                    # stage receipt, UUID request, then dispatched event.
+                    if journal_calls[0] == 3:
+                        stalled.set()
+                        if not release.wait(4):
+                            raise TimeoutError('test_stall_not_released')
+                return original_fsync(fd)
+
+            def spawn(_, intent, uid):
+                process = worker_process(manifest, lease.session_id, 'success')
+                processes.append(process)
+                return process
+
+            def invoke():
+                try:
+                    coordinator.coordinate(lease, guard, manifest, urdf(),
+                                           transmissions(), spawn, control, timeout=5)
+                except BaseException as exc:
+                    errors.append(exc)
+
+            try:
+                with patch.object(bridge.arm, 'physical_release_gate'), \
+                     patch.object(coordinator, 'GLOBAL_RECEIPT_DIR', control), \
+                     patch.object(coordinator, 'COORDINATOR_PROGRESS_TIMEOUT_S', .2), \
+                     patch.object(coordinator.os, 'fsync', side_effect=delayed_fsync):
+                    thread = threading.Thread(target=invoke)
+                    thread.start()
+                    try:
+                        self.assertTrue(stalled.wait(3), 'journal fsync was not reached')
+                        limit = time.monotonic()+2
+                        # ``failed`` is set before the zero deadline is fsynced
+                        # and replaced; observe the consumer's actual verdict.
+                        # Natural expiry is also valid.
+                        rejected = False
+                        while time.monotonic() < limit:
+                            try:
+                                bridge.native.check_lease(lease.path, time.monotonic())
+                            except (RuntimeError, OSError, ValueError):
+                                rejected = True
+                                break
+                            time.sleep(.02)
+                        self.assertTrue(rejected, 'lease remained valid after coordinator stalled')
+                    finally:
+                        # Always release/join before removing the fake gate and
+                        # temporary paths, even if a test assertion fails.
+                        release.set()
+                        thread.join(3)
+                    self.assertFalse(thread.is_alive())
+                    self.assertTrue(errors)
+                    self.assertIn('coordinator_progress_expired', str(errors[0]))
+                    self.assertTrue((control/'PENDING_OR_UNRESOLVED.json').is_file())
+                    self.assertEqual(guard.cancelled, [GOAL])
+            finally:
+                release.set()
+                guard.close()
+                for process in processes:
+                    if process.poll() is None: process.terminate()
+                    process.wait(timeout=3)
+                    for stream in (process.stdin, process.stdout, process.stderr): stream.close()
+
     def test_gate_blocks_before_receipt_or_worker(self):
         with self.assertRaisesRegex(RuntimeError, 'physical_dispatch_blocked'):
             coordinator.coordinate(None, None, None, None, None, None, None)
@@ -120,6 +216,7 @@ class CoordinatorTests(unittest.TestCase):
                         result = coordinator.coordinate(lease, guard, manifest, urdf(),
                                                         transmissions(), spawn, control, timeout=5)
                         self.assertEqual(result['status'], 'ACTION_SUCCEEDED_AND_POSTFLIGHT_OBSERVED')
+                        self.assertEqual(guard.ready_timeout, coordinator.GUARD_READY_TIMEOUT_S)
                         self.assertFalse(result['physical_stop_verified'])
                     else:
                         if mode == 'bad_pending':

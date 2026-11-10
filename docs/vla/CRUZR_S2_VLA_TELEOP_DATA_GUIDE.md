@@ -1,5 +1,10 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-LAUNCHER-REVIEW-20261110.** Check integrado del
+lanzador actualizado pasó sin goal; se revisaron entrega parcial y vigilancia
+de progreso. Integridad de fuentes no habilita la trayectoria física.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#revisión-del-lanzador--10-11-2026).
+
 **10-11-2026 — ARM-PICO-FULL-PASSIVE-20261110.** Se comprobó la integración
 PC→Motion y las huellas ROSA con UUID sintético sin goal; las fuentes y
 entradas coinciden con una copia vinculada. No valida trayectoria ni parada.

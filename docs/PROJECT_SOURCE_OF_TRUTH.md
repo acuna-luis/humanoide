@@ -1,5 +1,13 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-LAUNCHER-REVIEW-20261110: revisión parcial del
+lanzador.** El `--check` integrado pasó sin goal con fuentes actualizadas; se
+añadieron vigilancia de progreso y tratamiento conservador de entrega parcial.
+Una copia vinculada coincide con los bytes locales, sin acreditar runtime ni
+seguridad física. Gates, instalación y prueba física siguen PENDIENTES.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#revisión-del-lanzador--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-launcher-review-20261110).
+
 **10-11-2026 — ARM-PICO-FULL-PASSIVE-20261110: integración pasiva completa.**
 PC→Motion, latido, guardia ROS2, lease compartido y huellas ROSA se comprobaron
 con UUID sintético, sin meta ni movimiento. Las fuentes controladas y entradas

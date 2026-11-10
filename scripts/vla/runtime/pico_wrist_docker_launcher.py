@@ -70,26 +70,84 @@ def write_stream(fd, data, timeout):
         view = view[count:]
 
 
+class StreamStartUncertain(RuntimeError):
+    """A child exists but its source or payload delivery did not complete.
+
+    If source_may_have_executed, retain the process, revoke its lease, and
+    treat the outcome as uncertain. Do not kill a potentially active worker.
+    """
+    def __init__(self, process, phase, cause, *, source_may_have_executed,
+                 local_cleanup_observed=False):
+        self.process = process
+        self.phase = phase
+        self.source_may_have_executed = source_may_have_executed
+        self.local_cleanup_observed = local_cleanup_observed
+        super().__init__('stream_start_uncertain:' + phase + ':' + type(cause).__name__ + ':' + str(cause))
+
+
+def _reap_unstarted_bootstrap(child):
+    """Stop only a bootstrap that cannot have executed its task source.
+
+    The local docker-exec process is controlled here; its completion alone
+    does not prove remote process cleanup or physical stopping.
+    """
+    if child.stdin is not None:
+        try: child.stdin.close()
+        except OSError: pass
+    try:
+        child.wait(timeout=1)
+    except subprocess.TimeoutExpired:
+        child.terminate()
+        try: child.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            child.kill()
+            child.wait(timeout=1)
+
+
 def start_streamed(container, setup, source, payload, *, stderr):
     sentinel = 'PICO_SOURCE_END_' + uuid.uuid4().hex
     if sentinel in source:
         raise ValueError('source_sentinel_collision')
     bootstrap = ('import sys\nparts=[]\nfor line in sys.stdin:\n'
-                 ' if line.rstrip("\\n")=='+repr(sentinel)+': break\n'
+                 ' if line=='+repr(sentinel+'\n')+': break\n'
                  ' parts.append(line)\n'
                  'else: raise SystemExit("incomplete source")\n'
                  'exec(compile("".join(parts),"<pico-streamed-source>","exec"))\n')
     command = ('source '+setup+'; export ROS2CLI_DISABLE_DAEMON=1; '
                'exec python3 -B -u -c '+shlex.quote(bootstrap))
+    encoded_payload = (json.dumps(payload, allow_nan=False)+'\n').encode()
     child = subprocess.Popen(['docker', 'exec', '-i', container, 'bash', '-lc', command],
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=stderr, bufsize=0)
-    data = (source+'\n'+sentinel+'\n'+json.dumps(payload, allow_nan=False)+'\n').encode()
     try:
-        write_stream(child.stdin.fileno(), data, 10.0)
-    except BaseException:
-        # Source or payload might have arrived. Never interpret termination of
-        # docker exec as physical cancellation; caller preserves the receipt.
-        raise
+        # Before attempting any sentinel, source cannot be executed even if
+        # the full source write completed immediately before an interrupt.
+        write_stream(child.stdin.fileno(), (source+'\n').encode(), 10.0)
+    except BaseException as exc:
+        reaped = False
+        try:
+            _reap_unstarted_bootstrap(child)
+            reaped = True
+        except BaseException:
+            pass  # Preserve handle; remote cleanup unknown.
+        raise StreamStartUncertain(child, 'source', exc,
+                                   source_may_have_executed=False,
+                                   local_cleanup_observed=reaped) from exc
+    try:
+        # An interrupt can arrive after the complete sentinel reached the
+        # child but before write_stream returned; treat any exception here as
+        # potentially executed, even when a partial line would be harmless.
+        write_stream(child.stdin.fileno(), (sentinel+'\n').encode(), 10.0)
+    except BaseException as exc:
+        raise StreamStartUncertain(child, 'sentinel', exc,
+                                   source_may_have_executed=True) from exc
+    try:
+        write_stream(child.stdin.fileno(), encoded_payload, 10.0)
+    except BaseException as exc:
+        # Once sentinel is accepted, the source may run and EOF might turn a
+        # partial last line into valid JSON. Preserve the handle; no signal,
+        # stdin close, retry, or physical-stop claim is permitted here.
+        raise StreamStartUncertain(child, 'payload', exc,
+                                   source_may_have_executed=True) from exc
     return child
 
 
@@ -126,6 +184,85 @@ class HostOutput:
         except (OSError, BlockingIOError):
             self.failed = True
         return not self.failed
+
+
+def _track_stream_start(role, uncertain_children, output, *args, **kwargs):
+    """Retain a child if bootstrap delivery is uncertain; never resend."""
+    try:
+        return start_streamed(*args, **kwargs)
+    except StreamStartUncertain as exc:
+        # Preserve the handle in launch's scope even as the coordinator
+        # journals and propagates the error. The durable worker intent already
+        # exists before start_worker is called.
+        if exc.source_may_have_executed or not exc.local_cleanup_observed:
+            uncertain_children.append((role, exc.phase, exc.process))
+        output.emit({'event': 'OPERATOR_ALERT', 'reason': 'bootstrap_delivery_uncertain',
+                     'role': role, 'phase': exc.phase,
+                     'source_may_have_executed': exc.source_may_have_executed,
+                     'local_cleanup_observed': exc.local_cleanup_observed,
+                     'no_retry': True, 'physical_stop_confirmed': False,
+                     'instruction': 'Supervise el robot; no reintente ni envíe HOME.'})
+        raise
+
+
+def _observe_uncertain_child(child, output, role, phase):
+    """Keep a possibly active child under observation without signalling it.
+
+    EOF, a process exit or a cancellation request never establish physical
+    stopping. If the child remains alive, keep the host alive and warn rather
+    than silently abandoning its process handle. No commands are sent to it.
+    """
+    stream = child.stdout
+    if stream is not None:
+        try:
+            os.set_blocking(stream.fileno(), False)
+        except (OSError, ValueError):
+            stream = None  # Continue observing process; channel state unknown.
+    last_notice = float('-inf')
+    while True:
+        try:
+            status = child.poll()
+            if status is not None:
+                output.emit({'event': 'uncertain_child_exit_observed', 'role': role,
+                             'phase': phase, 'returncode': status, 'no_retry': True,
+                             'physical_stop_confirmed': False})
+                return status
+            now = time.monotonic()
+            if now-last_notice >= 5:
+                output.emit({'event': 'UNRESOLVED_MONITORING', 'role': role, 'phase': phase,
+                             'no_retry': True, 'physical_stop_confirmed': False,
+                             'instruction': 'Supervise el robot; no reintente ni envíe HOME.'})
+                last_notice = now
+            if stream is None:
+                time.sleep(.1)
+                continue
+            try:
+                readable, _, _ = select.select([stream.fileno()], [], [], .1)
+            except (OSError, ValueError):
+                stream = None
+                continue
+            if readable:
+                try: data = os.read(stream.fileno(), 400)
+                except BlockingIOError: continue
+                except OSError:
+                    stream = None
+                    continue
+                if not data:
+                    stream = None
+                else:
+                    # Drain the pipe so a worker cannot remain blocked on a
+                    # full buffer; forward it without treating it as a result.
+                    output.emit({'event': 'uncertain_child_output', 'role': role,
+                                 'text': data.decode('utf-8', 'replace'),
+                                 'physical_stop_confirmed': False})
+        except KeyboardInterrupt:
+            output.emit({'event': 'OPERATOR_ALERT', 'reason': 'uncertain_child_still_monitored',
+                         'role': role, 'no_retry': True, 'physical_stop_confirmed': False})
+        except OSError as exc:
+            # A failure to query the local process is not evidence of exit.
+            output.emit({'event': 'OPERATOR_ALERT', 'reason': 'uncertain_child_poll_failed:' + str(exc),
+                         'role': role, 'no_retry': True, 'physical_stop_confirmed': False})
+            time.sleep(.1)
 
 
 def pc_preflight_handoff(session, output, input_fd):
@@ -172,6 +309,7 @@ def launch(payload):
     lock_fd = coordinator.acquire_trial_lock()
     child = pipe = lease = pc = None
     worker_holder = []
+    uncertain_children = []
     directory = None
     completed = False
     try:
@@ -184,8 +322,9 @@ def launch(payload):
         app, ros = discover_containers()
         directory = tempfile.mkdtemp(prefix='pico-wrist-live-', dir='/tmp')
         verify_shared_tmp(directory, app)
-        child = start_streamed(ros, '/opt/ros/humble/setup.bash', payload['guard_source'], session,
-                               stderr=subprocess.DEVNULL)
+        child = _track_stream_start('guard', uncertain_children, output,
+            ros, '/opt/ros/humble/setup.bash', payload['guard_source'], session,
+            stderr=subprocess.DEVNULL)
         lease = bridge.GuardLease(directory, payload['manifest']['input']['reference_20d'],
                                   lambda: child.poll() is None and pc.alive() and not output.failed,
                                   session_id=session['session_id'])
@@ -198,8 +337,8 @@ def launch(payload):
                        'intent_uid': intent_uid}
             error_log = coordinator.GLOBAL_RECEIPT_DIR/('worker-stderr-'+session['session_id']+'.log')
             with error_log.open('x', encoding='utf-8') as errors:
-                worker = start_streamed(app, '/opt/walker/setup.bash', payload['worker_source'], request,
-                                        stderr=errors)
+                worker = _track_stream_start('worker', uncertain_children, output,
+                    app, '/opt/walker/setup.bash', payload['worker_source'], request, stderr=errors)
             worker_holder.append(worker)
             return worker
         result = coordinator.coordinate(lease, pipe, payload['manifest'], payload['urdf_text'],
@@ -216,6 +355,11 @@ def launch(payload):
             except Exception as exc:
                 output.emit({'event':'lease_revocation_failed', 'reason':str(exc),
                              'physical_stop_verified':False})
+        # A failed bootstrap after the sentinel may have reached executable
+        # code. Keep the host and the exact child handles alive until exit;
+        # do not signal a worker, resend, or mistake exit for physical stop.
+        for role, phase, uncertain_child in uncertain_children:
+            _observe_uncertain_child(uncertain_child, output, role, phase)
         if completed and pipe is not None:
             pipe.stop()
         if completed and child is not None:
