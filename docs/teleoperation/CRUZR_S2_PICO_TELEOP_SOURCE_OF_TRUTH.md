@@ -1,5 +1,15 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**10-11-2026 ~19:40 — reaplicado PICO-XR-USB-RECONNECT:** el usuario comunicó
+`tcp connection failed` en el visor al lanzar `probar_pico_v4.sh --teleoperate`
+con `PICO_PC_IP=127.0.0.1`. PICO `PA94Y0MGKB070822G` visible por USB, PC
+escuchando 63901, pero daemon ADB parado y sin reverse. `configure_pico_xr_usb.sh
+--check` confirmó STOP; `--configure` recreó `tcp:63901 → tcp:63901`
+(`XR_USB_REVERSE_OK=1`). Sin movimiento ni cambio de modo. Causa probable: el
+daemon ADB no sobrevive entre sesiones; si reaparece el error, repetir
+`--check` y `--configure` antes de lanzar la teleoperación. Reversión:
+`--remove`.
+
 **10-11-2026 — HEAD-PICO-SUPERVISED-20261110.** Una tarea fija de cabeza desde
 PICO/v4 respondió SUCCEED y quedó en reposo, pitch−0,430665rad; los otros ejes
 no variaron en las muestras. El usuario confirmó bajada suave, sin contacto ni
