@@ -1,5 +1,10 @@
 # Preparación del puente SmolVLA de pelota — 10-11-2026
 
+**Revisión posterior 10-11 — SMOLVLA-NATIVE-LIVE-20261110.** El flujo de
+observaciones y SmolVLA en Ada se conectó a la conversión a `MetaMove`: cuatro
+borradores, cero órdenes. Cadena URDF y orden del modelo coinciden por nombre;
+parser, trayectoria, parada y mano siguen sin validar. [Detalle y evidencia](SMOLVLA_NATIVE_ARM_STEP_20261110.md#observaciones-actuales--prueba-integrada-sin-movimiento).
+
 **Revisión posterior 10-11 — SMOLVLA-NATIVE-ARM-DRAFT-20261110.** Se añadió
 una conversión offline desde un shadow a un borrador `MetaMove` de brazo
 derecho. Reutiliza el formato nativo, pero no valida el orden, trayectoria,

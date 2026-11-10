@@ -1,4 +1,5 @@
 import io
+import json
 import math
 import unittest
 import xml.etree.ElementTree as ET
@@ -63,6 +64,43 @@ class NativeArmDraftTests(unittest.TestCase):
             with patch('sys.stderr', new_callable=io.StringIO) as error:
                 self.assertEqual(subject.main(['--run']), 2)
                 self.assertIn('BLOCKED', error.getvalue())
+
+    def test_live_stream_converts_real_lifecycle_without_a_hand_command(self):
+        rows = shadow_rows()
+        preview = subject.LivePreview(.05, 4.0)
+        self.assertEqual(preview.accept(rows[0])['event'], 'native_preview_ready')
+        step = preview.accept(rows[1])
+        self.assertEqual(step['event'], 'native_step_preview')
+        self.assertEqual(step['input_source'], 'live_shadow_relay')
+        self.assertEqual(step['hand_scalar_uninterpreted'], .9)
+        self.assertEqual(step['physical_commands_sent'], 0)
+        self.assertEqual(len(ET.fromstring(step['candidate_xml']).findall('.//Action')), 1)
+        self.assertIsNone(preview.accept(rows[2]))
+        self.assertEqual(preview.accept(rows[3])['samples'], 1)
+        preview.finish()
+
+    def test_live_stream_rejects_stale_sequence_and_incomplete_summary(self):
+        rows = shadow_rows()
+        preview = subject.LivePreview(.05, 4.0)
+        preview.accept(rows[0])
+        preview.accept(rows[1])
+        duplicate = dict(rows[1], index=1)
+        with self.assertRaisesRegex(ValueError, 'sequence'):
+            preview.accept(duplicate)
+        with self.assertRaisesRegex(ValueError, 'incomplete'):
+            preview.finish()
+        with self.assertRaises(ValueError):
+            preview.accept(dict(rows[2], samples=2))
+
+    def test_stream_cli_requires_complete_shadow_and_emits_no_command(self):
+        data = ''.join(json.dumps(row) + '\n' for row in shadow_rows()).encode()
+        source = io.TextIOWrapper(io.BytesIO(data), encoding='utf-8')
+        with patch('sys.stdin', source), patch('sys.stdout', new_callable=io.StringIO) as output:
+            self.assertEqual(subject.main(['--stream', '--max-step-rad', '.05', '--duration-s', '4']), 0)
+            events = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual([row['event'] for row in events],
+                         ['native_preview_ready', 'native_step_preview', 'native_preview_done'])
+        self.assertTrue(all(row['physical_commands_sent'] == 0 for row in events))
 
 
 if __name__ == '__main__':

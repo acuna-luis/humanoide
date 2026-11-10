@@ -1,6 +1,6 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
-**Estado: conversión offline preparada; ejecución física PENDIENTE.** El
+**Estado: conversión en vivo verificada sin control físico; ejecución PENDIENTE.** El
 usuario solicitó acortar la prueba y reutilizar lo ya disponible. Las tareas
 de fábrica y `scripts/custom_tasks/heart_v4_fingers.xml` muestran el formato
 `MetaMove`, `type="arm"`, `location="right"` y `joint_angles` de siete valores.
@@ -16,6 +16,13 @@ los valores originales y limitados, el orden hipotético y un único XML candida
 `MetaMove type="arm" location="right"`. No instala archivos en Motion, no
 crea clientes ROS, no envía órdenes y `--run` devuelve 2 sin conectar.
 
+La opción `--stream` procesa el flujo real de `run_ball_live_shadow.py` por
+stdin y produce un borrador por cada predicción, tras verificar checkpoint,
+secuencia, sellos, estructura y cierre del flujo. Conserva el escalar de mano
+sin interpretarlo como orden. No instala tareas ni publica a actuadores. Si el
+flujo termina incompleto o contiene datos incompatibles, devuelve error; ya
+puede haber impreso borradores anteriores, que tampoco habilitan movimiento.
+
 Este es un **borrador para revisar, no una tarea habilitada**:
 
 * El orden de siete ejes y el significado de las metas del modelo aún no se
@@ -23,8 +30,9 @@ Este es un **borrador para revisar, no una tarea habilitada**:
 * El parámetro de salto y la duración son experimentales; no son límites de
   seguridad ni comprueban velocidad, aceleración, colisión o parada. Recortar
   una propuesta altera la política y puede impedir completar la tarea.
-* La entrada es una grabación: no acredita el estado actual, frescura o
-  sincronía. No contiene control de dedos ni detección de agarre o apoyo.
+* Una grabación no acredita estado actual; el flujo en vivo tampoco acredita
+  latencia física completa o sincronía. No contiene control de dedos ni
+  detección de agarre o apoyo.
 * La ejecución de `MetaMove` en esta postura, la aceptación del formato y su
   cancelación/retorno siguen sin verificarse; no instalar ni ejecutar este XML
   como resultado del diagnóstico.
@@ -45,7 +53,47 @@ y `physical_commands_sent=0`. Los cuatro tests locales pasan. La muestra es
 del 09-11, anterior al movimiento de cabeza; no describe la escena actual.
 Entrada SHA256 `5be819ea4a7941c3b136c40aa66494bbda42c5b6b116fbe431686cf2b85e8131`.
 
-Para pasar a un ciclo físico sigue faltando conectar observaciones y acciones
-en tiempo real, comprobar el orden y la parada de la tarea de brazo, y disponer
+## Observaciones actuales — prueba integrada sin movimiento
+
+Con el checkpoint ya entrenado y la cámara del robot se ejecutó un único flujo
+de 5 s a 1 Hz. La inferencia en Ada entregó cuatro predicciones y la conversión
+generó cuatro borradores de una acción derecha cada uno; no se enviaron órdenes.
+La mayor diferencia original propuesta−estado fue 1,157168 rad; cada diferencia
+del borrador se recortó al parámetro experimental 0,05 rad y la duración se
+fijó experimentalmente en 4 s. Estos valores no son límites certificados. La
+inferencia tardó 0,168–0,564 s; adaptador PC a predicción 0,271–0,687 s, sin
+incluir transporte Vision→PC. No se guardaron imágenes ni se verificó que el
+modelo identifique la pelota. El modelo vio las imágenes recibidas; eso no
+demuestra un ciclo cerrado ni un agarre.
+
+Se comprobaron localmente 7 tests. El colector de Vision y el contenedor
+temporal de Ada habían terminado al concluir. Evidencia privada en
+`../Humanoide-vla-evidence/20261110_NATIVE_LIVE_3ndpJ8/`: `shadow.jsonl`
+SHA256 `ed178695efa640def802d854a9cc8738d33374191351f3563b4ff72333087fc1`,
+`native-preview.jsonl` `a9eba4fe6a756ce9d91688570e709058993656cab32f59acc28ae6089c2514bd`,
+`source.py` `37a057432ab181e399613451f2c8d38472254e88212e146dc8b8f965d3f7478f`
+y `shadow-stderr.log` `f788aef7b645aba82d1ac2ed3bf547ed17d0a1dfd05ee5c0aea681a7fefd6e4b`.
+
+La cadena ROS `R_shoulder_pitch→roll→yaw→elbow_roll→elbow_yaw→wrist_pitch→roll`
+del URDF de Motion leído coincide con el orden de salida del modelo; el URDF
+leído tenía SHA256 `a4bf032f2c8314c8d0f320357bbc7da8b75b846c1d44fb05b37ed0cb3bb0acfc`.
+Es una consistencia estática de la cadena cinemática, no demuestra que el
+parser de `MetaMove` aplique ese mismo orden o que el archivo sea el usado por
+el controlador en ejecución.
+
+Para reproducir la conexión en observación, comprobar antes las fuentes fijadas
+según [la receta shadow](../../scripts/vla/SMOLVLA_BALL_LIVE_SHADOW.md) y,
+desde la raíz, usar sus argumentos de servidor existentes con `--seconds 5
+--fps 1` y canalizar stdout a:
+
+```bash
+python3 -B scripts/vla/prepare_ball_native_arm_step.py --stream --max-step-rad 0.05 --duration-s 4
+```
+
+El paso limita cada articulación individual, cambia la salida del modelo y
+no garantiza una trayectoria real, colisiones, agarre, parada o éxito físico.
+
+Para pasar a un ciclo físico sigue faltando conectar los pasos al control del
+robot, comprobar el orden y la parada de la tarea de brazo, y disponer
 de una orden de mano con límites/confirmación de agarre y suelta. Ver la
 [auditoría del SDK y mano](SMOLVLA_SDK_COMMAND_AGE_20261110.md).

@@ -1,5 +1,20 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-NATIVE-LIVE-20261110
+
+**10-11-2026, Europe/Madrid — integración de observación y conversión
+VERIFICADA; ciclo físico PENDIENTE.** El usuario pidió conectar las piezas.
+Se agregó lectura de flujo a la conversión y se probó con observaciones reales;
+no se enviaron órdenes ni se cambiaron controladores, modos o SDK.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | Conversor de una grabación existente y shadow Ada independientes; brazo, mano y parada no conectados físicamente. Antes de los cambios: commit `99f2d77`; blobs de scripts `1f69fd0d797d455330c02d33442bb2ec76cabef5` y test `4c7abd2ebadbe9542ac9a2508dff22e76430a2b0`, global `32ef772cec4f36020fa1ecfac6abe9ce9fbadf4b`, registro `f03c91a0b294691fac4d660746dede815302b01c`, puente `c623bc23e41f0b21b24f69e01da3743552190617` y guía nativa `0a15fb63d663f9a9e6424fd25a828280bd002680`. Se conservaron los tres elementos no seguidos preexistentes. |
+| Fuente | `scripts/vla/prepare_ball_native_arm_step.py` SHA256 `adeab6baf81fd85bf1cd77a981202df2552f6eb95dacef76b78bc09f22b55b5a`; test `scripts/vla/test_prepare_ball_native_arm_step.py` `90950dd953147ae88babcfbe0577844928b3e6ecaebae8ee0b5d3b531bd1c310`. La copia exacta utilizada en la prueba `source.py` SHA256 `37a057432ab181e399613451f2c8d38472254e88212e146dc8b8f965d3f7478f` difiere del archivo final sólo en el docstring. Python estándar y auditor existente. |
+| Prueba | Flujo real Vision→Ada→PC,5s/1Hz, checkpoint `e707eea07b58e14b979e78463b94ba75a52b1c18abf8076aebc8aa34ac77f8da`: cuatro predicciones y cuatro borradores nativos; cero órdenes. Diferencia original máxima1,157168rad; recorte experimental0,05rad por eje, duración experimental4s, no límites físicos. Inferencia0,168–0,564s, adaptador PC→predicción0,271–0,687s sin transporte Vision→PC. Siete tests locales pasan; `--run` sigue bloqueado. Salida conserva escalar de mano sin interpretarlo. |
+| Evidencia y reversión | `../Humanoide-vla-evidence/20261110_NATIVE_LIVE_3ndpJ8/`: `shadow.jsonl` SHA256 `ed178695efa640def802d854a9cc8738d33374191351f3563b4ff72333087fc1`; `native-preview.jsonl` `a9eba4fe6a756ce9d91688570e709058993656cab32f59acc28ae6089c2514bd`; `source.py` `37a057432ab181e399613451f2c8d38472254e88212e146dc8b8f965d3f7478f`; log `f788aef7b645aba82d1ac2ed3bf547ed17d0a1dfd05ee5c0aea681a7fefd6e4b`. Sin imágenes almacenadas; colector y contenedor terminaron. Revertir cambios locales selectivamente frente a `99f2d77`; conservar o retirar sólo esta evidencia según necesidad. Sin configuración remota que revertir. |
+| Alcance y deuda | El URDF de Motion leído SHA256 `a4bf032f2c8314c8d0f320357bbc7da8b75b846c1d44fb05b37ed0cb3bb0acfc` tiene la cadena derecha en orden homólogo a la salida del modelo; no demuestra orden efectivo de `MetaMove` ni modelo cargado. El flujo no instala ni acciona tareas, no prueba latencia completa, agarre o parada. Faltan conexión física, registro/semántica y parada de brazo, control/fases y límites de mano, y comprobación de condiciones físicas actuales. [Receta y límites](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#observaciones-actuales--prueba-integrada-sin-movimiento). |
+
 ## SMOLVLA-NATIVE-ARM-DRAFT-20261110
 
 **10-11-2026, Europe/Madrid — conversión offline VERIFICADA; puente y ciclo

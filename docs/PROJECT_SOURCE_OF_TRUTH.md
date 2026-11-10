@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-NATIVE-LIVE-20261110: conversión en vivo sin
+movimiento.** Cuatro observaciones actuales produjeron cuatro borradores
+`MetaMove` del brazo derecho en un flujo integrado; el recorte experimental
+no certifica trayectoria ni parada. La cadena del URDF coincide por nombre
+con el orden del modelo, sin validar el parser de tareas. No se enviaron
+órdenes; el ciclo físico y la mano siguen PENDIENTES.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-native-live-20261110).
+
 **10-11-2026 — SMOLVLA-NATIVE-ARM-DRAFT-20261110: conversión offline.**
 Para acortar la integración se preparó un paso candidato al formato nativo
 `MetaMove` de brazo derecho a partir de un shadow grabado, sin otra inferencia.
