@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-PHYSICAL-BRIDGE/GRASP-20261110: SmolVLA ejecutado en el robot.**
+Con autorización del propietario, un puente simple
+(`scripts/vla/smolvla_physical_bridge.py`: shadow en vivo → recorte → `MetaMove`
+vía `rosa action send_goal`) sustituyó la pila lease/guardia para este piloto.
+Brazo derecho: 3/3 pasos SUCCEED. Intento de agarre con mano v4: 50/50 pasos
+SUCCEED, sin abortos, seguimiento ≤3,4 mrad; tarea de pelota no completada.
+Brazo fuera de HOME y mano cerrada al terminar. Metodología validada; faltan
+datos para la tarea. [Documento vigente](vla/SMOLVLA_PUENTE_FISICO_20261110.md),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-physical-grasp-20261110).
+
 **10-11-2026 — RELEVO-CLAUDE-20261110: relevo actualizado y privado.**
 Se actualizó `CLAUDE.md` y la guía portable para que otro agente pueda continuar
 sin el historial del chat. La carpeta privada `RELEVO_CLAUDE_20261110/` reúne

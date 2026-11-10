@@ -1,5 +1,10 @@
 # Relevo portable: SmolVLA de la pelota — 10-11-2026
 
+> **HISTÓRICO.** El estado vigente, el puente físico y cómo continuar están en
+> [SMOLVLA_PUENTE_FISICO_20261110.md](SMOLVLA_PUENTE_FISICO_20261110.md). Lo que
+> sigue describe la situación anterior a la ejecución física del 10-11 por la
+> tarde (gate cerrado, pila lease/guardia), ya superada.
+
 Este documento permite a otro agente o persona retomar el piloto sin depender
 del historial del chat. La última instrucción fue detener el trabajo físico y
 cambiar a Claude; la solicitud posterior autoriza actualizar el relevo, no

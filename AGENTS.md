@@ -14,6 +14,8 @@ instrucciones son obligatorias para cualquier agente que trabaje aquí.
      [`docs/teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md`](docs/teleoperation/CRUZR_S2_PICO_TELEOP_SOURCE_OF_TRUTH.md).
    - Captura, datasets, entrenamiento o evolución VLA:
      [`docs/vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md`](docs/vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md).
+   - SmolVLA de la pelota (puente físico vigente, estado y relevo):
+     [`docs/vla/SMOLVLA_PUENTE_FISICO_20261110.md`](docs/vla/SMOLVLA_PUENTE_FISICO_20261110.md).
    - Estado y activación gradual del VLA suministrado:
      [`docs/guides/CRUZR_S2_VLA_SAFE_ENABLEMENT.md`](docs/guides/CRUZR_S2_VLA_SAFE_ENABLEMENT.md).
    - Cajas, AprilTags y transferencia entre mesas:
@@ -67,7 +69,9 @@ a descubrir contenedores, tipos, endpoints y estados.
   entradas RGB-D del costmap para evitar que la propia caja se marque como
   obstáculo. Debe conservar LiDAR, odometría, mapa, bumpers y paros, y restaurar
   la configuración al terminar.
-- El VLA suministrado permanece limitado a inferencia/shadow. No conecte un
+- El VLA suministrado (UBTECH) permanece limitado a inferencia/shadow; el
+  SmolVLA de la pelota propio tiene su puente físico autorizado por el
+  propietario (ver su documento), que no habilita el VLA suministrado. No conecte un
   publicador físico ni arranque sus contenedores para movimiento hasta cumplir
   los gates de la guía VLA y recibir autorización explícita.
 - La urgencia sí
