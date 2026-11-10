@@ -3,8 +3,9 @@
 **10-11-2026 — ARM-PICO-731084-ARCHIVE-PREP-20261110: recuperación preparada,
 no ejecutada.** Nueva herramienta específica del intento cancelado valida el
 UUID y la evidencia histórica, y conserva un bloqueo duradero aunque archive
-el marker. Pasan diez tests y revisión independiente. No existe aún transporte
-revisado de la evidencia a Motion; no hubo check remoto, archivado ni movimiento.
+el marker. Pasan diez tests y revisión independiente. Un check remoto fue rechazado
+por detectar un Python en el contenedor ROS; se observó un daemon ROS. La
+evidencia temporal se retiró; no hubo archivado ni movimiento.
 Una consulta puntual observó marker y XML intactos, UUID en estado 5, velocidades
 cero y 20 actuadores sin error; no demuestra parada física ni exclusividad. El
 fallo de supervisión y el despacho físico de SmolVLA siguen pendientes.

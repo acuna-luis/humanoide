@@ -2,7 +2,7 @@
 
 ## Recuperación preparada de 731084 — 10-11-2026
 
-**PREPARADO EN PC; NO EJECUTADO EN MOTION.** Se preparó una herramienta para
+**CHECK RECHAZADO EN MOTION; ARCHIVADO NO EJECUTADO.** Se preparó una herramienta para
 la sesión 731084 que valida el UUID exacto y la evidencia histórica de status
 5, junto con marker, journal, lease y XML de esa sesión. La evidencia de
 cancelación está fijada por SHA; una lista actual vacía no se trata como
@@ -12,9 +12,10 @@ concreto. La lectura histórica y los tests no certifican parada física.
 
 El archivador futuro mantiene el bloqueo duradero `RECOVERY-...-intent.json`
 que rechazan los lanzadores cooperantes, incluso si completa el archivado. No
-habilita por sí solo movimiento ni SmolVLA. **No se ha ejecutado ni su check
-en Motion ni el archivado:** falta transporte revisado del código y de la
-evidencia desde el PC. Una consulta puntual posterior observó marker y XML
+habilita por sí solo movimiento ni SmolVLA. **El check en Motion fue rechazado antes de comprobar el XML** porque detectó
+un proceso Python. Una lectura posterior identificó el daemon ROS; no se cambió
+ni se detuvo. El transporte verificó SHA y eliminó el temporal. No se ha
+ejecutado el archivado. Una consulta puntual posterior observó marker y XML
 intactos, UUID estado 5, velocidades cero, sin errores de 20 actuadores y sin
 procesos adicionales en los dos contenedores; no se guardó esa salida y no
 acredita exclusividad ni parada física. No hubo nuevas órdenes de movimiento.

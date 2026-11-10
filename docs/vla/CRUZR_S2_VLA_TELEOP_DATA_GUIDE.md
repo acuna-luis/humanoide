@@ -3,8 +3,9 @@
 **10-11-2026 — ARM-PICO-731084-ARCHIVE-PREP-20261110.** Preparada una
 recuperación específica del intento 731084 que exige evidencia histórica del
 UUID cancelado y mantiene un bloqueo para nuevas órdenes. Diez tests y revisión
-independiente pasan; sin transporte revisado, check remoto, archivado ni
-movimiento. Una consulta puntual observó marker/XML intactos, UUID estado 5 y
+independiente pasan. Un check remoto fue rechazado por detectar un proceso
+Python, identificado después como daemon ROS; el temporal se retiró. Sin
+archivado ni movimiento. Una consulta puntual observó marker/XML intactos, UUID estado 5 y
 velocidades cero; no acredita parada física ni exclusividad. Supervisión y
 despacho físico SmolVLA siguen pendientes.
 [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#recuperación-preparada-de-731084--10-11-2026),
