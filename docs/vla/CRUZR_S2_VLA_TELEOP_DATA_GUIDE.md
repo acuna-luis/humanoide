@@ -1,5 +1,12 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — RELEVO-CLAUDE-20261110.** Actualizados el punto de entrada de
+Claude y el relevo portable con las pruebas sin movimiento y los pendientes.
+La nueva entrega privada agrupa bundle `fcb1ab5`, evidencia, SDK y respaldos
+seleccionados y se ha verificado en este PC; no se ha trasladado a otro. La
+historia Git contiene una credencial y la entrega no está cifrada. El usuario
+ha detenido el ensayo físico. [Ficha](../SYSTEM_CUSTOMIZATIONS.md#relevo-claude-20261110).
+
 **10-11-2026 — SMOLVLA-LOCK-REAL-CHECKS-20261110.** El puente revisado pasó
 un watchdog en Motion con servidor sintético y un check de modelo real con
 197 latidos y permiso, sin metas físicas. El modelo propuso cambios grandes en

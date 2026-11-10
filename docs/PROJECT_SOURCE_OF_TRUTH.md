@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — RELEVO-CLAUDE-20261110: relevo actualizado y privado.**
+Se actualizó `CLAUDE.md` y la guía portable para que otro agente pueda continuar
+sin el historial del chat. La carpeta privada `RELEVO_CLAUDE_20261110/` reúne
+el bundle `fcb1ab5`, cambios y evidencia seleccionados, SDK y respaldos
+separados. Verificada en este PC; transferencia a otro sigue pendiente. Contiene
+una credencial preexistente en Git y no está cifrada; no publicar ni subir a nube
+sin saneamiento y protección. El usuario detuvo el ensayo físico; la solicitud
+actual solo prepara el relevo. [Ficha](SYSTEM_CUSTOMIZATIONS.md#relevo-claude-20261110).
+
 **10-11-2026 — SMOLVLA-LOCK-REAL-CHECKS-20261110: guardia y modelo sin movimiento.**
 Con el puente revisado pasó en Motion un watchdog con servidor sintético aislado
 (una meta ficticia y cero físicas). Un segundo check combinó guardia real,
