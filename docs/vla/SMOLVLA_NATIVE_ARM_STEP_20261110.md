@@ -1,5 +1,42 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Lectura de guardia con escritura bloqueada — 10-11-2026
+
+**PREPARADO Y PROBADO LOCALMENTE; NO PROBADO EN MOTION.** La lectura del
+canal de la guardia se separó de la renovación durable del lease: el lector
+puede recibir alertas y ACK de solicitud de cancelación aunque el fsync de una
+renovación esté bloqueado. Una cola llena invalida la admisión y mantiene el
+canal prioritario; una renovación tardía no debe rearmar el latido ni publicar
+una muestra vencida. La auditoría independiente no halló otro defecto
+inequívoco después de corregir las carreras detectadas. Pasan 38 tests del
+puente, 14 del check pasivo y 29 del coordinador, todos locales.
+
+Una renovación positiva ya iniciada puede persistir hasta su vencimiento
+original, como máximo 0,5 s, y la revocación en disco puede quedar pendiente.
+El ACK recibido solo acredita la solicitud; ni la cancelación física, ni el
+frenado, ni la entrega tardía de una orden en tránsito quedan demostrados. No
+hay evidencia de que fsync causara el incidente 731084. Los bindings anteriores
+deben regenerarse por cambio de fuentes. El usuario indicó que avisará tras
+cargar y desconectar; no consta si comenzó la carga. No hubo acción física
+SmolVLA. [Fuentes, backup y límites](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-fsync-transport-20261110).
+
+## Cancelación sintética interrumpida por batería — 10-11-2026
+
+**PREFLIGHT RECHAZADO, CERO GOALS Y MOVIMIENTO.** Tras comunicar el usuario que
+desconectó el cargador, una consulta puntual del topic de carga mostró `0` y
+ambas baterías informaron descarga a 26,2 % y 28,4 %. La referencia articular
+reciente indicó velocidades publicadas cero y los hashes URDF/SPS coincidieron
+con los leídos en Motion. El check aislado terminó antes del UUID y de cualquier
+goal con `battery_invalid_or_below_30_percent`: el supervisor exige al menos
+30 % en cada batería. No se probó la cancelación ni se modificó el umbral.
+
+El postcheck observó sin procesos sintéticos y hashes originales del marker y
+XML intactos; también observó un daemon ros2-cli, cuya procedencia no se
+identificó. La lectura es puntual y no prueba exclusividad futura o frenado.
+El usuario debe cargar ambas baterías por encima del umbral y desconectar antes
+de reanudar; no cambiar protecciones ni inferir estado actual de estos registros.
+[Detalle, respaldos y evidencia](../SYSTEM_CUSTOMIZATIONS.md#smolvla-synthetic-cancel-battery-20261110).
+
 ## Cancelación sintética y estado del cargador — 10-11-2026
 
 **DOS CHECKS INTERRUMPIDOS ANTES DEL GOAL; NINGÚN MOVIMIENTO.** Se preparó un

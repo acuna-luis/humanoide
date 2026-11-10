@@ -122,21 +122,24 @@ class LeaseTests(unittest.TestCase):
             with self.assertRaises(RuntimeError): gate.heartbeat(telemetry(clock()))
 
     def test_invalid_sample_is_never_published_as_latest(self):
-        clock = box_tests.FakeClock(); clock.value = 3.0
-        with tempfile.TemporaryDirectory() as directory:
-            lease = bridge.GuardLease(directory, dict(bridge.arm.BODY), lambda: True, clock=clock)
-            old = telemetry(clock()); lease.heartbeat(old)
-            clock.value += .1
-            bad = telemetry(clock()); bad['position']['L_elbow_yaw_joint'] += .003
-            pipe = object.__new__(bridge.GuardPipe)
-            pipe.process = types.SimpleNamespace(stdout=io.BytesIO((json.dumps(bad)+'\n').encode()))
-            pipe.lease = lease; pipe.clock = clock; pipe.failure = None; pipe.stopping = False
-            pipe.latest = old; pipe.ready = threading.Event(); pipe.ready.set()
-            pipe._reader()
-            self.assertEqual(pipe.latest, old)
-            self.assertTrue(lease.failed)
-            with self.assertRaisesRegex(RuntimeError, 'guard_not_healthy'):
-                pipe.checked_snapshot()
+        child = simulated_guard('d'*32, 'bad_observation')
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                lease = bridge.GuardLease(directory, dict(bridge.arm.BODY),
+                                          lambda: child.poll() is None, session_id='d'*32)
+                pipe = bridge.GuardPipe(child, lease, time.monotonic())
+                pipe.await_ready(3)
+                lease.synchronize_uuid(box_tests.GOAL_ID, pipe.exchange)
+                deadline = time.monotonic()+2
+                while not lease.failed and time.monotonic()<deadline: time.sleep(.01)
+                self.assertTrue(lease.failed)
+                self.assertEqual(pipe.latest['position'], dict(bridge.arm.BODY))
+                with self.assertRaisesRegex(RuntimeError, 'guard_not_healthy'):
+                    pipe.checked_snapshot()
+        finally:
+            if child.poll() is None: child.terminate()
+            child.wait(timeout=3)
+            for stream in (child.stdin, child.stdout, child.stderr): stream.close()
 
     def test_expired_lease_cancels_exact_simulated_native_goal(self):
         clock = box_tests.FakeClock(); clock.value = 1.0
@@ -386,11 +389,136 @@ while True:
 
 
 class GuardPipeProcessTests(unittest.TestCase):
-    def test_renewal_stall_leaves_watchdog_cancel_unconfirmed_by_reader(self):
+    def test_initial_renewal_that_expires_never_advertises_readiness(self):
+        child = simulated_guard('d'*32, 'success')
+        release = threading.Event()
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                lease = bridge.GuardLease(directory, dict(bridge.arm.BODY),
+                                          lambda: child.poll() is None, session_id='d'*32)
+                began = threading.Event(); original = lease._write
+                def stalled(deadline):
+                    if deadline > 0:
+                        began.set()
+                        if not release.wait(4): raise RuntimeError('test_stall_not_released')
+                    original(deadline)
+                with patch.object(lease, '_write', side_effect=stalled):
+                    pipe = bridge.GuardPipe(child, lease, time.monotonic(), enable_guard_heartbeat=True)
+                    self.assertTrue(began.wait(2))
+                    time.sleep(bridge.LEASE_S+.05)
+                    release.set()
+                    with self.assertRaisesRegex(RuntimeError, 'continuous_guard_not_ready'):
+                        pipe.await_ready(3)
+                    self.assertEqual(pipe.heartbeat_sequence, 0)
+                    self.assertTrue(lease.failed)
+                    self.assertTrue(lease._async_failure_done.wait(2))
+                    self.assertEqual(json.loads(lease.path.read_text())['deadline'], 0)
+        finally:
+            release.set()
+            if child.poll() is None: child.terminate()
+            child.wait(timeout=3)
+            for stream in (child.stdin, child.stdout, child.stderr): stream.close()
+
+    def test_stop_ack_is_processed_before_immediate_eof(self):
+        for valid in (True, False):
+            with self.subTest(valid=valid), tempfile.TemporaryDirectory() as directory:
+                lease = bridge.GuardLease(directory, dict(bridge.arm.BODY), lambda: True,
+                                          session_id='d'*32)
+                row = {'event':'ARM_GUARD_STOPPED', 'goal_uuid':'a'*32,
+                       'movement_commands':0, 'physical_stop_confirmed':not valid}
+                pipe = object.__new__(bridge.GuardPipe)
+                pipe.process = types.SimpleNamespace(stdout=io.BytesIO((json.dumps(row)+'\n').encode()))
+                pipe.lease = lease; pipe.stopping = True; pipe.stop_ack = False
+                pipe.channel_failed = False; pipe.failure = None; pipe.guard_id = 'a'*32
+                pipe.ready = threading.Event(); pipe.ready.set()
+                pipe._guard_input = bridge.queue.Queue(maxsize=2)
+                pipe._guard_transport_done = threading.Event(); pipe._normal_queue_failed = False
+                pipe._read_transport()
+                self.assertFalse(pipe.channel_failed)
+                pipe._reader()
+                self.assertEqual(pipe.stop_ack, valid)
+                self.assertEqual(pipe.channel_failed, not valid)
+                if not valid: self.assertTrue(lease._async_failure_done.wait(2))
+
+    def test_stalled_renewal_does_not_block_exact_cancel_ack(self):
+        child = simulated_guard('d'*32, 'cancel')
+        release = threading.Event()
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                lease = bridge.GuardLease(directory, dict(bridge.arm.BODY),
+                                          lambda: child.poll() is None, session_id='d'*32)
+                pipe = bridge.GuardPipe(child, lease, time.monotonic(), enable_guard_heartbeat=True)
+                pipe.await_ready(3)
+                lease.synchronize_uuid(box_tests.GOAL_ID, pipe.exchange)
+                began = threading.Event(); original = lease._write
+                def stalled(deadline):
+                    if deadline > 0:
+                        began.set()
+                        if not release.wait(4): raise RuntimeError('test_stall_not_released')
+                    original(deadline)
+                with patch.object(lease, '_write', side_effect=stalled):
+                    self.assertTrue(began.wait(2))
+                    old = pipe.latest; sequence = pipe.heartbeat_sequence
+                    started = time.monotonic()
+                    result = pipe.cancel_goal(box_tests.GOAL_ID)
+                    self.assertTrue(result['request_sent'])
+                    self.assertTrue(result['lease_revocation_pending'])
+                    self.assertFalse(result['physical_stop_verified'])
+                    self.assertLess(time.monotonic()-started, 1)
+                    # Returning a late positive write cannot publish the
+                    # observation or rearm a failed lease/heartbeat.
+                    time.sleep(bridge.LEASE_S+.05)
+                    release.set()
+                    self.assertTrue(lease._async_failure_done.wait(2))
+                    self.assertEqual(json.loads(lease.path.read_text())['deadline'], 0)
+                    self.assertIs(pipe.latest, old)
+                    self.assertEqual(pipe.heartbeat_sequence, sequence)
+                    self.assertTrue(lease.failed)
+        finally:
+            release.set()
+            if child.poll() is None: child.terminate()
+            child.wait(timeout=3)
+            for stream in (child.stdin, child.stdout, child.stderr): stream.close()
+
+    def test_full_event_queue_fails_closed_but_retains_cancel_channel(self):
+        child = simulated_guard('d'*32, 'cancel')
+        release = threading.Event()
+        try:
+            with patch.object(bridge, 'MAX_GUARD_EVENTS', 2), tempfile.TemporaryDirectory() as directory:
+                lease = bridge.GuardLease(directory, dict(bridge.arm.BODY),
+                                          lambda: child.poll() is None, session_id='d'*32)
+                pipe = bridge.GuardPipe(child, lease, time.monotonic())
+                pipe.await_ready(3)
+                lease.synchronize_uuid(box_tests.GOAL_ID, pipe.exchange)
+                began = threading.Event(); original = lease._write
+                def stalled(deadline):
+                    if deadline > 0:
+                        began.set()
+                        if not release.wait(4): raise RuntimeError('test_stall_not_released')
+                    original(deadline)
+                with patch.object(lease, '_write', side_effect=stalled):
+                    self.assertTrue(began.wait(2))
+                    deadline = time.monotonic()+2
+                    while not pipe._normal_queue_failed and time.monotonic()<deadline:
+                        time.sleep(.01)
+                    self.assertEqual(pipe.failure, 'guard_event_queue_saturated')
+                    self.assertTrue(lease.failed)
+                    self.assertFalse(pipe.channel_failed)
+                    self.assertTrue(pipe.cancel_goal(box_tests.GOAL_ID)['request_sent'])
+                    release.set()
+                    self.assertTrue(lease._async_failure_done.wait(2))
+        finally:
+            release.set()
+            if child.poll() is None: child.terminate()
+            child.wait(timeout=3)
+            for stream in (child.stdin, child.stdout, child.stderr): stream.close()
+
+    def test_renewal_stall_keeps_watchdog_cancel_observable(self):
         # Real GuardPipe and SupervisorHeartbeat over process pipes; ROS and
         # physical movement are simulated. This observes a different fault
-        # from the zero-deadline fsync test below: the reader itself blocks in
-        # an in-flight positive lease renewal and cannot read cancellation ACK.
+        # from the zero-deadline fsync test below: the renewal thread blocks in
+        # an in-flight positive lease write while the transport reader remains
+        # able to report the independent simulated watchdog cancellation.
         code = r'''import json,os,select,sys,time
 sys.path.insert(0, sys.argv[1])
 from arm_from_pico_supervised import SupervisorHeartbeat
@@ -458,12 +586,15 @@ while True:
                         self.assertTrue(readable, 'independent simulated watchdog did not fire')
                         marker = child.stderr.readline().decode().strip()
                         self.assertEqual(marker, 'simulated_watchdog_cancel:'+box_tests.GOAL_ID)
-                        # The guard emitted its automatic cancellation event,
-                        # but the blocked reader cannot consume it or an ACK.
-                        self.assertFalse(pipe.auto_cancel_requested)
-                        with self.assertRaisesRegex(TimeoutError, 'guard_cancel_request_timeout'):
-                            pipe.cancel_goal(box_tests.GOAL_ID)
-                        self.assertFalse(pipe.auto_cancel_requested)
+                        deadline = time.monotonic()+1
+                        while not pipe.auto_cancel_requested and time.monotonic()<deadline:
+                            time.sleep(.01)
+                        self.assertTrue(pipe.auto_cancel_requested)
+                        result = pipe.cancel_goal(box_tests.GOAL_ID)
+                        self.assertTrue(result['automatic'])
+                        self.assertTrue(result['request_sent'])
+                        self.assertTrue(result['lease_revocation_pending'])
+                        self.assertFalse(result['physical_stop_verified'])
                 finally:
                     release.set()
                     if child.poll() is None: child.terminate()
@@ -634,6 +765,7 @@ while True:
                     child.terminate(); child.wait(timeout=3)
                     pipe.thread.join(3)
                     self.assertTrue(lease.failed)
+                    self.assertTrue(lease._async_failure_done.wait(2))
                     self.assertEqual(json.loads(lease.path.read_text())['deadline'], 0)
                 pipe.stop()
         finally:

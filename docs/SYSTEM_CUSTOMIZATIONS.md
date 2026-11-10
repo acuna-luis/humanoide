@@ -1,5 +1,33 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-FSYNC-TRANSPORT-20261110
+
+**10-11-2026, Europe/Madrid — PREPARADO EN PC Y PROBADO LOCALMENTE;
+NO PROBADO EN MOTION.** No se ha actuado sobre el robot con este cambio.
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo y destino | `scripts/vla/arm_native_lease_bridge.py`: separar la lectura del canal de guardia de la escritura de renovación del lease, para que un fsync bloqueado no impida recibir alertas y ACK de solicitud de cancelación del UUID. No altera ni desactiva watchdog, límites o paros y no habilita VLA. |
+| Fuentes | `arm_native_lease_bridge.py` SHA256 `1c9a55dffc1fc8dbac4992b9b498e76c6351eff5d440085efdbfc528c1ec73a3`; `test_arm_native_lease_bridge.py` SHA256 `48b496d5a0365c63a216a8e1492abfe20ec5eec8609bf9fbeb60272f25a4c21f`. Los archivos de código previos se recuperan selectivamente desde Git HEAD anterior; no restaurar estados transitorios de control ni trabajo ajeno. |
+| Funcionamiento | Un lector de transporte atiende eventos de fallo y confirmación de solicitud mientras la renovación se procesa por cola acotada. Saturación, fallo o muestra vencida revocan la admisión; una renovación tardía no debe actualizar la muestra vigente ni rearmar latidos. Se conserva el watchdog independiente. El ACK expresa recepción de solicitud, no cancelación física. |
+| Verificación | 38 tests locales del puente, 14 del check pasivo y 29 del coordinador. Auditoría independiente identificó carreras de cierre y de cola llena; se corrigieron y su revisión final no halló otro defecto inequívoco. Las pruebas de fsync bloqueado y cola llena usan procesos simulados; ninguna acredita ejecución o frenado reales. No se ha ejecutado este código en Motion. |
+| Límites | Una renovación positiva ya iniciada puede publicarse tras un fallo y ser válida hasta su vencimiento original, como máximo 0,5 s; el fsync o la escritura de revocación pueden quedar pendientes. No se resuelve atómicamente una orden en tránsito, no se prueba cancelación real ni frenado y no hay evidencia de que fsync causara el incidente 731084. La prueba SmolVLA física sigue bloqueada. |
+| Dependencias | El cambio modifica fuentes del bundle revisado; el binding anterior deja de coincidir. Para un check futuro se requiere nueva muestra, binding y revisión, comprobar carga y perfil vivos; no reusar hashes ni postura histórica. El último intento sin movimiento se interrumpió por batería <30 % en ambas. Se solicitó al usuario cargar por encima de 30 %, desconectar y avisar; respondió que avisará, sin confirmar el inicio de carga. |
+| Backup y reversión | Antes de actualizar esta ficha se respaldaron las cuatro fuentes documentales con cambios ajenos en `../Humanoide-vla-evidence/PICO_CANCEL_RESUME_20261110T161204Z_6362c42c/before-fsync-docs.tar`, SHA256 `338eae8691c0d414925e4c31e88c0eed83fded5f657ee45c5e3cc6e57aad4ea0`. Revertir selectivamente solo esta intervención mediante control de versiones, sin cambiar el robot ni retirar evidencia. |
+
+## SMOLVLA-SYNTHETIC-CANCEL-BATTERY-20261110
+
+**10-11-2026, Europe/Madrid — CHECK SINTÉTICO INTERRUMPIDO SIN MOVIMIENTO.**
+
+| Campo | Registro |
+| --- | --- |
+| Solicitud y alcance | Tras comunicar el usuario que desconectó el cargador se efectuó una sola prueba de watchdog con servidor ROS sintético en namespace propio. No se envió goal físico ni sintético: la guardia rechazó preflight antes de UUID. No se cambió ningún límite o protección. |
+| Lecturas previas | Observación puntual de solo lectura del topic `/emb/chrg_input_status`: `data: 0`; ambas baterías `discharging`, aprox. 26,2 % y 28,4 %. Las lecturas de carga/batería se comunicaron por herramientas, sin archivo conservado. Servicio independiente devolvió `success=true`, `volt=0`, `current=0`, `charge_status=0`, `conn_status=2`; no se infiere equivalencia de ese campo con el topic. |
+| Preparación | La muestra articular local registró velocidad máxima 0; URDF y transmisiones coincidieron con hashes leídos en Motion. Muestra puntual, no parada física ni exclusividad. Referencia y binding privado en `../Humanoide-vla-evidence/PICO_CANCEL_RESUME_20261110T161204Z_6362c42c/`, binding SHA256 `3b1d371544d9c94f2bd7268e4b4c5719e244e5ad78e638c0bb4c4967d8699078`. `read-only.json` SHA256 `32b6c435030b639e3b40761a660d124fd695917498bd100bcd566e7545a6b45b`. |
+| Resultado | Sesión `edbfca94c71949518a34ae7e53509bcd` terminó con `battery_invalid_or_below_30_percent`; `head_from_pico_readonly.check_battery` exige un valor finito entre 30 y 100 por cada una de las dos baterías. La prueba no llegó a watchdog/cancelación y no estableció frenado. El primer intento de preparar la lectura falló por un separador YAML y se analizó la misma salida preservada; no se envió orden ni se alteró el robot. |
+| Evidencia y restauración | En `../Humanoide-vla-evidence/PICO_SYNTHETIC_CANCEL_CHECK/check-edbfca94c71949518a34ae7e53509bcd/`, `stderr.log` SHA256 `5a7b9cbbc4cbc8196f9808a15b82384347160e184b172d815821872d845e0926` y `postcheck-readonly.json` `86f04ba100236b6fbee4b93daa37dcf97be34890cef6924ce3397016bac5d500`. La lectura posterior no observó procesos sintéticos, ni colector Vision ni contenedores Ada propios; marker y XML originales conservan hashes. En ROS Motion se observó daemon ros2-cli PID 398397; no se conoce si lo inició alguna consulta, ni se detuvo. Estado puntual, no exclusividad futura. |
+| Backup y continuación | Backup de documentos y cambios previos `../Humanoide-vla-evidence/PICO_CANCEL_RESUME_20261110T161204Z_6362c42c/before-docs.tar`, SHA256 `7a38bb80d4144f78f2e829a795e34c0fd844c9c6b5fa4c77240aa6e94c40ac35`. Reanudar solo tras cargar ambas baterías por encima de 30 %, desconectar y comprobar de nuevo; no modificar el umbral ni inferir una prueba física válida. La política SmolVLA y la cancelación real permanecen pendientes. |
+
 ## SMOLVLA-SYNTHETIC-CANCEL-20261110
 
 **10-11-2026, Europe/Madrid — DOS CHECKS SIN MOVIMIENTO, PREFLIGHT FALLIDO.**

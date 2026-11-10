@@ -1,5 +1,27 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-FSYNC-TRANSPORT-20261110: supervisión local
+reforzada.** El lector del canal de guardia ya no espera a una renovación de
+lease bloqueada en disco para recibir alertas o el ACK de solicitud de
+cancelación; cola llena o estado vencido cierran la admisión. Pasan pruebas y
+revisión independientes, sin check en Motion. Una renovación positiva en
+curso puede persistir hasta su plazo original (máximo 0,5 s); la escritura
+de revocación puede seguir pendiente. No demuestra cancelación, frenado ni
+control SmolVLA. Se solicita cargar ambas baterías por encima del 30 %,
+desconectar y avisar; no consta cuándo empezará la carga.
+[Ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-fsync-transport-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#lectura-de-guardia-con-escritura-bloqueada--10-11-2026).
+
+**10-11-2026 — SMOLVLA-SYNTHETIC-CANCEL-BATTERY-20261110: prueba pasiva
+interrumpida por batería.** Tras desconexión de cargador comunicada por el
+usuario, lectura puntual del topic de carga `0` y baterías descargando a 26,2 %
+y 28,4 %. El check sintético se detuvo antes de UUID o goal con
+`battery_invalid_or_below_30_percent`: el supervisor exige al menos 30 % en
+ambas baterías. Sin movimiento ni prueba de cancelación. Postcheck observó
+procesos sintéticos terminados y marker/XML previos con hashes conservados.
+[Ficha y evidencia](SYSTEM_CUSTOMIZATIONS.md#smolvla-synthetic-cancel-battery-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#cancelación-sintética-interrumpida-por-batería--10-11-2026).
+
 **10-11-2026 — SMOLVLA-SYNTHETIC-CANCEL-20261110: diagnóstico sin movimiento
 interrumpido en preflight.** Se preparó un servidor ROS sintético en namespace
 separado y una copia efímera de guardia con las rutas de acción remapeadas. Dos

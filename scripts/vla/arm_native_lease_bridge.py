@@ -31,6 +31,7 @@ MAX_AGE_S = .5
 LEASE_S = .5
 HANDSHAKE_S = .4
 MAX_LINE_BYTES = 65536
+MAX_GUARD_EVENTS = 128
 UUID = re.compile(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\Z')
 
 
@@ -233,7 +234,15 @@ class GuardPipe:
             raise ValueError('guard_heartbeat_mode_invalid')
         self.enable_guard_heartbeat = enable_guard_heartbeat
         self.heartbeat_sequence = 0
+        # Reading the guard's pipe must not wait behind the filesystem write
+        # that renews the lease.  Keep normal events ordered and bounded; only
+        # fault/observation/cancel acknowledgements take the fast path below.
+        self._guard_input = queue.Queue(maxsize=MAX_GUARD_EVENTS)
+        self._guard_transport_done = threading.Event()
+        self._normal_queue_failed = False
+        self.transport_thread = threading.Thread(target=self._read_transport, daemon=True)
         self.thread = threading.Thread(target=self._reader, daemon=True)
+        self.transport_thread.start()
         self.thread.start()
 
     def _send(self, row, deadline):
@@ -262,7 +271,23 @@ class GuardPipe:
         finally:
             self.write_lock.release()
 
-    def _reader(self):
+    def _fail_read_channel(self, reason):
+        # Never acquire lease.lock or wait on the filesystem here. The normal
+        # reader can hold that lock in an in-flight fsync. The on-disk deadline
+        # remains bounded, and the independent guard is still responsible for
+        # cancel/reobservation of any goal already delivered.
+        self.channel_failed = True
+        self.failure = self.failure or reason[:512]
+        self.lease.fail_async()
+        self.ready.set()
+
+    def _read_transport(self):
+        """Drain guard output while lease renewal may be blocked in I/O.
+
+        Fast-path events cannot authorize movement: only cancellation ACKs and
+        fault/status observations bypass the ordered, bounded normal queue.
+        On saturation fail closed and continue draining those priority events.
+        """
         try:
             while True:
                 raw = self.process.stdout.readline(MAX_LINE_BYTES + 1)
@@ -271,6 +296,64 @@ class GuardPipe:
                 if len(raw) > MAX_LINE_BYTES or not raw.endswith(b'\n'):
                     raise ValueError('guard_output_excessive_or_truncated')
                 row = native.object_json(raw.decode('utf-8'))
+                event = row.get('event')
+                if event == 'guard_cancel_requested' and self.ready.is_set():
+                    self._remember_guard_event(row)
+                    self.acks.put_nowait(row)
+                    continue
+                if event in ('guard_cancel_response', 'guard_terminal_observed'):
+                    self._remember_guard_event(row)
+                    continue
+                if event in ('OPERATOR_ALERT', 'UNRESOLVED_MONITORING',
+                             'guard_auto_cancel_requested', 'guard_auto_cancel_delivery_unknown',
+                             'guard_cancel_response_unknown', 'guard_fault_terminal_and_still'):
+                    self._remember_guard_event(row)
+                    self.failure = self.failure or ('guard_reported:' + event)
+                    if event == 'guard_auto_cancel_requested':
+                        self.auto_cancel_requested = True
+                    self.lease.fail_async()
+                    continue
+                if self.channel_failed or self._normal_queue_failed:
+                    continue
+                try:
+                    self._guard_input.put_nowait(row)
+                except queue.Full:
+                    # Saturation invalidates authority but does not prove the
+                    # pipe is broken. Keep the fast path alive for the exact
+                    # cancellation response rather than declaring the channel
+                    # unavailable merely because the renewal reader stalled.
+                    self._normal_queue_failed = True
+                    self.failure = self.failure or 'guard_event_queue_saturated'
+                    self.lease.fail_async()
+                    self.ready.set()
+        except BaseException as exc:
+            # An intentional stop is acknowledged on this same stream. Let
+            # the ordered reader inspect the queued stop event before EOF;
+            # malformed output and unexpected EOF still fail immediately.
+            if not (self.stopping and isinstance(exc, RuntimeError)
+                    and str(exc) == 'guard_output_closed'):
+                self._fail_read_channel(type(exc).__name__ + ':' + str(exc))
+        finally:
+            self._guard_transport_done.set()
+            try:
+                self._guard_input.put_nowait(None)
+            except queue.Full:
+                # The processing thread may be stuck in fsync.  Failure is
+                # already visible and the guard's independent watchdog must
+                # handle any active goal; do not block this transport reader.
+                pass
+
+    def _reader(self):
+        try:
+            while True:
+                try:
+                    row = self._guard_input.get(timeout=.1)
+                except queue.Empty:
+                    if self._guard_transport_done.is_set():
+                        raise RuntimeError('guard_output_closed')
+                    continue
+                if row is None:
+                    raise RuntimeError('guard_output_closed')
                 event = row.get('event')
                 if event == 'BRIDGE_READY':
                     continue
@@ -296,9 +379,21 @@ class GuardPipe:
                                 # channel may still cancel the exact UUID.
                                 self.failure = 'guard_telemetry_invalid:' + str(exc)
                             else:
-                                self.latest = row
-                                if self.enable_guard_heartbeat:
-                                    self._send_guard_heartbeat()
+                                # The fsync may have completed after a fault or
+                                # the lease/sample's original deadline. Never
+                                # publish or pulse from that stale renewal.
+                                try:
+                                    if self.failure or self.lease.failed or not self.lease.guard_alive():
+                                        raise RuntimeError('guard_failed_during_renewal')
+                                    native.check_lease(self.lease.path, self.clock())
+                                    if not 0 <= self.clock()-row['monotonic'] <= MAX_AGE_S:
+                                        raise RuntimeError('guard_sample_expired_during_renewal')
+                                    self.latest = row
+                                    if self.enable_guard_heartbeat:
+                                        self._send_guard_heartbeat()
+                                except Exception as exc:
+                                    self.failure = self.failure or ('guard_renewal_invalid:' + str(exc))
+                                    self.lease.fail_async()
                     elif not self.ready.is_set():
                         self.latest = row
                 elif event == 'pre_dispatch_ready':
@@ -334,9 +429,18 @@ class GuardPipe:
                                    abs(velocities[n]) > .001 for n in arm.BODY)):
                         raise ValueError('guard_reference_changed')
                     self.lease.heartbeat(self.latest)
-                    if self.enable_guard_heartbeat:
-                        self._send_guard_heartbeat()
-                    self.ready.set()
+                    # Initial readiness must also remain valid after the
+                    # potentially blocking lease write. Never start watchdog
+                    # pulses or advertise readiness from an expired sample.
+                    with self.lease.lock:
+                        if self.failure or self.lease.failed or not self.lease.guard_alive():
+                            raise RuntimeError('guard_failed_during_initial_renewal')
+                        native.check_lease(self.lease.path, self.clock())
+                        if not 0 <= self.clock()-self.latest['monotonic'] <= MAX_AGE_S:
+                            raise RuntimeError('guard_initial_sample_expired_during_renewal')
+                        if self.enable_guard_heartbeat:
+                            self._send_guard_heartbeat()
+                        self.ready.set()
                 elif event in ('goal_uuid_ready', 'guard_cancel_requested'):
                     if not self.ready.is_set():
                         raise ValueError('guard_ack_before_ready')
@@ -368,17 +472,10 @@ class GuardPipe:
                 else:
                     raise ValueError('unexpected_guard_event:' + str(event))
         except BaseException as exc:
-            with self.lease.lock:
-                self.channel_failed = True
-                # Preserve the first fault: an EOF after an alert must not
-                # erase the reason that initially revoked the lease.
-                self.failure = self.failure or (type(exc).__name__ + ':' + str(exc)[:512])
-                try:
-                    self.lease.fail()
-                except Exception as revoke_error:
-                    self.failure += ':lease_revocation_failed:' + str(revoke_error)
-                finally:
-                    self.ready.set()  # wake waiters; they must inspect failure
+            # Preserve the first fault and wake waiters without waiting for a
+            # blocked filesystem. The fast transport reader remains able to
+            # receive the cancellation response until its own stream closes.
+            self._fail_read_channel(type(exc).__name__ + ':' + str(exc))
 
     def _remember_guard_event(self, row):
         """Retain a bounded record without filesystem or network I/O."""
@@ -423,7 +520,7 @@ class GuardPipe:
 
     def await_ready(self, timeout):
         if not self.ready.wait(timeout) or self.failure or not self.lease.guard_alive():
-            self.lease.fail()
+            self.lease.fail_async()
             raise RuntimeError('continuous_guard_not_ready:' + str(self.failure))
         native.check_lease(self.lease.path, self.clock())
 
@@ -440,10 +537,10 @@ class GuardPipe:
                 raise TimeoutError('guard_ack_timeout')
             return self.acks.get(timeout=remaining)
         except (queue.Empty, TimeoutError) as exc:
-            self.lease.fail()
+            self.lease.fail_async()
             raise TimeoutError('guard_ack_timeout') from exc
         except (OSError, ValueError):
-            self.lease.fail()
+            self.lease.fail_async()
             raise
 
     def stop(self, timeout=2.0):

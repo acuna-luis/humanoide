@@ -1,5 +1,22 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-FSYNC-TRANSPORT-20261110.** La lectura de la
+guardia y el registro de renovación se separaron para que una escritura
+bloqueada no impida recibir el ACK de solicitud de cancelación. Pruebas y
+auditoría independientes pasan localmente; no hay check en Motion. Una
+renovación ya iniciada puede seguir vigente hasta su plazo de 0,5 s y la
+revocación en disco puede quedar pendiente; no se acredita frenado ni control
+físico. La carga de baterías y el aviso posterior siguen pendientes.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-fsync-transport-20261110).
+
+**10-11-2026 — SMOLVLA-SYNTHETIC-CANCEL-BATTERY-20261110.** Tras informar el
+usuario que desconectó el cargador, topic de carga `0`; lectura puntual de
+baterías 26,2 % y 28,4 %. El check sintético abortó en preflight antes de goal
+con `battery_invalid_or_below_30_percent`, sin movimiento. El supervisor exige
+30 % en cada batería; carga y posterior desconexión quedan pendientes. No se
+probó cancelación ni frenado.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-synthetic-cancel-battery-20261110).
+
 **10-11-2026 — SMOLVLA-SYNTHETIC-CANCEL-20261110.** Dos intentos sin movimiento
 de probar watchdog con acción sintética quedaron detenidos antes del goal. El
 segundo registró `charger_connected_or_unknown`; lectura independiente del
