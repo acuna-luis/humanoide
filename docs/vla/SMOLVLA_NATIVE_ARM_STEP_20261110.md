@@ -1,5 +1,25 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Watchdog sintético con cliente aislado — 10-11-2026
+
+**VERIFICADO CON SERVIDOR FICTICIO EN MOTION; CERO GOALS FÍSICOS.** Tras
+nueva desconexión del cargador comunicada por el usuario, una lectura puntual
+mostró topic `0` y baterías 50,1/51,7 % descargando. Con referencia y binding
+nuevos se efectuó un único check sintético con el cliente VLA aislado. Al cortar
+su latido deliberadamente, la guardia detectó `supervisor_heartbeat_expired` y
+el servidor ficticio aceptó la cancelación; el goal sintético terminó status 5.
+El resumen indica `SYNTHETIC_WATCHDOG_CANCEL_PASSED`, un goal sintético, cero
+físicos y `physical_control_qualified=false`.
+
+El postcheck independiente de las 17:12:17 UTC no observó procesos sintéticos
+en Motion app/ROS ni host y confirmó hashes/inodes de marker y XML históricos;
+solo se conservó salida de herramientas. Las muestras son puntuales y no
+acreditan exclusividad futura, cancelación ni frenado reales. En la referencia
+de preparación ambos codos no cumplen el margen diagnóstico de 0,002 rad. No
+se ha demostrado causa de 731084 y `model_wrist_dispatch_not_enabled` permanece
+cerrado. El resultado no habilita el envío de la política SmolVLA.
+[Identidades y respaldo](../SYSTEM_CUSTOMIZATIONS.md#smolvla-isolated-synthetic-pass-20261110).
+
 ## Preflight de carga en el cliente aislado — 10-11-2026
 
 **INTERRUMPIDO ANTES DE UUID/GOAL; SIN PRUEBA DE CANCELACIÓN.** Un único check

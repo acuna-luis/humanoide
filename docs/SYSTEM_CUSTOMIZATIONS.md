@@ -1,5 +1,19 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-ISOLATED-SYNTHETIC-PASS-20261110
+
+**10-11-2026, Europe/Madrid — WATCHDOG SINTÉTICO VERIFICADO EN MOTION;
+SIN GOALS FÍSICOS NI PRUEBA DE FRENADO.**
+
+| Campo | Registro |
+| --- | --- |
+| Preparación y estado | Tras nueva desconexión comunicada por el usuario, lectura puntual del topic cargador `0` y baterías 50,1/51,7 % descargando. Referencia y binding nuevos en `../Humanoide-vla-evidence/PICO_ISOLATED_RETRY_20261110T171140Z_5cadcdee/`, binding SHA256 `1c24b2253e5654852961b278cd76f9d9d25266444d8b60f4f79fb535ab18e157`. Ambos codos no cumplen el margen diagnóstico de 0,002 rad en esa muestra. Las lecturas no acreditan estado físico ni exclusividad futura. |
+| Procedimiento y resultado | Un único check con el cliente VLA aislado y una copia de guardia remapeada a un servidor ficticio detuvo deliberadamente el latido. Se observó `supervisor_heartbeat_expired`, solicitud de cancelación y cancelación sintética aceptada, status 5: `SYNTHETIC_WATCHDOG_CANCEL_PASSED`, un goal sintético, cero físicos, `physical_control_qualified=false`. No se envió ninguna meta al servidor real de manipulación. |
+| Evidencia | `../Humanoide-vla-evidence/PICO_SYNTHETIC_CANCEL_CHECK/check-6116d8fae5ad49a596417029bd6fd086/`: `stdout.jsonl` SHA256 `eb7cc319e8b8e5477bb209ed60f9463eb6cf49edec22f499d5c81a950e8d2778`, `sources.json` `3cac333593eda8eb981bbb087af4c68af9868e7b4147e64c4fec704dd776359c`, `stderr.log` vacío `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`. El resumen declara que no confirma parada física. |
+| Postcheck | Lectura independiente a 17:12:17 UTC, solo en salida de herramientas: Motion app con rosa/robot_app, ROS bash y daemon previo, sin identificadores sintéticos observados en host. Marker SHA256 `e174d2895dda0a2e0784cbb7296b2c5b7524bc31add8f28cc80255a326e8252c` inode 3584594; XML SHA256 `d4c704e6ab369d250658a596cd6a5704258accf130971d3046748a8d132b616b`, dev 45/inode 3584597. Observación puntual: no prueba exclusividad futura, contacto físico o frenado. |
+| Límites y continuación | El servidor y goal eran ficticios. No se ha demostrado cancelación/frenado físicos, seguridad de una orden en vuelo o solución de la contención del lock/ACK; tampoco se conoce la causa de 731084. `model_wrist_dispatch_not_enabled` continúa cerrado. Cotejar de nuevo las condiciones físicas y fuentes en cualquier continuación; no falsear ni retirar controles. |
+| Respaldo documental | Antes de registrar el resultado se guardaron las cuatro fuentes, incluidos cambios locales previos, en `../Humanoide-vla-evidence/PICO_ISOLATED_PASS_DOCS_20261110T171229Z/before-docs.tar`, SHA256 `48c304c3df77a87f4e679250fb1548ce04e90039ed1e108b655d88bdeec052a7`. Revertir solo esta intervención sin sobrescribir cambios ajenos ni restaurar estados transitorios. |
+
 ## SMOLVLA-ISOLATED-SYNTHETIC-CHARGER-20261110
 
 **10-11-2026, Europe/Madrid — PREFLIGHT INTERRUMPIDO; SIN UUID/GOAL NI
@@ -11,7 +25,7 @@ PRUEBA DE CANCELACIÓN.**
 | Preparación | Referencia y binding en `../Humanoide-vla-evidence/PICO_ISOLATED_LIVE_20261110T170933Z_7d165594/`, binding SHA256 `5e0ad3dfa032644c1bf3fc5832d2a9d9ee44739cf6c8a7d1abc0637ecedfaaae`. Las muestras no acreditan estado físico o exclusividad futura. |
 | Evidencia | `../Humanoide-vla-evidence/PICO_SYNTHETIC_CANCEL_CHECK/check-a1566e3a62164205908a157dfb3d4be9/`: `stdout.jsonl` SHA256 `b5e15df02fe01ce75d778f1d6b947850d170ec0dad982ceb28de29f78dfe239a`, `stderr.log` `da3f6f7d1adb0b6420cef92e9da114ed49eb8f8ff3f9f6c6090e944a1ed9e61c`, `sources.json` `9d9bd2168f343fce9d09f6a36358e3e33d7a131452dc8872dadbd2eed57b8769`. El stdout conserva 236 eventos de preparación/heartbeat, sin evento de goal o cancelación. |
 | Postcheck | Lectura independiente puntual 17:10:26 UTC, registrada en salida de herramientas, sin archivo propio: topic de carga `data: 2`; baterías 49,6/51,4 %, `charging`, corrientes −7,7/−7,8 A. No identifica contacto físico del cable ni significado vendor del valor 2. Se observaron app rosa/robot_app, ROS bash/daemon y host sin identificadores de procesos sintéticos; no prueba exclusividad futura. Marker SHA256 `e174d2895dda0a2e0784cbb7296b2c5b7524bc31add8f28cc80255a326e8252c`, inode 3584594, y XML SHA256 `d4c704e6ab369d250658a596cd6a5704258accf130971d3046748a8d132b616b`, dev 45/inode 3584597, conservados. |
-| Límites y continuación | El motivo no identifica por sí solo una avería o cable conectado. No se ha observado cancelación con el cliente aislado, ni cancelación/frenado reales; no atribuir el incidente 731084 al cargador. Contrastar su estado físico y lectura con el operador antes de reanudar; no falsear ni omitir el control. `model_wrist_dispatch_not_enabled` continúa cerrado. |
+| Límites y continuación | El motivo no identifica por sí solo una avería o cable conectado. En este intento no se observó cancelación con el cliente aislado; después se observó cancelación sintética en la [prueba posterior](#smolvla-isolated-synthetic-pass-20261110). No se ha demostrado cancelación/frenado reales; no atribuir el incidente 731084 al cargador. Contrastar su estado físico y lectura con el operador antes de reanudar; no falsear ni omitir el control. `model_wrist_dispatch_not_enabled` continúa cerrado. |
 | Respaldo documental | Antes de anotar el resultado se guardaron las cuatro fuentes, incluidos cambios locales previos, en `../Humanoide-vla-evidence/PICO_ISOLATED_PREFLIGHT_DOCS_20261110T171041Z/before-docs.tar`, SHA256 `68d989aaa54993dd5ce79fa0d3fc915b267b8d83425db0b7a6d3a64a40a54ee9`. Revertir selectivamente sin sobrescribir cambios ajenos; no restaurar estados transitorios del robot. |
 
 ## ARM-PICO-LEASE-ISOLATED-20261110

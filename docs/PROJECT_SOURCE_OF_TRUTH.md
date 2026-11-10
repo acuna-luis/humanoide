@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-ISOLATED-SYNTHETIC-PASS-20261110: watchdog
+sintético verificado con cliente VLA aislado.** Tras nueva desconexión del
+cargador, la guardia detectó la caducidad del latido y el servidor ficticio
+aceptó la cancelación: un goal sintético, cero físicos. El postcheck no observó
+procesos sintéticos y conservó marker/XML históricos. No demuestra cancelación
+o frenado reales, no resuelve 731084 ni abre el gate físico; ambos codos no
+cumplen el margen diagnóstico de 0,002 rad en la muestra de preparación.
+[Ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-isolated-synthetic-pass-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#watchdog-sintético-con-cliente-aislado--10-11-2026).
+
 **10-11-2026 — SMOLVLA-ISOLATED-SYNTHETIC-CHARGER-20261110: preflight
 interrumpido.** El primer check sintético con la corrección aislada terminó
 antes de UUID/goal por `charger_connected_or_unknown`. Lectura posterior puntual:

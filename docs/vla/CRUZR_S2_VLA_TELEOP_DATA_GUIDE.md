@@ -1,5 +1,13 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — SMOLVLA-ISOLATED-SYNTHETIC-PASS-20261110.** Tras nueva
+confirmación de desconexión, pasó el watchdog contra servidor ficticio con el
+cliente VLA aislado: un goal sintético, cero físicos. No acredita cancelación ni
+frenado físicos; gate cerrado. La muestra previa no cumple el margen diagnóstico
+de 0,002 rad para ambos codos.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-isolated-synthetic-pass-20261110),
+[detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#watchdog-sintético-con-cliente-aislado--10-11-2026).
+
 **10-11-2026 — SMOLVLA-ISOLATED-SYNTHETIC-CHARGER-20261110.** El primer
 check sintético con cliente VLA corregido se interrumpió antes de UUID/goal:
 `charger_connected_or_unknown`; postcheck observó topic `2` y baterías con
