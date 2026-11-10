@@ -11,7 +11,9 @@ aceptó el lease unos 0,1304 s después de vencer. También se reprodujo en
 `LeaseProxy.synchronize_uuid`: al bloquear la tercera y última lectura con
 canal y staging falsos, retornó normalmente unos 0,1303 s después del plazo.
 Esto puede permitir continuar hacia envío sin lease vigente; no se usaron ROS
-ni red y no se envió ningún goal. No se ha demostrado que ocurriera en 731084
+ni red y no se envió ningún goal. El reproductor offline y su hash están
+registrados en la ficha; puede ejecutarse desde la raíz del repo. No se ha
+demostrado que ocurriera en 731084
 ni que produjera movimiento físico; el resultado de cancelación sintética no
 resuelve esta limitación.
 
