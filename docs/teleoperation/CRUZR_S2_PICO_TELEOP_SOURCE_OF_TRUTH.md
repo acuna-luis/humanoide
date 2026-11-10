@@ -1,5 +1,17 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**10-11-2026 ~19:45 — cámara del robot en el PICO por USB.** Con el visor
+por USB (control vía `adb reverse` 63901), el vídeo puede ir también por USB:
+`adb -s PA94Y0MGKB070822G forward tcp:12345 tcp:12345` y lanzar con
+`PICO_CAMERA_PICO_IP=127.0.0.1` (sin `PICO_TELEOP_CAMERA=off`).
+`cruzr_pico_camera.sh --check` con `PICO_IP=127.0.0.1` pasó
+(`PICO_CAMERA_CHECK_OK=1`, ruta loopback). Alternativa Wi-Fi: el visor tenía
+`wlan0` 192.168.42.211 alcanzable desde `wlxd40dab0b5b8e` con ~150 ms RTT. La
+textura en el visor real sigue PENDIENTE de confirmación del operador. Comando:
+`PICO_CAMERA_PICO_IP=127.0.0.1 PICO_PC_IP=127.0.0.1 CRUZR_IFACE=eno1
+CRUZR_PC_IP=192.168.11.250 bash scripts/teleoperation/probar_pico_v4.sh --teleoperate`.
+Reversión: `adb forward --remove tcp:12345`.
+
 **10-11-2026 ~19:40 — reaplicado PICO-XR-USB-RECONNECT:** el usuario comunicó
 `tcp connection failed` en el visor al lanzar `probar_pico_v4.sh --teleoperate`
 con `PICO_PC_IP=127.0.0.1`. PICO `PA94Y0MGKB070822G` visible por USB, PC
