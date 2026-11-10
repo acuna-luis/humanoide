@@ -1,5 +1,11 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-SOURCE-BINDING-20261110: integridad de fuentes.**
+El lanzador prepara el registro de bytes de sus fuentes PC controladas y
+bundles; una prueba detectó y corrigió una ruta local. Este registro no es
+una aprobación ni cubre el entorno completo. El gate físico sigue cerrado;
+no se consultó ni movió el robot. [Ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-source-binding-20261110).
+
 **10-11-2026 — ARM-PICO-LAUNCHER-CANDIDATE-20261110: lanzador preparado y
 comprobado en simulación.** Incluye preparación aditiva, guardia, lease,
 latido con desafío, recibo global y cancelación por UUID. Guardia final pasó

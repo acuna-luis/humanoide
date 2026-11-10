@@ -2,6 +2,13 @@
 
 ## Lanzador candidato — 10-11-2026
 
+**Revisión posterior de fuentes:** el lanzador prepara la conservación de
+bytes y hashes de ocho fuentes PC controladas, además de bundles y entradas.
+Se corrigió la ruta del lector de E-stop y se comprueba que esas fuentes se
+puedan leer. Esto no acredita los módulos ya cargados, Python, ROSA, SDK ni
+todo el entorno. No se ha generado una aprobación externa ni se requiere
+inferirla de un hash; la vinculación a la revisión técnica real sigue pendiente.
+
 Se preparó un lanzador que combina la tarea nativa local de muñeca, el cliente
 ROSA de cajas, un monitor de cuerpo/manos/paros, lease y un latido de desafío
 PC–Motion. La instalación propuesta es aditiva y conserva recibo; una marca

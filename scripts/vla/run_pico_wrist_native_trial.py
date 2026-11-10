@@ -77,7 +77,23 @@ def source_bundle(*, include_sources=False):
     return host, guard, worker
 
 
-def retain_bundle_evidence(outdir, sources, host, guard, worker, manifest_raw, urdf_raw, transmissions_raw):
+def controlled_pc_sources():
+    """Snapshot direct project-controlled PC inputs; not the full runtime."""
+    paths = {
+        'trial_launcher': VLA/'run_pico_wrist_native_trial.py',
+        'bridge_check': VLA/'check_arm_native_bridge_live.py',
+        'arm_preflight': VLA/'check_arm_from_pico_supervised.py',
+        'head_launcher': VLA/'run_head_from_pico_supervised.py',
+        'head_admission': VLA/'head_from_pico_check.py',
+        'estop_reader': ROOT/'scripts/collect_estop_available_readonly.py',
+        'pico_cc_mode': ROOT/'scripts/teleoperation/pico_cc_mode.py',
+        'askpass_script': ROOT/'scripts/cruzr_recover_to_home.sh',
+    }
+    return {name: (path.read_bytes(), str(path)) for name, path in paths.items()}
+
+
+def retain_bundle_evidence(outdir, sources, host, guard, worker, manifest_raw, urdf_raw, transmissions_raw,
+                           *, pc_sources=None):
     """Retain exact in-memory input bytes before handoff; no review is implied."""
     artifacts = {'bundle-host.py':host.encode(), 'bundle-guard.py':guard.encode(),
                  'bundle-worker.py':worker.encode(), 'manifest.json':manifest_raw,
@@ -85,6 +101,10 @@ def retain_bundle_evidence(outdir, sources, host, guard, worker, manifest_raw, u
     for name, (source, _) in sources.items():
         if not name.isidentifier(): raise ValueError('invalid_source_name')
         artifacts['source-'+name+'.py'] = source.encode('utf-8')
+    pc_sources = pc_sources or {}
+    for name, (source, _) in pc_sources.items():
+        if not name.isidentifier() or not isinstance(source, bytes): raise ValueError('invalid_pc_source')
+        artifacts['pc-source-'+name] = source
     index = {}
     for name, data in sorted(artifacts.items()):
         path = outdir/name
@@ -97,7 +117,10 @@ def retain_bundle_evidence(outdir, sources, host, guard, worker, manifest_raw, u
         index[name] = hashlib.sha256(data).hexdigest()
     index_bytes = (json.dumps({'schema':'pico_wrist_bundle_evidence_v1',
         'source_origins':{name:path for name, (_, path) in sources.items()},
-        'sha256':index, 'review_attested':False}, sort_keys=True, indent=2)+'\n').encode()
+        'pc_source_origins':{name:path for name, (_, path) in pc_sources.items()},
+        'sha256':index, 'review_status':'not_reviewed',
+        'coverage':'controlled_sources_only_runtime_and_loaded_code_not_attested'},
+        sort_keys=True, indent=2)+'\n').encode()
     fd = os.open(outdir/'bundle-evidence.json', os.O_WRONLY | os.O_CREAT | os.O_EXCL |
                  os.O_CLOEXEC | getattr(os, 'O_NOFOLLOW', 0), 0o600)
     with os.fdopen(fd, 'wb') as stream:
@@ -153,7 +176,8 @@ def run_candidate(manifest_path, urdf_path, transmissions_path, physical_confirm
     finally: os.close(fd)
     host, guard, worker, sources = source_bundle(include_sources=True)
     evidence_digest = retain_bundle_evidence(outdir, sources, host, guard, worker,
-                                             manifest_raw, urdf_raw, transmissions_raw)
+                                             manifest_raw, urdf_raw, transmissions_raw,
+                                             pc_sources=controlled_pc_sources())
     mode, started, _ = passive.existing.preflight()
     session = {'schema':'cruzr_head_pico_preflight_v1', 'task_sha256':passive.existing.ARM_TASK_SHA,
                'pico_sha256':head.admission.PICO_SHA, 'work_mode':mode,

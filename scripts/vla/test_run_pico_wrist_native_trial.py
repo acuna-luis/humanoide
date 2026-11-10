@@ -25,6 +25,11 @@ def execute_streamed(source, payload):
 
 
 class LauncherTests(unittest.TestCase):
+    def test_controlled_pc_sources_exist_and_are_readable(self):
+        sources = launcher.controlled_pc_sources()
+        self.assertIn('estop_reader', sources)
+        self.assertTrue(all(isinstance(raw, bytes) and raw for raw, _ in sources.values()))
+
     def test_run_blocked_before_file_or_network(self):
         with patch.object(Path, 'read_bytes', side_effect=AssertionError('must not read')), \
              patch.object(launcher.subprocess, 'Popen', side_effect=AssertionError('must not connect')):
@@ -46,7 +51,7 @@ class LauncherTests(unittest.TestCase):
             raw = (outdir/'bundle-evidence.json').read_bytes()
             index = json.loads(raw)
             self.assertEqual(digest, hashlib.sha256(raw).hexdigest())
-            self.assertFalse(index['review_attested'])
+            self.assertEqual(index['review_status'], 'not_reviewed')
             self.assertEqual((outdir/'robot.urdf').read_bytes(), b'URDF\r\n')
             for name, expected in index['sha256'].items():
                 self.assertEqual(hashlib.sha256((outdir/name).read_bytes()).hexdigest(), expected)

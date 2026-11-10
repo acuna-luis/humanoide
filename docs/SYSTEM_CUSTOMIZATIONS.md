@@ -1,5 +1,16 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-SOURCE-BINDING-20261110
+
+**10-11-2026, Europe/Madrid — inventario local de fuentes preparado; revisión
+y habilitación PENDIENTES.** Sin consultas remotas ni movimientos.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | `cfe63da`, lanzador candidato con gate físico y vínculo de revisión bloqueados. |
+| Fuentes y verificación | `scripts/vla/run_pico_wrist_native_trial.py` SHA256 `eec4e3fac4ee4f0eb14d6e034ae3906894007e3b4c486ca79d76cb5c3152d1c9`, test `c742dfbdefbaba15f8aa7f5d12934b1ff2b077ac4aaa8e8021c2a993afe18d1c`. Se incorporó copia íntegra de ocho fuentes PC controladas al inventario de bundles y se corrigió la ruta del lector E-stop; seis tests del lanzador pasan y las ocho fuentes se leen. No se fabricó atestación, autorización ni identidad de revisor. |
+| Alcance y reversión | Guardar hashes no vincula automáticamente los bundles a una revisión técnica, ni cubre módulos cargados, binarios o dependencias transitivas. Gate físico intacto. Revertir selectivamente frente a `cfe63da`; sin cambios remotos. |
+
 ## ARM-PICO-LAUNCHER-CANDIDATE-20261110
 
 **10-11-2026, Europe/Madrid — lanzador candidato SIMULADO; ejecución y

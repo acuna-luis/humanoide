@@ -1,5 +1,9 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-SOURCE-BINDING-20261110.** Preparado inventario de
+fuentes locales y bundles; no es habilitación física ni revisión del runtime
+completo. [Ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-source-binding-20261110).
+
 **10-11-2026 — ARM-PICO-LAUNCHER-CANDIDATE-20261110.** Preparado candidato
 de lanzador con pruebas simuladas; guardia final comprobada en Motion sin
 meta. Gate, trayectoria y control físico siguen pendientes.
