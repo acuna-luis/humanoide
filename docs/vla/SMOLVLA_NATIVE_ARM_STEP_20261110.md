@@ -1,5 +1,54 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Intento interrumpido de muñeca — 10-11-2026
+
+La sesión `ccfbd5afa50744649c4d9982601013ae` inició la ruta supervisada de
+una tarea estática de muñeca derecha, **sin ejecutar la política SmolVLA**.
+El worker creó el XML nativo y emitió receipt; a continuación el coordinador
+falló con `JSONDecodeError` al interpretar su stdout. Los eventos retenidos
+no incluyen solicitud de UUID, envío, aceptación ni resultado. La línea no
+JSON fue descartada antes de escribirse en el journal, por lo que se desconoce
+su contenido.
+
+El worker revisado espera el ACK del coordinador tras la solicitud de UUID,
+y la API ROSA fijada llama al servicio de goal después de esa espera. Por ello
+los registros y ese protocolo **apoyan la inferencia** de que el fallo ocurrió
+antes del envío; no son una observación directa del servicio ni acreditan el
+estado físico en todo momento. El operador indicó no haber visto movimiento
+ni anomalías. En una muestra posterior de articulaciones la muñeca derecha
+era `0,0012463593901570836` rad, igual al inicio del candidato, y todas las
+velocidades publicadas eran 0; el único goal de estado observado era anterior
+y mostraba `status=4`. No atribuirlo a este intento.
+
+El receipt y una lectura independiente identifican el XML staged
+`/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/diagnostics/pico_v4_wrist_d4c704e6ab369d25.xml`,
+SHA256 `d4c704e6ab369d250658a596cd6a5704258accf130971d3046748a8d132b616b`,
+dev 45/inode 3584590, modo 0600/UID 0. El directorio creado fue dev 45/inode
+3584589. El host conserva `/var/tmp/cruzr-pico-v4-wrist-control/` con marker,
+lock, journal y stderr, y `/tmp/pico-wrist-live-3k5e3w2k/` con intent y lease;
+éste se leyó con `deadline=0.0`. La lectura puntual de procesos mostró app
+con `rosa` y `robot_app` y ROS con `bash`, sin Python visible en esos dos
+contenedores. No se ha retirado ningún archivo ni se ha enviado HOME.
+
+Un experimento temporal separado de `rosa.init()`/`rosa.shutdown()`, sin nodo
+ni goal, mostró que la biblioteca imprime una línea nativa en stdout. Esa
+línea sería incompatible con JSONL y ofrece una hipótesis plausible; **no
+permite identificar la línea descartada**. Evidencia privada en
+`../Humanoide-vla-evidence/PICO_NATIVE_WRIST_TRIAL/run-ccfbd5afa50744649c4d9982601013ae/`:
+`host-stdout.log` SHA256 `a59e9ada3d6d9949972d9064e9163a273d105dc1222fcfe48c37ad757aba0c93`,
+`host-stderr.log` `9514c5b74ac7da5fdc814bf9af8d9f61e3591ca0dabfd89e80519ab21e47771c`,
+`remote-receipts-readonly.json` `4d01274ea56b72b363022e35fc49c87704269de0cba8d40e2446805a12b027cb`,
+`post-attempt-readonly.json` `d56004c470b422a40f81a4befab11a5b473b78c591230a1713ba847ea03bfa75`,
+`inventory-readonly.json` `c483d92ebb94ee8c7c17c613ec69d415017fe80a3e20a6aeb905e1bb935313be` y
+`rosa-init-readonly.json` `bbb546e657a91184a85cf71dcf14bec4f05a20d3ae33b7026a135a66652afbb1`.
+El registro remoto usa un reloj distinto: no usarlo para inferir edad de datos
+en el PC sin sincronización. El backup documental y la deuda están en la
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-attempt-ccfbd5-20261110).
+
+No reintentar, enviar HOME ni borrar automáticamente. Una reanudación requiere
+revisar el protocolo, los procesos y el marker/lease/XML registrados; cualquier
+limpieza debe ser selectiva y quedar documentada.
+
 ## Sesión acotada de muñeca — 10-11-2026
 
 **PREPARADA LOCALMENTE; EJECUCIÓN FÍSICA PENDIENTE.** El cargador aislado

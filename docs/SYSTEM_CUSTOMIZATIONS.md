@@ -1,5 +1,21 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-ATTEMPT-CCFBD5-20261110
+
+**10-11-2026, Europe/Madrid — INTENTO FÍSICO INTERRUMPIDO; estado observado
+posteriormente inmóvil, despacho NO DEMOSTRADO.** El operador indicó que no
+observó movimiento ni anomalía. No es una prueba de SmolVLA.
+
+| Campo | Registro |
+| --- | --- |
+| Sesión y objetivo | `ccfbd5afa50744649c4d9982601013ae`; una sola tarea nativa supervisada de muñeca derecha, sin retorno automático. La preparación y fuentes previas constan en `ARM-PICO-SCOPED-SESSION-20261110`. |
+| Resultado observado | PC registró `BRIDGE_READY` y `stage_receipt`; el coordinador terminó en `JSONDecodeError` al leer stdout del worker, sin evento `uuid_request`, `dispatched`, `accepted` o `result` en los registros conservados. El journal remoto conserva receipt y `coordinator_failure`; no conserva la línea inválida. Según el protocolo y la API ROSA fijada, el envío ocurre sólo después del ACK al UUID; **inferir ausencia de envío** es condicionado a que esos bytes y ese orden se aplicaran, no evidencia directa de que el robot no recibiera un goal. La observación del operador no prueba por sí sola el estado de la acción. |
+| Estado leído después | Una muestra ROS posterior mostró muñeca derecha `0,0012463593901570836` rad (igual al inicio del candidato), velocidad 0 y velocidad máxima observada 0 en esa muestra. El único goal de estado observado era anterior y tenía `status=4`; no atribuirlo a esta sesión. Inventario puntual `docker top`: app con `rosa` y `robot_app`, ROS con `bash`, sin proceso Python visible en esos contenedores. El lease leído tenía `deadline=0.0`. Estas observaciones no garantizan estado posterior ni parada general. |
+| Cambio remoto persistente | En contenedor app, XML `.../config/diagnostics/pico_v4_wrist_d4c704e6ab369d25.xml`, SHA256 `d4c704e6ab369d250658a596cd6a5704258accf130971d3046748a8d132b616b`, dev 45/inode 3584590, modo 0600/UID 0; directorio recién creado según receipt dev 45/inode 3584589. Host Motion conserva `/var/tmp/cruzr-pico-v4-wrist-control/` con `PENDING_OR_UNRESOLVED.json`, lock, journal y stderr del worker, y `/tmp/pico-wrist-live-3k5e3w2k/` con lease e intent. No se ha retirado ni restaurado nada. |
+| Causa y experimento | La línea inválida exacta no se guardó, por lo que su contenido y origen siguen PENDIENTES. Un proceso temporal de `rosa.init()`/`rosa.shutdown()` sin nodo ni goal emitió en stdout una línea nativa `context_options.cpp`; esto es compatible con el fallo pero no identifica la línea perdida. Proceso terminado, sin cambio persistente declarado. |
+| Evidencia y backup | `../Humanoide-vla-evidence/PICO_NATIVE_WRIST_TRIAL/run-ccfbd5afa50744649c4d9982601013ae/`: `remote-receipts-readonly.json` SHA256 `4d01274ea56b72b363022e35fc49c87704269de0cba8d40e2446805a12b027cb`; `post-attempt-readonly.json` `d56004c470b422a40f81a4befab11a5b473b78c591230a1713ba847ea03bfa75`; `inventory-readonly.json` `c483d92ebb94ee8c7c17c613ec69d415017fe80a3e20a6aeb905e1bb935313be`; demás hashes en la guía. `before-attempt-docs.tar` SHA256 `b0e86c6791b3ff7466a5fb5c7d3160ada40bf5c7848ad2207ae2c79794b3cab2`. |
+| Reanudación y reversión | No reintentar, enviar HOME ni borrar automáticamente. Corregir o diagnosticar el protocolo y revisar presencia/identidad de procesos, marker, lease y XML antes de cualquier recuperación o reversión selectiva; conservar los recibos. La limpieza de archivos o cualquier movimiento requieren procedimiento concreto documentado. |
+
 ## ARM-PICO-SCOPED-SESSION-20261110
 
 **10-11-2026, Europe/Madrid — PREPARADO LOCAL Y CHECK PASIVO OBSERVADO;

@@ -1,5 +1,12 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-ATTEMPT-CCFBD5-20261110.** Un intento supervisado de
+la tarea estática de muñeca falló después de copiar el XML y antes de observar
+la solicitud de UUID. Lectura posterior inmóvil y operador sin anomalía; el
+envío no se demuestra directamente. Quedan XML y marcador para revisión, sin
+reintento ni HOME automático. No es ejecución física de SmolVLA.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#intento-interrumpido-de-muñeca--10-11-2026).
+
 **10-11-2026 — ARM-PICO-SCOPED-SESSION-20261110.** Preparada la ruta para una
 sola tarea nativa de muñeca con sesión y UUID vinculados; tests y check pasivo
 pasan. No se ha probado físicamente y no ejecuta SmolVLA. Los codos de la

@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-ATTEMPT-CCFBD5-20261110: intento interrumpido.**
+La tarea nativa de muñeca se copió a Motion, pero el coordinador falló al
+procesar una línea no JSON antes de observar `uuid_request`. El protocolo
+revisado sugiere que no se envió una meta sin el ACK, pero no es una prueba
+directa. La lectura posterior mostró las articulaciones inmóviles y el
+operador no observó movimiento ni anomalía. XML, marcador, lease y registro
+siguen presentes; no reintentar ni enviar HOME automáticamente.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#intento-interrumpido-de-muñeca--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-attempt-ccfbd5-20261110).
+
 **10-11-2026 — ARM-PICO-SCOPED-SESSION-20261110: ruta local acotada a una
 muñeca preparada.** El cargador aislado y los bundles enlazan una sesión,
 fuentes, candidato y UUID; el transporte admite una única meta de la tarea
