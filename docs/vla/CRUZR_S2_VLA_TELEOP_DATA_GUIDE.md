@@ -1,5 +1,10 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-LAUNCHER-CANDIDATE-20261110.** Preparado candidato
+de lanzador con pruebas simuladas; guardia final comprobada en Motion sin
+meta. Gate, trayectoria y control físico siguen pendientes.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#lanzador-candidato--10-11-2026).
+
 **10-11-2026 — ARM-PICO-LEASE-BRIDGE-20261110.** Puente de lease y UUID
 probado con monitor real en Motion, sin meta ni control físico.
 [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#puente-de-supervisión-y-cliente-nativo--10-11-2026).

@@ -1,0 +1,230 @@
+#!/usr/bin/env python3
+"""Motion-host launcher candidate; physical gate remains closed.
+
+Starts a guard in ROS2 and a worker in the native app container only after
+separate release and preflight. No command-line release switch exists. This
+code has not been exercised on hardware and is not a certified stop mechanism.
+"""
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import select
+import shlex
+import subprocess
+import sys
+import tempfile
+import time
+import uuid
+
+import arm_from_pico_supervised as arm
+import arm_native_lease_bridge as bridge
+import pico_wrist_native_coordinator as coordinator
+import pico_wrist_pc_heartbeat as heartbeat
+import prepare_pico_wrist_native_probe as probe
+import scenario1_action_client as native
+
+
+def validate_payload(payload):
+    required = {'session', 'manifest', 'urdf_text', 'transmissions_text',
+                'guard_source', 'worker_source', 'operator_confirmed'}
+    if not isinstance(payload, dict) or set(payload) != required:
+        raise ValueError('invalid_launcher_payload')
+    if payload['operator_confirmed'] is not True:
+        raise ValueError('current_operator_confirmation_required')
+    session = payload['session']
+    arm.validate_preflight(session, 0, dry_run=True)
+    probe.validate(payload['manifest'], payload['urdf_text'], payload['transmissions_text'])
+    for key in ('guard_source', 'worker_source'):
+        if not isinstance(payload[key], str) or not 0 < len(payload[key]) <= 1_000_000:
+            raise ValueError('invalid_' + key)
+        compile(payload[key], '<'+key+'>', 'exec')
+    return session
+
+
+def discover_containers():
+    result = subprocess.run(['docker', 'ps', '--format', '{{.Names}}'], capture_output=True, text=True, timeout=5)
+    if result.returncode:
+        raise RuntimeError('container_discovery_failed')
+    names = result.stdout.splitlines()
+    app = [x for x in names if x == 'walker-motion.manipulation_robot_app-1']
+    ros = [x for x in names if x == 'walker-ros.ros2-1']
+    if len(app) != 1 or len(ros) != 1:
+        raise RuntimeError('motion_containers_not_unique')
+    return app[0], ros[0]
+
+
+def write_stream(fd, data, timeout):
+    os.set_blocking(fd, False)
+    deadline = time.monotonic()+timeout
+    view = memoryview(data)
+    while view:
+        remaining = deadline-time.monotonic()
+        if remaining <= 0: raise TimeoutError('bootstrap_write_timeout')
+        _, writable, _ = select.select([], [fd], [], remaining)
+        if not writable: raise TimeoutError('bootstrap_write_timeout')
+        try: count = os.write(fd, view)
+        except BlockingIOError: continue
+        if count <= 0: raise BrokenPipeError('bootstrap_write_failed')
+        view = view[count:]
+
+
+def start_streamed(container, setup, source, payload, *, stderr):
+    sentinel = 'PICO_SOURCE_END_' + uuid.uuid4().hex
+    if sentinel in source:
+        raise ValueError('source_sentinel_collision')
+    bootstrap = ('import sys\nparts=[]\nfor line in sys.stdin:\n'
+                 ' if line.rstrip("\\n")=='+repr(sentinel)+': break\n'
+                 ' parts.append(line)\n'
+                 'else: raise SystemExit("incomplete source")\n'
+                 'exec(compile("".join(parts),"<pico-streamed-source>","exec"))\n')
+    command = ('source '+setup+'; export ROS2CLI_DISABLE_DAEMON=1; '
+               'exec python3 -B -u -c '+shlex.quote(bootstrap))
+    child = subprocess.Popen(['docker', 'exec', '-i', container, 'bash', '-lc', command],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=stderr, bufsize=0)
+    data = (source+'\n'+sentinel+'\n'+json.dumps(payload, allow_nan=False)+'\n').encode()
+    try:
+        write_stream(child.stdin.fileno(), data, 10.0)
+    except BaseException:
+        # Source or payload might have arrived. Never interpret termination of
+        # docker exec as physical cancellation; caller preserves the receipt.
+        raise
+    return child
+
+
+def verify_shared_tmp(directory, app):
+    """Check one newly-created private file is readable in the app container."""
+    token = uuid.uuid4().hex
+    path = Path(directory)/('shared-' + token)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | getattr(os, 'O_NOFOLLOW', 0)
+    fd = os.open(path, flags, 0o600)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            f.write(token); f.flush(); os.fsync(f.fileno())
+        code = 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).read_text())'
+        result = subprocess.run(['docker', 'exec', app, 'python3', '-B', '-c', code, str(path)],
+                                capture_output=True, text=True, timeout=5)
+        if result.returncode != 0 or result.stdout.strip() != token:
+            raise RuntimeError('shared_tmp_not_verified')
+    finally:
+        # Remove only the locally created marker; no task or lease cleanup.
+        path.unlink(missing_ok=True)
+
+
+class HostOutput:
+    """Nonblocking operator output: a lost reader revokes future leases."""
+    def __init__(self, fd):
+        self.fd, self.failed = fd, False
+        os.set_blocking(fd, False)
+
+    def emit(self, row):
+        try:
+            data = (json.dumps(row, separators=(',', ':'), allow_nan=False)+'\n').encode()
+            if len(data) > 4096 or os.write(self.fd, data) != len(data):
+                self.failed = True
+        except (OSError, BlockingIOError):
+            self.failed = True
+        return not self.failed
+
+
+def pc_preflight_handoff(session, output, input_fd):
+    """Bound PC-to-Motion preflight age without comparing host clocks."""
+    challenge = uuid.uuid4().hex
+    if not output.emit({'event':'HOST_PREFLIGHT_READY', 'session_id':session['session_id'],
+                        'challenge':challenge}):
+        raise RuntimeError('operator_output_unavailable')
+    os.set_blocking(input_fd, False)
+    deadline = time.monotonic()+3.0
+    buffer = bytearray()
+    while time.monotonic() < deadline:
+        readable, _, _ = select.select([input_fd], [], [], max(0.0, deadline-time.monotonic()))
+        if not readable: break
+        try: data = os.read(input_fd, 4097)
+        except BlockingIOError: continue
+        if not data: raise RuntimeError('pc_preflight_disconnected')
+        buffer.extend(data)
+        if len(buffer) > 4096: raise ValueError('pc_preflight_ack_oversize')
+        if b'\n' in buffer:
+            line, extra = bytes(buffer).split(b'\n', 1)
+            if extra: raise ValueError('pc_preflight_ack_extra_data')
+            ack = native.object_json(line.decode('utf-8'))
+            if (set(ack) != {'event', 'session_id', 'challenge', 'inventory_age_s'} or
+                    ack['event'] != 'pc_preflight_ack' or ack['session_id'] != session['session_id'] or
+                    ack['challenge'] != challenge or type(ack['inventory_age_s']) not in (int, float) or
+                    not math.isfinite(ack['inventory_age_s']) or ack['inventory_age_s'] < 0 or
+                    ack['inventory_age_s']+3.0 > 30 or time.monotonic() > deadline):
+                raise ValueError('pc_preflight_ack_invalid_or_stale')
+            # The maximum remaining preflight RTT is conservatively included.
+            session['age_at_handoff_s'] = ack['inventory_age_s'] + 3.0
+            return
+    raise TimeoutError('pc_preflight_ack_timeout')
+
+
+def launch(payload):
+    # Closed before Docker, temporary files, staging or any action client.
+    arm.physical_release_gate()
+    session = validate_payload(payload)
+    # This creates only a private, receipted control directory if absent. No
+    # automatic rollback; an interrupted creation requires manual review.
+    coordinator.ensure_control_root()
+    # Acquired before either guard or worker is started; retained until return.
+    lock_fd = coordinator.acquire_trial_lock()
+    child = pipe = lease = pc = None
+    worker_holder = []
+    directory = None
+    completed = False
+    try:
+        output = HostOutput(sys.stdout.fileno())
+        pc_preflight_handoff(session, output, sys.stdin.fileno())
+        if not output.emit({'event':'HOST_HEARTBEAT_READY', 'session_id':session['session_id']}):
+            raise RuntimeError('operator_output_unavailable')
+        pc = heartbeat.PcHeartbeat(sys.stdin.fileno(), session['session_id'], output.emit)
+        pc.await_ready(3.0)
+        app, ros = discover_containers()
+        directory = tempfile.mkdtemp(prefix='pico-wrist-live-', dir='/tmp')
+        verify_shared_tmp(directory, app)
+        child = start_streamed(ros, '/opt/ros/humble/setup.bash', payload['guard_source'], session,
+                               stderr=subprocess.DEVNULL)
+        lease = bridge.GuardLease(directory, payload['manifest']['input']['reference_20d'],
+                                  lambda: child.poll() is None and pc.alive() and not output.failed,
+                                  session_id=session['session_id'])
+        now = time.monotonic()
+        pipe = bridge.GuardPipe(child, lease, now-session['age_at_handoff_s'])
+        def start_worker(lease_path, intent_path, intent_uid):
+            request = {'manifest': payload['manifest'], 'urdf_text': payload['urdf_text'],
+                       'transmissions_text': payload['transmissions_text'], 'lease_path': str(lease_path),
+                       'session_id': session['session_id'], 'intent_path': str(intent_path),
+                       'intent_uid': intent_uid}
+            error_log = coordinator.GLOBAL_RECEIPT_DIR/('worker-stderr-'+session['session_id']+'.log')
+            with error_log.open('x', encoding='utf-8') as errors:
+                worker = start_streamed(app, '/opt/walker/setup.bash', payload['worker_source'], request,
+                                        stderr=errors)
+            worker_holder.append(worker)
+            return worker
+        result = coordinator.coordinate(lease, pipe, payload['manifest'], payload['urdf_text'],
+                                        payload['transmissions_text'], start_worker,
+                                        coordinator.GLOBAL_RECEIPT_DIR, held_lock_fd=lock_fd,
+                                        event_sink=output.emit)
+        completed = True
+        return result
+    finally:
+        # On uncertainty, preserve shared files and do not claim cancellation.
+        # The operator must monitor the robot; no HOME or retry is issued.
+        if lease is not None:
+            try: lease.fail()
+            except Exception as exc:
+                output.emit({'event':'lease_revocation_failed', 'reason':str(exc),
+                             'physical_stop_verified':False})
+        if completed and pipe is not None:
+            pipe.stop()
+        if completed and child is not None:
+            try: child.wait(timeout=3)
+            except subprocess.TimeoutExpired: pass
+        if pc is not None:
+            pc.close()
+        os.close(lock_fd)
+
+
+if __name__ == '__main__':
+    raise SystemExit('Physical launcher remains blocked; no direct execution.')

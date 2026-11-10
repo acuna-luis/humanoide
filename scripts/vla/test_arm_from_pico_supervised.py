@@ -6,6 +6,7 @@ import sys
 import time
 import types
 import unittest
+import uuid
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'runtime'))
@@ -196,16 +197,44 @@ class ArmActionTests(unittest.TestCase):
 class ContinuousGuardTests(unittest.TestCase):
     def simulate_guard(self, scenario):
         fake = FakeArmRun('success')
+        faults = ('guard_estop', 'guard_stale', 'guard_stdout', 'guard_eof', 'guard_badjson', 'guard_ros_error', 'cancel_unknown_then_active')
+        if scenario in ('cancel', 'cancel_disabled') + faults:
+            fake.goal_id = list(uuid.UUID('12345678-1234-1234-1234-123456789abc').bytes)
         original_spin = fake.spin
         def spin(node, timeout_sec=0):
+            if (scenario == 'guard_ros_error' and not getattr(fake, 'ros_error_given', False)
+                    and any(x['event'] == 'goal_uuid_ready' for x in fake.emitted)):
+                fake.ros_error_given = True
+                raise OSError('simulated ROS failure')
             original_spin(node, timeout_sec)
+            acknowledged = any(x['event'] == 'goal_uuid_ready' for x in fake.emitted)
+            if acknowledged and scenario == 'guard_estop':
+                fake.subs['/emb/estop_key_state']({'data': 1})
+            if acknowledged and scenario == 'guard_stale' and not fake.cancelled:
+                if not hasattr(fake, 'saved_body_callback'):
+                    fake.saved_body_callback = fake.subs['/mc/whole_joint_states']
+                    fake.subs['/mc/whole_joint_states'] = lambda message: None
+            if fake.cancelled and hasattr(fake, 'saved_body_callback'):
+                fake.subs['/mc/whole_joint_states'] = fake.saved_body_callback
+            if fake.cancelled and scenario in faults:
+                status = types.SimpleNamespace(status=5, goal_info=types.SimpleNamespace(
+                    goal_id=types.SimpleNamespace(uuid=fake.goal_id)))
+                fake.subs['/mc/manipulation/action/_action/status'](types.SimpleNamespace(status_list=[status]))
+            if (scenario == 'cancel_unknown_then_active' and fake.cancel_uuid_count == 1
+                    and any(x['event'] == 'guard_cancel_response' for x in fake.emitted)):
+                status = types.SimpleNamespace(status=2, goal_info=types.SimpleNamespace(
+                    goal_id=types.SimpleNamespace(uuid=fake.goal_id)))
+                fake.subs['/mc/manipulation/action/_action/status'](types.SimpleNamespace(status_list=[status]))
             if scenario == 'foreign' and any(x['event'] == 'goal_uuid_ready' for x in fake.emitted):
                 status = types.SimpleNamespace(status=2, goal_info=types.SimpleNamespace(
                     goal_id=types.SimpleNamespace(uuid=list(b'z'*16))))
                 fake.subs['/mc/manipulation/action/_action/status'](types.SimpleNamespace(status_list=[status]))
         fake.spin = spin
         read_count = 0
-        def write(fd, data): fake.emitted.append(json.loads(data)); return len(data)
+        def write(fd, data):
+            if scenario == 'guard_stdout' and any(x['event'] == 'goal_uuid_ready' for x in fake.emitted):
+                raise BlockingIOError('fake broken observer')
+            fake.emitted.append(json.loads(data)); return len(data)
         def read(fd, size):
             nonlocal read_count
             read_count += 1
@@ -219,17 +248,66 @@ class ContinuousGuardTests(unittest.TestCase):
                        'challenge': 'c'*32}
             if read_count == 2 or scenario == 'duplicate':
                 return (json.dumps(command)+'\n').encode()
+            if read_count == 3 and scenario in ('guard_eof', 'cancel_unknown_then_active'): return b''
+            if read_count == 3 and scenario == 'guard_badjson': return b'{bad json}\n'
+            if read_count == 3 and scenario in ('cancel', 'cancel_disabled'):
+                return (json.dumps({'event':'cancel_goal_uuid', 'session_id':'a'*32,
+                        'goal_id':command['goal_id'], 'challenge':'e'*32})+'\n').encode()
             return (json.dumps({'event':'stop_guard', 'session_id':'a'*32})+'\n').encode()
+        def select_input(r, w, x, timeout):
+            if (scenario in ('guard_stale', 'guard_stdout', 'guard_estop', 'guard_ros_error')
+                    and any(e['event'] == 'goal_uuid_ready' for e in fake.emitted)):
+                return ([], [], [])
+            return (r, [], [])
         with patch.object(head_tests, 'subject', arm):
             session = head_tests.proof()
         session['mode'] = 'check'; session['operator_confirmed'] = False
-        with patch.object(head_tests, 'sample', sample), patch.dict(sys.modules, fake.install()), \
+        modules = fake.install()
+        if scenario in ('cancel_service_missing', 'cancel_service_lost_before_ack', 'cancel_unknown_then_active'):
+            create_node = modules['rclpy'].create_node
+            def new_node(*args, **kwargs):
+                node = create_node(*args, **kwargs)
+                create_client = node.create_client
+                def new_client(*args, **kwargs):
+                    client = create_client(*args, **kwargs)
+                    if scenario != 'cancel_unknown_then_active':
+                        client.service_is_ready = lambda: (scenario != 'cancel_service_missing' and read_count < 2)
+                    else:
+                        call = client.call_async
+                        def first_unknown(request):
+                            if fake.cancel_uuid_count == 0:
+                                self.assertEqual(bytes(request.goal_info.goal_id.uuid), bytes(fake.goal_id))
+                                fake.cancel_uuid_count += 1
+                                return types.SimpleNamespace(done=lambda: True,
+                                    result=lambda: types.SimpleNamespace(return_code=2))
+                            return call(request)
+                        client.call_async = first_unknown
+                    return client
+                node.create_client = new_client
+                return node
+            modules['rclpy'].create_node = new_node
+        with patch.object(head_tests, 'sample', sample), patch.dict(sys.modules, modules), \
+             patch.object(arm, 'physical_release_gate'), \
              patch.object(arm.time, 'monotonic', side_effect=lambda: fake.now), \
              patch.object(arm.os, 'set_blocking'), patch.object(arm.os, 'write', side_effect=write), \
              patch.object(arm.os, 'read', side_effect=read), \
-             patch.object(arm.select, 'select', side_effect=lambda r,w,x,timeout:(r,[],[])):
-            if scenario == 'success':
-                self.assertEqual(arm.main(session, dry_run=True, monitor_only=True), 0)
+             patch.object(arm.select, 'select', side_effect=select_input):
+            if scenario == 'cancel_service_missing':
+                self.assertEqual(arm.main(session, dry_run=True, monitor_only=True, guard_can_cancel=True), 1)
+                self.assertTrue(any(x.get('reason') == 'cancel_service_unavailable' for x in fake.emitted))
+            elif scenario == 'cancel_service_lost_before_ack':
+                with self.assertRaisesRegex(ValueError, 'cancel_service_unavailable'):
+                    arm.main(session, dry_run=True, monitor_only=True, guard_can_cancel=True)
+            elif scenario in ('success', 'cancel'):
+                self.assertEqual(arm.main(session, dry_run=True, monitor_only=True,
+                                          guard_can_cancel=scenario == 'cancel'), 0)
+            elif scenario in faults:
+                self.assertEqual(arm.main(session, dry_run=True, monitor_only=True,
+                                          guard_can_cancel=True), 1)
+                self.assertEqual(fake.cancel_uuid_count, 2 if scenario == 'cancel_unknown_then_active' else 1)
+            elif scenario == 'cancel_disabled':
+                with self.assertRaisesRegex(ValueError, 'invalid_guard_cancel_request'):
+                    arm.main(session, dry_run=True, monitor_only=True)
             elif scenario == 'duplicate':
                 with self.assertRaisesRegex(ValueError, 'invalid_guard_uuid_handshake'):
                     arm.main(session, dry_run=True, monitor_only=True)
@@ -249,6 +327,36 @@ class ContinuousGuardTests(unittest.TestCase):
 
     def test_foreign_action_remains_blocked_after_uuid_ack(self):
         self.simulate_guard('foreign')
+
+    def test_guard_requests_exact_uuid_cancel_without_claiming_stop(self):
+        events = self.simulate_guard('cancel')
+        request = next(x for x in events if x['event'] == 'guard_cancel_requested')
+        self.assertEqual(request['goal_id'], '12345678-1234-1234-1234-123456789abc')
+        self.assertFalse(request['physical_stop_confirmed'])
+
+    def test_missing_cancel_service_blocks_preflight(self):
+        events = self.simulate_guard('cancel_service_missing')
+        self.assertNotIn('ARM_GUARD_READY', [row['event'] for row in events])
+
+    def test_cancel_service_lost_before_ack_blocks_uuid(self):
+        events = self.simulate_guard('cancel_service_lost_before_ack')
+        self.assertNotIn('goal_uuid_ready', [row['event'] for row in events])
+
+    def test_passive_check_cannot_cancel(self):
+        self.simulate_guard('cancel_disabled')
+
+    def test_guard_faults_cancel_own_uuid_and_keep_observing(self):
+        for scenario in ('guard_estop', 'guard_stale', 'guard_stdout', 'guard_eof', 'guard_badjson', 'guard_ros_error'):
+            with self.subTest(scenario=scenario):
+                self.simulate_guard(scenario)
+
+    def test_unknown_cancel_followed_by_own_active_retries_once(self):
+        events = self.simulate_guard('cancel_unknown_then_active')
+        self.assertTrue(any(x.get('event') == 'guard_cancel_response' and x.get('return_code') == 2
+                            for x in events))
+        retry = [x for x in events if x.get('attempt') == 2]
+        self.assertEqual(len(retry), 1)
+        self.assertFalse(retry[0]['physical_stop_confirmed'])
 
 
 if __name__ == '__main__':

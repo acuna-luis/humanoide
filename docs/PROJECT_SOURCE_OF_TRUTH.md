@@ -1,5 +1,13 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-LAUNCHER-CANDIDATE-20261110: lanzador preparado y
+comprobado en simulación.** Incluye preparación aditiva, guardia, lease,
+latido con desafío, recibo global y cancelación por UUID. Guardia final pasó
+un check pasivo en Motion sin meta; lanzador, trayectoria y parada físicos
+siguen sin probar. Gate y atestación cerrados; cero movimiento.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#lanzador-candidato--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-launcher-candidate-20261110).
+
 **10-11-2026 — ARM-PICO-LEASE-BRIDGE-20261110: puente pasivo comprobado.**
 El monitor y coordinador de lease intercambiaron UUID sintético en Motion y
 revocaron lease al terminar guardia, sin crear meta ni enviar movimiento.

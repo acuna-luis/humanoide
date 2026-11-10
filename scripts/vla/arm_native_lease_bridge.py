@@ -188,6 +188,8 @@ class GuardPipe:
         self.ready = threading.Event()
         self.write_lock = threading.Lock()
         self.failure = None
+        self.channel_failed = False
+        self.auto_cancel_requested = False
         self.stopping = False
         self.latest = None
         self.handoff = False
@@ -234,9 +236,30 @@ class GuardPipe:
                 if event == 'BRIDGE_READY':
                     continue
                 if event == 'telemetry':
-                    self.latest = row
-                    if self.ready.is_set() and not self.stopping:
-                        self.lease.heartbeat(row)
+                    if self.ready.is_set() and not self.stopping and not self.lease.failed:
+                        if not self.lease.guard_alive():
+                            # PC liveness can fail while the independent guard
+                            # process is still alive. Revoke authority but keep
+                            # its pipe available for exact-UUID cancellation.
+                            with self.lease.lock:
+                                self.failure = 'guard_or_pc_liveness_lost'
+                                try: self.lease.fail()
+                                except Exception as exc:
+                                    self.failure += ':lease_revocation_failed:' + str(exc)
+                            continue
+                        # Publish the sample only after it has been validated;
+                        # postflight readers use this same lock.
+                        with self.lease.lock:
+                            try:
+                                self.lease.heartbeat(row)
+                            except Exception as exc:
+                                # The observation is unsafe, but the guard
+                                # channel may still cancel the exact UUID.
+                                self.failure = 'guard_telemetry_invalid:' + str(exc)
+                            else:
+                                self.latest = row
+                    elif not self.ready.is_set():
+                        self.latest = row
                 elif event == 'pre_dispatch_ready':
                     challenge, guard_id = row.get('challenge'), row.get('goal_uuid')
                     age = self.clock()-self.inventory_started
@@ -271,18 +294,52 @@ class GuardPipe:
                         raise ValueError('guard_reference_changed')
                     self.lease.heartbeat(self.latest)
                     self.ready.set()
-                elif event == 'goal_uuid_ready':
+                elif event in ('goal_uuid_ready', 'guard_cancel_requested'):
                     if not self.ready.is_set():
                         raise ValueError('guard_ack_before_ready')
                     self.acks.put_nowait(row)
+                elif event in ('guard_cancel_response', 'guard_terminal_observed'):
+                    # These are observations only. They do not revive a lease or
+                    # establish physical stopping; caller can journal them.
+                    continue
+                elif event in ('OPERATOR_ALERT', 'UNRESOLVED_MONITORING',
+                               'guard_auto_cancel_requested', 'guard_auto_cancel_delivery_unknown',
+                               'guard_cancel_response_unknown', 'guard_fault_terminal_and_still'):
+                    with self.lease.lock:
+                        self.failure = self.failure or ('guard_reported:' + event)
+                        try: self.lease.fail()
+                        except Exception as exc:
+                            self.failure += ':lease_revocation_failed:' + str(exc)
+                        if event == 'guard_auto_cancel_requested':
+                            self.auto_cancel_requested = True
                 elif event == 'ARM_GUARD_STOPPED' and self.stopping:
                     return
                 else:
                     raise ValueError('unexpected_guard_event:' + str(event))
         except BaseException as exc:
-            self.failure = str(exc)
-            self.lease.fail()
-            self.ready.set()  # wake waiters; they must inspect failure
+            with self.lease.lock:
+                self.channel_failed = True
+                self.failure = str(exc)
+                try:
+                    self.lease.fail()
+                except Exception as revoke_error:
+                    self.failure += ':lease_revocation_failed:' + str(revoke_error)
+                finally:
+                    self.ready.set()  # wake waiters; they must inspect failure
+
+    def checked_snapshot(self):
+        """Atomically return only a fresh, successfully checked sample."""
+        with self.lease.lock:
+            if self.failure or self.lease.failed or not self.ready.is_set() or not self.lease.guard_alive():
+                raise RuntimeError('guard_not_healthy_for_snapshot')
+            native.check_lease(self.lease.path, self.clock())
+            sample = self.latest
+            if (not isinstance(sample, dict) or type(sample.get('monotonic')) not in (int, float)
+                    or not math.isfinite(sample['monotonic'])
+                    or not 0 <= self.clock()-sample['monotonic'] <= MAX_AGE_S):
+                raise RuntimeError('postflight_telemetry_stale')
+            # Return independent containers so callers cannot alter the sample.
+            return dict(sample, position=dict(sample['position']), velocity=dict(sample['velocity']))
 
     def await_ready(self, timeout):
         if not self.ready.wait(timeout) or self.failure or not self.lease.guard_alive():
@@ -313,13 +370,48 @@ class GuardPipe:
         if type(timeout) not in (int, float) or not math.isfinite(timeout) or not 0 < timeout <= 5:
             raise ValueError('invalid_guard_stop_timeout')
         self.stopping = True
-        self.lease.fail()
+        try:
+            self.lease.fail()
+        except Exception:
+            pass  # Still stop the passive guard; do not claim lease revocation.
         try:
             self._send({'event': 'stop_guard', 'session_id': self.lease.session_id}, time.monotonic()+timeout)
         except (OSError, ValueError, TimeoutError):
             pass
         self.thread.join(timeout)
         return not self.thread.is_alive()
+
+    def cancel_goal(self, goal_id):
+        """Ask independent guard to cancel only the handshaken UUID once.
+
+        Call only after the worker received, or might have received, its ACK.
+        A request, response or unknown UUID never proves physical stopping.
+        """
+        if self.channel_failed or self.process.poll() is not None or self.lease.goal_id != goal_id:
+            raise RuntimeError('guard_cancel_identity_unavailable')
+        if self.auto_cancel_requested:
+            return {'goal_id': goal_id, 'request_sent': True, 'automatic': True,
+                    'physical_stop_verified': False}
+        revocation_error = None
+        try:
+            self.lease.fail()
+        except Exception as exc:
+            # A disk/fsync failure must not suppress the independent cancel.
+            revocation_error = type(exc).__name__ + ':' + str(exc)
+        request = {'event': 'cancel_goal_uuid', 'session_id': self.lease.session_id,
+                   'goal_id': goal_id, 'challenge': uuid.uuid4().hex}
+        deadline = time.monotonic()+1.0
+        self._send(request, deadline)
+        remaining = deadline-time.monotonic()
+        if remaining <= 0: raise TimeoutError('guard_cancel_request_timeout')
+        try: ack = self.acks.get(timeout=remaining)
+        except queue.Empty as exc: raise TimeoutError('guard_cancel_request_timeout') from exc
+        expected = dict(request, event='guard_cancel_requested', physical_stop_confirmed=False)
+        if (not isinstance(ack, dict) or set(ack) != set(expected) | {'goal_uuid','monotonic'}
+                or {k:ack[k] for k in expected} != expected or ack['goal_uuid'] != self.guard_id):
+            raise RuntimeError('guard_cancel_ack_invalid')
+        return {'goal_id': goal_id, 'request_sent': True, 'physical_stop_verified': False,
+                'lease_revocation_error': revocation_error}
 
 
 def synchronized_client_class(base, to_string, handshake):
@@ -381,7 +473,8 @@ class GuardedRosaTransport(native.RosaTransport):
             raise
 
 
-def run_guarded_once(lease, exchange, manifest, urdf_text, transmissions_text, emit, *, timeout=15.0):
+def run_guarded_once(lease, exchange, manifest, urdf_text, transmissions_text, emit, *,
+                     timeout=15.0, interrupted=lambda: None, after_transport_ready=lambda: None):
     """Use native action state machine under lease; current gate blocks ROSA.
 
     The caller must feed fresh guard events concurrently, use a private path
@@ -401,8 +494,11 @@ def run_guarded_once(lease, exchange, manifest, urdf_text, transmissions_text, e
         raise ValueError('invalid_goal')
     transport = GuardedRosaTransport(lease, exchange)
     try:
+        # ROSA initialization may overwrite process signal handlers. The worker
+        # reinstalls its callbacks here before the native client can send.
+        after_transport_ready()
         return native.run_action(transport, 'motion', goal, timeout, emit,
-                                 lease_file=lease.path)
+                                 interrupted=interrupted, lease_file=lease.path)
     finally:
         lease.fail()
         transport.close()

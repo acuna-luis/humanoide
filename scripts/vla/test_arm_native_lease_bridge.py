@@ -1,5 +1,6 @@
 """Guard lease and native handshake tests, offline with simulated processes."""
 import json
+import io
 import os
 import subprocess
 import sys
@@ -7,6 +8,7 @@ import tempfile
 import threading
 import time
 import unittest
+import types
 from pathlib import Path
 from unittest.mock import patch
 
@@ -94,6 +96,23 @@ class LeaseTests(unittest.TestCase):
             self.assertFalse(heartbeat.is_alive() or fault.is_alive())
             self.assertTrue(gate.failed)
             self.assertEqual(json.loads(gate.path.read_text())['deadline'], 0)
+
+    def test_invalid_sample_is_never_published_as_latest(self):
+        clock = box_tests.FakeClock(); clock.value = 3.0
+        with tempfile.TemporaryDirectory() as directory:
+            lease = bridge.GuardLease(directory, dict(bridge.arm.BODY), lambda: True, clock=clock)
+            old = telemetry(clock()); lease.heartbeat(old)
+            clock.value += .1
+            bad = telemetry(clock()); bad['position']['L_elbow_yaw_joint'] += .003
+            pipe = object.__new__(bridge.GuardPipe)
+            pipe.process = types.SimpleNamespace(stdout=io.BytesIO((json.dumps(bad)+'\n').encode()))
+            pipe.lease = lease; pipe.clock = clock; pipe.failure = None; pipe.stopping = False
+            pipe.latest = old; pipe.ready = threading.Event(); pipe.ready.set()
+            pipe._reader()
+            self.assertEqual(pipe.latest, old)
+            self.assertTrue(lease.failed)
+            with self.assertRaisesRegex(RuntimeError, 'guard_not_healthy'):
+                pipe.checked_snapshot()
 
     def test_expired_lease_cancels_exact_simulated_native_goal(self):
         clock = box_tests.FakeClock(); clock.value = 1.0
@@ -212,6 +231,7 @@ ack=json.loads(sys.stdin.readline())
 assert ack['session_id']==session and ack['challenge']=='c'*32
 telemetry()
 emit('ARM_GUARD_READY',session_id=session,movement_commands=0,physical_control_qualified=False)
+injected=False
 while True:
  ready,_,_=select.select([sys.stdin],[],[],.05)
  if ready:
@@ -224,6 +244,12 @@ while True:
    cmd['event']='goal_uuid_ready'
    if mode=='bad_ack':cmd['goal_id']='00000000-0000-0000-0000-000000000000'
    emit(**cmd)
+   if mode=='bad_observation' and not injected:
+    time.sleep(.1)
+    bad=dict(body);bad['L_elbow_yaw_joint']+=.003
+    emit('telemetry',position=bad,velocity={n:0.0 for n in body},estop=0,servo_stop=0);injected=True
+  if cmd['event']=='cancel_goal_uuid':
+   cmd['event']='guard_cancel_requested';cmd['physical_stop_confirmed']=False;emit(**cmd)
  telemetry()
 '''
     return subprocess.Popen([sys.executable, '-u', '-c', code, session, mode,
@@ -235,15 +261,50 @@ class GuardPipeProcessTests(unittest.TestCase):
     def exercise(self, mode):
         session = 'd'*32
         child = simulated_guard(session, mode)
+        liveness = {'pc': True}
         try:
             with tempfile.TemporaryDirectory() as directory:
                 lease = bridge.GuardLease(directory, dict(bridge.arm.BODY),
-                                          lambda: child.poll() is None, session_id=session)
+                                          lambda: child.poll() is None and liveness['pc'], session_id=session)
                 pipe = bridge.GuardPipe(child, lease, time.monotonic())
                 pipe.await_ready(3)
                 if mode == 'success':
                     lease.synchronize_uuid(box_tests.GOAL_ID, pipe.exchange)
                     self.assertEqual(lease.goal_id, box_tests.GOAL_ID)
+                elif mode == 'cancel':
+                    lease.synchronize_uuid(box_tests.GOAL_ID, pipe.exchange)
+                    result = pipe.cancel_goal(box_tests.GOAL_ID)
+                    self.assertEqual(result['goal_id'], box_tests.GOAL_ID)
+                    self.assertFalse(result['physical_stop_verified'])
+                elif mode == 'disk_fail_cancel':
+                    lease.synchronize_uuid(box_tests.GOAL_ID, pipe.exchange)
+                    def fail_disk():
+                        lease.failed = True
+                        raise OSError('simulated disk failure')
+                    with patch.object(lease, 'fail', side_effect=fail_disk):
+                        result = pipe.cancel_goal(box_tests.GOAL_ID)
+                    self.assertTrue(result['request_sent'])
+                    self.assertIn('OSError', result['lease_revocation_error'])
+                    self.assertFalse(result['physical_stop_verified'])
+                elif mode == 'pc_lost':
+                    lease.synchronize_uuid(box_tests.GOAL_ID, pipe.exchange)
+                    liveness['pc'] = False
+                    deadline = time.monotonic()+2
+                    while not lease.failed and time.monotonic()<deadline: time.sleep(.01)
+                    self.assertTrue(lease.failed)
+                    self.assertFalse(pipe.channel_failed)
+                    result = pipe.cancel_goal(box_tests.GOAL_ID)
+                    self.assertTrue(result['request_sent'])
+                    self.assertFalse(result['physical_stop_verified'])
+                elif mode == 'bad_observation':
+                    lease.synchronize_uuid(box_tests.GOAL_ID, pipe.exchange)
+                    deadline = time.monotonic()+2
+                    while not lease.failed and time.monotonic()<deadline: time.sleep(.01)
+                    self.assertTrue(lease.failed)
+                    self.assertFalse(pipe.channel_failed)
+                    result = pipe.cancel_goal(box_tests.GOAL_ID)
+                    self.assertTrue(result['request_sent'])
+                    self.assertFalse(result['physical_stop_verified'])
                 elif mode == 'no_ack':
                     started = time.monotonic()
                     with self.assertRaisesRegex(TimeoutError, 'guard_ack_timeout'):
@@ -274,6 +335,18 @@ class GuardPipeProcessTests(unittest.TestCase):
 
     def test_wrong_uuid_ack_revokes(self):
         self.exercise('bad_ack')
+
+    def test_independent_exact_uuid_cancel_does_not_claim_stop(self):
+        self.exercise('cancel')
+
+    def test_disk_error_does_not_block_independent_cancel(self):
+        self.exercise('disk_fail_cancel')
+
+    def test_pc_liveness_loss_still_allows_independent_exact_cancel(self):
+        self.exercise('pc_lost')
+
+    def test_invalid_guard_sample_revokes_but_channel_can_cancel(self):
+        self.exercise('bad_observation')
 
     def test_guard_death_revokes(self):
         self.exercise('dead')

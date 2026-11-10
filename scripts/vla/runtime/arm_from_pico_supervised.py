@@ -190,11 +190,16 @@ def build_trial_args(q):
             'mode': 0, 'durations': [4.0]}
 
 
-def main(preflight, *, dry_run, monitor_only=False):
+def main(preflight, *, dry_run, monitor_only=False, guard_can_cancel=False):
     if type(dry_run) is not bool:
         raise ValueError('dry_run_must_be_explicit_boolean')
     if type(monitor_only) is not bool or (monitor_only and not dry_run):
         raise ValueError('continuous_monitor_requires_dry_run')
+    if type(guard_can_cancel) is not bool or (guard_can_cancel and not monitor_only):
+        raise ValueError('guard_cancel_requires_continuous_monitor')
+    if guard_can_cancel:
+        # Distinct physical gate: a passive --check never obtains this mode.
+        physical_release_gate()
     if not dry_run:
         physical_release_gate()
     local_started = time.monotonic()
@@ -221,7 +226,7 @@ def main(preflight, *, dry_run, monitor_only=False):
     node = rclpy.create_node('pico_v4_supervised_arm_check', enable_rosout=False,
                              start_parameter_services=False)
     samples, stamps, stop_times = {}, {}, {'estop': [], 'servo_stop': []}
-    state = {'statuses': None, 'own': None, 'transport_failed': False,
+    state = {'statuses': None, 'status_sequence': 0, 'own': None, 'transport_failed': False,
              'hand_initial': None}
     subs = []
     goal = None
@@ -263,6 +268,7 @@ def main(preflight, *, dry_run, monitor_only=False):
 
     def receive_status(msg):
         state['statuses'] = list(msg.status_list)
+        state['status_sequence'] += 1
 
     def checked(initial=None):
         nonlocal last_report
@@ -402,11 +408,16 @@ def main(preflight, *, dry_run, monitor_only=False):
         uuid_cancel_client = node.create_client(CancelGoal,
             '/mc/manipulation/action/_action/cancel_goal')
         deadline = time.monotonic() + 2
-        while time.monotonic() < deadline and not client.server_is_ready():
+        while (time.monotonic() < deadline and
+               (not client.server_is_ready() or
+                (guard_can_cancel and not uuid_cancel_client.service_is_ready()))):
             rclpy.spin_once(node, timeout_sec=.02)
             checked()
         if not client.server_is_ready():
             emit('preflight_failed', reason='action_server_unavailable', movement_commands=0)
+            return 1
+        if guard_can_cancel and not uuid_cancel_client.service_is_ready():
+            emit('preflight_failed', reason='cancel_service_unavailable', movement_commands=0)
             return 1
         q, _ = checked()
         if any(abs(q[n]-initial[n]) > LOCKED_DRIFT_RAD for n in BODY):
@@ -468,47 +479,173 @@ def main(preflight, *, dry_run, monitor_only=False):
             emit('ARM_GUARD_READY', session_id=preflight['session_id'],
                  movement_commands=0, physical_control_qualified=False)
             buffer = bytearray()
+            guard_cancel_future = None
+            guard_cancel_requested = False
+            guard_cancel_count = 0
+            guard_first_cancel_sequence = None
+            guard_first_cancel_at = None
+            guard_terminal_reported = False
+            guard_fault = None
+            guard_fault_at = None
+            guard_still_since = None
+            guard_last_reminder = 0.0
             while True:
-                rclpy.spin_once(node, timeout_sec=.01)
-                checked(initial)
-                if not select.select([input_fd], [], [], 0)[0]:
+                try:
+                    rclpy.spin_once(node, timeout_sec=.01)
+                    if guard_fault is None:
+                        if guard_can_cancel and not uuid_cancel_client.service_is_ready():
+                            raise ValueError('cancel_service_unavailable')
+                        checked(initial)
+                except Exception as exc:
+                    if not guard_can_cancel or state['own'] is None:
+                        raise
+                    if guard_fault is None:
+                        guard_fault = type(exc).__name__ + ':' + str(exc)
+                        guard_fault_at = time.monotonic()
+                        emit('OPERATOR_ALERT', reason=guard_fault, no_retry=True,
+                             physical_stop_confirmed=False)
+                    # Keep spinning and monitoring even after a guard failure.
+                    # No fresh telemetry is emitted, so the lease expires.
+                    time.sleep(.01)
+                if guard_fault is not None and not guard_cancel_requested:
+                    try:
+                        if uuid_cancel_client.service_is_ready():
+                            request = CancelGoal.Request()
+                            request.goal_info.goal_id.uuid = list(state['own'])
+                            # One exact handshaken UUID, never a wildcard. Set
+                            # attempted before call_async: delivery can be
+                            # unknown if the call raises after sending.
+                            guard_cancel_requested = True
+                            guard_cancel_count = 1
+                            guard_first_cancel_sequence = state['status_sequence']
+                            guard_first_cancel_at = time.monotonic()
+                            guard_cancel_future = uuid_cancel_client.call_async(request)
+                            emit('guard_auto_cancel_requested', reason=guard_fault,
+                                 physical_stop_confirmed=False)
+                    except Exception as exc:
+                        emit('guard_auto_cancel_delivery_unknown', reason=str(exc),
+                             physical_stop_confirmed=False)
+                if guard_cancel_future is not None and guard_cancel_future.done():
+                    try:
+                        response = guard_cancel_future.result()
+                        emit('guard_cancel_response', return_code=int(response.return_code),
+                             physical_stop_confirmed=False)
+                    except Exception as exc:
+                        emit('guard_cancel_response_unknown', reason=str(exc),
+                             physical_stop_confirmed=False)
+                    guard_cancel_future = None
+                guard_status = own_status(state['statuses'], state['own']) if state['own'] is not None else None
+                if (guard_cancel_count == 1 and state['status_sequence'] > guard_first_cancel_sequence
+                        and guard_status in ACTIVE_STATUSES
+                        and (guard_cancel_future is None or time.monotonic()-guard_first_cancel_at >= .5)):
+                    try:
+                        if uuid_cancel_client.service_is_ready():
+                            request = CancelGoal.Request()
+                            request.goal_info.goal_id.uuid = list(state['own'])
+                            # One bounded retry of cancellation, never movement,
+                            # only after a newer status shows this UUID active.
+                            guard_cancel_count = 2
+                            guard_cancel_future = uuid_cancel_client.call_async(request)
+                            emit('guard_auto_cancel_requested', reason='own_uuid_active_after_cancel',
+                                 attempt=2, physical_stop_confirmed=False)
+                    except Exception as exc:
+                        emit('guard_auto_cancel_delivery_unknown', reason=str(exc),
+                             physical_stop_confirmed=False)
+                if guard_cancel_requested and guard_status in (4, 5, 6) and not guard_terminal_reported:
+                    emit('guard_terminal_observed', status=guard_status, physical_stop_confirmed=False)
+                    guard_terminal_reported = True
+                if guard_fault is not None:
+                    # Terminal status and observed stillness are required to
+                    # end a fault monitor; neither certifies braking distance.
+                    if guard_status in (4, 5, 6) and observed_standstill():
+                        guard_still_since = guard_still_since or time.monotonic()
+                        if time.monotonic()-guard_still_since >= 1:
+                            emit('guard_fault_terminal_and_still', reason=guard_fault,
+                                 physical_stop_confirmed=False, no_retry=True)
+                            return 1
+                    else:
+                        guard_still_since = None
+                    if time.monotonic()-guard_last_reminder >= 5:
+                        emit('UNRESOLVED_MONITORING', reason=guard_fault, no_retry=True,
+                             physical_stop_confirmed=False)
+                        guard_last_reminder = time.monotonic()
                     continue
                 try:
-                    block = os.read(input_fd, 4096)
-                except BlockingIOError:
-                    continue
-                if not block:
-                    raise ValueError('guard_input_closed')
-                buffer.extend(block)
-                if len(buffer) > 4096:
-                    raise ValueError('guard_input_oversize')
-                while b'\n' in buffer:
-                    line, _, remainder = bytes(buffer).partition(b'\n')
-                    buffer = bytearray(remainder)
-                    command = json.loads(line)
-                    if not isinstance(command, dict):
-                        raise ValueError('invalid_guard_command')
-                    if command == {'event': 'stop_guard', 'session_id': preflight['session_id']}:
-                        emit('ARM_GUARD_STOPPED', movement_commands=0,
+                    if not select.select([input_fd], [], [], 0)[0]:
+                        continue
+                    try:
+                        block = os.read(input_fd, 4096)
+                    except BlockingIOError:
+                        continue
+                    if not block:
+                        raise ValueError('guard_input_closed')
+                    buffer.extend(block)
+                    if len(buffer) > 4096:
+                        raise ValueError('guard_input_oversize')
+                    while b'\n' in buffer:
+                        line, _, remainder = bytes(buffer).partition(b'\n')
+                        buffer = bytearray(remainder)
+                        command = json.loads(line)
+                        if not isinstance(command, dict):
+                            raise ValueError('invalid_guard_command')
+                        if command == {'event': 'stop_guard', 'session_id': preflight['session_id']}:
+                            emit('ARM_GUARD_STOPPED', movement_commands=0,
+                                 physical_stop_confirmed=False)
+                            return 0
+                        if command.get('event') == 'cancel_goal_uuid':
+                            if (not guard_can_cancel or guard_cancel_requested or state['own'] is None
+                                    or set(command) != {'event','session_id','goal_id','challenge'}
+                                    or command['session_id'] != preflight['session_id']
+                                    or not isinstance(command['goal_id'], str)
+                                    or not re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', command['goal_id'])
+                                    or uuid.UUID(command['goal_id']).bytes != state['own']
+                                    or not isinstance(command['challenge'], str)
+                                    or not re.fullmatch('[0-9a-f]{32}', command['challenge'])
+                                    or not uuid_cancel_client.service_is_ready()):
+                                raise ValueError('invalid_guard_cancel_request')
+                            request = CancelGoal.Request()
+                            request.goal_info.goal_id.uuid = list(state['own'])
+                            # Exactly the already handshaken UUID; never empty or
+                            # wildcard. An unknown goal and an ACK do not prove rest.
+                            guard_cancel_requested = True
+                            guard_cancel_count = 1
+                            guard_first_cancel_sequence = state['status_sequence']
+                            guard_first_cancel_at = time.monotonic()
+                            guard_cancel_future = uuid_cancel_client.call_async(request)
+                            emit('guard_cancel_requested', session_id=command['session_id'],
+                                 goal_id=command['goal_id'], challenge=command['challenge'],
+                                 physical_stop_confirmed=False)
+                            continue
+                        if (set(command) != {'event', 'session_id', 'guard_id', 'goal_id', 'challenge'}
+                                or command['event'] != 'prepare_goal_uuid'
+                                or command['session_id'] != preflight['session_id']
+                                or command['guard_id'] != uuid_bytes.hex()
+                                or not isinstance(command['goal_id'], str)
+                                or not re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', command['goal_id'])
+                                or not isinstance(command['challenge'], str)
+                                or not re.fullmatch('[0-9a-f]{32}', command['challenge'])
+                                or state['own'] is not None):
+                            raise ValueError('invalid_guard_uuid_handshake')
+                        # The absence of other actions is rechecked before granting
+                        # exactly one UUID; no catch-all exemption is created.
+                        checked(initial)
+                        if guard_can_cancel and not uuid_cancel_client.service_is_ready():
+                            raise ValueError('cancel_service_unavailable')
+                        state['own'] = uuid.UUID(command['goal_id']).bytes
+                        emit('goal_uuid_ready', session_id=command['session_id'],
+                             guard_id=command['guard_id'], goal_id=command['goal_id'],
+                             challenge=command['challenge'])
+                except Exception as exc:
+                    if not guard_can_cancel or state['own'] is None:
+                        raise
+                    if guard_fault is None:
+                        guard_fault = type(exc).__name__ + ':' + str(exc)
+                        guard_fault_at = time.monotonic()
+                        emit('OPERATOR_ALERT', reason=guard_fault, no_retry=True,
                              physical_stop_confirmed=False)
-                        return 0
-                    if (set(command) != {'event', 'session_id', 'guard_id', 'goal_id', 'challenge'}
-                            or command['event'] != 'prepare_goal_uuid'
-                            or command['session_id'] != preflight['session_id']
-                            or command['guard_id'] != uuid_bytes.hex()
-                            or not isinstance(command['goal_id'], str)
-                            or not re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', command['goal_id'])
-                            or not isinstance(command['challenge'], str)
-                            or not re.fullmatch('[0-9a-f]{32}', command['challenge'])
-                            or state['own'] is not None):
-                        raise ValueError('invalid_guard_uuid_handshake')
-                    # The absence of other actions is rechecked before granting
-                    # exactly one UUID; no catch-all exemption is created.
-                    checked(initial)
-                    state['own'] = uuid.UUID(command['goal_id']).bytes
-                    emit('goal_uuid_ready', session_id=command['session_id'],
-                         guard_id=command['guard_id'], goal_id=command['goal_id'],
-                         challenge=command['challenge'])
+                    # Input/parse failure after the UUID handoff can coincide
+                    # with a send. Keep ROS alive and cancel that exact UUID.
+                    continue
         if dry_run:
             emit('PICO_ARM_SUPERVISED_DRY_RUN_PASSED', movement_commands=0,
                  physical_control_qualified=False)

@@ -1,5 +1,34 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Lanzador candidato — 10-11-2026
+
+Se preparó un lanzador que combina la tarea nativa local de muñeca, el cliente
+ROSA de cajas, un monitor de cuerpo/manos/paros, lease y un latido de desafío
+PC–Motion. La instalación propuesta es aditiva y conserva recibo; una marca
+global impide repetir automáticamente un intento incierto. El monitor verifica
+los seis objetivos que se esperan quietos contra la postura y avisos SPS
+actuales, además de la meta de muñeca. Una cancelación independiente del UUID
+propio puede solicitarse ante fallo; si se recibe posteriormente estado activo,
+se permite una segunda solicitud al mismo UUID sin reenviar el movimiento.
+El estado posterior puede ser antiguo; ninguna respuesta certifica frenado.
+
+Pasan 94 tests locales en total, con procesos o ROS simulados (incluidos
+preparador y plan). La guardia final y su intercambio de UUID sintético/lease
+pasaron una prueba pasiva en Motion: cero metas y movimientos. Evidencia
+`../Humanoide-vla-evidence/ARM_NATIVE_BRIDGE_CHECK/check-fe7cb1c412de437b9ddbd783337b3623/`,
+`stdout.log` SHA256 `d8a9590b0b81a302d9c481f2b1b20bc595c968e53688ad6f8490507a3391d243`,
+`sources-sha256.json` `a952464f7130fd0eaf5e91acd77ee5075840321860618ab2032df16c2c6e5f9b`.
+La prueba pasiva no ejecutó el lanzador físico, staging, cliente ROSA real ni
+cancelación de una trayectoria.
+
+**No está listo para mover:** `physical_release_gate` y la atestación de
+bundles revisados siguen cerrados. La tarea no está instalada; falta verificar
+el lanzador integrado, atestar el código efectivamente revisado, revisar la
+geometría y el recorrido v4, y establecer un procedimiento frente a pérdida
+de cliente/guardia y parada física. El canal de estado no demuestra exclusividad
+distribuida y un latido no prueba que el operador vea alertas. No se ha hecho
+staging ni se ha mandado ningún movimiento; no habilita SmolVLA físico.
+
 ## Puente de supervisión y cliente nativo — 10-11-2026
 
 `arm_native_lease_bridge.py` prepara un lease de duración experimental 0,5 s,

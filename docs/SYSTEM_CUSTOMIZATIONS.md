@@ -1,5 +1,17 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-LAUNCHER-CANDIDATE-20261110
+
+**10-11-2026, Europe/Madrid — lanzador candidato SIMULADO; ejecución y
+habilitación física PENDIENTES.** No se instaló tarea ni se enviaron órdenes.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | `f562303`: guardia y lease probados pasivamente con UUID sintético; sin lanzador completo ni acción física. |
+| Fuentes | `scripts/vla/runtime/pico_wrist_native_stage.py` SHA256 `fc8d39c4d54172c3bbd0c485783ea22b8201e90a7c5dd50766ac2e4ac609a238`; worker `d5121d9bd71d24d8adecdac8fde3e1cacedd1175a9cc41da6d1bc8b740cd83d0`; coordinator `0fd2a82c8fbe41004a3acf07b384d8d4d075acf28464e3c03467bb3813527bcc`; docker launcher `0b945aa3082cc8812a12beefa4468109280260ba20c0e5ddcd62e50a7024e592`; guardia `4fd9202b3027a1be5e30195a398983b401386b32dd68c0eeb0a43e7c188ff71d`; puente `3ef36cd662c3e947c289c7bede18a0df5eccf569b6b072e75d284c3d9776f7c0`; latido PC `6942d85e3396daab7b4719a89e021592190ac311e2b3f760f25f079d0ddae200`; lanzador PC `c79533c6ebb949df5e399978d6cad779b324f7666f5beef815bcf9920b36f50f`. |
+| Verificación | 94 tests locales con ROS/procesos simulados, incluidos preparador y plan. Guardia final pasó check pasivo en Motion, sin goal; `../Humanoide-vla-evidence/ARM_NATIVE_BRIDGE_CHECK/check-fe7cb1c412de437b9ddbd783337b3623/stdout.log` SHA256 `d8a9590b0b81a302d9c481f2b1b20bc595c968e53688ad6f8490507a3391d243`, `sources-sha256.json` `a952464f7130fd0eaf5e91acd77ee5075840321860618ab2032df16c2c6e5f9b`. [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#lanzador-candidato--10-11-2026). |
+| Deuda y reversión | Gate físico y atestación cerrados; faltan revisión identificada de bundles, lanzador integrado real, geometría v4, trayectoria y parada. La cadencia de status no certifica exclusividad distribuida; heartbeat no certifica que el operador observe alertas. Revertir selectivamente fuentes y notas frente a `f562303`, preservando trabajo ajeno; no se instaló nada en robot. |
+
 ## ARM-PICO-LEASE-BRIDGE-20261110
 
 **10-11-2026, Europe/Madrid — puente de guardia COMPROBADO sin meta en Motion;
