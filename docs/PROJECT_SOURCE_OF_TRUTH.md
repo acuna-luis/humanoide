@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-SYNTHETIC-CANCEL-PASS-20261110: watchdog sintético**
+**verificado en Motion, sin goal físico.** Un servidor ROS ficticio y una copia
+remapeada de guardia observaron caducidad del latido y cancelación del goal
+sintético (status 5); cero goals físicos. El postcheck puntual no observó
+procesos sintéticos y conservó marker/XML de 731084. No demuestra cancelación
+ni frenado reales, no explica 731084 y el gate físico de SmolVLA sigue cerrado.
+[Ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-synthetic-cancel-pass-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#cancelación-sintética-comprobada--10-11-2026).
+
 **10-11-2026 — RELEVO-PORTABLE-20261110: preparación para otro agente/PC.**
 Se añadió `CLAUDE.md`, un [relevo de SmolVLA](vla/RELEVO_PORTABLE_SMOLVLA.md)
 y un exportador/verificador privado de fuentes y evidencia seleccionada. Se

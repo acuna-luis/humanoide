@@ -1,5 +1,21 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-SYNTHETIC-CANCEL-PASS-20261110
+
+**10-11-2026, Europe/Madrid — VERIFICADO EN MOTION CONTRA SERVIDOR ROS
+FICTICIO; SIN GOAL FÍSICO.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo | Reanudar el diagnóstico interrumpido por batería y comprobar el watchdog y la cancelación en un servidor ficticio, con telemetría real, sin enviar tareas al servidor real de manipulación. El usuario comunicó la desconexión del cargador. |
+| Preparación | Referencia, candidato y binding nuevos en `../Humanoide-vla-evidence/PICO_SYNTHETIC_RESUME_20261110T165840Z_5d5007be/`; binding SHA256 `085bd4c8f24177578e90a6de5cf6feedb70bfb51630b0647f8f2d9cc4db433b7`. Una muestra puntual no establece condiciones físicas ni exclusividad futura. |
+| Procedimiento | `scripts/vla/check_pico_wrist_synthetic_cancel.py --check` con manifiesto, URDF, transmisiones, binding y SHA de la preparación. Se generó namespace privado de acción, servidor ROS ficticio y copia transitoria de guardia con endpoints remapeados; se detuvo deliberadamente su latido tras iniciar el único goal sintético. No se preparó ni envió un goal al servidor real de manipulación. |
+| Resultado | `SYNTHETIC_WATCHDOG_CANCEL_PASSED`: la guardia detectó `supervisor_heartbeat_expired` y solicitó cancelación; servidor sintético aceptó y reportó status 5. Un goal sintético, cero físicos; `physical_control_qualified=false`. Este resultado no acredita cancelación ni frenado físicos, no atribuye causa a 731084 y no habilita el despacho SmolVLA. |
+| Evidencia | `../Humanoide-vla-evidence/PICO_SYNTHETIC_CANCEL_CHECK/check-240acd9fc85e42849acba4dc324f9870/`: `stdout.jsonl` SHA256 `ef106e0f5301a29eebc57509c76e1732427382de27f232f7762e509666565da7`, `sources.json` SHA256 `62581fa9d529c8d562d36f9c92883d91869f2e566eaae82e3f7d5b9ed8fbe1ae`, `stderr.log` vacío SHA256 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`. `sources.json` fija los hashes de la guardia original y remapeada y del servidor/host generados. |
+| Postcheck y restauración | Lectura puntual a 16:59:24 UTC, comunicada en salida de herramientas y entre agentes sin archivo conservado: no se observaron procesos sintéticos en Motion app/ROS ni host. Marker SHA256 `e174d2895dda0a2e0784cbb7296b2c5b7524bc31add8f28cc80255a326e8252c` y XML SHA256 `d4c704e6ab369d250658a596cd6a5704258accf130971d3046748a8d132b616b` conservados. Baterías 48,9/50,6 % y topic cargador `0`; no certifica exclusividad futura o estado físico actual. No hubo cambios persistentes del robot conocidos ni se modificó el marker, XML o protección. |
+| Límites y continuación | La muestra y el resultado no acreditan parada física, watchdog bajo un goal real, envío en vuelo o resultado de la tarea. Persiste el bloqueo `model_wrist_dispatch_not_enabled` antes de conexión, además de la causa desconocida de la pérdida de guardia 731084. No salvar el bloqueo por otro binding o cliente. Redescubrir estados y verificar condiciones actuales antes de cualquier acción física. |
+| Respaldo y reversión | Antes de registrar el resultado se guardaron las cuatro fuentes documentales con sus cambios preexistentes en `../Humanoide-vla-evidence/PICO_SYNTHETIC_PASS_DOCS_20261110T165930Z/before-docs.tar`, SHA256 `b31b5e7c00a6204d76bc20c4184229a0efd7eb7a63bf8f3c28276d4e1495d053`. Revertir únicamente el registro de esta intervención si corresponde, preservando cambios ajenos; los procesos temporales ya no se observaron en el postcheck. |
+
 ## RELEVO-PORTABLE-20261110
 
 **10-11-2026, Europe/Madrid — EXPORT PRIVADO CREADO Y VERIFICADO EN ESTE PC;

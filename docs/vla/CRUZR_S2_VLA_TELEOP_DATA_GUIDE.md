@@ -1,5 +1,12 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — SMOLVLA-SYNTHETIC-CANCEL-PASS-20261110.** En Motion pasó el
+watchdog contra un servidor ficticio aislado: cancelación sintética observada,
+status 5 y cero goals físicos. La prueba no demuestra cancelación o frenado
+reales, no explica el incidente 731084 ni habilita el despacho de SmolVLA.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-synthetic-cancel-pass-20261110),
+[detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#cancelación-sintética-comprobada--10-11-2026).
+
 **10-11-2026 — RELEVO-PORTABLE-20261110.** Un [relevo](RELEVO_PORTABLE_SMOLVLA.md)
 y un exportador privado preparan fuentes y evidencia seleccionada para otro PC.
 El paquete `943bc7b` se verificó y restauró en temporal en este PC, no se

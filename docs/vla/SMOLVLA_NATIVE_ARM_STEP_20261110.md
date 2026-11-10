@@ -1,5 +1,27 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Cancelación sintética comprobada — 10-11-2026
+
+**VERIFICADO EN MOTION CON SERVIDOR FICTICIO; CERO GOALS FÍSICOS.** Tras la
+confirmación de desconexión del cargador se prepararon referencia y binding
+nuevos. Una copia transitoria de guardia, con los endpoints de acción
+remapeados a un namespace aislado, trabajó con telemetría real y un servidor
+ficticio. Al detener deliberadamente su latido, la guardia observó
+`supervisor_heartbeat_expired`, solicitó cancelación y el servidor sintético
+aceptó la cancelación y terminó en status 5. El resumen informó
+`SYNTHETIC_WATCHDOG_CANCEL_PASSED`, un goal sintético y cero goals físicos.
+No se usó el servidor real de manipulación ni se enviaron órdenes físicas.
+
+El postcheck comunicado por herramientas a las 16:59:24 UTC no observó procesos
+sintéticos en Motion app/ROS ni en el host; el marker y XML de 731084 conservaron
+sus hashes. Registró baterías de 48,9 % y 50,6 % y topic de cargador `0`.
+Esta lectura puntual quedó en salida de herramientas, sin archivo propio; no
+prueba exclusividad futura, estado actual ni frenado. La causa de 731084 sigue
+sin identificarse. El despacho `model_wrist_dispatch_not_enabled` sigue cerrado:
+este resultado no prueba cancelación o frenado del brazo, no valida la política
+ni habilita ejecución física de SmolVLA.
+[Identidades, evidencia, respaldo y continuación](../SYSTEM_CUSTOMIZATIONS.md#smolvla-synthetic-cancel-pass-20261110).
+
 ## Espera del lock y ACK caducado — 10-11-2026
 
 **REPRODUCIDO LOCALMENTE; SIN PRUEBA EN MOTION.** `checked_snapshot()` puede
