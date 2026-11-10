@@ -54,7 +54,10 @@ def _worker_line(process, timeout):
 
 def check(payload):
     required = {'session', 'manifest', 'urdf_text', 'transmissions_text', 'guard_source', 'worker_source'}
-    diagnostic = isinstance(payload, dict) and set(payload) == required | {'guard_heartbeat', 'guard_sha256'}
+    diagnostic = isinstance(payload, dict) and set(payload) in (
+        required | {'guard_heartbeat', 'guard_sha256'},
+        required | {'guard_heartbeat', 'guard_sha256', 'model_diagnostic'})
+    model_diagnostic = diagnostic and payload.get('model_diagnostic') is True
     if not isinstance(payload, dict) or (set(payload) != required and not diagnostic):
         raise ValueError('invalid_passive_payload')
     if diagnostic and (payload['guard_heartbeat'] is not True or
@@ -62,6 +65,8 @@ def check(payload):
                        not isinstance(payload['guard_sha256'], str) or
                        hashlib.sha256(payload['guard_source'].encode('utf-8')).hexdigest() != payload['guard_sha256']):
         raise ValueError('passive_guard_digest_mismatch')
+    if diagnostic and 'model_diagnostic' in payload and not model_diagnostic:
+        raise ValueError('invalid_passive_model_diagnostic')
     session = payload['session']
     arm.validate_preflight(session, 0, dry_run=True)
     manifest = payload['manifest']
@@ -77,7 +82,11 @@ def check(payload):
     launch.pc_preflight_handoff(session, output, sys.stdin.fileno())
     if not output.emit({'event': 'HOST_HEARTBEAT_READY', 'session_id': session['session_id']}):
         raise RuntimeError('operator_output_unavailable')
-    pc = heartbeat.PcHeartbeat(sys.stdin.fileno(), session['session_id'], output.emit)
+    if model_diagnostic:
+        pc = heartbeat.PcHeartbeat(sys.stdin.fileno(), session['session_id'], output.emit,
+                                   model_mode=True)
+    else:
+        pc = heartbeat.PcHeartbeat(sys.stdin.fileno(), session['session_id'], output.emit)
     try:
         pc.await_ready(3)
         app, ros = launch.discover_containers()
@@ -119,7 +128,36 @@ def check(payload):
                     raise RuntimeError('native_worker_check_failed')
                 if worker.wait(timeout=2) != 0:
                     raise RuntimeError('native_readonly_worker_failed')
-                if diagnostic:
+                model_permit = None
+                if model_diagnostic:
+                    # This identifier is *only* a correlation token on the PC
+                    # heartbeat. Never hand it to the guard or any ROS client.
+                    correlation_id = str(uuid.uuid4())
+                    if not output.emit({'event':'PASSIVE_MODEL_INFERENCE_READY',
+                                        'session_id':session['session_id']}):
+                        raise RuntimeError('passive_model_start_delivery_failed')
+                    pc.begin_model_permit(correlation_id, manifest['candidate']['xml_sha256'])
+                    initial_sequence = pipe.heartbeat_sequence
+                    end = time.monotonic() + 140.0
+                    while time.monotonic() < end:
+                        if lease.goal_id is not None or not pc.alive() or output.failed:
+                            raise RuntimeError('passive_model_guard_state_changed')
+                        pipe.checked_snapshot()
+                        model_permit = pc.permit_snapshot()
+                        if model_permit is not None:
+                            if (model_permit.get('goal_id') != correlation_id or
+                                    model_permit.get('task_sha256') != manifest['candidate']['xml_sha256']):
+                                raise ValueError('passive_model_permit_identity_mismatch')
+                            if pipe.heartbeat_sequence - initial_sequence >= 2:
+                                break
+                        time.sleep(.05)
+                    if model_permit is None:
+                        raise TimeoutError('passive_model_permit_timeout')
+                    pulses = pipe.heartbeat_sequence - initial_sequence
+                    if pulses < 2 or lease.goal_id is not None:
+                        raise RuntimeError('passive_model_guard_not_sustained')
+                    pipe.checked_snapshot()
+                elif diagnostic:
                     # No UUID is handed off: even a fault has no goal that the
                     # guard could cancel. The heartbeat timeout is only enforced
                     # after a UUID, so this is not a watchdog-expiry test.
@@ -153,7 +191,8 @@ def check(payload):
                 else:
                     raise RuntimeError('lease_not_revoked')
                 if diagnostic:
-                    return {'status': 'PASS_PC_HOST_GUARD_HEARTBEAT_NO_GOAL',
+                    report = {'status': ('PASS_PC_MODEL_GUARD_PERMIT_NO_GOAL' if model_diagnostic else
+                                         'PASS_PC_HOST_GUARD_HEARTBEAT_NO_GOAL'),
                             'movement_commands': 0, 'action_goals_created': 0,
                             'uuid_handshakes': 0, 'cancel_requests': 0,
                             'heartbeat_pulses_sent': pulses, 'physical_control_qualified': False,
@@ -162,6 +201,14 @@ def check(payload):
                                 'heartbeat expiry enforcement requires a handed-off UUID',
                                 'no cancellation, action goal or physical movement',
                                 'does not reproduce the original trajectory']}
+                    if model_diagnostic:
+                        report.update(decision_sha256=model_permit['decision_sha256'],
+                                      model_permit_received=True,
+                                      correlation_id_never_handed_to_guard=True)
+                        report['limitations'].extend(['no model command is sent to an action server',
+                            'Vision to PC image age is not measured',
+                            'no real ROS goal, UUID handoff, cancellation or braking'])
+                    return report
                 return {'status': 'PASS_PC_HOST_GUARD_READONLY_NATIVE',
                         'movement_commands': 0, 'action_goals_created': 0,
                         'physical_control_qualified': False,

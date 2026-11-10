@@ -1,5 +1,12 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — SMOLVLA-LIVE-GUARD-PERMIT-20261110.** Una predicción real de
+Ada, validación PC y permiso vía latido a Motion se comprobaron con guardia real
+activa y 195 latidos, sin UUID en guardia, goals, staging, cancelaciones ni
+movimiento. El token era solo correlación PC↔Motion. No prueba el coordinador ni
+worker de envío, watchdog con meta, frenado o frescura Vision→PC; el gate físico
+sigue cerrado. [Ficha y evidencia](../SYSTEM_CUSTOMIZATIONS.md#smolvla-live-guard-permit-20261110).
+
 **10-11-2026 — SMOLVLA-SCOPED-731084-20261110.** Preparada una conexión
 PC→permiso de una predicción→coordinador/worker para un paso acotado de muñeca,
 y una admisión explícita que conserva el marker 731084. La integración solo se

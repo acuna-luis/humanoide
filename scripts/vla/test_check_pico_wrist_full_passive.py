@@ -95,7 +95,8 @@ print(json.dumps({'status':'PASS_PC_HOST_GUARD_READONLY_NATIVE','movement_comman
             if process.poll() is None: process.kill(); process.wait()
             for stream in (process.stdin, process.stdout, process.stderr): stream.close()
 
-    def run_fake_host(self, *, bad_worker=False, guard_heartbeat=False, drop_heartbeat=False):
+    def run_fake_host(self, *, bad_worker=False, guard_heartbeat=False, drop_heartbeat=False,
+                      model_diagnostic=False):
         token = uuid.uuid4().hex
         arm = remote.arm
         session = {'schema':'cruzr_head_pico_preflight_v1', 'task_sha256':arm.TASK_SHA,
@@ -104,18 +105,26 @@ print(json.dumps({'status':'PASS_PC_HOST_GUARD_READONLY_NATIVE','movement_comman
                    'age_at_handoff_s':1.0, 'session_id':token, 'mode':'check'}
         reference = dict(arm.BODY)
         payload = {'session': session, 'manifest':{'input':{'reference_20d':reference},
-                   'candidate':{'goal':{'task_name':'synthetic','yaml_args':'{}'}}},
+                   'candidate':{'goal':{'task_name':'synthetic','yaml_args':'{}'},
+                                'xml_sha256':'e'*64}},
                    'urdf_text':'', 'transmissions_text':'',
                    'guard_source':'pass', 'worker_source':'pass'}
         if guard_heartbeat:
             payload.update(guard_heartbeat=True,
                            guard_sha256=hashlib.sha256(b'pass').hexdigest())
+        if model_diagnostic:
+            payload['model_diagnostic'] = True
 
         class Pc:
             def __init__(self, *args, **kwargs): pass
             def await_ready(self, timeout): pass
             def alive(self): return True
             def close(self): return True
+            def begin_model_permit(self, goal_id, task_sha256):
+                self.request = {'goal_id':goal_id, 'task_sha256':task_sha256}
+            def permit_snapshot(self):
+                return dict(self.request, decision_sha256='f'*64,
+                            deadline_monotonic_ns=time.monotonic_ns()+1_000_000_000)
 
         class Output:
             failed = False
@@ -232,6 +241,66 @@ print(json.dumps({'event':'NATIVE_READONLY_READY','fingerprints':hashes,
     def test_heartbeat_guard_failure_cannot_pass(self):
         with self.assertRaises((RuntimeError, TimeoutError)):
             self.run_fake_host(guard_heartbeat=True, drop_heartbeat=True)
+
+    def test_model_permit_with_guard_never_hands_uuid_or_cancels(self):
+        with patch.object(remote.bridge.GuardLease, 'synchronize_uuid',
+                          side_effect=AssertionError('UUID handoff is forbidden')), \
+             patch.object(remote.bridge.GuardPipe, 'cancel_goal',
+                          side_effect=AssertionError('cancellation is forbidden')):
+            result = self.run_fake_host(guard_heartbeat=True, model_diagnostic=True)
+        self.assertEqual(result['status'], 'PASS_PC_MODEL_GUARD_PERMIT_NO_GOAL')
+        self.assertTrue(result['model_permit_received'])
+        self.assertTrue(result['correlation_id_never_handed_to_guard'])
+        self.assertEqual(result['movement_commands'], 0)
+        self.assertEqual(result['action_goals_created'], 0)
+        self.assertEqual(result['uuid_handshakes'], 0)
+        self.assertEqual(result['cancel_requests'], 0)
+
+    def test_model_diagnostic_requires_guard_heartbeat_before_network(self):
+        with patch.object(subject.preflight, 'preflight', side_effect=AssertionError('must not connect')), \
+             self.assertRaisesRegex(ValueError, 'model_diagnostic_requires_guard_heartbeat'):
+            subject.check(Path('/missing'), Path('/missing'), Path('/missing'), model_diagnostic=True)
+
+    def test_model_driver_supplies_permit_only_after_guard_ready(self):
+        token = 'a'*32
+        child_code = '''import json,sys
+token='a'*32
+def send(row): print(json.dumps(row),flush=True)
+send({'event':'HOST_PREFLIGHT_READY','session_id':token,'challenge':'b'*32})
+assert json.loads(sys.stdin.readline())['challenge']=='b'*32
+send({'event':'HOST_HEARTBEAT_READY','session_id':token})
+send({'event':'PASSIVE_MODEL_INFERENCE_READY','session_id':token})
+request={'goal_id':'12345678-1234-1234-1234-123456789abc','task_sha256':'d'*64}
+ping={'event':'pc_ping','session_id':token,'sequence':0,'nonce':'c'*32,'model_request':request}
+send(ping)
+reply=json.loads(sys.stdin.readline())
+assert reply['model_permit']==dict(request,decision_sha256='e'*64,budget_ns=1000000000)
+send({'status':'PASS_PC_MODEL_GUARD_PERMIT_NO_GOAL','movement_commands':0,
+      'action_goals_created':0,'uuid_handshakes':0,'cancel_requests':0,
+      'heartbeat_pulses_sent':3,'physical_control_qualified':False,
+      'model_permit_received':True,'correlation_id_never_handed_to_guard':True,
+      'decision_sha256':'e'*64})
+'''
+        class Model:
+            started = closed = False
+            def start(self): self.started = True
+            def permit(self, request):
+                assert self.started
+                return dict(request, decision_sha256='e'*64, budget_ns=1_000_000_000)
+            def close(self): self.closed = True
+        process = subprocess.Popen([sys.executable, '-B', '-u', '-c', child_code],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
+        model=Model()
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                result=subject.drive(process, token, time.monotonic(), Path(directory),
+                                     guard_heartbeat=True, model=model)
+            self.assertTrue(model.started)
+            self.assertTrue(model.closed)
+            self.assertEqual(result['decision_sha256'], 'e'*64)
+        finally:
+            if process.poll() is None: process.kill(); process.wait()
+            for stream in (process.stdin, process.stdout, process.stderr): stream.close()
 
 
 if __name__ == '__main__':

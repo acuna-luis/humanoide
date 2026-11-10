@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-LIVE-GUARD-PERMIT-20261110: integración real sin meta.**
+El SmolVLA de Ada produjo una predicción durante guardia real en Motion; un
+permiso correlacionado llegó por latido PC→Motion, sin UUID entregado a guardia,
+goals, staging, cancelaciones ni movimiento. La muñeca propuesta fue +0,187606
+rad; la decisión restringida habría elegido +0,01 rad. El gate físico sigue
+cerrado: el check no prueba el coordinador/worker de envío, cancelación,
+frenado o edad Vision→PC. [Ficha y evidencia](SYSTEM_CUSTOMIZATIONS.md#smolvla-live-guard-permit-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#modelo-y-guardia-reales-sin-meta--10-11-2026).
+
 **10-11-2026 — SMOLVLA-SCOPED-731084-20261110: integración preparada en PC.**
 Una sola predicción puede vincularse al UUID y al XML de un paso acotado de
 muñeca; la admisión específica conserva el marker del intento 731084 y crea una

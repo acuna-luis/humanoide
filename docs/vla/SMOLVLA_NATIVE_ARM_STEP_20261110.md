@@ -1,5 +1,28 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Modelo y guardia reales sin meta — 10-11-2026
+
+**OBSERVADO EN MOTION Y ADA; SIN UUID EN GUARDIA, META, STAGING,
+CANCELACIÓN O MOVIMIENTO.** `--check --guard-heartbeat --model-diagnostic`
+arrancó la guardia real y el worker de lectura de huellas; solo después inició
+una inferencia real de SmolVLA mientras el PC respondía a los latidos. La
+propuesta se contrastó con el estado y tarea de muñeca, se conservó una decisión
+y llegó un permiso por el canal PC→Motion. El token UUID sintético fue solo
+correlación en ese canal; nunca se entregó a la guardia o a un servidor ROS.
+PASS con 195 latidos, 0 goals, 0 handoffs UUID y 0 solicitudes de cancelación.
+La muñeca propuesta fue +0,18760588965888958 rad; el candidato acotado era
++0,01 rad sobre la referencia, y NO se envió. Latencia PC 0,736325 s, sin medir
+Vision→PC; la muestra ha caducado y no habilita control. El modelo también
+propuso cambios grandes en otros ejes, que esta prueba no transmite.
+
+El check no comparte el lock de ensayo ni incluye el coordinador/worker de
+envío físico: no valida exclusividad distribuida, el envío real, la cancelación,
+el watchdog con UUID/goal, frenado, trayectoria, dedos ni la tarea de pelota.
+La excepción 731084 no se ejecutó; marker y XML permanecen; la causa del fallo
+anterior sigue desconocida y `model_wrist_dispatch_not_enabled` sigue activo.
+Lectura independiente de procesos posteriores y trazas, SHA, respaldo y
+reproducción en [la ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-live-guard-permit-20261110).
+
 ## Integración de modelo y admisión 731084 — 10-11-2026
 
 **PREPARADO EN PC; INTEGRACIÓN SOLO SIMULADA; GATE FÍSICO CERRADO.** El PC

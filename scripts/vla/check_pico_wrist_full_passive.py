@@ -82,7 +82,7 @@ def source_bundle(*, guard_heartbeat=False):
     return host, guard, worker, hashes
 
 
-def drive(process, session_id, preflight_started, outdir, *, guard_heartbeat=False):
+def drive(process, session_id, preflight_started, outdir, *, guard_heartbeat=False, model=None):
     selector = selectors.DefaultSelector()
     for stream, name in ((process.stdout, 'stdout'), (process.stderr, 'stderr')):
         os.set_blocking(stream.fileno(), False)
@@ -91,7 +91,7 @@ def drive(process, session_id, preflight_started, outdir, *, guard_heartbeat=Fal
     data = bytearray()
     preflight_ack = heartbeat_ready = False
     result = None
-    deadline = time.monotonic() + 55
+    deadline = time.monotonic() + (190 if model is not None else 55)
     try:
         with (outdir / 'stdout.jsonl').open('x', encoding='utf-8') as out, \
              (outdir / 'stderr.log').open('x', encoding='utf-8') as err:
@@ -133,13 +133,19 @@ def drive(process, session_id, preflight_started, outdir, *, guard_heartbeat=Fal
                         elif event == 'HOST_HEARTBEAT_READY':
                             if not preflight_ack or heartbeat_ready or row.get('session_id') != session_id:
                                 raise ValueError('invalid_pc_heartbeat_ready')
-                            pump = heartbeat.PcHeartbeatPump(process.stdin.fileno(), session_id)
+                            pump = heartbeat.PcHeartbeatPump(process.stdin.fileno(), session_id,
+                                model_permit=model.permit if model is not None else None)
                             heartbeat_ready = True
+                        elif event == 'PASSIVE_MODEL_INFERENCE_READY':
+                            if model is None or not heartbeat_ready or row.get('session_id') != session_id:
+                                raise ValueError('unexpected_passive_model_start')
+                            model.start()
                         elif event == 'pc_ping':
                             if pump is None:
                                 raise ValueError('challenge_before_heartbeat_ready')
                             pump.submit(row)
-                        elif row.get('status') == ('PASS_PC_HOST_GUARD_HEARTBEAT_NO_GOAL'
+                        elif row.get('status') == ('PASS_PC_MODEL_GUARD_PERMIT_NO_GOAL' if model is not None else
+                                                   'PASS_PC_HOST_GUARD_HEARTBEAT_NO_GOAL'
                                                    if guard_heartbeat else 'PASS_PC_HOST_GUARD_READONLY_NATIVE'):
                             if result is not None:
                                 raise ValueError('duplicate_result')
@@ -156,15 +162,23 @@ def drive(process, session_id, preflight_started, outdir, *, guard_heartbeat=Fal
                                 type(result.get('heartbeat_pulses_sent')) is not int or
                                 result['heartbeat_pulses_sent'] < 2):
             raise RuntimeError('passive_guard_heartbeat_not_confirmed')
+        if model is not None and (result.get('model_permit_received') is not True or
+                                  result.get('correlation_id_never_handed_to_guard') is not True or
+                                  not isinstance(result.get('decision_sha256'), str)):
+            raise RuntimeError('passive_model_permit_not_confirmed')
         return result
     finally:
         if pump is not None:
             pump.close()
+        if model is not None:
+            model.close()
         selector.close()
 
 
 def check(manifest_path, urdf_path, transmissions_path, *, guard_heartbeat=False,
-          binding=None, binding_sha256=None):
+          binding=None, binding_sha256=None, model_diagnostic=False):
+    if model_diagnostic and not guard_heartbeat:
+        raise ValueError('model_diagnostic_requires_guard_heartbeat')
     manifest_raw = manifest_path.read_bytes()
     urdf_raw = urdf_path.read_bytes()
     transmissions_raw = transmissions_path.read_bytes()
@@ -205,6 +219,15 @@ def check(manifest_path, urdf_path, transmissions_path, *, guard_heartbeat=False
     outdir.mkdir(mode=0o700)
     print('EVIDENCIA=' + str(outdir), flush=True)
     (outdir / 'sources-sha256.json').write_text(json.dumps(hashes, indent=2)+'\n', encoding='utf-8')
+    model = None
+    if model_diagnostic:
+        pc_snapshot = trial.controlled_pc_sources()
+        trial.verify_candidate_binding(binding, binding_sha256, manifest_raw, urdf_raw,
+                                       transmissions_raw, pc_snapshot=pc_snapshot)
+        files = {'pc-source-'+key: (binding/('pc-source-'+key)).read_bytes()
+                 for key in trial.MODEL_LOCAL_FILES}
+        model = trial.LiveModelPermission(manifest, files, outdir)
+        payload['model_diagnostic'] = True
     env = dict(os.environ, CRUZR_INTERNAL_ASKPASS='1',
                SSH_ASKPASS=str(ROOT/'scripts/cruzr_recover_to_home.sh'),
                SSH_ASKPASS_REQUIRE='force', DISPLAY=os.environ.get('DISPLAY', ':0'))
@@ -213,7 +236,7 @@ def check(manifest_path, urdf_path, transmissions_path, *, guard_heartbeat=False
     try:
         trial.docker_launch.write_stream(process.stdin.fileno(),
             (host+'\n'+sentinel+'\n'+json.dumps(payload, allow_nan=False)+'\n').encode(), 10)
-        result = drive(process, token, started, outdir, guard_heartbeat=guard_heartbeat)
+        result = drive(process, token, started, outdir, guard_heartbeat=guard_heartbeat, model=model)
     finally:
         # This check never sends goals; terminate only its own SSH if stuck.
         if process.poll() is None:
@@ -228,6 +251,9 @@ def check(manifest_path, urdf_path, transmissions_path, *, guard_heartbeat=False
     if guard_heartbeat:
         report.update(heartbeat_pulses_sent=result['heartbeat_pulses_sent'],
                       uuid_handshakes=0, cancel_requests=0, limitations=result['limitations'])
+    if model_diagnostic:
+        report.update(model_permit_received=result['model_permit_received'],
+                      decision_sha256=result['decision_sha256'])
     print(json.dumps(report, allow_nan=False))
 
 
@@ -241,6 +267,8 @@ def main(argv=None):
     parser.add_argument('--transmissions', type=Path)
     parser.add_argument('--guard-heartbeat', action='store_true',
                         help='check reviewed cancel-capable guard heartbeats without UUID or goal')
+    parser.add_argument('--model-diagnostic', action='store_true',
+                        help='run real one-shot inference while guard is alive; no goal or cancellation')
     parser.add_argument('--binding', type=Path)
     parser.add_argument('--binding-sha256')
     args = parser.parse_args(argv)
@@ -251,7 +279,8 @@ def main(argv=None):
         if any(value is None for value in (args.manifest, args.urdf, args.transmissions)):
             raise ValueError('manifest_urdf_and_transmissions_required')
         check(args.manifest, args.urdf, args.transmissions, guard_heartbeat=args.guard_heartbeat,
-              binding=args.binding, binding_sha256=args.binding_sha256)
+              binding=args.binding, binding_sha256=args.binding_sha256,
+              model_diagnostic=args.model_diagnostic)
         return 0
     except (OSError, ValueError, TypeError, KeyError, RuntimeError, subprocess.SubprocessError) as exc:
         print('FULL_PASSIVE_CHECK_FAILED: ' + str(exc), file=sys.stderr)
