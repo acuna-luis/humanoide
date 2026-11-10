@@ -1,5 +1,42 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Guardia previa y entrega incierta — 10-11-2026
+
+**Estado: comprobado en simulación y parcialmente en integración pasiva.** El ensayo
+candidato es una sola tarea nativa estática de muñeca derecha; no consume ni
+ejecuta acciones de SmolVLA. No se ha abierto el gate físico ni el de
+atestación y no se ha realizado prueba física de estos cambios.
+
+Antes de confirmar el UUID al worker, el coordinador llama a
+`check_guard_before_dispatch`: exige el mismo lease y referencia, muestra
+fresca de la guardia, 20 articulaciones inmóviles junto a la referencia y
+comprobaciones existentes de envolvente y objetivos estacionarios SPS. La
+guardia y el lease deben continuar activos durante el envío; una comprobación
+previa no demuestra parada ni elimina las carreras físicas del handshake.
+El módulo local `scripts/vla/pico_wrist_trial_admission.py` también contiene
+comprobaciones de estructura de informe físico y de identidad del candidato;
+no acredita por sí mismo la procedencia o actualidad del informe y no es un
+permiso de movimiento. Los bundles host deben incluirlo antes del coordinador.
+
+El lanzador local distingue una entrega de fuente incompleta de una entrega
+potencialmente ejecutada tras el sentinel. En caso incierto intenta observar el
+mismo proceso y comunicar la incertidumbre sin reintentar ni enviar HOME; una
+salida del proceso o una cancelación no prueban detención física. También
+verifica una secuencia de eventos y el UUID antes de comunicar éxito. La
+observación no está garantizada ante caída del PC o terminación forzada; estas
+comprobaciones no constituyen una prueba de parada.
+
+Se completaron 66 pruebas locales: 17 del lanzador, 5 de admisión, 15 del
+coordinador, 7 del check pasivo y 22 del puente de lease. El check integrado
+`check-e613e5a37ab14beda72d817adb0d4eb0` pasó PC→Motion con la versión actual
+del coordinador y de admisión; no ejecuta la rama física del lanzador. El
+snapshot privado de fuentes y entradas tiene SHA-256
+`8d72f944615a8e42bf18675e50c147fd8b5b373a965b327a7b5c6ae2b583b466` y coincide
+con fuentes actuales; la copia documental incluida precede a este registro.
+No acredita autorización, runtime cargado ni movimiento. La trayectoria real, geometría de mano,
+distancia de parada y referencias próximas a límites nominales SPS siguen sin
+cualificar. No se registran nuevas instalaciones o movimientos en el robot.
+
 ## Revisión del lanzador — 10-11-2026
 
 El `--check` del lanzador llama ahora a la comprobación pasiva integrada PC→

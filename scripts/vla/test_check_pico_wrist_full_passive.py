@@ -34,6 +34,18 @@ class FullPassiveTests(unittest.TestCase):
                  and isinstance(node.func, ast.Attribute)]
         self.assertFalse(forbidden.intersection(calls))
 
+    def test_host_modules_import_without_pc_binding_on_motion(self):
+        host, _, _, hashes = subject.source_bundle()
+        self.assertIn('pico_wrist_trial_admission', hashes)
+        module_code = host.rsplit('import json\nprint(', 1)[0]
+        module_code += ('assert "pico_wrist_trial_admission" in sys.modules\n'
+                        'assert "pico_wrist_native_coordinator" in sys.modules\n'
+                        'assert "pico_wrist_review_binding" not in sys.modules\n')
+        with tempfile.TemporaryDirectory() as directory:
+            result = subprocess.run([sys.executable, '-I', '-B', '-'], input=module_code,
+                                    cwd=directory, capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_real_pipes_challenge_response_and_result(self):
         token = 'a' * 32
         child_code = '''import json,sys

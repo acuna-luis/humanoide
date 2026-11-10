@@ -26,6 +26,7 @@ class FakeGuard:
         self.lease, self.failure, self.latest = lease, None, None
         self.ready_timeout = None
         self.cancelled = []
+        self.goal_acknowledged = threading.Event()
         self.stop_event = threading.Event()
         self.thread = threading.Thread(target=self.pump)
         self.thread.start()
@@ -33,7 +34,8 @@ class FakeGuard:
     def pump(self):
         while not self.stop_event.wait(.03):
             row = telemetry(time.monotonic(), self.lease.initial)
-            row['position'][bridge.arm.ARM_AXIS] += bridge.arm.ARM_STEP
+            if self.goal_acknowledged.is_set():
+                row['position'][bridge.arm.ARM_AXIS] += bridge.arm.ARM_STEP
             try:
                 self.lease.heartbeat(row)
                 self.latest = row
@@ -47,6 +49,7 @@ class FakeGuard:
         if self.latest is None: raise RuntimeError('fake_guard_not_ready')
 
     def exchange(self, request, timeout):
+        self.goal_acknowledged.set()
         return dict(request, event='goal_uuid_ready', goal_uuid=request['guard_id'],
                     monotonic=time.monotonic())
 
@@ -190,6 +193,43 @@ class CoordinatorTests(unittest.TestCase):
     def test_gate_blocks_before_receipt_or_worker(self):
         with self.assertRaisesRegex(RuntimeError, 'physical_dispatch_blocked'):
             coordinator.coordinate(None, None, None, None, None, None, None)
+
+    def test_moving_before_uuid_ack_is_rejected_without_ack(self):
+        manifest = prep.prepare(state(), urdf(), transmissions())
+        with tempfile.TemporaryDirectory() as directory:
+            control = Path(directory)/'stable-control'
+            control.mkdir(mode=0o700)
+            lease = bridge.GuardLease(directory, manifest['input']['reference_20d'], lambda: True)
+            guard = FakeGuard(lease)
+            processes = []
+            def spawn(_, intent, uid):
+                process = worker_process(manifest, lease.session_id, 'success')
+                processes.append(process)
+                return process
+            def moving_snapshot():
+                row = telemetry(time.monotonic(), lease.initial)
+                row['velocity'][bridge.arm.ARM_AXIS] = .002
+                return row
+            try:
+                with patch.object(bridge.arm, 'physical_release_gate'), \
+                     patch.object(coordinator, 'GLOBAL_RECEIPT_DIR', control), \
+                     patch.object(guard, 'checked_snapshot', side_effect=moving_snapshot), \
+                     patch.object(lease, 'synchronize_uuid') as sync:
+                    with self.assertRaisesRegex(ValueError, 'guard_sample_not_stationary_at_reference'):
+                        coordinator.coordinate(lease, guard, manifest, urdf(),
+                                               transmissions(), spawn, control, timeout=5)
+                    sync.assert_not_called()
+                self.assertFalse(guard.goal_acknowledged.is_set())
+                self.assertTrue(lease.failed)
+                events = [json.loads(line) for line in
+                          (control/('worker-events-'+lease.session_id+'.jsonl')).read_text().splitlines()]
+                self.assertNotIn('dispatched', [row['event'] for row in events])
+            finally:
+                guard.close()
+                for process in processes:
+                    if process.poll() is None: process.terminate()
+                    process.wait(timeout=3)
+                    for stream in (process.stdin, process.stdout, process.stderr): stream.close()
 
     def exercise(self, mode):
         manifest = prep.prepare(state(), urdf(), transmissions())

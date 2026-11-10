@@ -21,6 +21,7 @@ import arm_from_pico_supervised as arm
 import arm_native_lease_bridge as bridge
 import scenario1_action_client as native
 import prepare_pico_wrist_native_probe as probe
+import pico_wrist_trial_admission as admission
 
 MAX_LINE = 65536
 # Application liveness threshold, not a physical stopping-time bound.
@@ -360,10 +361,9 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
                             or not isinstance(row.get('challenge'), str) or not re.fullmatch('[0-9a-f]{32}', row['challenge'])
                             or set(row) != {'event', 'session_id', 'goal_id', 'challenge'}):
                         raise ValueError('invalid_worker_uuid_request')
-                    # The XML specifies all seven joints. Compare its six
-                    # nominally stationary targets with fresh telemetry
-                    # before ACK allows the worker to send anything.
-                    check_stationary_targets(manifest, guard_pipe.checked_snapshot(), lease.initial)
+                    # Before ACK, require a fresh guarded stationary snapshot
+                    # and check all seven targets and the whole-body envelope.
+                    admission.check_guard_before_dispatch(manifest, lease, guard_pipe)
                     goal_id = row['goal_id']
                     lease.synchronize_uuid(goal_id, guard_pipe.exchange)
                     write_ack(process, dict(row, event='uuid_ok'), bridge.HANDSHAKE_S)

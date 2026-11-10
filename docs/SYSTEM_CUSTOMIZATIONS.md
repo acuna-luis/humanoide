@@ -1,5 +1,21 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-PREDISPATCH-SUPERVISION-20261110
+
+**10-11-2026, Europe/Madrid — cambios locales comprobados en simulación y
+comprobación integrada pasiva; prueba física PENDIENTE.** Gates físicos y
+atestación siguen cerrados.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | `ARM-PICO-LAUNCHER-REVIEW-20261110`; el check y binding de aquella ficha corresponden a fuentes anteriores. Preservar el trabajo local ajeno. |
+| Destino y motivo | PC, árbol local `scripts/vla/`: reforzar el control de muestra antes del ACK y la observación de entrega incierta del candidato nativo de muñeca derecha, sin habilitar SmolVLA ni modificar el SDK. |
+| Fuentes y dependencias | `pico_wrist_trial_admission.py` SHA256 `91f195c51e1ec33003122a8143ac7c105d86755aac28c899398f83d5a21f8a8e`; `runtime/pico_wrist_native_coordinator.py` `cd3ab4078c657492426079f073debf418bf6606b56b5a1b87497e6bd73cf3e94`; `run_pico_wrist_native_trial.py` `0128d110a1c1f52e6cff55ea814f42d3a6213cbbe94d03726e82ac92f6905b0d`; `check_pico_wrist_full_passive.py` `8a8e4cf555fd9d979c8ac37e62253cf64df169498657cfa4e257faebf1e7722c`, y tests relacionados. Admisión precede a coordinador en bundles host. |
+| Aplicación y activación | Fuentes locales solamente; sin instalación ni activación física. Requiere completar la cadena de habilitación, revisión de estado y trayectoria antes de cualquier uso físico. |
+| Verificación | 66 tests locales pasan. `check-e613e5a37ab14beda72d817adb0d4eb0`: integración pasiva PC→Motion con coordinador/admisión actuales, cero goals; no ejecutó la rama física. Snapshot de fuentes y candidato `8d72f944615a8e42bf18675e50c147fd8b5b373a965b327a7b5c6ae2b583b466`, comparado con archivos actuales; no acredita runtime cargado, revisor ni seguridad física. No consta prueba física de estos cambios. |
+| Reversión y evidencia | Backup anterior a los cambios `../Humanoide-vla-evidence/ARM_PICO_PREDISPATCH_20261110/before-ac127e2.tar`, SHA256 `86d5e7b0e00d6f21cd20a7b8a75fa312077facd24c93a3bff0763e3e55f75124`; restaurar selectivamente frente a `ac127e2`, preservando trabajo ajeno. Snapshot actual en `../Humanoide-vla-evidence/ARM_PICO_PREDISPATCH_20261110/binding/`; check en `../Humanoide-vla-evidence/PICO_FULL_PASSIVE_CHECK/check-e613e5a37ab14beda72d817adb0d4eb0/`. Check creó ficheros temporales privados en Motion y terminó; sin cambio remoto persistente declarado. |
+| Deuda | Confirmación física actual y verificación continua antes de movimiento; geometría, trayectoria y parada no calificadas. No hay garantía de frenado en una cancelación. Las fuentes anteriores retenidas no vinculan automáticamente esta versión. [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#guardia-previa-y-entrega-incierta--10-11-2026). |
+
 ## ARM-PICO-LAUNCHER-REVIEW-20261110
 
 **10-11-2026, Europe/Madrid — revisión y check pasivo OBSERVADOS; habilitación

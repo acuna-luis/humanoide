@@ -1,5 +1,11 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-PREDISPATCH-SUPERVISION-20261110.** Preparados cambios
+locales para comprobar la guardia antes del ACK y conservar la observación ante
+entrega o supervisión incierta. Tests locales y check pasivo pasan; gates
+cerrados, sin prueba física ni ejecución de SmolVLA.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#guardia-previa-y-entrega-incierta--10-11-2026).
+
 **10-11-2026 — ARM-PICO-LAUNCHER-REVIEW-20261110.** Check integrado del
 lanzador actualizado pasó sin goal; se revisaron entrega parcial y vigilancia
 de progreso. Integridad de fuentes no habilita la trayectoria física.

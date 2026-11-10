@@ -3,10 +3,12 @@ import contextlib
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -38,6 +40,223 @@ class LauncherTests(unittest.TestCase):
              patch.object(launcher.subprocess, 'Popen', side_effect=AssertionError('must not connect')):
             with contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(launcher.main(['--run', '--physical-confirmed']), 2)
+
+    def test_sentinel_delivered_then_interrupt_preserves_live_child(self):
+        sentinel = 'LOCAL_TEST_SENTINEL'
+        bootstrap = ('import sys\nparts=[]\nfor line in sys.stdin:\n'
+                     ' if line=='+repr(sentinel+'\n')+': break\n'
+                     ' parts.append(line)\n'
+                     'else: raise SystemExit("incomplete")\n'
+                     'exec(compile("".join(parts),"<local-test>","exec"))\n')
+        source = 'import sys\nprint("SOURCE_EXECUTED",flush=True)\nsys.stdin.readline()\n'
+        original = launcher.docker_launch.write_stream
+        calls = []
+        def write_then_interrupt(fd, data, timeout):
+            calls.append(data)
+            original(fd, data, timeout)
+            if len(calls) == 2:
+                raise KeyboardInterrupt('after complete sentinel')
+        child = None
+        try:
+            with patch.object(launcher.docker_launch, 'write_stream', side_effect=write_then_interrupt):
+                with self.assertRaises(launcher.HostStartUncertain) as raised:
+                    launcher.start_host_streamed([sys.executable, '-B', '-u', '-c', bootstrap],
+                        source, sentinel, {}, dict(os.environ))
+            child = raised.exception.process
+            self.assertEqual(raised.exception.phase, 'sentinel')
+            self.assertTrue(raised.exception.source_may_have_executed)
+            self.assertFalse(raised.exception.local_cleanup_observed)
+            self.assertEqual(child.stdout.readline(), b'SOURCE_EXECUTED\n')
+            self.assertIsNone(child.poll())
+            self.assertFalse(child.stdin.closed)
+        finally:
+            # This is a local fake bootstrap with no robot access or goal.
+            if child is not None:
+                child.stdin.close()
+                child.wait(timeout=3)
+                child.stdout.close(); child.stderr.close()
+
+    def test_source_failure_reaps_only_before_sentinel(self):
+        child = unittest.mock.MagicMock()
+        child.stdin.fileno.return_value = 123
+        with patch.object(launcher.subprocess, 'Popen', return_value=child), \
+             patch.object(launcher.docker_launch, 'write_stream', side_effect=BrokenPipeError('before sentinel')), \
+             patch.object(launcher.docker_launch, '_reap_unstarted_bootstrap') as reap:
+            with self.assertRaises(launcher.HostStartUncertain) as raised:
+                launcher.start_host_streamed(['fake'], 'source', 'sentinel', {}, {})
+        self.assertEqual(raised.exception.phase, 'source')
+        self.assertFalse(raised.exception.source_may_have_executed)
+        self.assertTrue(raised.exception.local_cleanup_observed)
+        reap.assert_called_once_with(child)
+
+    def test_bad_output_after_dispatch_keeps_observing_without_killing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = Path(tmp)/'local-child-completed'
+            code = ('import json,pathlib,sys,time\n'
+                    'print(json.dumps({"event":"dispatched","goal_id":"fake"}),flush=True)\n'
+                    'print("not-json",flush=True)\n'
+                    'time.sleep(.3)\n'
+                    'pathlib.Path(sys.argv[1]).write_text("completed")\n')
+            child = subprocess.Popen([sys.executable, '-B', '-u', '-c', code, str(marker)],
+                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, bufsize=0)
+            try:
+                with contextlib.redirect_stdout(io.StringIO()), \
+                     contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaisesRegex(RuntimeError, 'host_delivery_uncertain'):
+                        launcher.supervise_started_host(child, 'a'*32, time.monotonic(), Path(tmp))
+                self.assertEqual(child.returncode, 0)
+                self.assertEqual(marker.read_text(), 'completed')
+            finally:
+                if child.poll() is None:
+                    child.kill()  # Local fake process only; no robot.
+                child.wait(timeout=3)
+                child.stdin.close(); child.stdout.close(); child.stderr.close()
+
+    def test_selector_setup_failure_preserves_same_host_handle(self):
+        child = unittest.mock.MagicMock()
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch.object(launcher.selectors, 'DefaultSelector', side_effect=OSError('no selector')), \
+             patch.object(launcher, 'observe_uncertain_host', side_effect=RuntimeError('observed')) as observe, \
+             contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaisesRegex(RuntimeError, 'observed'):
+                launcher.supervise_started_host(child, 'a'*32, time.monotonic(), Path(tmp))
+        observe.assert_called_once_with(child, Path(tmp), 'runtime')
+        child.kill.assert_not_called(); child.terminate.assert_not_called()
+
+    def test_selector_close_failure_does_not_abandon_host(self):
+        child = unittest.mock.MagicMock()
+        selector = unittest.mock.MagicMock()
+        selector.register.side_effect = OSError('register failed')
+        selector.close.side_effect = OSError('close failed')
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch.object(launcher.selectors, 'DefaultSelector', return_value=selector), \
+             patch.object(launcher.os, 'set_blocking'), \
+             patch.object(launcher, 'observe_uncertain_host', side_effect=RuntimeError('observed')) as observe, \
+             contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaisesRegex(RuntimeError, 'observed'):
+                launcher.supervise_started_host(child, 'a'*32, time.monotonic(), Path(tmp))
+        observe.assert_called_once_with(child, Path(tmp), 'runtime')
+        child.kill.assert_not_called(); child.terminate.assert_not_called()
+
+    def test_uncertain_observation_survives_failed_logs_and_selector(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = Path(tmp)/'local-child-completed'
+            code = ('import pathlib,sys,time\n'
+                    'print("still-running",flush=True)\n'
+                    'time.sleep(.2)\n'
+                    'pathlib.Path(sys.argv[1]).write_text("completed")\n')
+            child = subprocess.Popen([sys.executable, '-B', '-u', '-c', code, str(marker)],
+                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, bufsize=0)
+            original_open = Path.open
+            def fail_log_open(path, *args, **kwargs):
+                if path.name.startswith('uncertain-host-'):
+                    raise OSError('simulated log failure')
+                return original_open(path, *args, **kwargs)
+            try:
+                with patch.object(Path, 'open', fail_log_open), \
+                     patch.object(launcher.selectors, 'DefaultSelector', side_effect=OSError('no selector')), \
+                     contextlib.redirect_stderr(io.StringIO()) as stderr:
+                    with self.assertRaisesRegex(RuntimeError, 'host_delivery_uncertain'):
+                        launcher.observe_uncertain_host(child, Path(tmp), 'runtime')
+                self.assertIn('observación continúa', stderr.getvalue())
+                self.assertEqual(child.returncode, 0)
+                self.assertEqual(marker.read_text(), 'completed')
+                self.assertFalse(child.stdin.closed)
+            finally:
+                if child.poll() is None:
+                    child.kill()  # Local fake process only; no robot.
+                child.wait(timeout=3)
+                child.stdin.close(); child.stdout.close(); child.stderr.close()
+
+    def test_uncertain_observation_survives_poll_and_stderr_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            child = subprocess.Popen([sys.executable, '-B', '-c', 'import time; time.sleep(.2)'],
+                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            original_poll = child.poll
+            polls = []
+            def flaky_poll():
+                polls.append(1)
+                if len(polls) == 1: raise OSError('poll failed')
+                return original_poll()
+            broken_stderr = unittest.mock.MagicMock()
+            broken_stderr.write.side_effect = BrokenPipeError('stderr closed')
+            try:
+                with patch.object(child, 'poll', side_effect=flaky_poll), \
+                     patch.object(sys, 'stderr', broken_stderr):
+                    with self.assertRaisesRegex(RuntimeError, 'host_delivery_uncertain'):
+                        launcher.observe_uncertain_host(child, Path(tmp), 'runtime')
+                self.assertEqual(child.returncode, 0)
+                self.assertFalse(child.stdin.closed)
+            finally:
+                if child.poll() is None: child.kill()
+                child.wait(timeout=3)
+                child.stdin.close(); child.stdout.close(); child.stderr.close()
+
+    def test_uncertain_observation_survives_setup_interrupt_and_close_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = Path(tmp)/'local-child-completed'
+            code = 'import pathlib,sys,time; time.sleep(.2); pathlib.Path(sys.argv[1]).write_text("done")'
+            child = subprocess.Popen([sys.executable, '-B', '-c', code, str(marker)],
+                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            real_set_blocking = os.set_blocking
+            real_open = Path.open
+            calls = {'stream': 0, 'log': 0}
+            def flaky_set_blocking(*args):
+                calls['stream'] += 1
+                if calls['stream'] == 1: raise KeyboardInterrupt()
+                return real_set_blocking(*args)
+            class FailingClose:
+                def __init__(self, wrapped): self.wrapped = wrapped
+                def write(self, value): return self.wrapped.write(value)
+                def flush(self): return self.wrapped.flush()
+                def close(self):
+                    self.wrapped.close()
+                    raise OSError('simulated close failure')
+            def flaky_open(path, *args, **kwargs):
+                if path.name.startswith('uncertain-host-'):
+                    calls['log'] += 1
+                    if calls['log'] == 1: raise KeyboardInterrupt()
+                    return FailingClose(real_open(path, *args, **kwargs))
+                return real_open(path, *args, **kwargs)
+            try:
+                with patch.object(launcher.os, 'set_blocking', side_effect=flaky_set_blocking), \
+                     patch.object(Path, 'open', flaky_open), contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaisesRegex(RuntimeError, 'host_delivery_uncertain'):
+                        launcher.observe_uncertain_host(child, Path(tmp), 'runtime')
+                self.assertEqual(child.returncode, 0)
+                self.assertEqual(marker.read_text(), 'done')
+                self.assertFalse(child.stdin.closed)
+            finally:
+                if child.poll() is None: child.kill()
+                child.wait(timeout=3)
+                child.stdin.close(); child.stdout.close(); child.stderr.close()
+
+    def test_success_evidence_requires_order_and_matching_identities(self):
+        session = 'a'*32
+        goal = '01234567-89ab-cdef-0123-456789abcdef'
+        rows = [
+            {'event':'stage_receipt','session_id':session},
+            {'event':'uuid_request','session_id':session,'goal_id':goal},
+            {'event':'dispatched','goal_id':goal},
+            {'event':'accepted','goal_id':goal,'accepted':True},
+            {'event':'result','goal_id':goal,'status':4,'result':{'state':{'desc':'SUCCEED','state':1101001}}},
+            {'event':'worker_finished','session_id':session},
+            {'event':'worker_result','returncode':0},
+            {'event':'postflight_settled','physical_stop_verified':False},
+            {'status':'ACTION_SUCCEEDED_AND_POSTFLIGHT_OBSERVED','goal_id':goal,'physical_stop_verified':False},
+        ]
+        good = launcher.SuccessEvidence(session)
+        for row in rows: good.accept(row)
+        self.assertEqual(good.phase, 9)
+        for bad_rows in (rows[:4]+rows[5:], rows[:3]+[rows[2]]+rows[3:],
+                         rows[:3]+[dict(rows[3], goal_id='f'*36)]+rows[4:],
+                         rows[:8]+[dict(rows[8], goal_id='f'*36)],
+                         [dict(rows[0],session_id='b'*32)]+rows[1:]):
+            with self.subTest(rows=bad_rows), self.assertRaises(RuntimeError):
+                evidence = launcher.SuccessEvidence(session)
+                for row in bad_rows: evidence.accept(row)
 
     def test_binding_is_checked_before_passive_robot_check(self):
         with tempfile.TemporaryDirectory() as tmp:

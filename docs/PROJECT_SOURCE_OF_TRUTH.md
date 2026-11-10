@@ -1,5 +1,17 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-PREDISPATCH-SUPERVISION-20261110: cambios locales
+comprobados en simulación e integración pasiva.** El coordinador comprueba una
+muestra fresca e inmóvil de la guardia antes del ACK, conservando lease y
+límites existentes. El lanzador incorpora observación conservadora cuando la
+entrega al host o la supervisión quedan inciertas y exige una secuencia de
+eventos para declarar éxito. 66 tests pasan; el check pasivo de la integración
+pasó sin goals. La copia vinculada identifica las fuentes actuales, sin
+acreditar runtime ni seguridad física. Ningún gate se ha abierto ni se ha efectuado prueba física.
+La prueba nativa de muñeca no ejecuta SmolVLA.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#guardia-previa-y-entrega-incierta--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-predispatch-supervision-20261110).
+
 **10-11-2026 — ARM-PICO-LAUNCHER-REVIEW-20261110: revisión parcial del
 lanzador.** El `--check` integrado pasó sin goal con fuentes actualizadas; se
 añadieron vigilancia de progreso y tratamiento conservador de entrega parcial.
