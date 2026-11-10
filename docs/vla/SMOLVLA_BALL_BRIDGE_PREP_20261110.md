@@ -52,6 +52,10 @@ otros18 ejes sin variación en las muestras, paros0/0. El registro no contiene
 posiciones de dedos, aunque el monitor comprobó su deriva. El final normal no
 certifica la cancelación ni la distancia de parada física.
 
+El usuario confirmó posteriormente que observó una bajada suave, sin contacto
+ni movimiento inesperado de brazos o manos. Esta observación se refiere al
+ensayo, no acredita el estado físico posterior ni prueba la parada de emergencia.
+
 Lectura posterior puntual: pitch−0,430665 rad, yaw0 y velocidades0 en cuerpo,
 ruedas y manos; actuadores corporales error0, baterías73,3/75,6%, cargador0,
 paros0/0, acción status4 y modo CC `joystick`. Sin supervisor residual ni

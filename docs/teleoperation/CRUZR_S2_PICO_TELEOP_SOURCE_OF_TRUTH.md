@@ -2,7 +2,8 @@
 
 **10-11-2026 — HEAD-PICO-SUPERVISED-20261110.** Una tarea fija de cabeza desde
 PICO/v4 respondió SUCCEED y quedó en reposo, pitch−0,430665rad; los otros ejes
-no variaron en las muestras. No se activó teleop ni cambió modo. Se distingue
+no variaron en las muestras. El usuario confirmó bajada suave, sin contacto ni
+movimientos inesperados de brazos o manos. No se activó teleop ni cambió modo. Se distingue
 la pelota en la imagen recibida. Cancelación y parada física no certificadas;
 la cabeza permanece bajada. [Detalle](../vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#ejecutor-supervisado-de-cabeza-desde-pico--preparación-10-11-2026),
 [ficha](../SYSTEM_CUSTOMIZATIONS.md#head-pico-supervised-20261110).

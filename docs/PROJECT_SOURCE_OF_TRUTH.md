@@ -3,7 +3,8 @@
 **10-11-2026 — HEAD-PICO-SUPERVISED-20261110: tarea de cabeza completada.**
 Tras check y confirmación física, una única tarea de cabeza desde PICO/v4
 respondió SUCCEED y se observó reposo; pitch final−0,430665rad y sin cambios
-muestreados en otros ejes. La imagen recibida permite distinguir la pelota;
+muestreados en otros ejes. El usuario confirmó bajada suave, sin contacto ni
+movimientos inesperados de brazos o manos. La imagen recibida distingue la pelota;
 shadow Ada generó cuatro propuestas sin órdenes. Cabeza permanece bajada, sin
 cambio de modo o HOME; parada/cancelación no certificadas y control VLA físico
 sigue pendiente.
