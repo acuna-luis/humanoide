@@ -14,10 +14,23 @@ import sys
 import tempfile
 import time
 import uuid
+from pathlib import Path
 
 import arm_from_pico_supervised as arm
 import arm_native_lease_bridge as bridge
-import scenario1_action_client as native
+import pico_wrist_action_client as native
+
+
+def require_persisted_revocation(lease):
+    """Distinguish a written zero deadline from natural expiry or I/O failure."""
+    if not lease._async_failure_done.wait(3):
+        raise RuntimeError('lease_revocation_not_observed')
+    if lease._async_failure_error is not None:
+        raise RuntimeError('lease_revocation_write_failed')
+    row = native.object_json(Path(lease.path).read_text())
+    deadline = row.get('deadline')
+    if set(row) != {'deadline'} or type(deadline) not in (int, float) or deadline != 0:
+        raise RuntimeError('lease_revocation_not_persisted')
 
 
 def validate_payload(payload):
@@ -80,7 +93,7 @@ def check(payload):
             while time.monotonic() < keepalive_end:
                 if pipe.failure or child.poll() is not None:
                     raise RuntimeError('guard_failed_during_observation')
-                native.check_lease(lease.path, time.monotonic())
+                native.check_lease_current(lease.path, time.monotonic)
                 time.sleep(.05)
             # There is no action or moving task to interrupt in this check.
             child.terminate()
@@ -88,8 +101,11 @@ def check(payload):
             pipe.thread.join(3)
             if pipe.thread.is_alive() or not lease.failed:
                 raise RuntimeError('guard_loss_not_observed')
+            # The transport revokes asynchronously on loss. Observe its
+            # completion before claiming the on-disk lease was revoked.
+            require_persisted_revocation(lease)
             try:
-                native.check_lease(lease.path, time.monotonic())
+                native.check_lease_current(lease.path, time.monotonic)
             except RuntimeError:
                 pass
             else:

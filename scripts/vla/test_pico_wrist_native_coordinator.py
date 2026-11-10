@@ -37,7 +37,7 @@ class ModelPermissionTests(unittest.TestCase):
         lease = types.SimpleNamespace(guard_alive=lambda: True, path='/no-io')
         guard = types.SimpleNamespace(failure=None)
         progress = types.SimpleNamespace(beat=lambda: calls.append('beat'))
-        with patch.object(coordinator.native, 'check_lease') as check, patch.object(coordinator.time, 'sleep'):
+        with patch.object(coordinator.native, 'check_lease_current') as check, patch.object(coordinator.time, 'sleep'):
             got = coordinator.await_model_permission(pc, lease, guard, progress, GOAL, task,
                                                      time.monotonic()+1)
         self.assertEqual(got, permit)
@@ -58,7 +58,7 @@ class ModelPermissionTests(unittest.TestCase):
         ):
             pc = types.SimpleNamespace(begin_model_permit=lambda *_: None,
                                        permit_snapshot=lambda: value)
-            with patch.object(coordinator.native, 'check_lease'):
+            with patch.object(coordinator.native, 'check_lease_current'):
                 with self.assertRaisesRegex(RuntimeError, 'invalid_or_expired_model_permission'):
                     coordinator.await_model_permission(pc, lease, guard, progress, GOAL, task,
                                                        time.monotonic()+1)
@@ -106,7 +106,7 @@ class FakeGuard:
         with self.lease.lock:
             if self.failure or self.lease.failed:
                 raise RuntimeError('fake_guard_not_healthy')
-            bridge.native.check_lease(self.lease.path, time.monotonic())
+            bridge.native.check_lease_current(self.lease.path, time.monotonic)
             if self.latest is None or time.monotonic()-self.latest['monotonic'] > bridge.MAX_AGE_S:
                 raise RuntimeError('fake_guard_stale')
             return self.latest
@@ -699,7 +699,7 @@ class CoordinatorTests(unittest.TestCase):
                         rejected = False
                         while time.monotonic() < limit:
                             try:
-                                bridge.native.check_lease(lease.path, time.monotonic())
+                                bridge.native.check_lease_current(lease.path, time.monotonic)
                             except (RuntimeError, OSError, ValueError):
                                 rejected = True
                                 break

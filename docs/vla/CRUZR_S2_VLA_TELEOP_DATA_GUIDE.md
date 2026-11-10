@@ -1,5 +1,19 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — SMOLVLA-ISOLATED-SYNTHETIC-CHARGER-20261110.** El primer
+check sintético con cliente VLA corregido se interrumpió antes de UUID/goal:
+`charger_connected_or_unknown`; postcheck observó topic `2` y baterías con
+`charging`. No se infiere el contacto físico ni se habilita el despacho.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-isolated-synthetic-charger-20261110),
+[detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#preflight-de-carga-en-el-cliente-aislado--10-11-2026).
+
+**10-11-2026 — ARM-PICO-LEASE-ISOLATED-20261110.** Corrección local aislada
+VLA toma el reloj tras leer el lease; pruebas y auditoría offline pasan y el
+worker falso rechaza el caso vencido. El cliente y pin de cajas no se alteraron.
+Persisten limitaciones de lock/ACK, revocación y frenado; gate físico cerrado.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-lease-isolated-20261110),
+[detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#corrección-vla-aislada-del-reloj-del-lease--10-11-2026).
+
 **10-11-2026 — ARM-PICO-LEASE-CLOCK-CANDIDATE-20261110.** Se descartó un
 candidato de corrección del reloj de lease porque también cambiaba el cliente
 compartido y el pin del lanzador validado de cajas; 14 archivos se restauraron

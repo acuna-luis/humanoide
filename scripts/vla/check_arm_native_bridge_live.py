@@ -44,7 +44,7 @@ def source_bundle():
         'head_from_pico_readonly': RUNTIME/'head_from_pico_readonly.py',
         'arm_from_pico_supervised': RUNTIME/'arm_from_pico_supervised.py',
         'scenario1_request_ids': BOX/'scenario1_request_ids.py',
-        'scenario1_action_client': BOX/'scenario1_action_client.py',
+        'pico_wrist_action_client': VLA/'pico_wrist_action_client.py',
         'prepare_pico_wrist_native_probe': VLA/'prepare_pico_wrist_native_probe.py',
         'arm_native_lease_bridge': VLA/'arm_native_lease_bridge.py',
         'arm_native_bridge_check_remote': RUNTIME/'arm_native_bridge_check_remote.py',

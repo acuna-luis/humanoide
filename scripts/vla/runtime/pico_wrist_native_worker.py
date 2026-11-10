@@ -19,7 +19,7 @@ import uuid
 
 import arm_from_pico_supervised as arm
 import arm_native_lease_bridge as bridge
-import scenario1_action_client as native
+import pico_wrist_action_client as native
 import pico_wrist_native_stage as staging
 
 MAX_LINE = 4096
@@ -181,15 +181,15 @@ class LeaseProxy:
         self.stage_receipt = None
 
     def synchronize_uuid(self, goal_id, _exchange):
-        self.channel.prepare_uuid(goal_id, check_live=lambda: native.check_lease(self.path, time.monotonic()))
-        native.check_lease(self.path, time.monotonic())
+        self.channel.prepare_uuid(goal_id, check_live=lambda: native.check_lease_current(self.path, time.monotonic))
+        native.check_lease_current(self.path, time.monotonic)
         if self.channel.interrupted(): raise RuntimeError(self.channel.interrupted())
         staging.verify_staged(self.manifest, self.stage_receipt)
         # File read can block while the guard dies; require a still-current
         # lease and an uninterrupted channel immediately before returning to
         # create_goal_request. This does not make a later wire send atomic.
         if self.channel.interrupted(): raise RuntimeError(self.channel.interrupted())
-        native.check_lease(self.path, time.monotonic())
+        native.check_lease_current(self.path, time.monotonic)
         # Same Motion clock is already required by the shared lease. This
         # checks immediately before returning to ROSA; wire delivery is not
         # atomic with this check and stopping is not certified.
@@ -237,7 +237,7 @@ def run(payload, channel, *, verified_provenance=None):
                 raise RuntimeError('worker_installed_hash_mismatch:' + path)
         require_robot_app_can_read_private_task()
         if channel.interrupted(): raise RuntimeError(channel.interrupted())
-        native.check_lease(lease.path, time.monotonic())
+        native.check_lease_current(lease.path, time.monotonic)
         receipt = staging.stage_task(manifest, payload['urdf_text'], payload['transmissions_text'],
                                      intent_path=payload['intent_path'], session_id=channel.session_id,
                                      intent_owner_uid=payload['intent_uid'])
@@ -245,7 +245,7 @@ def run(payload, channel, *, verified_provenance=None):
         channel.emit(event='stage_receipt', session_id=channel.session_id, receipt=receipt)
         if channel.interrupted():
             raise RuntimeError('stage_receipt_or_signal_no_goal:' + channel.interrupted())
-        native.check_lease(lease.path, time.monotonic())
+        native.check_lease_current(lease.path, time.monotonic)
         # Uses the reviewed native box transport, source fingerprints, acceptance,
         # UUID targeted cancel and expiry checks; no auto retry or HOME.
         return bridge.run_guarded_once(lease, None, manifest, payload['urdf_text'],

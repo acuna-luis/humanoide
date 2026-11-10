@@ -23,7 +23,7 @@ import arm_native_lease_bridge as bridge
 import pico_wrist_docker_launcher as launch
 import pico_wrist_pc_heartbeat as heartbeat
 import prepare_pico_wrist_native_probe as probe
-import scenario1_action_client as native
+import pico_wrist_action_client as native
 
 
 def _worker_line(process, timeout):
@@ -178,14 +178,14 @@ def check(payload):
                     lease.synchronize_uuid(synthetic, pipe.exchange)
                 if not pc.alive() or not lease.guard_alive() or output.failed:
                     raise RuntimeError('passive_connection_not_live')
-                native.check_lease(lease.path, time.monotonic())
+                native.check_lease_current(lease.path, time.monotonic)
                 stop_clean = pipe.stop()
                 guard.wait(timeout=4)
                 pipe.thread.join(3)
                 if not stop_clean or pipe.thread.is_alive() or guard.returncode != 0 or not lease.failed:
                     raise RuntimeError('guard_did_not_stop_cleanly')
                 try:
-                    native.check_lease(lease.path, time.monotonic())
+                    native.check_lease_current(lease.path, time.monotonic)
                 except RuntimeError:
                     pass
                 else:

@@ -20,7 +20,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / 'runtime'))
 sys.path.insert(0, str(HERE.parent / 'box_handling'))
 from arm_from_pico_supervised import ARM_AXIS, ARM_STEP, BODY, check_body
-from scenario1_action_client import validate_goal
+from pico_wrist_action_client import validate_goal
 
 ARM = ('R_shoulder_pitch_joint', 'R_shoulder_roll_joint', 'R_shoulder_yaw_joint',
        'R_elbow_roll_joint', 'R_elbow_yaw_joint', 'R_wrist_pitch_joint',

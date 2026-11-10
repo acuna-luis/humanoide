@@ -37,7 +37,7 @@ def source_bundle(*, guard_heartbeat=False):
         'head_from_pico_readonly': RUNTIME / 'head_from_pico_readonly.py',
         'arm_from_pico_supervised': RUNTIME / 'arm_from_pico_supervised.py',
         'scenario1_request_ids': BOX / 'scenario1_request_ids.py',
-        'scenario1_action_client': BOX / 'scenario1_action_client.py',
+        'pico_wrist_action_client': VLA / 'pico_wrist_action_client.py',
         'prepare_pico_wrist_native_probe': VLA / 'prepare_pico_wrist_native_probe.py',
         'arm_native_lease_bridge': VLA / 'arm_native_lease_bridge.py',
         'pico_wrist_pc_heartbeat': VLA / 'pico_wrist_pc_heartbeat.py',
@@ -61,14 +61,14 @@ def source_bundle(*, guard_heartbeat=False):
     # This worker imports the native API for fingerprinting but never creates
     # an action client, calls rosa.init, or constructs/sends an action goal.
     worker = passive.module_code({name: sources[name] for name in
-        ('scenario1_request_ids', 'scenario1_action_client')})
+        ('scenario1_request_ids', 'pico_wrist_action_client')})
     worker += ('import json,time\n'
         'request=json.loads(sys.stdin.readline())\n'
         'from rosa.action_client import ActionClient,ActionClientGoalHandle\n'
-        'native=sys.modules["scenario1_action_client"]\n'
+        'native=sys.modules["pico_wrist_action_client"]\n'
         'fingerprints=native.validate_native_sources({"ActionClient":ActionClient,'
         '"ActionClientGoalHandle":ActionClientGoalHandle})\n'
-        'native.check_lease(request["lease_path"],time.monotonic())\n'
+        'native.check_lease_current(request["lease_path"], time.monotonic)\n'
         'goal_valid=native.validate_goal("motion",json.dumps(request["goal"],allow_nan=False))==request["goal"]\n'
         'print(json.dumps({"event":"NATIVE_READONLY_READY","fingerprints":fingerprints,'
         '"goal_format_valid":goal_valid,"lease_fresh":True,"monotonic":time.monotonic()}),flush=True)\n')

@@ -5,6 +5,9 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
+import threading
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -55,6 +58,22 @@ def payload():
 
 
 class PassiveCheckTests(unittest.TestCase):
+    def test_revocation_receipt_rejects_write_error_and_natural_expiry(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/'lease.json'
+            done = threading.Event(); done.set()
+            lease = SimpleNamespace(path=path, _async_failure_done=done,
+                                    _async_failure_error='OSError: disk')
+            path.write_text('{"deadline":0}')
+            with self.assertRaisesRegex(RuntimeError, 'write_failed'):
+                remote.require_persisted_revocation(lease)
+            lease._async_failure_error = None
+            path.write_text('{"deadline":0.001}')
+            with self.assertRaisesRegex(RuntimeError, 'not_persisted'):
+                remote.require_persisted_revocation(lease)
+            path.write_text('{"deadline":0}')
+            remote.require_persisted_revocation(lease)
+
     def test_simulated_child_handshake_and_loss_without_goal(self):
         result = remote.check(payload())
         self.assertEqual(result['status'], 'PASS_PASSIVE_GUARD_UUID_AND_LEASE_REVOCATION')

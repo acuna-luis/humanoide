@@ -56,7 +56,7 @@ BUNDLE_PATHS = {
     'head_from_pico_readonly': 'scripts/vla/runtime/head_from_pico_readonly.py',
     'arm_from_pico_supervised': 'scripts/vla/runtime/arm_from_pico_supervised.py',
     'scenario1_request_ids': 'scripts/box_handling/scenario1_request_ids.py',
-    'scenario1_action_client': 'scripts/box_handling/scenario1_action_client.py',
+    'pico_wrist_action_client': 'scripts/vla/pico_wrist_action_client.py',
     'prepare_pico_wrist_native_probe': 'scripts/vla/prepare_pico_wrist_native_probe.py',
     'arm_native_lease_bridge': 'scripts/vla/arm_native_lease_bridge.py',
     'pico_wrist_native_stage': 'scripts/vla/runtime/pico_wrist_native_stage.py',

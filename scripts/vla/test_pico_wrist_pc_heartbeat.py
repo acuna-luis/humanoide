@@ -249,7 +249,7 @@ class HeartbeatTests(unittest.TestCase):
                 deadline=time.monotonic()+2
                 while time.monotonic()<deadline:
                     try:
-                        bridge.native.check_lease(lease.path, time.monotonic())
+                        bridge.native.check_lease_current(lease.path, time.monotonic)
                         break
                     except RuntimeError:
                         time.sleep(.01)

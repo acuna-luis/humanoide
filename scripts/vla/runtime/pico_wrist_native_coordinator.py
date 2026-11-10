@@ -20,7 +20,7 @@ import time
 
 import arm_from_pico_supervised as arm
 import arm_native_lease_bridge as bridge
-import scenario1_action_client as native
+import pico_wrist_action_client as native
 import prepare_pico_wrist_native_probe as probe
 import pico_wrist_trial_admission as admission
 import archive_canceled_pico_wrist_731084 as incident
@@ -495,7 +495,7 @@ def await_model_permission(pc, lease, guard_pipe, progress, goal_id, task_sha256
         progress.beat()
         if guard_pipe.failure or not lease.guard_alive():
             raise RuntimeError('guard_lost_waiting_for_model')
-        native.check_lease(lease.path, time.monotonic())
+        native.check_lease_current(lease.path, time.monotonic)
         permit = pc.permit_snapshot()
         if permit is not None:
             if (not isinstance(permit, dict) or set(permit) !=
@@ -525,7 +525,7 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
     if manifest['input']['reference_20d'] != lease.initial:
         raise ValueError('reference_mismatch')
     guard_pipe.await_ready(GUARD_READY_TIMEOUT_S)
-    native.check_lease(lease.path, time.monotonic())
+    native.check_lease_current(lease.path, time.monotonic)
     progress.start()
     if incident_evidence is None:
         marker = durable_intent(GLOBAL_RECEIPT_DIR, manifest, lease.session_id)
@@ -554,7 +554,7 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
             progress.beat()
             if guard_pipe.failure or not lease.guard_alive():
                 raise RuntimeError('guard_lost_during_trial')
-            native.check_lease(lease.path, time.monotonic())
+            native.check_lease_current(lease.path, time.monotonic)
             ready, _, _ = select.select([process.stdout.fileno()], [], [], .05)
             if not ready:
                 if process.poll() is not None: break
@@ -567,7 +567,7 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
                 progress.beat()
                 if guard_pipe.failure or not lease.guard_alive():
                     raise RuntimeError('guard_lost_during_trial')
-                native.check_lease(lease.path, time.monotonic())
+                native.check_lease_current(lease.path, time.monotonic)
                 line, _, rest = bytes(buffer).partition(b'\n')
                 buffer = bytearray(rest)
                 row = native.object_json(line.decode('utf-8'))

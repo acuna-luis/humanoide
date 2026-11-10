@@ -18,7 +18,7 @@ import time
 import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent/'box_handling'))
-import scenario1_action_client as native
+import pico_wrist_action_client as native
 
 MAX_GAP_S = .75
 SEND_INTERVAL_S = .1

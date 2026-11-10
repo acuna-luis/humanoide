@@ -1,5 +1,41 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Preflight de carga en el cliente aislado — 10-11-2026
+
+**INTERRUMPIDO ANTES DE UUID/GOAL; SIN PRUEBA DE CANCELACIÓN.** Un único check
+sintético con las fuentes VLA corregidas terminó rc=1; la guardia informó
+`charger_connected_or_unknown`. El log no muestra goal o cancelación: no se
+probó el watchdog nuevo ni se enviaron goals físicos. No se modificó el control
+de cargador ni la condición de admisión.
+
+Un postcheck de solo lectura a las 17:10:26 UTC observó topic de carga `2` y
+baterías 49,6/51,4 %, ambas `charging`, corrientes −7,7/−7,8 A. Esto no explica
+el valor 2 del proveedor ni demuestra contacto físico del cargador. La lectura
+puntual, conservada solo en salida de herramientas, observó app con rosa y
+robot_app, ROS con bash y daemon, y ningún identificador sintético en host;
+marker y XML del incidente conservaron sus hashes/inodes. No certifica
+exclusividad futura o frenado. `model_wrist_dispatch_not_enabled` sigue cerrado.
+[Identidades, archivos y respaldo](../SYSTEM_CUSTOMIZATIONS.md#smolvla-isolated-synthetic-charger-20261110).
+
+## Corrección VLA aislada del reloj del lease — 10-11-2026
+
+**PREPARADA EN PC Y VERIFICADA OFFLINE; GATE FÍSICO CERRADO.** Se derivó
+`scripts/vla/pico_wrist_action_client.py` del cliente de cajas y se cambió la
+ruta específica de VLA para leer el reloj después de leer el archivo del lease.
+Los bundles, puente, worker, coordinador y verificaciones de VLA usan el cliente
+aislado. El cliente y pin de cajas quedaron sin cambios, y su función anterior
+no queda corregida por este trabajo. Las pruebas y auditoría independientes se
+realizaron offline; no prueban seguimiento, cancelación ni frenado físicos.
+
+El reproductor del fallo anterior volvió a ejecutarse offline con las fuentes
+actuales: el cliente de cajas original todavía acepta el lease vencido, mientras
+el worker VLA falso lo rechaza. Esto cubre el reloj previo a la lectura, no
+resuelve la carrera de revocación o un envío en vuelo, ni la contención de lock
+y ACK tardío. La causa de 731084 sigue sin identificarse y
+`model_wrist_dispatch_not_enabled` permanece cerrado. La prueba sintética posterior de las fuentes nuevas se interrumpió antes del
+goal por `charger_connected_or_unknown`, como se registra arriba.
+[Hashes, pruebas y reversión](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-lease-isolated-20261110).
+
 ## Corrección del reloj descartada — 10-11-2026
 
 **CANDIDATO OFFLINE DESCARTADO; SIN CAMBIO PRODUCTIVO NI PRUEBA EN ROBOT.**

@@ -72,15 +72,15 @@ class LeaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             gate = bridge.GuardLease(directory, dict(bridge.arm.BODY), lambda: True, clock=clock)
             with self.assertRaises(RuntimeError):
-                bridge.native.check_lease(gate.path, clock())
+                bridge.native.check_lease_current(gate.path, clock)
             gate.heartbeat(telemetry(clock()))
-            bridge.native.check_lease(gate.path, clock())
+            bridge.native.check_lease_current(gate.path, clock)
             clock.value += .1
             bad = telemetry(clock()); bad['position']['L_elbow_yaw_joint'] += .003
             with self.assertRaises(ValueError):
                 gate.heartbeat(bad)
             with self.assertRaises(RuntimeError):
-                bridge.native.check_lease(gate.path, clock())
+                bridge.native.check_lease_current(gate.path, clock)
             with self.assertRaises(RuntimeError):
                 gate.heartbeat(telemetry(clock()))
 
@@ -113,7 +113,7 @@ class LeaseTests(unittest.TestCase):
                 child.terminate(); child.wait(timeout=3)
                 time.sleep(bridge.LEASE_S + .1)
                 with self.assertRaises(RuntimeError):
-                    bridge.native.check_lease(gate.path, time.monotonic())
+                    bridge.native.check_lease_current(gate.path, time.monotonic)
         finally:
             if child.poll() is None: child.kill()
             child.wait(timeout=3)
@@ -216,7 +216,7 @@ class HandshakeTests(unittest.TestCase):
             self.assertEqual(gate.goal_id, box_tests.GOAL_ID)
             clock.value += bridge.LEASE_S + .01
             with self.assertRaises(RuntimeError):
-                bridge.native.check_lease(gate.path, clock())
+                bridge.native.check_lease_current(gate.path, clock)
 
     def test_mismatched_and_late_ack_fail_closed(self):
         for kind in ('mismatch', 'late'):
@@ -368,7 +368,7 @@ class HandshakeTests(unittest.TestCase):
                                 path='/tmp/fake.json', channel=SimpleNamespace(interrupted=lambda: None))
         transport = object.__new__(bridge.GuardedRosaTransport)
         transport._wrist_lease, transport._wrist_goal, transport._wrist_attempted = lease, goal, False
-        with patch.object(stage, 'verify_staged'), patch.object(bridge.native, 'check_lease'), \
+        with patch.object(stage, 'verify_staged'), patch.object(bridge.native, 'check_lease_current'), \
              patch.object(bridge.native.RosaTransport, 'send', side_effect=OSError('delivery_unknown')) as send:
             with self.assertRaisesRegex(ValueError, 'unexpected_or_repeated_wrist_goal'):
                 transport.send({'task_name':'cruzr/home', 'yaml_args':'{}'})

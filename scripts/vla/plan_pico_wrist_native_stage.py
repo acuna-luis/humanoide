@@ -16,11 +16,11 @@ from prepare_pico_wrist_native_probe import TASK_ROOT, validate
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 SOURCES = {
-    'scenario1_action_client.py': REPO / 'scripts/box_handling/scenario1_action_client.py',
+    'pico_wrist_action_client.py': REPO / 'scripts/vla/pico_wrist_action_client.py',
     'scenario1_request_ids.py': REPO / 'scripts/box_handling/scenario1_request_ids.py',
 }
 EXPECTED = {
-    'scenario1_action_client.py': '196b6241de0d1e624b919ab062fc391e6e8ee8837e4a496cbcdad99a57b3b607',
+    'pico_wrist_action_client.py': '7cef03f8ec1a93d011a898409544a7f3d7eee4d1a8eb6458abbe71d266df7512',
     'scenario1_request_ids.py': '904adfb55e621fde1bd03d8e7fd96b61bf1866e5a0b94f92b36eb53999d4092d',
 }
 

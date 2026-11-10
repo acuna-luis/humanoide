@@ -35,6 +35,28 @@ class WorkerChannelTests(unittest.TestCase):
             try: os.close(fd)
             except OSError: pass
 
+    def test_final_lease_read_expiring_during_io_blocks_handshake(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/'lease.json'
+            path.write_text(json.dumps({'deadline': time.monotonic()+10}))
+            lease = worker.LeaseProxy(path, {}, self.channel, {})
+            lease.stage_receipt = {}
+            original = Path.read_text
+            reads = []
+            def delayed(file, *args, **kwargs):
+                if file == path:
+                    reads.append(None)
+                    if len(reads) == 3:
+                        file.write_text(json.dumps({'deadline': time.monotonic()+.05}))
+                        time.sleep(.1)
+                return original(file, *args, **kwargs)
+            with patch.object(Path, 'read_text', delayed), \
+                 patch.object(self.channel, 'prepare_uuid', side_effect=lambda _, check_live: check_live()), \
+                 patch.object(worker.staging, 'verify_staged'):
+                with self.assertRaisesRegex(RuntimeError, 'expired'):
+                    lease.synchronize_uuid(GOAL, None)
+            self.assertEqual(len(reads), 3)
+
     def test_uuid_handshake_waits_for_exact_ack(self):
         errors = []
         def send():
@@ -58,7 +80,7 @@ class WorkerChannelTests(unittest.TestCase):
 import os,sys
 sys.path[:0]=[sys.argv[1],sys.argv[2],sys.argv[3]]
 import pico_wrist_native_worker as worker
-import scenario1_action_client as native
+import pico_wrist_action_client as native
 import test_scenario1_action_client as fixtures
 fd=worker.isolate_event_stdout()
 channel=worker.WorkerChannel(sys.stdin.fileno(),fd,'a'*32)
@@ -138,7 +160,7 @@ os.close(fd)
         self.assertEqual(self.channel.model_decision_sha256, 'f'*64)
         with tempfile.TemporaryDirectory() as directory:
             lease = worker.LeaseProxy(Path(directory)/'lease.json', {}, self.channel, {})
-            with patch.object(self.channel, 'prepare_uuid'), patch.object(worker.native, 'check_lease'), \
+            with patch.object(self.channel, 'prepare_uuid'), patch.object(worker.native, 'check_lease_current'), \
                  patch.object(worker.staging, 'verify_staged',
                               side_effect=lambda *_: setattr(self.channel, 'model_deadline_monotonic_ns',
                                                              time.monotonic_ns()-1)):
@@ -217,7 +239,7 @@ os.close(fd)
              patch.dict(os.environ, {'HW_TYPE':'cruzr_s2_v1_sps'}), \
              patch.object(worker.Path, 'read_bytes', return_value=raw), \
              patch.object(worker, 'require_robot_app_can_read_private_task'), \
-             patch.object(worker.native, 'check_lease'), \
+             patch.object(worker.native, 'check_lease_current'), \
              patch.object(worker.staging, 'stage_task', return_value={}), \
              patch.object(worker.bridge, 'run_guarded_once', side_effect=guarded):
             result = worker.run(payload, self.channel)

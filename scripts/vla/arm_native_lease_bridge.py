@@ -24,7 +24,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / 'runtime'))
 sys.path.insert(0, str(HERE.parent / 'box_handling'))
 import arm_from_pico_supervised as arm
-import scenario1_action_client as native
+import pico_wrist_action_client as native
 import prepare_pico_wrist_native_probe as probe
 
 MAX_AGE_S = .5
@@ -167,7 +167,7 @@ class GuardLease:
                     raise RuntimeError('guard_not_ready')
                 if self.goal_id is not None or not isinstance(goal_id, str) or not UUID.fullmatch(goal_id):
                     raise ValueError('invalid_or_duplicate_goal_id')
-                native.check_lease(self.path, self.clock())
+                native.check_lease_current(self.path, self.clock)
                 challenge = uuid.uuid4().hex
                 request = {'event': 'prepare_goal_uuid', 'session_id': self.session_id,
                            'guard_id': self.guard_id, 'goal_id': goal_id, 'challenge': challenge}
@@ -188,7 +188,7 @@ class GuardLease:
                     raise RuntimeError('uuid_handshake_failed')
                 # Waiting for ACK must not extend a stale guard lease. The caller
                 # must deliver independently verified fresh telemetry as needed.
-                native.check_lease(self.path, self.clock())
+                native.check_lease_current(self.path, self.clock)
                 self.goal_id = goal_id
         except Exception:
             self.fail()
@@ -385,7 +385,7 @@ class GuardPipe:
                                 try:
                                     if self.failure or self.lease.failed or not self.lease.guard_alive():
                                         raise RuntimeError('guard_failed_during_renewal')
-                                    native.check_lease(self.lease.path, self.clock())
+                                    native.check_lease_current(self.lease.path, self.clock)
                                     if not 0 <= self.clock()-row['monotonic'] <= MAX_AGE_S:
                                         raise RuntimeError('guard_sample_expired_during_renewal')
                                     self.latest = row
@@ -435,7 +435,7 @@ class GuardPipe:
                     with self.lease.lock:
                         if self.failure or self.lease.failed or not self.lease.guard_alive():
                             raise RuntimeError('guard_failed_during_initial_renewal')
-                        native.check_lease(self.lease.path, self.clock())
+                        native.check_lease_current(self.lease.path, self.clock)
                         if not 0 <= self.clock()-self.latest['monotonic'] <= MAX_AGE_S:
                             raise RuntimeError('guard_initial_sample_expired_during_renewal')
                         if self.enable_guard_heartbeat:
@@ -509,7 +509,7 @@ class GuardPipe:
         with self.lease.lock:
             if self.failure or self.lease.failed or not self.ready.is_set() or not self.lease.guard_alive():
                 raise RuntimeError('guard_not_healthy_for_snapshot')
-            native.check_lease(self.lease.path, self.clock())
+            native.check_lease_current(self.lease.path, self.clock)
             sample = self.latest
             if (not isinstance(sample, dict) or type(sample.get('monotonic')) not in (int, float)
                     or not math.isfinite(sample['monotonic'])
@@ -522,7 +522,7 @@ class GuardPipe:
         if not self.ready.wait(timeout) or self.failure or not self.lease.guard_alive():
             self.lease.fail_async()
             raise RuntimeError('continuous_guard_not_ready:' + str(self.failure))
-        native.check_lease(self.lease.path, self.clock())
+        native.check_lease_current(self.lease.path, self.clock)
 
     def exchange(self, request, timeout):
         if self.failure or not self.ready.is_set() or not self.lease.guard_alive():
@@ -563,7 +563,7 @@ class GuardPipe:
         with self.lease.lock:
             if self.failure or self.lease.failed or not self.ready.is_set() or not self.lease.guard_alive():
                 raise RuntimeError('guard_unhealthy_at_shutdown')
-            native.check_lease(self.lease.path, self.clock())
+            native.check_lease_current(self.lease.path, self.clock)
             self.stopping = True
             self.lease.fail()
 
@@ -646,7 +646,7 @@ class GuardedRosaTransport(native.RosaTransport):
             candidate = lease.manifest.get('candidate', {})
             if candidate.get('goal') != {'task_name':candidate.get('task_name'), 'yaml_args':'{}'}:
                 raise ValueError('worker_goal_not_staged_task')
-            native.check_lease(lease.path, time.monotonic())
+            native.check_lease_current(lease.path, time.monotonic)
             if lease.channel.interrupted():
                 raise RuntimeError('worker_interrupted_before_transport')
         self._wrist_lease = lease
@@ -688,7 +688,7 @@ class GuardedRosaTransport(native.RosaTransport):
         self._wrist_attempted = True
         import pico_wrist_native_stage as staging
         staging.verify_staged(self._wrist_lease.manifest, self._wrist_lease.stage_receipt)
-        native.check_lease(self._wrist_lease.path, time.monotonic())
+        native.check_lease_current(self._wrist_lease.path, time.monotonic)
         if self._wrist_lease.channel.interrupted():
             raise RuntimeError('worker_interrupted_before_send')
         return super().send(goal)

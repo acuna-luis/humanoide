@@ -24,7 +24,7 @@ import arm_native_lease_bridge as bridge
 import pico_wrist_native_coordinator as coordinator
 import pico_wrist_pc_heartbeat as heartbeat
 import prepare_pico_wrist_native_probe as probe
-import scenario1_action_client as native
+import pico_wrist_action_client as native
 
 
 def validate_payload(payload):

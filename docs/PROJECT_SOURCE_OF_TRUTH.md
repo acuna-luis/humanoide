@@ -1,5 +1,23 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-ISOLATED-SYNTHETIC-CHARGER-20261110: preflight
+interrumpido.** El primer check sintético con la corrección aislada terminó
+antes de UUID/goal por `charger_connected_or_unknown`. Lectura posterior puntual:
+topic de carga `2`, baterías 49,6/51,4 % con estado `charging`; no identifica
+el estado físico del cable ni el significado vendor de `2`. No hubo prueba de
+cancelación con las fuentes nuevas ni goal físico; gate cerrado.
+[Ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-isolated-synthetic-charger-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#preflight-de-carga-en-el-cliente-aislado--10-11-2026).
+
+**10-11-2026 — ARM-PICO-LEASE-ISOLATED-20261110: corrección VLA local.**
+Se aisló el cliente VLA del de cajas y se comprobó el reloj después de leer
+el lease. Las pruebas y auditoría offline pasan; el reproductor anterior ahora
+rechaza el lease vencido en el worker VLA falso. La ruta de cajas sigue intacta
+y su cliente original conserva el comportamiento anterior. El gate físico sigue
+cerrado: lock/ACK, revocación, envío en vuelo y frenado siguen sin resolver o
+acreditarse. [Ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-lease-isolated-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#corrección-vla-aislada-del-reloj-del-lease--10-11-2026).
+
 **10-11-2026 — ARM-PICO-LEASE-CLOCK-CANDIDATE-20261110: corrección
 descartada.** Se preparó un candidato offline para el reloj del lease, pero
 modificaba el cliente compartido y el pin de la ruta validada de cajas; se

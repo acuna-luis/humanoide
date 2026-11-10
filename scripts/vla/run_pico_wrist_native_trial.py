@@ -44,7 +44,7 @@ def source_bundle(*, include_sources=False):
         'head_from_pico_readonly': RUNTIME/'head_from_pico_readonly.py',
         'arm_from_pico_supervised': RUNTIME/'arm_from_pico_supervised.py',
         'scenario1_request_ids': BOX/'scenario1_request_ids.py',
-        'scenario1_action_client': BOX/'scenario1_action_client.py',
+        'pico_wrist_action_client': VLA/'pico_wrist_action_client.py',
         'prepare_pico_wrist_native_probe': VLA/'prepare_pico_wrist_native_probe.py',
         'arm_native_lease_bridge': VLA/'arm_native_lease_bridge.py',
         'pico_wrist_native_stage': RUNTIME/'pico_wrist_native_stage.py',
@@ -66,7 +66,7 @@ def source_bundle(*, include_sources=False):
               'verified_provenance=globals().get("__pico_verified_stream__")))\n')
     worker = passive.module_code({n: sources[n] for n in (
         'metamove_head_probe', 'head_from_pico_readonly', 'arm_from_pico_supervised',
-        'scenario1_request_ids', 'scenario1_action_client', 'prepare_pico_wrist_native_probe',
+        'scenario1_request_ids', 'pico_wrist_action_client', 'prepare_pico_wrist_native_probe',
         'arm_native_lease_bridge', 'pico_wrist_native_stage', 'pico_wrist_native_worker')})
     worker += ('import json,os\nprint(json.dumps({"event":"BRIDGE_READY"}),flush=True)\n'
                'payload=json.loads(sys.stdin.readline())\n'
