@@ -1,5 +1,21 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-PHYSICAL-BRIDGE-20261110
+
+**10-11-2026 ~18:53 Europe/Madrid — PROBADO FÍSICAMENTE: primera ejecución de
+acciones SmolVLA en el brazo derecho (3 pasos, SUCCEED).** Autorización expresa
+del propietario en esta sesión (persona en paro, zona despejada, sin otros
+clientes, cargador desconectado, ruta alternativa al gate de Codex).
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo | Validar la cadena grabaciones → SmolVLA → acción física, sin exigir éxito de la tarea de pelota. Sustituye para este fin la pila lease/guardia/binding (congelada, no borrada). |
+| Fuente PC | [`scripts/vla/smolvla_physical_bridge.py`](../scripts/vla/smolvla_physical_bridge.py) SHA256 `63b1310c5aa62430f04e5e2ca29d5670df3d8cf0014fff32eacc8049e2280109`. Reutiliza `run_ball_live_shadow.py` (checkpoint Ada `pilot-1000step/001000`) y `rosa action send_goal` como `cruzr_blue_workbin_cycle.sh`. |
+| Cambios en Motion | Contenedor `walker-motion.manipulation_robot_app-1`, `/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/diagnostics/`: directorio vacío `svla_20261110T185313/` (intento abortado por parámetro del shadow, sin goals) y `svla_20261110T185347/step_000..002.xml` SHA256 `8912369b…a7697`, `b72790c3…aa9f6`, `65da70b2…f094`. Se crean en cada ejecución (`svla_<run>`). No se recargó ni modificó nada más. Reversión: `docker exec … rm -r config/diagnostics/svla_*` (no afecta a tareas de fábrica). Se perderán al recrear el contenedor. |
+| Límites aplicados | Brazo derecho, sin mano; ≤0,05 rad por articulación y paso de 1 s; envolvente 0,5 rad desde la postura inicial; límites URDF `cruzr_s2_v1` con margen 0,03; aborto si |obs−objetivo| > 0,15 rad; Ctrl-C → `cancel_goal` estándar (no ejercitado). |
+| Resultado | Preflight: paros 0/0, cargador 0, baterías 54,2/55,5 %, sin metas activas. 3/3 goals SUCCEED (~2,1 s cada uno). Error de seguimiento en la siguiente observación ≤0,0024 rad. Postura derecha inicial `[+0.0022,-0.1486,+1.5684,-1.5639,-2.8786,+0.0002,+0.0112]` → final leída `[-0.1411,-0.1773,+1.4294,-1.4068,-2.7313,-0.1259,-0.0031]`, velocidades 0. Registro `../Humanoide-vla-evidence/SMOLVLA_PHYSICAL_BRIDGE/run-20261110T185347/bridge.jsonl` SHA256 `43438332d4b256b9cdaabcd54b0d91df07a0003634c07c2764e1217c832147d1`. Dry-run previo `run-20261110T184950/`. |
+| Pendiente | Más pasos/envolvente, mano v4, cancelación por Ctrl-C en movimiento, política dentro de distribución (postura inicial de las demos o más demostraciones). El brazo quedó fuera de la postura PICO previa; no se envió HOME. |
+
 ## RELEVO-CLAUDE-20261110
 
 **10-11-2026, Europe/Madrid — ENTREGA PRIVADA CREADA Y VERIFICADA EN ESTE PC;

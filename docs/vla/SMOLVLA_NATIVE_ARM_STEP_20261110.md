@@ -1,5 +1,21 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Primera ejecución física de SmolVLA — 10-11-2026
+
+**PROBADO FÍSICAMENTE.** Con autorización expresa del propietario se usó el
+puente simple [`smolvla_physical_bridge.py`](../../scripts/vla/smolvla_physical_bridge.py)
+en lugar de la pila lease/guardia: observación real → inferencia en Ada →
+recorte 0,05 rad/articulación → un `MetaMove` derecho de 1 s por paso vía
+`rosa action send_goal`. Tres pasos, los tres `SUCCEED`; el error de
+seguimiento medido en la observación siguiente fue ≤0,0024 rad, es decir, el
+bucle cerrado modelo→brazo→cámara/estado→modelo funciona. El modelo propone de
+forma consistente hombro pitch −0,3…−0,4, codo roll +0,4…+0,66, codo yaw
++0,8…+1,16 rad; se ejecuta recortado. No se accionó la mano ni se intentó la
+pelota. [Ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-physical-bridge-20261110).
+
+Uso: `python3 -B scripts/vla/smolvla_physical_bridge.py --dry-run` (sin
+envío), `--step` (Enter por paso) o continuo con `--max-steps N`; `--help`.
+
 ## Guardia y modelo con puente revisado — 10-11-2026
 
 **OBSERVADO EN MOTION Y ADA, SIN META FÍSICA.** Con el puente revisado se

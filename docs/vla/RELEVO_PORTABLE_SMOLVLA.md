@@ -57,6 +57,11 @@ Los modos de origen están registrados; no se promete una restauración automát
 de esos modos. La copia SDK no incluye ni certifica imágenes/volúmenes Docker
 de Ada y tampoco ha sido trasladada a otro PC.
 
+**Actualización 10-11-2026 ~18:53 — supera el estado de abajo:** SmolVLA se
+ejecutó físicamente en el brazo derecho con el puente simple
+`scripts/vla/smolvla_physical_bridge.py` (3 pasos SUCCEED). Ver
+[primera ejecución física](SMOLVLA_NATIVE_ARM_STEP_20261110.md#primera-ejecución-física-de-smolvla--10-11-2026).
+
 ## Inicio directo para Claude u otro agente
 
 El usuario quiere validar el ciclo completo con el robot físico, acepta un
