@@ -2,6 +2,7 @@
 import json
 import io
 import os
+import select
 import subprocess
 import sys
 import tempfile
@@ -385,6 +386,95 @@ while True:
 
 
 class GuardPipeProcessTests(unittest.TestCase):
+    def test_renewal_stall_leaves_watchdog_cancel_unconfirmed_by_reader(self):
+        # Real GuardPipe and SupervisorHeartbeat over process pipes; ROS and
+        # physical movement are simulated. This observes a different fault
+        # from the zero-deadline fsync test below: the reader itself blocks in
+        # an in-flight positive lease renewal and cannot read cancellation ACK.
+        code = r'''import json,os,select,sys,time
+sys.path.insert(0, sys.argv[1])
+from arm_from_pico_supervised import SupervisorHeartbeat
+session=sys.argv[2]; body=json.loads(sys.argv[3]); guard='a'*32
+watchdog=SupervisorHeartbeat(session,guard); own=None; fault=False; buf=b''
+os.set_blocking(1,False)
+def emit(event,**fields):
+ data=(json.dumps(dict(event=event,goal_uuid=guard,monotonic=time.monotonic(),**fields))+'\n').encode()
+ try: os.write(1,data)
+ except BlockingIOError: pass
+def telemetry(): emit('telemetry',position=body,velocity={n:0.0 for n in body},estop=0,servo_stop=0)
+emit('BRIDGE_READY'); telemetry(); emit('pre_dispatch_ready',session_id=session,challenge='c'*32)
+ack=json.loads(sys.stdin.readline()); assert ack['session_id']==session
+telemetry(); emit('ARM_GUARD_READY',session_id=session,movement_commands=0,physical_control_qualified=False)
+next_sample=time.monotonic()
+while True:
+ now=time.monotonic()
+ if own is not None and not fault:
+  try: watchdog.require_fresh(now)
+  except ValueError:
+   fault=True
+   os.write(2,('simulated_watchdog_cancel:'+own+'\n').encode())
+   emit('guard_auto_cancel_requested',reason='supervisor_heartbeat_expired',physical_stop_confirmed=False)
+ if not fault and now>=next_sample:
+  telemetry(); next_sample=now+.1
+ readable,_,_=select.select([0],[],[],.01)
+ if readable:
+  block=os.read(0,4096)
+  if not block: break
+  buf+=block
+  while b'\n' in buf:
+   line,buf=buf.split(b'\n',1); row=json.loads(line)
+   if fault: continue
+   if row['event']=='supervisor_heartbeat': watchdog.accept(row,time.monotonic())
+   elif row['event']=='prepare_goal_uuid':
+    watchdog.require_fresh(time.monotonic()); own=row['goal_id']
+    row['event']='goal_uuid_ready'; emit(**row)
+'''
+        session = 'd' * 32
+        child = subprocess.Popen([sys.executable, '-B', '-u', '-c', code,
+                                  str(Path(__file__).resolve().parent/'runtime'),
+                                  session, json.dumps(bridge.arm.BODY)],
+                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, bufsize=0)
+        pipe = None
+        release = threading.Event()
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                lease = bridge.GuardLease(directory, dict(bridge.arm.BODY),
+                                          lambda: child.poll() is None, session_id=session)
+                pipe = bridge.GuardPipe(child, lease, time.monotonic(), enable_guard_heartbeat=True)
+                pipe.await_ready(3)
+                lease.synchronize_uuid(box_tests.GOAL_ID, pipe.exchange)
+                began = threading.Event()
+                original = lease._write
+                def stalled_renewal(deadline):
+                    if deadline > 0:
+                        began.set()
+                        if not release.wait(4): raise RuntimeError('test_stall_not_released')
+                    original(deadline)
+                try:
+                    with patch.object(lease, '_write', side_effect=stalled_renewal):
+                        self.assertTrue(began.wait(2), 'reader did not enter lease renewal')
+                        readable, _, _ = select.select([child.stderr], [], [], 3)
+                        self.assertTrue(readable, 'independent simulated watchdog did not fire')
+                        marker = child.stderr.readline().decode().strip()
+                        self.assertEqual(marker, 'simulated_watchdog_cancel:'+box_tests.GOAL_ID)
+                        # The guard emitted its automatic cancellation event,
+                        # but the blocked reader cannot consume it or an ACK.
+                        self.assertFalse(pipe.auto_cancel_requested)
+                        with self.assertRaisesRegex(TimeoutError, 'guard_cancel_request_timeout'):
+                            pipe.cancel_goal(box_tests.GOAL_ID)
+                        self.assertFalse(pipe.auto_cancel_requested)
+                finally:
+                    release.set()
+                    if child.poll() is None: child.terminate()
+                    child.wait(timeout=3)
+                    pipe.thread.join(3)
+        finally:
+            release.set()
+            if child.poll() is None: child.kill()
+            child.wait(timeout=3)
+            for stream in (child.stdin, child.stdout, child.stderr): stream.close()
+
     def test_blocked_lease_fsync_does_not_delay_cancel_request(self):
         child = simulated_guard('d'*32, 'cancel')
         try:

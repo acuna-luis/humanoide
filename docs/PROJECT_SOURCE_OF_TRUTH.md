@@ -1,5 +1,16 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-SYNTHETIC-CANCEL-20261110: diagnóstico sin movimiento
+interrumpido en preflight.** Se preparó un servidor ROS sintético en namespace
+separado y una copia efímera de guardia con las rutas de acción remapeadas. Dos
+intentos finalizaron antes del goal; el segundo conservó el motivo
+`charger_connected_or_unknown` y una lectura independiente de
+`/emb/chrg_input_status` mostró `data: 2`. No se conoce el significado vendor
+del 2; no alterar ni ignorar el control. No se probó cancelación ni frenado.
+Marker/XML originales conservados; no hubo meta física ni movimiento.
+[Ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-synthetic-cancel-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#cancelación-sintética-y-estado-del-cargador--10-11-2026).
+
 **10-11-2026 — SMOLVLA-LIVE-GUARD-PERMIT-20261110: integración real sin meta.**
 El SmolVLA de Ada produjo una predicción durante guardia real en Motion; un
 permiso correlacionado llegó por latido PC→Motion, sin UUID entregado a guardia,

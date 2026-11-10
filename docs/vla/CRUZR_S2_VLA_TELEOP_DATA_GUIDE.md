@@ -1,5 +1,12 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — SMOLVLA-SYNTHETIC-CANCEL-20261110.** Dos intentos sin movimiento
+de probar watchdog con acción sintética quedaron detenidos antes del goal. El
+segundo registró `charger_connected_or_unknown`; lectura independiente del
+topic de entrada de carga reportó `data: 2`, cuyo significado vendor no está
+confirmado. No hubo cancelación ni meta física; marker/XML siguen intactos.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-synthetic-cancel-20261110).
+
 **10-11-2026 — SMOLVLA-LIVE-GUARD-PERMIT-20261110.** Una predicción real de
 Ada, validación PC y permiso vía latido a Motion se comprobaron con guardia real
 activa y 195 latidos, sin UUID en guardia, goals, staging, cancelaciones ni

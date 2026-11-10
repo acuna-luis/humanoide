@@ -1,5 +1,37 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Cancelación sintética y estado del cargador — 10-11-2026
+
+**DOS CHECKS INTERRUMPIDOS ANTES DEL GOAL; NINGÚN MOVIMIENTO.** Se preparó un
+servidor de acción ArmTask ficticio bajo un namespace aleatorio ajeno a
+`/mc/manipulation/action`, y una copia efímera de la guardia con las cuatro
+referencias de acción remapeadas a ese servidor. La prueba utiliza telemetría
+real y no ejecuta la tarea real ni verifica frenado. El código no cambia la
+guardia productiva, los límites ni el marker de 731084.
+
+En el primer intento, la guardia informó `preflight_failed`; el lector resumió
+ese evento sin conservar su motivo. Se añadió al harness diagnóstico un lector
+que conserva el campo sin modificar la línea y se hizo una única repetición. La
+segunda confirmó `charger_connected_or_unknown`: la condición del monitor
+requiere `/emb/chrg_input_status == 0` y una consulta posterior independiente
+observó `data: 2`. Se desconoce qué significa 2 según el proveedor; no afirmar
+que el cargador esté conectado solo por esa lectura. No hubo goal sintético,
+goal físico ni cancelación; se interrumpió antes del handoff de UUID.
+Otra lectura puntual, sin salida archivada, mostró `charge_status: charging`
+en ambas baterías, aproximadamente 24,1 % y 26,3 %, con corrientes −7,9 A y
+−7,5 A; esto no determina por sí solo el significado del 2 ni el estado físico
+del cable.
+Una lectura puntual independiente sin archivo del servicio distinto
+`/emb/get_chrg_status` devolvió `success=true`, `volt=0`, `current=0`,
+`charge_status=0` y `conn_status=2`; su semántica y equivalencia con el topic
+no están demostradas y los campos deben contrastarse con los de baterías.
+
+Comprobaciones posteriores observaron solo procesos habituales en Motion y
+Vision, ningún contenedor propio en Ada, y los SHA previos de marker/XML
+intactos. Son lecturas puntuales. La prueba del watchdog sigue pendiente; no
+modificar, saltar o falsificar la comprobación de cargador. Evidencias, fuentes,
+backups y reproducción en la [ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-synthetic-cancel-20261110).
+
 ## Modelo y guardia reales sin meta — 10-11-2026
 
 **OBSERVADO EN MOTION Y ADA; SIN UUID EN GUARDIA, META, STAGING,
