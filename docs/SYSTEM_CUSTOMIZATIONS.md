@@ -1,5 +1,17 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-LOCK-ACK-REVIEW-20261110
+
+**10-11-2026, Europe/Madrid — CANDIDATO DESCARTADO; SIN CAMBIO PRODUCTIVO
+DE LOCK/ACK NI PRUEBA FÍSICA.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo y revisión | Se reevaluó un candidato de la contención del lock y del ACK sobre el cliente VLA aislado ya corregido. Aunque 41/41 pruebas locales del puente pasaron, una auditoría independiente encontró que `guard_alive()` puede retrasarse después de validar el deadline y permitir asignación tras su vencimiento; el snapshot también podría devolver muestra envejecida. El candidato se descartó antes de ejecutar otras suites. Estas posibilidades no demuestran un envío físico ni la causa del incidente 731084. |
+| Fuentes y restauración | `../Humanoide-vla-evidence/PICO_LOCK_ISOLATED_20261110T171241Z_12e44acb/` conserva puente y test previos; fueron restaurados byte a byte. SHA256 actual `scripts/vla/arm_native_lease_bridge.py`: `34c3e133de7485a7f9a5073a63c5458daadb24180b11a82a0e6b982e3759da28`; test `5071b7b70825d6359eaf239225dc78e0f390369232382b22369b527d9725e4fd`. `candidate-relative-to-head.diff` SHA256 `37f23c69e0106e147cc9bad79cbf628123294f1d4379b7b9054647f3f4bf6c02` es relativo al HEAD de entonces e incluye la migración previa al fork, no solamente el candidato lock; no aplicarlo como parche independiente. |
+| Alcance y continuación | El cliente VLA aislado y su corrección del reloj se conservan; no se resolvió la contención lock/ACK, la carrera de revocación ni el envío en vuelo. No se acreditó cancelación o frenado reales y `model_wrist_dispatch_not_enabled` permanece cerrado. Diseñar y revisar corrección sin debilitar las protecciones. |
+| Respaldo documental | Antes de registrar esta revisión se guardaron las cuatro fuentes con cambios locales previos en `../Humanoide-vla-evidence/PICO_LOCK_ACK_REVIEW_DOCS_20261110T171343Z/before-docs.tar` SHA256 `93bad6ddaf1da2759a939413d64b904ba0a3c8bc9e59ca7d3c4b80d79e3ce9a9`. Revertir selectivamente si procede, sin sobrescribir trabajo ajeno o restaurar estados transitorios. |
+
 ## SMOLVLA-ISOLATED-SYNTHETIC-PASS-20261110
 
 **10-11-2026, Europe/Madrid — WATCHDOG SINTÉTICO VERIFICADO EN MOTION;

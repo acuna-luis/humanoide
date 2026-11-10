@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-LOCK-ACK-REVIEW-20261110: candidato descartado.**
+Reevaluada sobre el cliente VLA corregido una modificación de la contención de
+lock/ACK. Aunque 41 pruebas del puente pasaron, la auditoría encontró que
+`guard_alive()` puede retrasarse tras comprobar el plazo y permitir asignación
+fuera de plazo, y que el snapshot puede devolver una muestra envejecida. Se
+descartó y restauró el código byte a byte. No se atribuye a 731084 ni hubo
+prueba física; gate cerrado.
+[Ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-lock-ack-review-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#revisión-del-lock-con-cliente-aislado--10-11-2026).
+
 **10-11-2026 — SMOLVLA-ISOLATED-SYNTHETIC-PASS-20261110: watchdog
 sintético verificado con cliente VLA aislado.** Tras nueva desconexión del
 cargador, la guardia detectó la caducidad del latido y el servidor ficticio

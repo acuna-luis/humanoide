@@ -1,5 +1,21 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Revisión del lock con cliente aislado — 10-11-2026
+
+**CANDIDATO LOCAL DESCARTADO; CÓDIGO RESTAURADO.** Se reevaluó una modificación
+para la contención del lock y el ACK sobre el cliente VLA corregido. Las 41
+pruebas del puente pasaron, pero la auditoría independiente identificó que
+`guard_alive()` puede demorarse después de validar el plazo y permitir una
+asignación posterior al vencimiento; el snapshot también puede devolver una
+muestra envejecida. Es un hallazgo sobre ese candidato, no una causa probada
+del incidente 731084 ni evidencia de movimiento.
+
+Se descartó el candidato y restauraron puente y tests byte a byte a la versión
+del cliente aislado. El diff conservado está calculado contra el HEAD de ese
+momento e incluye también cambios previos del fork, no solo el candidato de lock.
+No se probó físicamente la variante y el gate SmolVLA sigue cerrado.
+[Pruebas y hashes](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-lock-ack-review-20261110).
+
 ## Watchdog sintético con cliente aislado — 10-11-2026
 
 **VERIFICADO CON SERVIDOR FICTICIO EN MOTION; CERO GOALS FÍSICOS.** Tras

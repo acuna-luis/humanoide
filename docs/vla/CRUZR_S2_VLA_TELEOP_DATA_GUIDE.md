@@ -1,5 +1,12 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-LOCK-ACK-REVIEW-20261110.** Se descartó otro
+candidato de lock/ACK sobre el cliente aislado: 41 tests del puente pasaron,
+pero la auditoría encontró un posible retraso de `guard_alive()` tras validar
+plazo y muestra envejecida. Código restaurado; sin prueba física ni causa
+identificada para 731084. [Ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-lock-ack-review-20261110),
+[detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#revisión-del-lock-con-cliente-aislado--10-11-2026).
+
 **10-11-2026 — SMOLVLA-ISOLATED-SYNTHETIC-PASS-20261110.** Tras nueva
 confirmación de desconexión, pasó el watchdog contra servidor ficticio con el
 cliente VLA aislado: un goal sintético, cero físicos. No acredita cancelación ni
