@@ -1,5 +1,12 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-EXECUTOR-CANDIDATE-20261110: envío y cancelación
+simulados.** La versión candidata del supervisor incluye una meta de muñeca y
+cancelación por UUID; probadas con ROS simulado. La salida física permanece
+bloqueada: trayectoria, parada y comunicación reales no están calificadas.
+No se movió el robot. [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#candidato-de-ejecución-y-cancelación--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-executor-candidate-20261110).
+
 **10-11-2026 — ARM-PICO-PASSIVE-20261110: monitor pasivo preparado y
 comprobado en Motion.** Telemetría, controladores y handoff de supervisión
 pasaron sin órdenes. El observador no implementa envío ni cancelación del

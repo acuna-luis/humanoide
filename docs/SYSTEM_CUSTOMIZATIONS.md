@@ -1,5 +1,17 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-EXECUTOR-CANDIDATE-20261110
+
+**10-11-2026, Europe/Madrid — candidato de despacho y cancelación SIMULADO;
+ejecución física PENDIENTE.** Sin consultas remotas ni órdenes en este cambio.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | Commit `66a34af`, monitor pasivo con `--check` real satisfactorio, sin rama de despacho. |
+| Fuentes | `scripts/vla/runtime/arm_from_pico_supervised.py` SHA256 `06ad9b751dd9a2c1cc528c9bf5949cb73fb2a0886b1cfe9a136ccdaf55805edc`; `scripts/vla/test_arm_from_pico_supervised.py` `d30ad43e7fd07a04161af32bde6cdfd781a19512054229ac7eb6d60747c02b04`. La comprobación física permanece bloqueada mediante función sin entrada de habilitación; wrapper rechaza `--run`. |
+| Prueba | Siete tests en proceso con ROS simulado: objetivo de muñeca, verificación de componente, llegada, vigilancia y solicitud de cancelación del UUID durante aceptación pendiente; no se probaron trayectorias, transporte o parada físicos. Cero comandos reales. |
+| Reversión y deuda | Comparar y revertir selectivamente respecto a `66a34af`, conservando cambios ajenos. No existe configuración remota a restaurar. Pendientes lanzador físico, revisión del handoff de argumentos, geometría v4 y trayectoria, parada efectiva y gates VLA. [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#candidato-de-ejecución-y-cancelación--10-11-2026). |
+
 ## ARM-PICO-PASSIVE-20261110
 
 **10-11-2026, Europe/Madrid — monitor pasivo OBSERVADO; ejecución de brazo

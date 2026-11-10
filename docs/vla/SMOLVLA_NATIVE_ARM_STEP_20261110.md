@@ -1,5 +1,27 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Candidato de ejecución y cancelación — 10-11-2026
+
+Se amplió el runtime pasivo con una rama candidata: genera una meta desde
+el estado medido para `right_arm` con una variación de 0,01 rad en muñeca,
+envía como máximo una acción con UUID asignado, supervisa articulaciones y
+solicita cancelación de ese UUID ante anomalías. La recepción desconocida,
+fallo de enlace o respuesta de cancelación no demuestran parada; no reintentar
+ni ordenar HOME automáticamente. El valor, duración y corredor son
+experimentales, no límites certificados ni una trayectoria revisada.
+
+La ejecución real permanece bloqueada al entrar en el runtime mediante
+`physical_release_gate`, y el comprobador local rechaza `--run`. En tests se
+sustituye esta función únicamente dentro del proceso simulado, sin ROS real:
+una acción simulada llegó al objetivo y una activación de paro mientras se
+esperaba aceptación provocó solicitud de cancelación del UUID exacto. Siete
+tests locales pasan. **No se ejecutó el candidato en el robot.**
+
+Siguen pendientes: comportamiento real de `yaml_args`, planificación y
+movimiento con manos v4, cobertura geométrica y escena, y parada; tampoco
+existe un lanzador físico habilitado para este candidato. Este ensayo no
+conecta SmolVLA ni demuestra ejecución física de la política.
+
 ## Monitor pasivo de brazo — 10-11-2026
 
 El operador confirmó manos v4 vacías, postura PICO con cabeza bajada, zona
@@ -18,8 +40,9 @@ función de corredor, pero el check en vivo no mueve el eje ni prueba esa
 función durante una trayectoria. El paso de muñeca de 0,01 rad y umbrales del
 código son hipótesis experimentales, no límites certificados.
 
-El código **no envía objetivos ni tiene un procedimiento de cancelación de
-brazo probado**; `--run` y `dry_run=False` están bloqueados. La recepción de
+En la revisión inicial el código no incluía envío. La rama candidata posterior
+incluye envío y cancelación sólo comprobados en simulación; `--run` y
+`dry_run=False` están bloqueados. La recepción de
 argumentos de `move_components_json`, planificador y parada física siguen
 pendientes. La autorización del usuario existe, pero esta observación no
 cumple los gates de ejecución del VLA ni valida geometría de manos o escena.

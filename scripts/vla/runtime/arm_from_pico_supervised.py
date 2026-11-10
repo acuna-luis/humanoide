@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Passive arm supervisor check from PICO v4; never dispatches a goal.
+"""Arm supervisor candidate from PICO v4; physical release is blocked.
 
 The operator must be at the physical stop. Cancellation is only a request and
 neither this monitor nor receipt of a cancellation proves a physical stop.
@@ -125,11 +125,33 @@ def standstill(values, *, target=False):
     return True
 
 
+def physical_release_gate():
+    # The safety review remains open. Never infer a release from a user flag,
+    # a successful dry run, a candidate corridor or a ROS action response.
+    raise RuntimeError('physical_dispatch_blocked_unqualified_arm_stop_and_trajectory')
+
+
+def build_trial_args(q):
+    names = ('R_shoulder_pitch_joint', 'R_shoulder_roll_joint',
+             'R_shoulder_yaw_joint', 'R_elbow_roll_joint', 'R_elbow_yaw_joint',
+             'R_wrist_pitch_joint', 'R_wrist_roll_joint')
+    if not isinstance(q, dict) or any(n not in q or type(q[n]) not in (float, int)
+                                      or not math.isfinite(q[n]) for n in names):
+        raise ValueError('invalid_arm_reference')
+    target = [float(q[n]) for n in names]
+    target[-1] += ARM_STEP
+    lo, hi = DECLARED_LIMITS[ARM_AXIS]
+    if not lo <= target[-1] <= hi:
+        raise ValueError('trial_endpoint_outside_declared_limits')
+    return {'component_names': ['right_arm'], 'goals': [target],
+            'mode': 0, 'durations': [4.0]}
+
+
 def main(preflight, *, dry_run):
     if type(dry_run) is not bool:
         raise ValueError('dry_run_must_be_explicit_boolean')
     if not dry_run:
-        raise RuntimeError('physical_dispatch_blocked_unqualified_arm_stop_and_trajectory')
+        physical_release_gate()
     local_started = time.monotonic()
     validate_preflight(preflight, 0, dry_run=dry_run)
     import rclpy
@@ -392,12 +414,214 @@ def main(preflight, *, dry_run):
             raise ValueError('posture_changed_before_dispatch')
         if time.monotonic()-started_handshake > 3:
             raise ValueError('pre_dispatch_handoff_expired')
-        emit('PICO_ARM_SUPERVISED_DRY_RUN_PASSED', movement_commands=0,
-             physical_control_qualified=False)
-        return 0 if not state['transport_failed'] else 1
+        if dry_run:
+            emit('PICO_ARM_SUPERVISED_DRY_RUN_PASSED', movement_commands=0,
+                 physical_control_qualified=False)
+            return 0 if not state['transport_failed'] else 1
+        initial = q
+        args = build_trial_args(q)
+        trial_target = args['goals'][0][-1]
+        request = ArmTask.Goal()
+        request.task_name, request.yaml_args = TASK, json.dumps(args, allow_nan=False)
+        state['own'] = uuid_bytes
+        emit('dispatch', task=TASK, no_retry=True)
+        if state['transport_failed']:
+            return 1  # No request was sent.
+        if time.monotonic()-started_handshake > 3:
+            emit('preflight_failed', reason='pre_dispatch_handoff_expired',
+                 movement_commands=0)
+            return 1  # No request was sent.
+        # Once send is attempted, even an exception cannot prove that the
+        # server did not receive the goal.
+        dispatched = time.monotonic()
+        dispatch_attempted = True
+        try:
+            goal_future = client.send_goal_async(request, goal_uuid=goal_uuid)
+        except Exception as exc:
+            # Humble can send the request before it returns the Future. Keep
+            # monitoring: lack of a Future is NOT evidence of non-delivery.
+            alert('dispatch_delivery_unknown_no_future:' + str(exc))
+        acceptance_deadline = dispatched + 5
+        end_deadline = dispatched + 15
+        cancel_future = None
+        stopped_since = None
+        last_reminder = 0.0
+        while True:
+            try:
+                rclpy.spin_once(node, timeout_sec=.01)
+            except Exception as exc:
+                # An executor/callback error does not establish that an
+                # already sent goal stopped; keep trying to observe, with no
+                # resend and no automatic HOME.
+                alert('executor_spin_failure:' + str(exc))
+                request_cancel()
+                time.sleep(.05)
+                continue
+            now = time.monotonic()
+            try:
+                _, values = checked(initial)
+            except (ValueError, RuntimeError, KeyError, TypeError) as exc:
+                values = None
+                alert('telemetry_or_envelope:' + str(exc))
+            if goal is None and goal_future is not None and goal_future.done():
+                try:
+                    goal = goal_future.result()
+                except Exception as exc:
+                    alert('goal_acceptance_exception:' + str(exc))
+                if goal is not None:
+                    emit('acceptance', accepted=bool(goal.accepted))
+                    if not goal.accepted:
+                        return 1
+                    try:
+                        result_future = goal.get_result_async()
+                    except Exception as exc:
+                        alert('result_request_failed:' + str(exc))
+            if goal is None and now >= acceptance_deadline:
+                alert('acceptance_unknown_no_handle')
+            if goal is not None and goal.accepted and fault:
+                cancel_future = request_cancel() or cancel_future
+            # If send_goal_async raised after sending, a status with the exact
+            # preassigned UUID can reveal the accepted goal even without a
+            # Future/handle. Request cancellation for that UUID only; this is
+            # not proof of stopping. Never cancel any other client's goal.
+            status = own_status(state['statuses'], uuid_bytes)
+            if (fault and goal is None and status in ACTIVE_STATUSES and
+                    not uuid_cancel_requested and uuid_cancel_client.service_is_ready()):
+                uuid_cancel_requested = True
+                try:
+                    request_cancel_uuid = CancelGoal.Request()
+                    request_cancel_uuid.goal_info.goal_id.uuid = list(uuid_bytes)
+                    uuid_cancel_future = uuid_cancel_client.call_async(request_cancel_uuid)
+                    emit('cancel_uuid_requested', physical_stop_confirmed=False)
+                except Exception as exc:
+                    emit('cancel_uuid_request_failed', reason=str(exc),
+                         physical_stop_confirmed=False)
+            if uuid_cancel_future is not None and uuid_cancel_future.done():
+                try:
+                    response = uuid_cancel_future.result()
+                    emit('cancel_uuid_response', return_code=int(response.return_code),
+                         physical_stop_confirmed=False)
+                except Exception as exc:
+                    emit('cancel_uuid_response_failed', reason=str(exc),
+                         physical_stop_confirmed=False)
+                uuid_cancel_future = None
+            if cancel_future is not None and cancel_future.done():
+                try:
+                    response = cancel_future.result()
+                    emit('cancel_response', return_code=int(response.return_code),
+                         physical_stop_confirmed=False)
+                except Exception as exc:
+                    emit('cancel_response_failed', reason=str(exc),
+                         physical_stop_confirmed=False)
+                cancel_future = None
+            if now >= end_deadline and not fault:
+                alert('action_deadline_exceeded')
+            if result_future is not None and result_future.done():
+                try:
+                    response = result_future.result()
+                    succeeded = response.status == 4 and response.result.state.desc == 'SUCCEED'
+                    if not result_reported:
+                        emit('action_result', status=int(response.status),
+                             desc=str(response.result.state.desc), physical_stop_confirmed=False)
+                        result_reported = True
+                except Exception as exc:
+                    alert('action_result_exception:' + str(exc))
+                    succeeded = False
+                if not succeeded:
+                    alert('action_not_successful')
+                stable = (observed_standstill() if fault else
+                          values is not None and standstill(values) and abs(values[ARM_AXIS][0] - trial_target) <= ARM_CORRIDOR_TOLERANCE)
+                if stable:
+                    stopped_since = stopped_since or now
+                    if now-stopped_since >= 1:
+                        if fault:
+                            emit('fault_and_standstill_observed', reason=fault,
+                                 no_retry=True, physical_stop_certified=False)
+                            return 1
+                        emit('ARM_SUCCEEDED_AND_STATIONARY', no_retry=True,
+                             physical_stop_certified=False)
+                        return 0
+                else:
+                    stopped_since = None
+            elif fault and status in (4, 5, 6):
+                # A terminal status is observational evidence, not proof that
+                # cancellation caused a physical stop. Require fresh stationary
+                # joint observations for at least one second before closing.
+                if observed_standstill():
+                    stopped_since = stopped_since or now
+                    if now-stopped_since >= 1:
+                        emit('terminal_status_and_standstill_observed',
+                             status=status, reason=fault, no_retry=True,
+                             physical_stop_certified=False)
+                        return 1
+                else:
+                    stopped_since = None
+            if fault and now-last_reminder >= 5:
+                emit('UNRESOLVED_MONITORING', reason=fault, no_retry=True,
+                     physical_stop_confirmed=False,
+                     instruction='Operator intervention required; do not send HOME or retry.')
+                last_reminder = now
     except BaseException as exc:
-        emit('preflight_failed', reason=str(exc), movement_commands=0)
+        if dispatch_attempted:
+            try:
+                alert('unexpected_exception:' + str(exc))
+                request_cancel()
+                emit('UNRESOLVED', reason='unexpected_exception', no_retry=True,
+                     physical_stop_confirmed=False)
+                # Last-resort observation after a post-dispatch failure. A
+                # single interrupt requests cancellation but does not prove
+                # the goal ended. A second interrupt or an unrecoverable ROS
+                # failure may still terminate this process; the wrapper must
+                # then report uncertainty and the operator must intervene.
+                fallback_since = None
+                fallback_cancel_uuid = False
+                fallback_reminder = 0.0
+                while True:
+                    try:
+                        rclpy.spin_once(node, timeout_sec=.02)
+                        if goal is None and goal_future is not None and goal_future.done():
+                            try:
+                                goal = goal_future.result()
+                                if goal is not None and not goal.accepted:
+                                    emit('acceptance', accepted=False)
+                                    return 1
+                            except Exception as error:
+                                emit('acceptance_failed', reason=str(error),
+                                     physical_stop_confirmed=False)
+                        request_cancel()
+                        status = own_status(state['statuses'], uuid_bytes)
+                        if (goal is None and status in ACTIVE_STATUSES and
+                                not fallback_cancel_uuid and uuid_cancel_client.service_is_ready()):
+                            fallback_cancel_uuid = True
+                            cancel_request = CancelGoal.Request()
+                            cancel_request.goal_info.goal_id.uuid = list(uuid_bytes)
+                            uuid_cancel_client.call_async(cancel_request)
+                            emit('cancel_uuid_requested', physical_stop_confirmed=False)
+                        if status in (4, 5, 6) and observed_standstill():
+                            fallback_since = fallback_since or time.monotonic()
+                            if time.monotonic()-fallback_since >= 1:
+                                emit('terminal_status_and_standstill_observed',
+                                     status=status, reason='unexpected_exception',
+                                     no_retry=True, physical_stop_certified=False)
+                                return 1
+                        else:
+                            fallback_since = None
+                        if time.monotonic()-fallback_reminder >= 5:
+                            emit('UNRESOLVED_MONITORING', reason='unexpected_exception',
+                                 no_retry=True, physical_stop_confirmed=False)
+                            fallback_reminder = time.monotonic()
+                    except Exception as error:
+                        emit('fallback_observation_failed', reason=str(error),
+                             physical_stop_confirmed=False)
+                        time.sleep(.05)
+            except BaseException as error:
+                emit('UNRESOLVED_MONITOR_STOPPED', reason=str(error), no_retry=True,
+                     physical_stop_confirmed=False,
+                     instruction='Operator intervention required; do not retry or send HOME.')
+        else:
+            emit('preflight_failed', reason=str(exc), movement_commands=0)
         raise
+
     finally:
         node.destroy_node()
         rclpy.shutdown()

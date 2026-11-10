@@ -1,5 +1,9 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-EXECUTOR-CANDIDATE-20261110.** Preparado despacho
+candidato y cancelación por UUID, comprobados sólo con ROS simulado; salida
+física bloqueada. [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#candidato-de-ejecución-y-cancelación--10-11-2026).
+
 **10-11-2026 — ARM-PICO-PASSIVE-20261110.** Preparado y comprobado con
 telemetría real un monitor pasivo adaptado a PICO y cabeza bajada, sin envío
 de movimiento. No implementa despacho ni cancelación del brazo. [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#monitor-pasivo-de-brazo--10-11-2026).
