@@ -1,8 +1,18 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-RESUME-PREP-20261110.** Tras archivar el intento
+interrumpido se prepararon muestra, candidato y binding nuevos y pasó un check
+pasivo; no se ha enviado otra tarea física ni ejecutado SmolVLA.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#reanudación-de-muñeca-preparada--10-11-2026).
+
+**10-11-2026 — ARM-PICO-ARCHIVE-CCFBD5-20261110.** Archivados selectivamente
+XML y marker de la sesión interrumpida; la lectura independiente confirma
+identidad del XML y receipt. No hubo movimiento ni ejecución de SmolVLA.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#archivado-selectivo-realizado--10-11-2026).
+
 **10-11-2026 — ARM-PICO-ARCHIVE-PREP-20261110.** Preparado y comprobado en
-lectura un archivado selectivo del XML y marker de la sesión interrumpida; no
-se ha ejecutado ni reintentado la tarea física. La ausencia puntual de procesos
+lectura un archivado selectivo del XML y marker de la sesión interrumpida; el
+archivado posterior está registrado arriba. La ausencia puntual de procesos
 no acredita exclusividad ni parada. [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#recuperación-selectiva-preparada--10-11-2026).
 
 **10-11-2026 — ARM-PICO-WORKER-JSON-FD-20261110.** La salida de eventos del

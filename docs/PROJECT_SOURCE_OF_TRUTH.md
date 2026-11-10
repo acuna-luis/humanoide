@@ -1,10 +1,25 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-RESUME-PREP-20261110: reanudación preparada, no
+ejecutada.** Una nueva muestra, candidato y binding se verificaron; el check
+pasivo pasó sin goal. La postura y los codos próximos a límites SPS siguen
+requiriendo comprobación física vigente. Esto prepara una tarea nativa de
+muñeca, no ejecuta SmolVLA.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#reanudación-de-muñeca-preparada--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-resume-prep-20261110).
+
+**10-11-2026 — ARM-PICO-ARCHIVE-CCFBD5-20261110: archivado selectivo
+completado y contrastado por lectura.** La tarea y el marker del intento
+interrumpido se archivaron con receipts; XML conservado en mismo inode y hash,
+sin movimiento ni HOME. La utilidad no prueba parada ni habilita SmolVLA.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#archivado-selectivo-realizado--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-archive-ccfbd5-20261110).
+
 **10-11-2026 — ARM-PICO-ARCHIVE-PREP-20261110: recuperación selectiva
-preparada, no ejecutada.** El `--check` del archiver identificó el XML,
+preparada en aquel momento.** El `--check` del archiver identificó el XML,
 marker y lease de la sesión interrumpida sin modificar archivos. La operación
 propuesta archiva XML y marker con recibos y un bloqueo durable de recuperación;
-no envía movimientos. Los archivos originales siguen presentes.
+no envía movimientos. El archivado posterior está registrado arriba.
 [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#recuperación-selectiva-preparada--10-11-2026),
 [ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-archive-prep-20261110).
 

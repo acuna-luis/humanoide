@@ -1,8 +1,59 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Reanudación de muñeca preparada — 10-11-2026
+
+**PREPARADA, NO EJECUTADA.** Después del archivado del intento interrumpido se
+tomó una muestra nueva en `../Humanoide-vla-evidence/PICO_WRIST_RESUME_20261110T121336Z/`,
+se regeneró un candidato de muñeca y se vinculó a fuentes actuales. El XML
+resultante conserva SHA256 `d4c704e6ab369d250658a596cd6a5704258accf130971d3046748a8d132b616b`;
+binding `binding/review-binding.json` SHA256
+`935a6116fa34f3deb71b7ee827bb11028a8af07fc50e12163decdb1e1db78f5d`.
+El loader aislado y comparación de fuentes/candidato pasaron; el check pasivo
+`check-70f3e2e6e874483ab644a8a3839c985e` terminó sin goal.
+
+La muestra tenía velocidades publicadas cero, muñeca derecha
+`0,0012463593901570836`, cabeza `−0,43066510619889375` y codos L/R
+`2,879377812660591`/`−2,8787066960658914` rad. Los codos siguen cerca de sus
+límites SPS ±`2,88` rad y el margen diagnóstico `0,002` rad no se satisface.
+La captura no prueba la escena actual, interpolación o parada. Antes de una
+prueba hace falta comprobar condiciones físicas vigentes, exclusividad y
+guardia; la tarea de muñeca no es una acción del modelo SmolVLA.
+Hashes, backups y continuidad: [ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-resume-prep-20261110).
+
+## Archivado selectivo realizado — 10-11-2026
+
+La utilidad de recuperación de la sesión interrumpida devolvió rc 0 y
+`ARCHIVED_ONE_FAILED_STAGE`, sin órdenes de movimiento ni HOME. Registró un
+receipt `complete` SHA256
+`9118761347f02db516c555039c6c5fcc700f87a5ccbdcdfcd72c1039dab2c8cf`.
+El marker se conserva como
+`/var/tmp/cruzr-pico-v4-wrist-control/ARCHIVED-PENDING-ccfbd5afa50744649c4d9982601013ae.json`,
+junto al intent archivado y los receipts; no aparecen los nombres activos de
+marker e intent en la lectura posterior.
+
+Una lectura independiente comprobó que el XML original ya no está en su nombre
+de tarea y que se conserva como
+`/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/diagnostics/.pico_v4_wrist_d4c704e6ab369d25.xml.archived-ccfbd5afa50744649c4d9982601013ae`,
+con dev 45/inode 3584590, UID 0/modo 0600 y SHA256
+`d4c704e6ab369d250658a596cd6a5704258accf130971d3046748a8d132b616b`.
+No se declara limpieza del lease o de otros directorios. Las observaciones de
+acciones y procesos son puntuales y no prueban exclusividad ni parada física.
+
+Evidencia privada en
+`../Humanoide-vla-evidence/PICO_NATIVE_WRIST_TRIAL/run-ccfbd5afa50744649c4d9982601013ae/`:
+`archive-run.stdout` SHA256 `118081dc483c89ce917862efcd673b5e7c3149ee6c1f1cc955add2446759b0a0`
+y `archive-after-readonly.json` `f177c3842faccbd28bb79a3b77a114673ecfa561e1cb1eb06b019f6d31890fdd`.
+El backup documental previo, continuidad y reversión selectiva pendiente están
+en la [ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-archive-ccfbd5-20261110).
+No repetir la operación ni borrar receipts automáticamente. La utilidad no
+implementa `--restore`; antes de una reversión habría que preparar un
+procedimiento reproducible que restituya primero el marker bajo lock y luego,
+sin sobrescritura y comprobando inode y hash, el nombre original del XML.
+El archivado no habilita SmolVLA ni demuestra la tarea de la pelota.
+
 ## Recuperación selectiva preparada — 10-11-2026
 
-**PREPARADA Y COMPROBADA EN LECTURA; NO EJECUTADA.** La utilidad versionada
+**ESTADO HISTÓRICO PREVIO AL ARCHIVADO.** La utilidad versionada
 `scripts/vla/runtime/archive_failed_pico_wrist_stage.py` está limitada a la
 sesión `ccfbd5afa50744649c4d9982601013ae` y al XML, inode y SHA del receipt.
 No llama servicios ROS de movimiento. Su `--check` bloquea temporalmente el
@@ -11,7 +62,8 @@ actividad observada. El check final devolvió `CHECKED_NO_CHANGES` y estado de
 acción `[4]`, sin Python observado en los dos contenedores. Es una captura
 puntual, no demuestra exclusividad externa ni parada física.
 
-La operación `--archive` está preparada pero no realizada. Escribe un intent
+La operación `--archive`, entonces preparada y después realizada según la
+sección anterior, escribe un intent
 durable, crea un hardlink privado del XML exacto en su FS y retira su nombre
 original, registra el receipt, vuelve a revisar actividad/journal/marker/lease
 y archiva el marker en el FS host. Después escribe receipt complete durable y
@@ -61,7 +113,7 @@ no identifica el contenido de la línea que se perdió en el intento. Este fix
 no se ha probado físicamente, no acredita frenado ni activa SmolVLA. Las
 fuentes cambiaron: bindings anteriores no identifican esta versión y se debe
 crear y comprobar uno nuevo antes de cualquier uso. El XML y marker del intento
-anterior siguen en Motion; no hubo reintento ni movimiento. Fuentes, backup,
+anterior fueron archivados posteriormente; no hubo reintento ni movimiento. Fuentes, backup,
 evidencia y recuperación pendiente: [ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-worker-json-fd-20261110).
 
 ## Intento interrumpido de muñeca — 10-11-2026
@@ -92,7 +144,8 @@ dev 45/inode 3584590, modo 0600/UID 0. El directorio creado fue dev 45/inode
 lock, journal y stderr, y `/tmp/pico-wrist-live-3k5e3w2k/` con intent y lease;
 éste se leyó con `deadline=0.0`. La lectura puntual de procesos mostró app
 con `rosa` y `robot_app` y ROS con `bash`, sin Python visible en esos dos
-contenedores. No se ha retirado ningún archivo ni se ha enviado HOME.
+contenedores. El XML y marker se archivaron posteriormente como se registra
+arriba; no se ha enviado HOME.
 
 Un experimento temporal separado de `rosa.init()`/`rosa.shutdown()`, sin nodo
 ni goal, mostró que la biblioteca imprime una línea nativa en stdout. Esa
