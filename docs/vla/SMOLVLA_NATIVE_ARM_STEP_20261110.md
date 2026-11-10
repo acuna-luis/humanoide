@@ -1,5 +1,45 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Preparación nativa de muñeca — 10-11-2026
+
+Con el patrón del ensayo de brazo de cajas se preparó una sola acción
+`MetaMove` derecha: la referencia procede de una muestra 20D; el objetivo
+varía únicamente `R_wrist_roll_joint` +0,01 rad en 4 s. No es una propuesta
+SmolVLA ni se programó un retorno automático. El preparador rechaza extremos
+fuera del URDF o las transmisiones SPS; la comprobación de velocidad es de
+promedio necesario y no acredita picos, trayectoria o colisión.
+
+La muestra tenía los dos codos dentro de sus límites nominales y márgenes
+aproximados0,000622 y0,001293 rad. El valor0,002 rad del informe es una banda
+diagnóstica, no un límite oficial ni una decisión automática de admisión. No
+se ha establecido incertidumbre total, comportamiento del planificador o
+distancia de parada. El monitor independiente alerta si un eje inmóvil se
+aproxima a la mitad de su margen nominal; no garantiza que el servo se detenga.
+
+Paquete privado en `../Humanoide-vla-evidence/PICO_WRIST_PREP_20261110T103237Z_078897/`:
+`candidate/task.xml` SHA256 `70544f68d66f77ea7d4be163f6d517fba9a572127dcaa71e0c7dfe8f0e2abdca`,
+`candidate/manifest.json` `adcffeafa262dbb8a07e736fb8fadd295885e0a9f9dd6525eaf73a8f759ad576`,
+`stage-plan-v2.json` `07d690dacbc38010e7de51e2bfd99cf70526458e6135964eb1ca0303adc1eca1`.
+El plan v2 usa `/tmp` y exige comprobar que host y contenedor comparten la
+ruta; `stage-plan.json` anterior se conserva como evidencia obsoleta.
+No se instaló ni ejecutó; el plan es solo local. La muestra no acredita las
+condiciones físicas al intentar mover. Once tests del preparador/plan pasan.
+
+Validación reproducible del paquete existente:
+
+```bash
+python3 -B scripts/vla/prepare_pico_wrist_native_probe.py --check \
+  ../Humanoide-vla-evidence/PICO_WRIST_PREP_20261110T103237Z_078897/candidate/manifest.json \
+  --urdf ../Humanoide-vla-evidence/PICO_WRIST_PREP_20261110T103237Z_078897/runtime.urdf \
+  --transmissions ../Humanoide-vla-evidence/PICO_WRIST_PREP_20261110T103237Z_078897/transmissions.yaml
+```
+
+El cliente de cajas y el monitor de corredor todavía no disponen de una
+conexión de supervisión/lease comprobada; falta ese lanzador, así como revisar
+despeje real de mano v4, trayectoria y parada. Ningún parámetro `--run` de
+estas piezas habilita el movimiento. La preparación no cumple por sí sola los
+gates del VLA físico.
+
 ## Referencia del ciclo de cajas — 10-11-2026
 
 Por indicación del usuario se consultó el ciclo de cajas ya probado. El
@@ -195,7 +235,13 @@ y `shadow-stderr.log` `f788aef7b645aba82d1ac2ed3bf547ed17d0a1dfd05ee5c0aea681a7f
 
 La cadena ROS `R_shoulder_pitch→roll→yaw→elbow_roll→elbow_yaw→wrist_pitch→roll`
 del URDF de Motion leído coincide con el orden de salida del modelo; el URDF
-leído tenía SHA256 `a4bf032f2c8314c8d0f320357bbc7da8b75b846c1d44fb05b37ed0cb3bb0acfc`.
+leído en texto normalizado a LF tenía SHA256
+`a4bf032f2c8314c8d0f320357bbc7da8b75b846c1d44fb05b37ed0cb3bb0acfc`.
+**Corrección 10-11:** el hash de los bytes reales en Motion es
+`c01acb400366ec154a852e75853bc2b5cf4807d5bd217a89578b8f4cd8ae1760`;
+contiene 721 finales CRLF. `execute()` normalizó los finales al devolver texto;
+el hash anterior no identifica los bytes exactos en disco. Verificado mediante
+`sha256sum` y normalización explícita dentro del contenedor.
 Es una consistencia estática de la cadena cinemática, no demuestra que el
 parser de `MetaMove` aplique ese mismo orden o que el archivo sea el usado por
 el controlador en ejecución.

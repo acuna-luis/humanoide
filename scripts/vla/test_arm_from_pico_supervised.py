@@ -3,6 +3,7 @@ import math
 import json
 from pathlib import Path
 import sys
+import time
 import types
 import unittest
 from unittest.mock import patch
@@ -39,6 +40,18 @@ class ArmMonitorTests(unittest.TestCase):
         row = sample()
         row['position'][row['name'].index('L_elbow_roll_joint')] += .004
         with self.assertRaisesRegex(ValueError, 'non_trial_axis_drift'):
+            arm.motion_envelope(row, initial)
+
+    def test_codo_early_warning_before_sps_limit(self):
+        initial = dict(arm.BODY, L_elbow_yaw_joint=2.8793, R_elbow_yaw_joint=-2.8787)
+        row = sample()
+        row['position'] = [initial[n] for n in row['name']]
+        arm.motion_envelope(row, initial)
+        row['position'][row['name'].index('L_elbow_yaw_joint')] = 2.8797
+        with self.assertRaisesRegex(ValueError, 'approaching_nominal_sps_limit'):
+            arm.motion_envelope(row, initial)
+        row['position'][row['name'].index('L_elbow_yaw_joint')] = 2.8801
+        with self.assertRaisesRegex(ValueError, 'outside_nominal_sps_limit'):
             arm.motion_envelope(row, initial)
 
     def test_nonfinite_values_and_run_are_rejected_before_ros(self):
@@ -82,6 +95,27 @@ class ArmMonitorTests(unittest.TestCase):
             expected = box_client.result_succeeded('motion', status,
                          {'state': {'state': code, 'desc': desc}})
             self.assertEqual(arm.motion_result_ok(result(status, code, desc)), expected)
+
+    def test_preflight_requires_sps_profile_and_exact_transmissions(self):
+        names = 'walker-motion.manipulation_robot_app-1\nwalker-ros.ros2-1\nwalker-motion.hw-1\n'
+        def execute(host, command):
+            if command[:2] == ['docker', 'ps']:
+                return {'returncode': 0, 'stdout': names}
+            if command[-1] == 'HW_TYPE':
+                return {'returncode': 0, 'stdout': 'cruzr_s2_v1_sps\n'}
+            digest = runner.SPS_SHA if command[-1] == runner.SPS_TRANSMISSIONS else runner.ARM_TASK_SHA
+            return {'returncode': 0, 'stdout': digest + '  path\n'}
+        with patch.object(runner.head, 'preflight', return_value=('joystick', time.monotonic(), 'walker-ros.ros2-1')), \
+             patch.object(runner, 'execute', side_effect=execute):
+            self.assertEqual(runner.preflight()[0], 'joystick')
+        def bad_profile(host, command):
+            if command[-1] == 'HW_TYPE':
+                return {'returncode': 0, 'stdout': 'cruzr_s2_v1\n'}
+            return execute(host, command)
+        with patch.object(runner.head, 'preflight', return_value=('joystick', time.monotonic(), 'walker-ros.ros2-1')), \
+             patch.object(runner, 'execute', side_effect=bad_profile):
+            with self.assertRaisesRegex(RuntimeError, 'sps_profile'):
+                runner.preflight()
 
 
 class FakeArmRun(head_tests.FakeRun):

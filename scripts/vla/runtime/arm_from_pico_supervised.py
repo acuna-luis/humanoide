@@ -24,10 +24,42 @@ ARM_AXIS = 'R_wrist_roll_joint'
 ARM_STEP = 0.01
 ARM_CORRIDOR_TOLERANCE = 0.003
 ARM_SPEED_LIMIT = 0.03
+# Installed SPS transmission file, hash pinned by the local preflight. These
+# are nominal configuration limits, not proof of the values in servo memory.
+SPS_ARM_LIMITS = {
+    'shoulder_pitch': (-2.83, 2.83), 'shoulder_roll': (-1.86, .08),
+    'shoulder_yaw': (-2.92, 2.92), 'elbow_roll': (-2.6, .02),
+    'elbow_yaw': (-2.88, 2.88), 'wrist_roll': (-1.98, 1.98),
+}
+SPS_LIMITS = {
+    **{side + '_' + joint + '_joint': limits
+       for side in ('L', 'R') for joint, limits in SPS_ARM_LIMITS.items()},
+    'L_wrist_pitch_joint': (-1.57, 1.6), 'R_wrist_pitch_joint': (-1.6, 1.57),
+    'head_yaw_joint': (-1.65, 1.65), 'head_pitch_joint': (-.65, .51),
+    'waist_yaw_joint': (-2.8, 2.8), 'lifter_pitch_1_joint': (-1.5, 1.5),
+    'lifter_pitch_2_joint': (-2.5, 2.5), 'lifter_pitch_3_joint': (-1.5, 1.5),
+}
+
+
+def check_sps_limits(values, initial=None):
+    if set(SPS_LIMITS) != set(BODY):
+        raise ValueError('incomplete_sps_limit_table')
+    for name, (lo, hi) in SPS_LIMITS.items():
+        position = values[name][0]
+        if not lo <= position <= hi:
+            raise ValueError('outside_nominal_sps_limit:' + name)
+        if initial is not None and name != ARM_AXIS:
+            # Early warning halfway to either nominal boundary. Detection
+            # latency and braking distance are unknown; this is not a guarantee.
+            lower_warning = (lo + initial[name]) / 2
+            upper_warning = (hi + initial[name]) / 2
+            if not lower_warning <= position <= upper_warning:
+                raise ValueError('approaching_nominal_sps_limit:' + name)
 
 
 def check_body(message):
     values = joint_state(message, BODY)
+    check_sps_limits(values)
     if any(abs(values[n][0]-target) > .02 for n, target in BODY.items()):
         raise ValueError('not_pico_v4_head_lower_reference')
     if any(not lo <= values[n][0] <= hi for n, (lo, hi) in DECLARED_LIMITS.items()):
@@ -79,6 +111,7 @@ def validate_preflight(preflight, elapsed, *, dry_run=False):
 def motion_envelope(message, initial):
     """Validate all axes against the fixed reference, never generate targets."""
     values = joint_state(message, BODY)
+    check_sps_limits(values, initial)
     for name, (lo, hi) in DECLARED_LIMITS.items():
         if not lo <= values[name][0] <= hi:
             raise ValueError('outside_declared_pico_v4_limits:' + name)
@@ -150,7 +183,8 @@ def build_trial_args(q):
     target = [float(q[n]) for n in names]
     target[-1] += ARM_STEP
     lo, hi = DECLARED_LIMITS[ARM_AXIS]
-    if not lo <= target[-1] <= hi:
+    hw_lo, hw_hi = SPS_LIMITS[ARM_AXIS]
+    if not max(lo, hw_lo) <= target[-1] <= min(hi, hw_hi):
         raise ValueError('trial_endpoint_outside_declared_limits')
     return {'component_names': ['right_arm'], 'goals': [target],
             'mode': 0, 'durations': [4.0]}

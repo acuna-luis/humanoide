@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[2]
 RUNTIME = ROOT / 'scripts/vla/runtime'
 ARM_TASK = '/opt/walker/manipulation_task_manager/share/manipulation_task_manager/config/move_components_json.xml'
 ARM_TASK_SHA = 'bfcfc097dfefb3e81fcb2acc913d7db55545b3ea3b853b345b9ba1836c01b797'
+SPS_TRANSMISSIONS = '/opt/walker/config_mc_cruzr_s2_v1_sps/share/config_mc_cruzr_s2_v1_sps/config/ecat_hardware/transmissions.yaml'
+SPS_SHA = '7c7e0760c274c59237ca5787bc2e75096692ee92c43bcf79f61cbad2cfa0f29c'
 EVIDENCE_ROOT = ROOT.parent / 'Humanoide-vla-evidence' / 'ARM_PICO_SUPERVISED_CHECK'
 
 
@@ -39,7 +41,18 @@ def source_bundle():
 
 def preflight():
     mode, started, container = head.preflight()
-    motion, _ = head.admission.parse_containers(execute('motion', ['docker', 'ps', '--format', '{{.Names}}']))
+    discovered = execute('motion', ['docker', 'ps', '--format', '{{.Names}}'])
+    motion, _ = head.admission.parse_containers(discovered)
+    hardware = [name for name in discovered.get('stdout', '').splitlines() if name == 'walker-motion.hw-1']
+    if len(hardware) != 1:
+        raise RuntimeError('hardware_container_not_unique')
+    for component in (motion, hardware[0]):
+        profile = execute('motion', ['docker', 'exec', component, 'printenv', 'HW_TYPE'])
+        if profile.get('returncode') != 0 or profile.get('stdout', '').strip() != 'cruzr_s2_v1_sps':
+            raise RuntimeError('sps_profile_missing_or_changed')
+    limits = execute('motion', ['docker', 'exec', hardware[0], 'sha256sum', SPS_TRANSMISSIONS])
+    if limits.get('returncode') != 0 or limits.get('stdout', '').split()[:1] != [SPS_SHA]:
+        raise RuntimeError('sps_transmission_limits_missing_or_changed')
     task = execute('motion', ['docker', 'exec', motion, 'sha256sum', ARM_TASK])
     if task.get('returncode') != 0 or task.get('stdout', '').split()[:1] != [ARM_TASK_SHA]:
         raise RuntimeError('dynamic_arm_task_missing_or_changed')

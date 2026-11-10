@@ -1,5 +1,33 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-NATIVE-PREP-20261110
+
+**10-11-2026, Europe/Madrid — prueba estática PREPARADA en PC; instalación y
+ejecución PENDIENTES.** Estado del robot consultado en lectura; no se envió
+movimiento ni se cambiaron SDK, controladores o archivos remotos.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | `b0add04`, supervisor dinámico bloqueado; ejecutor de cajas probado desde HOME con abrazaderas, incompatible con PICO/v4 sin adaptación. |
+| Fuente | `scripts/vla/prepare_pico_wrist_native_probe.py` SHA256 `816237c86e278a3115ba905a8b6dd0165ab7e7710e528ef96a61dd108acff7d4`; test `33623fa4157569d8f4cff1a3758001ba3e1b4252b58a8d5aed16550d561ba747`; `scripts/vla/plan_pico_wrist_native_stage.py` `04dec7001a2406416b758e2a6b928f4ab40f98edbacf2aadba871865e725d852`; test `b32ab2288afc03cf0a2f42943784b72194b12a4375f8a524ba0f377938c971f3`. Preparador usa Python, PyYAML y validación del cliente de cajas. |
+| Aplicación y evidencia | Paquete privado `../Humanoide-vla-evidence/PICO_WRIST_PREP_20261110T103237Z_078897/`: XML `70544f68d66f77ea7d4be163f6d517fba9a572127dcaa71e0c7dfe8f0e2abdca`, manifiesto `adcffeafa262dbb8a07e736fb8fadd295885e0a9f9dd6525eaf73a8f759ad576`, plan v2 `07d690dacbc38010e7de51e2bfd99cf70526458e6135964eb1ca0303adc1eca1`. El plan original permanece como evidencia obsoleta. Contiene lectura puntual y copias URDF/SPS; once tests pasan y revalidación no ordena movimiento. Meta fija un solo eje, paso/duración experimentales. [Receta](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#preparación-nativa-de-muñeca--10-11-2026). |
+| Deuda y reversión | No existe aún lanzador PICO/v4 que conecte monitor activo al cliente ROSA y lease. Persisten revisión de escena, trayectoria y parada; no habilitar VLA. Reversión: retirar selectivamente los cuatro archivos fuente nuevos y notas tras comparar con `b0add04`, conservar o retirar evidencia privada según necesidad. No hay configuración remota que restaurar. |
+
+## ARM-PICO-SPS-CHECK-20261110
+
+**10-11-2026, Europe/Madrid — comprobación pasiva y guardia nominal SPS;
+ejecución física PENDIENTE.** No se enviaron comandos ni cambiaron parámetros,
+modos, watchdogs o archivos en robot.
+
+| Campo | Registro |
+| --- | --- |
+| Estado anterior | Commit `b0add04`; monitor candidato con corredor experimental de0,002 rad para ejes quietos, sin vigilancia explícita de límites de transmisiones SPS. |
+| Hallazgo | Motion y HW indican `HW_TYPE=cruzr_s2_v1_sps`; archivo `/opt/walker/config_mc_cruzr_s2_v1_sps/share/config_mc_cruzr_s2_v1_sps/config/ecat_hardware/transmissions.yaml` SHA256 `7c7e0760c274c59237ca5787bc2e75096692ee92c43bcf79f61cbad2cfa0f29c`. En una muestra los codos yaw izquierdo y derecho estaban dentro de ±2,88rad, con márgenes aproximados0,000622 y0,001293rad. No afirma límites efectivos en memoria o estado posterior. |
+| Fuente | `scripts/vla/runtime/arm_from_pico_supervised.py` SHA256 `6e2c4ce26ad112718692c6281cba1a9a8022e4092cf0daf510a338cfc68810f3`; wrapper `scripts/vla/check_arm_from_pico_supervised.py` `1edfd74c4fdda51f324e25437097f5e9e25ce6b640d90a3eb048f01088e6ca9d`; test `scripts/vla/test_arm_from_pico_supervised.py` `60bb2e8054dec0ddc277cacb297e986862b9e663ef2696300a60fa6623f695b3`. Preflight contrasta perfil/hash y el runtime comprueba 20 ejes y alerta al alcanzar la mitad de la distancia inicial a un límite para ejes quietos. Ese aviso es experimental; no certifica latencia o distancia de frenado. |
+| Prueba | Once tests locales pasan. `--check` pasó usando telemetría viva y las nuevas comprobaciones, sin comandos; evidencia `../Humanoide-vla-evidence/ARM_PICO_SUPERVISED_CHECK/check-f852a635ac154239a3b51ed1c733a203/`, `result.json` SHA256 `7486bc40f7ea32e395e2cc5bd7d7804c5b93b8c16e824c634c3400f40b5233c1`, `remote-stdout.jsonl` `666ff245111d6776de12a7865a1a04c43ad5a459c22a0073aebdfb8d9cd2b478`. No fue una prueba de trayectoria o cancelación. |
+| Corrección URDF | El archivo real en Motion contiene721 finales CRLF y SHA256 `c01acb400366ec154a852e75853bc2b5cf4807d5bd217a89578b8f4cd8ae1760`. La lectura por `execute()` normalizó a LF y produjo `a4bf032f2c8314c8d0f320357bbc7da8b75b846c1d44fb05b37ed0cb3bb0acfc`; no es otro URDF ni el hash de los bytes instalados. |
+| Deuda y reversión | El control físico sigue bloqueado: no hay lanzador que conecte el cliente probado de cajas con el monitor y lease. Geometría v4, trayectoria y parada no están cualificadas. Revertir selectivamente frente a `b0add04`; conservar cambios ajenos. Sin cambios remotos persistentes. |
+
 ## ARM-BOX-REFERENCE-20261110
 
 **10-11-2026, Europe/Madrid — contrato de cajas REUTILIZADO en candidato;
@@ -65,7 +93,7 @@ no se enviaron órdenes ni se cambiaron controladores, modos o SDK.
 | Fuente | `scripts/vla/prepare_ball_native_arm_step.py` SHA256 `adeab6baf81fd85bf1cd77a981202df2552f6eb95dacef76b78bc09f22b55b5a`; test `scripts/vla/test_prepare_ball_native_arm_step.py` `90950dd953147ae88babcfbe0577844928b3e6ecaebae8ee0b5d3b531bd1c310`. La copia exacta utilizada en la prueba `source.py` SHA256 `37a057432ab181e399613451f2c8d38472254e88212e146dc8b8f965d3f7478f` difiere del archivo final sólo en el docstring. Python estándar y auditor existente. |
 | Prueba | Flujo real Vision→Ada→PC,5s/1Hz, checkpoint `e707eea07b58e14b979e78463b94ba75a52b1c18abf8076aebc8aa34ac77f8da`: cuatro predicciones y cuatro borradores nativos; cero órdenes. Diferencia original máxima1,157168rad; recorte experimental0,05rad por eje, duración experimental4s, no límites físicos. Inferencia0,168–0,564s, adaptador PC→predicción0,271–0,687s sin transporte Vision→PC. Siete tests locales pasan; `--run` sigue bloqueado. Salida conserva escalar de mano sin interpretarlo. |
 | Evidencia y reversión | `../Humanoide-vla-evidence/20261110_NATIVE_LIVE_3ndpJ8/`: `shadow.jsonl` SHA256 `ed178695efa640def802d854a9cc8738d33374191351f3563b4ff72333087fc1`; `native-preview.jsonl` `a9eba4fe6a756ce9d91688570e709058993656cab32f59acc28ae6089c2514bd`; `source.py` `37a057432ab181e399613451f2c8d38472254e88212e146dc8b8f965d3f7478f`; log `f788aef7b645aba82d1ac2ed3bf547ed17d0a1dfd05ee5c0aea681a7fefd6e4b`. Sin imágenes almacenadas; colector y contenedor terminaron. Revertir cambios locales selectivamente frente a `99f2d77`; conservar o retirar sólo esta evidencia según necesidad. Sin configuración remota que revertir. |
-| Alcance y deuda | El URDF de Motion leído SHA256 `a4bf032f2c8314c8d0f320357bbc7da8b75b846c1d44fb05b37ed0cb3bb0acfc` tiene la cadena derecha en orden homólogo a la salida del modelo; no demuestra orden efectivo de `MetaMove` ni modelo cargado. El flujo no instala ni acciona tareas, no prueba latencia completa, agarre o parada. Faltan conexión física, registro/semántica y parada de brazo, control/fases y límites de mano, y comprobación de condiciones físicas actuales. [Receta y límites](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#observaciones-actuales--prueba-integrada-sin-movimiento). |
+| Alcance y deuda | El URDF de Motion leído en texto normalizado LF SHA256 `a4bf032f2c8314c8d0f320357bbc7da8b75b846c1d44fb05b37ed0cb3bb0acfc` tiene la cadena derecha en orden homólogo a la salida del modelo; corrección posterior: bytes reales CRLF SHA256 `c01acb400366ec154a852e75853bc2b5cf4807d5bd217a89578b8f4cd8ae1760`. No demuestra orden efectivo de `MetaMove` ni modelo cargado. El flujo no instala ni acciona tareas, no prueba latencia completa, agarre o parada. Faltan conexión física, registro/semántica y parada de brazo, control/fases y límites de mano, y comprobación de condiciones físicas actuales. [Receta y límites](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#observaciones-actuales--prueba-integrada-sin-movimiento). |
 
 ## SMOLVLA-NATIVE-ARM-DRAFT-20261110
 

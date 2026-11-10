@@ -1,5 +1,13 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-NATIVE-PREP-20261110.** Preparada una tarea local
+de prueba de muñeca, sin instalar ni ejecutar; el cliente nativo y el
+monitor activo aún no están conectados. [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#preparación-nativa-de-muñeca--10-11-2026).
+
+**10-11-2026 — ARM-PICO-SPS-CHECK-20261110.** Monitor actualizado con los
+límites nominales de las transmisiones SPS y aviso anticipado, probado en
+observación. No certifica frenado ni habilita movimiento. [Ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-sps-check-20261110).
+
 **10-11-2026 — ARM-BOX-REFERENCE-20261110.** Se aprovechó el cliente de
 acciones del ciclo de cajas físicamente comprobado para contrastar el formato
 y el criterio de éxito de la prueba candidata de brazo SmolVLA. No valida

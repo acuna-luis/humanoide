@@ -1,5 +1,19 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-NATIVE-PREP-20261110: prueba nativa en PC.** Se
+preparó una tarea local de muñeca derecha desde una muestra PICO, con
+comprobaciones URDF/SPS y plan de instalación sin efectuar. No instala ni
+ejecuta. La conexión entre cliente ROSA y monitor activo sigue pendiente;
+no habilita control físico. [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#preparación-nativa-de-muñeca--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-native-prep-20261110).
+
+**10-11-2026 — ARM-PICO-SPS-CHECK-20261110: comprobación SPS preparada.**
+El monitor exige el perfil y hash de transmisiones SPS leídos en Motion y
+comprueba límites nominales de los 20 ejes. Los codos están cerca de sus
+límites y se añadió aviso anticipado; no garantiza frenado. El nuevo check
+pasó sin movimiento. El URDF leído antes era texto normalizado: el hash de
+bytes reales difiere por CRLF, corregido en la guía. [Ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-sps-check-20261110).
+
 **10-11-2026 — ARM-BOX-REFERENCE-20261110: contrato de cajas reutilizado.**
 El ciclo completo de caja de mesa74 fue comprobado físicamente con abrazaderas;
 se contrastó su interfaz ArmTask y se incorporó al candidato de brazo el mismo
