@@ -1,5 +1,17 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Corrección del reloj descartada — 10-11-2026
+
+**CANDIDATO OFFLINE DESCARTADO; SIN CAMBIO PRODUCTIVO NI PRUEBA EN ROBOT.**
+Se preparó un segundo candidato para comprobar el deadline después de leer el
+archivo, con pruebas offline. Modificaba también el cliente compartido de
+cajas y el pin de su lanzador. No se acepta esa ampliación sin revisión y
+validación específicas de la ruta de cajas, previamente validada; el candidato
+se descartó y sus 14 archivos se restauraron byte a byte. Las pruebas offline
+no demostraron cancelación ni frenado físicos. El problema del reloj continúa
+abierto y `model_wrist_dispatch_not_enabled` sigue cerrado.
+[Pruebas, fuentes y respaldo](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-lease-clock-candidate-20261110).
+
 ## Revisión del reloj del lease — 10-11-2026
 
 **REPRODUCIDO OFFLINE CON LECTURA SIMULADA; NO PROBADO EN MOTION.**

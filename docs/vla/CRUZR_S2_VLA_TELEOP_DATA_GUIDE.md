@@ -1,5 +1,12 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-LEASE-CLOCK-CANDIDATE-20261110.** Se descartó un
+candidato de corrección del reloj de lease porque también cambiaba el cliente
+compartido y el pin del lanzador validado de cajas; 14 archivos se restauraron
+byte a byte. Sin prueba en robot, corrección productiva ni habilitación física.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-lease-clock-candidate-20261110),
+[detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#corrección-del-reloj-descartada--10-11-2026).
+
 **10-11-2026 — ARM-PICO-LEASE-CLOCK-REVIEW-20261110.** Una lectura bloqueada
 simulada hizo que `check_lease` aceptara un lease vencido; también ocurrió en
 `LeaseProxy.synchronize_uuid` con componentes falsos. Podría continuar hacia

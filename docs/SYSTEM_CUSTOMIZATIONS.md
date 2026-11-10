@@ -1,5 +1,18 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-LEASE-CLOCK-CANDIDATE-20261110
+
+**10-11-2026, Europe/Madrid — CANDIDATO DESCARTADO; SIN CAMBIO PRODUCTIVO NI
+PRUEBA EN ROBOT.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo y decisión | Se preparó offline un candidato para verificar el deadline con reloj posterior a la lectura. Al afectar al cliente compartido de cajas y al pin del lanzador de esa ruta, se descartó: no se acepta modificar la ruta validada de cajas sin revisión específica. El defecto de reloj reproducido sigue abierto y no se habilita SmolVLA físico. |
+| Pruebas del candidato | El autor comunicó por salida de herramientas: cliente de cajas 40/40, puente 39/39, worker-stage 16/16, coordinador 29/29, sintético 11/11, loader 17/17, plan PICO 4/4 y lanzador de cajas 9/9. El pasivo completo obtuvo 13/14 en paralelo (`guard_did_not_stop_cleanly`) y 14/14 en repetición aislada. Los resultados son offline, no validan frenado ni rutas físicas; la salida no se conservó en archivo independiente. |
+| Fuentes y restauración | Diff candidato descartado `../Humanoide-vla-evidence/PICO_LEASE_CLOCK_20261110T170330Z_3a1ad05a/candidate-discarded.diff` SHA256 `5bfec315d37a7880afd81c33ad08efdcd83d0ee7ca2cd8e33454afa9d2dfc858`; backup `before-sources.tar` en esa carpeta SHA256 `8d94a5fbad4ae01a4f9e390f9e79d687baf2c3effe1d90a2f82c58c37cba9e7f`, además de dos respaldos individuales. Se restauraron 14 archivos y contrastaron byte a byte con respaldos; `git diff -- scripts/box_handling scripts/vla` quedó vacío. Ninguna prueba ni modificación en robot. |
+| Continuación | Diseñar una corrección con alcance revisado, mantener intacta la ruta de cajas salvo validación específica, cubrir el vencimiento después de E/S y estudiar el envío en vuelo y la revocación. Las pruebas anteriores no resuelven la causa de 731084 ni demuestran frenado. El gate sigue cerrado. |
+| Respaldo documental | Antes de registrar esta decisión se guardaron las cuatro fuentes documentales con los cambios locales previos en `../Humanoide-vla-evidence/PICO_LEASE_CANDIDATE_DOCS_20261110T170508Z/before-docs.tar`, SHA256 `d18e93ef5d964369de5d7f9c7140a29db2fc568bb4c10d14fcf523c304987ce8`. Revertir solo esta intervención si procede; no sobrescribir cambios ajenos. |
+
 ## ARM-PICO-LEASE-CLOCK-REVIEW-20261110
 
 **10-11-2026, Europe/Madrid — REPRODUCIDO OFFLINE; SIN CAMBIO PRODUCTIVO NI

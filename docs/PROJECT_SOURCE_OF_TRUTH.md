@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-LEASE-CLOCK-CANDIDATE-20261110: corrección
+descartada.** Se preparó un candidato offline para el reloj del lease, pero
+modificaba el cliente compartido y el pin de la ruta validada de cajas; se
+descartó para no afectar esa ruta sin revisión específica. Catorce archivos
+se restauraron byte a byte; no hubo prueba en robot. El fallo reproducido
+sigue abierto y el gate físico de SmolVLA cerrado.
+[Ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-lease-clock-candidate-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#corrección-del-reloj-descartada--10-11-2026).
+
 **10-11-2026 — ARM-PICO-LEASE-CLOCK-REVIEW-20261110: reproducido offline.**
 `check_lease` compara el plazo con un tiempo capturado antes de leer el
 archivo; con lectura bloqueada simulada aceptó un lease ya vencido. También
