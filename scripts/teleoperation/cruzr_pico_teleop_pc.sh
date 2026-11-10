@@ -1507,6 +1507,10 @@ EOF
     assert_v4_full_control_available
     official_v4_start_committed=1
   fi
+  # El relay puede morir entre su primer keyframe y START (10-11-2026: Broken
+  # pipe 20 s antes de START con adb forward). Revalidar justo antes de START.
+  pico_camera_runtime_ok ||
+    die "La cámara PICO no sigue activa antes de START; no se envía START."
   "$pico_control_executable" \
     --websocket_url ws://127.0.0.1:8082 \
     --arm_type "$required_arm" --enable_hand_pose 0 --push_rate 90 &

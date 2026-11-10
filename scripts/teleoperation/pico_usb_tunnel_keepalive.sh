@@ -9,7 +9,7 @@
 set -uo pipefail
 serial="${PICO_SERIAL:-PA94Y0MGKB070822G}"
 interval="${PICO_KEEPALIVE_INTERVAL:-2}"
-video="${PICO_KEEPALIVE_VIDEO:-1}"   # 0 = sólo control
+video="${PICO_KEEPALIVE_VIDEO:-0}"   # 1 = también forward 12345 (NO recomendado: falso "conectado")
 log() { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 
 log "Vigilando PICO $serial: control 63901, vídeo 12345=$([[ $video == 1 ]] && echo sí || echo no). Ctrl+C para salir."

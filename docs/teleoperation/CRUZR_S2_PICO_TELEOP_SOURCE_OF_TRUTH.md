@@ -1,5 +1,20 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**10-11-2026 ~19:50 — vídeo por `adb forward` DESCARTADO; check antes de START.**
+Con `forward tcp:12345` el relay "conectó" (19:47:07) al socket local de ADB,
+que acepta aunque XRoboToolkit no escuche, escribió el primer keyframe en su
+buffer (`PICO_CAMERA_LIVE=1`) y a las 19:47:08 recibió `Broken pipe`: el vídeo
+nunca llegó al visor y se saltó la espera de Listen. START se envió a las
+19:47:28 sin revalidar la cámara; el monitor la detectó a las 19:47:31 y envió
+STOP confirmado (sin movimiento inesperado). Cambios: `cruzr_pico_teleop_pc.sh`
+revalida `pico_camera_runtime_ok` justo antes de lanzar `pico_control`;
+`pico_usb_tunnel_keepalive.sh` ya no crea el forward 12345 por defecto
+(`PICO_KEEPALIVE_VIDEO=1` lo reactiva, no recomendado); forward retirado.
+**Vídeo por Wi-Fi** (control sigue por USB): no fijar `PICO_CAMERA_PICO_IP`;
+el script descubre `wlan0` 192.168.42.211; en el visor, `Camera source IP` =
+IP del PC en la Wi-Fi Cruzr (192.168.42.167 observada). `cruzr_pico_camera.sh
+--check` pasó por esa ruta. Sustituye la nota de las 19:45 sobre vídeo por USB.
+
 **10-11-2026 ~19:44 — túneles USB caídos por re-enumeración del visor.** El
 kernel registró `usb 1-3: USB disconnect` a las 19:41:49 y nueva enumeración a
 las 19:42:08 con otro idProduct (`00b5` → `00b7`); ADB perdió `reverse 63901` y
