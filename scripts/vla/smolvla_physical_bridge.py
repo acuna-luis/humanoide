@@ -42,6 +42,9 @@ JOINTS = ['R_shoulder_pitch_joint', 'R_shoulder_roll_joint', 'R_shoulder_yaw_joi
 # cruzr_s2_v1.urdf leído en Motion el 10-11-2026.
 URDF_LIMITS = [(-2.8623, 2.8623), (-1.885, 0.1222), (-2.9322, 2.9322), (-2.6529, 0.0349),
                (-2.9322, 2.9322), (-1.658, 1.658), (-2.0245, 2.0245)]
+# Posturas de dedos v4 medidas en la toma 2 (935-1008): abierta y sujetando la pelota.
+HAND_OPEN = [0.8, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+HAND_CLOSED = [1.824, 0.737, 1.018, 1.638, 0.853, 0.76, 0.234]
 ADA = dict(host='luisacuna@192.168.1.43', port='2649',
            runner='/home/luisacuna/cruzr-smolvla-ball-20261109/live-shadow-20261109-2144/shadow_live_inference.sh',
            train='/home/luisacuna/cruzr-smolvla-ball-20261109/dataset-v2/lerobot-experiment',
@@ -78,12 +81,47 @@ def plan_step(prediction, diff, start, last_target, *, max_step, envelope, margi
     return obs, target, info
 
 
-def step_xml(target, duration):
+class HandGate:
+    """Cierra sólo si el modelo pide cerrar `confirm` pasos seguidos y el brazo ya
+    está cerca de su objetivo (max|delta modelo| < near); abre tras `confirm` pasos
+    pidiendo abrir. Devuelve la nueva consigna ('open'/'closed') o None si no cambia."""
+    def __init__(self, threshold, confirm, near):
+        self.threshold, self.confirm, self.near = threshold, confirm, near
+        self.state, self.votes = None, 0
+
+    def update(self, scalar, model_delta):
+        if self.state is None:
+            self.state = 'open'
+            return 'open'
+        want = 'closed' if scalar >= self.threshold else 'open'
+        # La proximidad sólo condiciona el cierre: una mano cerrada no se abre
+        # porque el brazo se mueva (corrige aperturas del run 20261110T190321).
+        if want == 'closed' and self.state == 'open' and max(map(abs, model_delta)) >= self.near:
+            want = 'open'
+        if want == self.state:
+            self.votes = 0
+            return None
+        self.votes += 1
+        if self.votes >= self.confirm:
+            self.state, self.votes = want, 0
+            return want
+        return None
+
+
+def step_xml(target, duration, hand=None):
     angles = ';'.join('%.6f' % x for x in target)
+    arm = ('<Action ID="MetaMove" type="arm" location="right" joint_angles="%s" duration="%.3f" />'
+           % (angles, duration))
+    if hand is None:
+        body = '      ' + arm + '\n'
+    else:
+        fingers = ';'.join('%.4f' % x for x in (HAND_CLOSED if hand == 'closed' else HAND_OPEN))
+        body = ('      <Parallel threshold="2">\n        ' + arm + '\n        '
+                '<Action ID="MetaMove" type="effector" location="right" eef_joint_commands="%s" '
+                'duration="%.3f" />\n      </Parallel>\n' % (fingers, duration))
     return ('<root main_tree_to_execute="MainTree">\n  <BehaviorTree ID="MainTree">\n'
-            '    <Sequence name="smolvla_step">\n'
-            '      <Action ID="MetaMove" type="arm" location="right" joint_angles="%s" duration="%.3f" />\n'
-            '    </Sequence>\n  </BehaviorTree>\n</root>\n' % (angles, duration))
+            '    <Sequence name="smolvla_step">\n' + body +
+            '    </Sequence>\n  </BehaviorTree>\n</root>\n')
 
 
 # ---------------------------------------------------------------- transporte
@@ -204,12 +242,17 @@ def main():
                    help='sólo usar predicciones llegadas este tiempo después del fin del paso')
     p.add_argument('--fps', type=float, default=1.0)
     p.add_argument('--seconds', type=int, default=60, help='duración del shadow (1-60 s)')
+    p.add_argument('--hand', action='store_true', help='controlar la mano v4 derecha (abrir/cerrar)')
+    p.add_argument('--hand-threshold', type=float, default=0.5)
+    p.add_argument('--hand-confirm', type=int, default=2)
+    p.add_argument('--grasp-near-rad', type=float, default=0.15,
+                   help='sólo cerrar si max|delta del modelo| < este valor')
     p.add_argument('--allow-charger', action='store_true', help='aceptar cargador conectado')
     args = p.parse_args()
-    if not 1 <= args.seconds <= 60 or not .5 <= args.fps <= 2:
-        raise SystemExit('--seconds debe estar en 1-60 y --fps en 0,5-2 (límites del shadow)')
-    if args.duration_s < 1.0 or args.max_step_rad > 0.15:
-        raise SystemExit('Parámetros fuera del rango conservador (duración>=1 s, paso<=0,15 rad)')
+    if not 1 <= args.seconds <= 240 or not .5 <= args.fps <= 2:
+        raise SystemExit('--seconds debe estar en 1-240 y --fps en 0,5-2 (límites del shadow)')
+    if args.duration_s < 1.0 or args.max_step_rad > 0.15 or args.envelope_rad > 1.5:
+        raise SystemExit('Parámetros fuera del rango conservador (duración>=1 s, paso<=0,15 rad, envolvente<=1,5 rad)')
 
     run_id = time.strftime('%Y%m%dT%H%M%S')
     out_dir = EVIDENCE / ('run-' + run_id)
@@ -243,6 +286,7 @@ def main():
         if ready.get('event') != 'executor_ready':
             raise SystemExit('Ejecutor remoto no disponible')
 
+    gate = HandGate(args.hand_threshold, args.hand_confirm, args.grasp_near_rad) if args.hand else None
     shadow, q = start_shadow(args)
     start = last_target = None
     steps, step_end = 0, 0.0
@@ -278,15 +322,17 @@ def main():
                 start = obs
                 log({'event': 'start_pose', 'joints': JOINTS, 'obs': obs})
             name = 'step_%03d' % steps
-            log({'event': 'plan', 'step': steps, 'index': row.get('index'),
+            hand = gate.update(info['hand_scalar_ignored'], info['model_delta']) if gate else None
+            log({'event': 'plan', 'hand_command': hand, 'hand_state': gate.state if gate else None, 'step': steps, 'index': row.get('index'),
                  'image_sha256': row.get('image_sha256'), 'obs': obs, 'target': target, **info})
-            print('%s modelo Δ=%s  enviado Δ=%s' % (name, ['%+.3f' % x for x in info['model_delta']],
-                                                     ['%+.3f' % x for x in info['sent_delta']]))
+            print('%s modelo Δ=%s  enviado Δ=%s  mano=%.2f%s' % (
+                name, ['%+.3f' % x for x in info['model_delta']], ['%+.3f' % x for x in info['sent_delta']],
+                info['hand_scalar_ignored'], (' -> ' + hand.upper()) if hand else ''))
             if args.dry_run:
                 steps += 1; step_end = arrival
                 continue
             executor.stdin.write(json.dumps({'name': name, 'task': task_rel + '/' + name,
-                                             'xml': step_xml(target, args.duration_s),
+                                             'xml': step_xml(target, args.duration_s, hand),
                                              'timeout': args.duration_s + 12}) + '\n')
             executor.stdin.flush()
             result = json.loads(executor.stdout.readline() or '{"event":"executor_eof"}')

@@ -1,5 +1,20 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-PHYSICAL-GRASP-20261110
+
+**10-11-2026 ~19:03 Europe/Madrid — PROBADO FÍSICAMENTE: intento de agarre
+SmolVLA con brazo derecho y mano v4, 50 pasos SUCCEED, sin aborto.** El
+propietario confirmó en el momento persona en paro, pelota sobre el aro, zona
+despejada y cargador desconectado.
+
+| Campo | Registro |
+| --- | --- |
+| Fuentes PC | `scripts/vla/smolvla_physical_bridge.py` (añade `--hand` con `HandGate` y posturas de dedos medidas en la toma 2; tras el ensayo se corrigió que la mano cerrada se abriera al moverse el brazo) SHA256 actual `9c770f47c1488f0387bb5872c25c3af35971f04aeae47b2f97b97c24d9580fc6`. `scripts/vla/run_ball_live_shadow.py`: límite `--seconds` 60 → 240 (colector Vision admite 1800, contenedor Ada corta a 300 s) SHA256 `b643a3237e8472d7eee004403370062c81ad4a5d5f899a604a88c4273ab586c0`; 8 tests del shadow pasan. |
+| Parámetros | `--hand --max-steps 50 --seconds 240 --envelope-rad 1.3 --max-step-rad 0.08 --jump-abort-rad 0.06`, 1 s por paso. |
+| Cambios en Motion | `config/diagnostics/svla_20261110T190321/step_000..049.xml` en `walker-motion.manipulation_robot_app-1` (pasos con cambio de mano incluyen `MetaMove type="effector"` en `Parallel`). Reversión como en SMOLVLA-PHYSICAL-BRIDGE-20261110. |
+| Resultado | 50/50 SUCCEED (~2,1 s), error de seguimiento máximo 3,4 mrad (sin contacto que frenara el brazo). Mano: abrir en 0, cerrar 12, abrir 16, cerrar 24, abrir 33, cerrar 35 (las aperturas 16/33 se debían al defecto corregido). Postura final brazo `[-0.371,-0.154,+1.387,-1.030,-1.790,-0.099,+0.065]`, mano `[1.824,0.739,0.980,1.570,0.853,0.760,0.234]` (cerrada; índice/pulgar pip 0,04–0,07 rad por debajo de consigna), velocidades 0. Agarre real de la pelota: **pendiente de observación del operador**. Registro `../Humanoide-vla-evidence/SMOLVLA_PHYSICAL_BRIDGE/run-20261110T190321/bridge.jsonl` SHA256 `f7cf616b4bcf6121622a9c9a75cf9f108b8d0b53c17af37b9d30181f7465ab51`. |
+| Estado dejado | Brazo y mano quietos en esa postura, mano cerrada; no se envió HOME ni apertura. |
+
 ## SMOLVLA-PHYSICAL-BRIDGE-20261110
 
 **10-11-2026 ~18:53 Europe/Madrid — PROBADO FÍSICAMENTE: primera ejecución de

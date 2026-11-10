@@ -332,7 +332,7 @@ def main():
                    help='send at most one observation and drain capture before summary')
     p.add_argument('--startup-timeout', type=int, default=120)
     args = p.parse_args()
-    if not (1 <= args.port <= 65535 and 1 <= args.seconds <= 60 and .5 <= args.fps <= 2
+    if not (1 <= args.port <= 65535 and 1 <= args.seconds <= 240 and .5 <= args.fps <= 2
             and ((args.one_shot and args.max_samples == 1) or
                  (not args.one_shot and math.ceil(args.seconds * args.fps) + 4 <= args.max_samples <= 1000))
             and 1 <= args.startup_timeout <= 120

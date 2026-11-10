@@ -1,5 +1,14 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Intento de agarre SmolVLA con mano — 10-11-2026
+
+**PROBADO FÍSICAMENTE.** 50 pasos del puente con `--hand`, envolvente 1,3 rad y
+0,08 rad/paso: todos `SUCCEED`, sin aborto, seguimiento ≤3,4 mrad. El modelo
+llevó el brazo a la zona de agarre de las demostraciones (hombro pitch ≈ −0,37,
+codo yaw ≈ −1,79) y allí osciló con deltas pequeños; pidió cerrar casi siempre
+(escalar 0,53–0,97). La mano quedó cerrada. Que haya sujetado la pelota depende
+de la observación del operador. Ficha `SMOLVLA-PHYSICAL-GRASP-20261110`.
+
 ## Primera ejecución física de SmolVLA — 10-11-2026
 
 **PROBADO FÍSICAMENTE.** Con autorización expresa del propietario se usó el
