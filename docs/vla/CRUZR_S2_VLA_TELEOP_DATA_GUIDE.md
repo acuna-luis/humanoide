@@ -1,9 +1,11 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
 **10-11-2026 — RELEVO-PORTABLE-20261110.** Un [relevo](RELEVO_PORTABLE_SMOLVLA.md)
-y un exportador privado preparan fuentes y evidencia seleccionada para otro PC;
-no acreditan transferencia o restauración efectiva. El dataset v2 Ada tiene
-copia local verificada. La historia Git contiene una credencial preexistente:
+y un exportador privado preparan fuentes y evidencia seleccionada para otro PC.
+El paquete `943bc7b` se verificó y restauró en temporal en este PC, no se
+trasladó a otro y no incluye esta actualización documental posterior. Un
+paquete SDK privado separado también requiere traslado y verificación. El
+dataset v2 Ada tiene copia local verificada. La historia Git contiene una credencial preexistente:
 el paquete no está saneado ni cifrado y no debe publicarse ni subirse a nube sin
 protección y revisión. La corrección de E-stop y las limitaciones de control
 físico se registran en la [ficha](../SYSTEM_CUSTOMIZATIONS.md#relevo-portable-20261110).

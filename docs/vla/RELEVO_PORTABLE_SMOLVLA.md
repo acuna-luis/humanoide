@@ -9,6 +9,48 @@ Los documentos globales incluyen hechos históricos de otros efectores y tareas;
 no confundirlos con el estado reciente de este piloto. Si la salida de lectura
 se trunca, leer el archivo completo por segmentos.
 
+**Para el traslado:** en este PC se prepara la carpeta privada
+`/home/lacuna/proyectos/Robots/RELEVO_TRASLADO_20261110/` con copias de los
+dos paquetes siguientes, en los subdirectorios `RELEVO_SMOLVLA_20261110/` y
+`RELEVO_CRUZR_SDK_20261110/`, y con una copia externa actualizada de esta guía
+junto a `LEEME.md`. Para reanudar desde otro PC se traslada la carpeta completa
+por un canal privado y se verifican ambos paquetes por separado con sus hashes
+obtenidos independientemente. La guía y el LEEME son complementos externos,
+no modifican los manifiestos de los paquetes. La preparación en este PC no
+acredita que se haya trasladado ni restaurado en otro equipo.
+
+**Resultado del export, 10-11-2026:** la copia para traslado del paquete privado
+está en este PC en
+`/home/lacuna/proyectos/Robots/RELEVO_TRASLADO_20261110/RELEVO_SMOLVLA_20261110`;
+su `manifest.json` tiene
+SHA256 `a1029fc48c7be5a250b19511ff9cde735f1917bea23596ad7285738dc1472b1f`.
+Conserva el commit `943bc7b07655ac8b1e754ac6bdaf2e718489c799`, 476 archivos
+no seguidos elegidos y evidencia seleccionada sin faltantes; su manifiesto
+registra 18 exclusiones. La verificación y una restauración en directorio
+temporal pasaron **en este PC**; no se ha transferido ni probado en otro. Esta
+actualización documental es posterior al paquete y no se encuentra en su bundle.
+El archivo privado de hash independiente es
+`../Humanoide-vla-evidence/PORTABLE_HANDOFF_20261110/portable-manifest.SHA256`,
+cuyo SHA256 es `8410a85a3fb73b982138e9d7dd0a5fc8f42c7aa390fba6ffeeacc154c921065a`.
+El paquete no está cifrado y la historia Git contiene una credencial preexistente:
+no subirlo a la nube ni publicarlo sin saneamiento y protección.
+
+**SDK complementario, también privado:**
+`/home/lacuna/proyectos/Robots/RELEVO_TRASLADO_20261110/RELEVO_CRUZR_SDK_20261110/`
+es la copia para traslado de un segundo paquete separado, no incluido en el
+manifiesto principal. Conserva la ruta
+original del SDK y 12 archivos (298149970 bytes), cotejados con el origen por
+SHA256 y tamaño. Su `manifest.json` SHA256 es
+`432791258fe0254bf9c418c3a281e2838f93332b6612a0db37593ff7050f7e2e`; registra
+el `source_mode` de cada archivo. El índice `SHA256SUMS` tiene SHA256
+`85aac5bc4bf44720c78c6a4bbe58af184381fe63c757cab0aa718772478e8e92` y permite
+verificar los 12 archivos. La raíz es 0700 y los archivos 0600; algunos
+subdirectorios heredados son 0775 pero están protegidos por la raíz privada.
+Hay que transferir **ambos paquetes** y verificar cada uno antes de restaurar.
+Los modos de origen están registrados; no se promete una restauración automática
+de esos modos. La copia SDK no incluye ni certifica imágenes/volúmenes Docker
+de Ada y tampoco ha sido trasladada a otro PC.
+
 ## Objetivo solicitado
 
 Con la mano derecha, coger la pelota de tenis situada sobre un aro fijo en la
@@ -329,3 +371,27 @@ Docker y los clientes conectados se comprueban de nuevo en el destino. Si una
 operación falla a mitad, inspecciona el destino parcial y los mensajes antes de
 decidir cómo continuar; no borres ni repitas sobre archivos existentes. No se
 envía ninguna orden al robot por restaurar el paquete.
+
+El paquete SDK se traslada **aparte**. Tras recibir sus dos hashes por un canal
+independiente, se puede verificar en el otro PC antes de copiar nada al checkout:
+
+```bash
+RELEVO_SDK='/ruta/privada/RELEVO_CRUZR_SDK_20261110'
+RELEVO_SDK_MANIFEST_SHA='HASH_MANIFEST_RECIBIDO_POR_CANAL_SEPARADO'
+RELEVO_SDK_INDICE_SHA='HASH_INDICE_RECIBIDO_POR_CANAL_SEPARADO'
+(
+  set -eu
+  test "$(sha256sum -- "$RELEVO_SDK/manifest.json" | cut -d ' ' -f 1)" = "$RELEVO_SDK_MANIFEST_SHA"
+  test "$(sha256sum -- "$RELEVO_SDK/SHA256SUMS" | cut -d ' ' -f 1)" = "$RELEVO_SDK_INDICE_SHA"
+  cd -- "$RELEVO_SDK"
+  sha256sum -c --quiet SHA256SUMS
+  printf '%s\n' 'Índice y archivos SDK verificados.'
+)
+```
+
+El índice y el manifiesto deben contrastarse con los hashes independientes,
+no con valores enviados solo junto al paquete. Después, revisar las rutas y
+`source_mode` del manifiesto y restaurar de manera selectiva sin sobrescribir
+un SDK existente. Los modos originales no se restauran automáticamente y
+pueden necesitar revisión manual. Verificar los archivos copiados; esto no
+instala el SDK ni verifica que sea compatible con el robot o con Ada.

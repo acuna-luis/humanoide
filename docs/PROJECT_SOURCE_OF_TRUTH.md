@@ -4,8 +4,12 @@
 Se añadió `CLAUDE.md`, un [relevo de SmolVLA](vla/RELEVO_PORTABLE_SMOLVLA.md)
 y un exportador/verificador privado de fuentes y evidencia seleccionada. Se
 corrigió la instrucción de E-stop: ante peligro inmediato se acciona sin esperar
-HOME. El dataset v2 de Ada tiene copia local verificada; paquete y transferencia
-efectiva a otro PC siguen pendientes. **Historia Git contiene una credencial
+HOME. El dataset v2 tiene copia local verificada; el paquete privado se creó y
+se restauró en un directorio temporal de este PC, sin transferirlo a otro. Su
+bundle corresponde a `943bc7b`, no incluye esta actualización posterior. El
+SDK se conserva en un segundo paquete privado separado, no dentro del manifiesto
+principal; tampoco se ha trasladado a otro PC.
+**Historia Git contiene una credencial
 preexistente**: el export no está saneado ni cifrado y no debe publicarse ni
 subirse a nube sin revisar y proteger. No hubo movimiento ni habilitación física.
 [Ficha](SYSTEM_CUSTOMIZATIONS.md#relevo-portable-20261110).
