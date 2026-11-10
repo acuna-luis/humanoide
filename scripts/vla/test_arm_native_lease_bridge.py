@@ -327,6 +327,9 @@ while True:
    cmd['event']='goal_uuid_ready'
    if mode=='bad_ack':cmd['goal_id']='00000000-0000-0000-0000-000000000000'
    emit(**cmd)
+   if mode=='guard_fault':
+    emit('OPERATOR_ALERT',reason='outside_nominal_sps_limit:R_elbow_yaw_joint',no_retry=True,physical_stop_confirmed=False)
+    break
    if mode=='bad_observation' and not injected:
     time.sleep(.1)
     bad=dict(body);bad['L_elbow_yaw_joint']+=.003
@@ -341,6 +344,32 @@ while True:
 
 
 class GuardPipeProcessTests(unittest.TestCase):
+    def test_guard_fault_reason_survives_later_pipe_close(self):
+        child = simulated_guard('d'*32, 'guard_fault')
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                lease = bridge.GuardLease(directory, dict(bridge.arm.BODY),
+                                          lambda: child.poll() is None, session_id='d'*32)
+                pipe = bridge.GuardPipe(child, lease, time.monotonic())
+                pipe.await_ready(3)
+                # The ACK may arrive just as the simulated process exits;
+                # the observed alert itself must survive subsequent EOF.
+                try:
+                    lease.synchronize_uuid(box_tests.GOAL_ID, pipe.exchange)
+                except (RuntimeError, TimeoutError, OSError, ValueError):
+                    pass
+                child.wait(timeout=3)
+                pipe.thread.join(3)
+                self.assertEqual(pipe.first_guard_fault['reason'],
+                                 'outside_nominal_sps_limit:R_elbow_yaw_joint')
+                self.assertEqual(pipe.first_guard_fault['event'], 'OPERATOR_ALERT')
+                self.assertEqual(pipe.failure, 'guard_reported:OPERATOR_ALERT')
+                self.assertTrue(lease.failed)
+        finally:
+            if child.poll() is None: child.terminate()
+            child.wait(timeout=3)
+            for stream in (child.stdin, child.stdout, child.stderr): stream.close()
+
     def test_normal_shutdown_precedes_coordinator_progress_end(self):
         child = simulated_guard('d'*32, 'success')
         progress = {'alive': True}

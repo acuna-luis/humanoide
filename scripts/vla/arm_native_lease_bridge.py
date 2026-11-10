@@ -5,6 +5,7 @@ This module supplies an expiry-only lease and a pre-send UUID handshake for a
 future independent guard. The current PICO monitor is not yet such a guard.
 Never interpret a lease, cancel ACK or terminal status as physical stopping.
 """
+import collections
 import json
 import math
 import os
@@ -189,6 +190,10 @@ class GuardPipe:
         self.ready = threading.Event()
         self.write_lock = threading.Lock()
         self.failure = None
+        # Kept in memory only; never perform diagnostic I/O in the guard
+        # reader, which must keep renewing or revoking the lease promptly.
+        self.guard_events = collections.deque(maxlen=16)
+        self.first_guard_fault = None
         self.channel_failed = False
         self.auto_cancel_requested = False
         self.stopping = False
@@ -307,14 +312,18 @@ class GuardPipe:
                 elif event in ('goal_uuid_ready', 'guard_cancel_requested'):
                     if not self.ready.is_set():
                         raise ValueError('guard_ack_before_ready')
+                    if event == 'guard_cancel_requested':
+                        self._remember_guard_event(row)
                     self.acks.put_nowait(row)
                 elif event in ('guard_cancel_response', 'guard_terminal_observed'):
                     # These are observations only. They do not revive a lease or
                     # establish physical stopping; caller can journal them.
+                    self._remember_guard_event(row)
                     continue
                 elif event in ('OPERATOR_ALERT', 'UNRESOLVED_MONITORING',
                                'guard_auto_cancel_requested', 'guard_auto_cancel_delivery_unknown',
                                'guard_cancel_response_unknown', 'guard_fault_terminal_and_still'):
+                    self._remember_guard_event(row)
                     with self.lease.lock:
                         self.failure = self.failure or ('guard_reported:' + event)
                         try: self.lease.fail()
@@ -333,13 +342,33 @@ class GuardPipe:
         except BaseException as exc:
             with self.lease.lock:
                 self.channel_failed = True
-                self.failure = str(exc)
+                # Preserve the first fault: an EOF after an alert must not
+                # erase the reason that initially revoked the lease.
+                self.failure = self.failure or (type(exc).__name__ + ':' + str(exc)[:512])
                 try:
                     self.lease.fail()
                 except Exception as revoke_error:
                     self.failure += ':lease_revocation_failed:' + str(revoke_error)
                 finally:
                     self.ready.set()  # wake waiters; they must inspect failure
+
+    def _remember_guard_event(self, row):
+        """Retain a bounded record without filesystem or network I/O."""
+        event = {}
+        for key in ('event', 'reason', 'session_id', 'goal_uuid', 'goal_id',
+                    'status', 'attempt', 'physical_stop_confirmed', 'no_retry', 'monotonic'):
+            value = row.get(key)
+            if isinstance(value, str):
+                event[key] = value[:512]
+            elif value is None or type(value) in (bool, int):
+                if key in row:
+                    event[key] = value
+            elif type(value) is float and math.isfinite(value):
+                event[key] = value
+        self.guard_events.append(event)
+        if self.first_guard_fault is None and event.get('event') in (
+                'OPERATOR_ALERT', 'guard_auto_cancel_delivery_unknown', 'guard_cancel_response_unknown'):
+            self.first_guard_fault = dict(event)
 
     def _send_guard_heartbeat(self):
         """Pulse only after validated telemetry and live PC/coordinator lease."""

@@ -254,6 +254,84 @@ def check_stationary_targets(manifest, sample, reference):
             raise ValueError('stationary_target_outside_guard_sps_warning:' + name)
 
 
+def failure_diagnostics(guard_pipe, progress_state):
+    """Take a bounded best-effort snapshot after cancellation was requested.
+
+    This never calls ROS or waits for the guard. Fields are observations, not
+    evidence that the actuator stopped or that an absent event did not occur.
+    """
+    result = {'event': 'guard_diagnostics', 'physical_stop_verified': False,
+              'progress_before_stop': progress_state}
+    try:
+        reason = getattr(guard_pipe, 'failure', None)
+        result['failure'] = None if reason is None else str(reason)[:512]
+        result['channel_failed'] = getattr(guard_pipe, 'channel_failed', None)
+        result['auto_cancel_requested'] = getattr(guard_pipe, 'auto_cancel_requested', None)
+        result['first_guard_fault'] = getattr(guard_pipe, 'first_guard_fault', None)
+    except Exception as exc:
+        result['guard_identity_error'] = type(exc).__name__ + ':' + str(exc)[:256]
+    try:
+        result['recent_guard_events'] = list(getattr(guard_pipe, 'guard_events', ()))
+    except Exception as exc:
+        # A concurrent append can invalidate deque iteration. Preserve the
+        # first alert and other already captured information in that case.
+        result['guard_events_error'] = type(exc).__name__ + ':' + str(exc)[:256]
+    try:
+        sample = getattr(guard_pipe, 'latest', None)
+        if isinstance(sample, dict):
+            result['last_guard_sample'] = {k: sample.get(k) for k in
+                ('monotonic', 'position', 'velocity', 'estop', 'servo_stop') if k in sample}
+    except Exception as exc:
+        result['guard_sample_error'] = type(exc).__name__ + ':' + str(exc)[:256]
+    try:
+        diagnostics = getattr(guard_pipe, 'status_diagnostics', None)
+        if callable(diagnostics):
+            result['host_liveness'] = diagnostics()
+    except Exception as exc:
+        result['host_liveness_error'] = type(exc).__name__ + ':' + str(exc)[:256]
+    try:
+        # Check serializability and cap overall evidence; never let a damaged
+        # diagnostic prevent retention of the cancellation outcome.
+        raw = json.dumps(result, allow_nan=False, separators=(',', ':'))
+        if len(raw.encode('utf-8')) > 32768:
+            raise ValueError('guard_diagnostics_too_large')
+    except Exception as exc:
+        # Keep small string evidence even if one auxiliary field is damaged.
+        fault = result.get('first_guard_fault')
+        fault_reason = fault.get('reason') if isinstance(fault, dict) else None
+        return {'event': 'guard_diagnostics',
+                'failure': result.get('failure') if isinstance(result.get('failure'), str) else None,
+                'first_guard_fault': {'reason': fault_reason[:512]} if isinstance(fault_reason, str) else None,
+                'diagnostic_error': type(exc).__name__ + ':' + str(exc)[:256],
+                'physical_stop_verified': False}
+    return result
+
+
+def failure_notice(diagnostics):
+    """Small operator alert for the host's nonblocking 4096-byte channel."""
+    fault = diagnostics.get('first_guard_fault')
+    fault = fault if isinstance(fault, dict) else {}
+    host = diagnostics.get('host_liveness')
+    host = host if isinstance(host, dict) else {}
+    def bounded(value):
+        # HostOutput uses JSON's ASCII escaping: a non-BMP code point can
+        # expand to 12 bytes. Four 64-character fields plus envelope remain
+        # below its 4096-byte limit even for such input.
+        return value[:64] if isinstance(value, str) else None
+    notice = {'event': 'guard_diagnostic_alert',
+            'failure': bounded(diagnostics.get('failure')),
+            'guard_reason': bounded(fault.get('reason')),
+            'pc_heartbeat_failure': bounded(host.get('pc_heartbeat_failure')),
+            'diagnostic_error': bounded(diagnostics.get('diagnostic_error')),
+            'no_retry': True, 'physical_stop_verified': False}
+    # Measure the same ensure_ascii encoding as HostOutput, with headroom.
+    encoded = json.dumps(notice, ensure_ascii=True, separators=(',', ':'), allow_nan=False).encode('utf-8')
+    if len(encoded) > 3500:
+        return {'event': 'guard_diagnostic_alert', 'reason': 'diagnostic_notice_oversize',
+                'no_retry': True, 'physical_stop_verified': False}
+    return notice
+
+
 def coordinate(lease, guard_pipe, manifest, urdf_text, transmissions_text,
                start_worker, evidence_dir, *, timeout=20.0, held_lock_fd=None,
                event_sink=lambda row: True, verified_provenance=None):
@@ -464,6 +542,10 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
                 'goal_id': goal_id, 'intent_receipt': str(marker),
                 'physical_stop_verified': False, 'automatic_cleanup': False}
     except BaseException as exc:
+        # Snapshot plain in-memory progress fields before stop changes them;
+        # no filesystem or ROS work may precede revocation/cancellation.
+        progress_state = {'started': progress.started, 'failed': progress.failed,
+                          'last_monotonic': progress.last}
         progress.stop()
         failure = type(exc).__name__ + ': ' + str(exc)
         records = [{'event': 'coordinator_failure', 'reason': failure,
@@ -481,6 +563,13 @@ def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_tex
             except Exception as cancel_error:
                 records.append({'event': 'independent_cancel_unconfirmed',
                     'reason': str(cancel_error), 'physical_stop_verified': False})
+        records.append(failure_diagnostics(guard_pipe, progress_state))
+        # Operator output is best effort and occurs after cancellation was
+        # attempted but before durable storage, which may block indefinitely.
+        try:
+            event_sink(failure_notice(records[-1]))
+        except Exception:
+            pass
         try:
             for row in records:
                 journal.write(json.dumps(row)+'\n')

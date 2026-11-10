@@ -1,5 +1,35 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Diagnóstico de pérdida de guardia — 10-11-2026
+
+**VERIFICADO EN TESTS LOCALES, no probado en Motion.** Tras el intento 731084,
+`GuardPipe` conserva en memoria un registro acotado de eventos de guardia y el
+primer `OPERATOR_ALERT`, sin incorporar E/S en el lector. Si llega EOF después
+de una alerta, se conserva el primer fallo. El coordinador captura de forma
+acotada ese motivo, eventos recientes, última muestra validada y estado de
+progreso/latido. Una vez intentada la cancelación, emite un resumen pequeño al
+operador antes de fsync del journal. La captura usa fallback si algún dato es
+inválido; no garantiza que todos los eventos o la razón existan o lleguen.
+
+Se ejecutaron 76 tests locales: lease/puente 30, coordinador 20, lanzador host
+4, arranque de streams 15 y comprobación pasiva 7. Auditoría independiente sin
+defecto nuevo inequívoco. No hubo una nueva consulta o movimiento del robot ni
+un `--check` real de estas fuentes; el efecto del diagnóstico durante un fallo
+real sigue PENDIENTE. stderr nativo de guardia continúa en `DEVNULL`; los datos
+de 731084 ya descartados no se recuperan y su causa sigue sin identificar.
+
+**Limitación abierta:** la secuencia anterior revoca el lease mediante
+`lease.fail()` antes de solicitar cancelación; esa operación incluye `fsync`
+síncrono. Si el disco se bloquea, la solicitud podría demorarse. No hay
+evidencia de que ese bloqueo ocurriera en 731084; el cambio de diagnóstico no
+altera ni prueba la secuencia de control. Una cancelación, respuesta o muestra
+de reposo no certifica distancia de frenado. El XML y marker de 731084 siguen
+retenidos; no repetir, enviar HOME ni limpiarlos automáticamente. No se ha
+habilitado SmolVLA físico.
+
+Fuentes versionadas, hashes exactos, backup selectivo y límites adicionales:
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-guard-diagnostics-20261110).
+
 ## Intento supervisado interrumpido 731084 — 10-11-2026
 
 **OBSERVADO: acción aceptada y luego estado cancelado; éxito de tarea y causa

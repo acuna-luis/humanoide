@@ -1,5 +1,16 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-GUARD-DIAGNOSTICS-20261110: diagnóstico local
+preparado.** La guardia conserva el primer aviso y eventos recientes para
+registrarlos y emitir un resumen después del intento de cancelación. Pasan
+76 tests locales; no se ha probado este cambio en Motion. stderr de guardia
+sigue descartándose y la causa del intento 731084 sigue sin identificar. El
+lease se revoca con `fsync` síncrono antes de cancelar y una escritura
+bloqueada podría retrasar la solicitud; no consta que ocurriera aquí. Sin
+nuevo movimiento: XML y marker de 731084 permanecen.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#diagnóstico-de-pérdida-de-guardia--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-guard-diagnostics-20261110).
+
 **10-11-2026 — ARM-PICO-ATTEMPT-731084-20261110: muñeca movida, ensayo
 interrumpido.** Motion aceptó una tarea estática de muñeca y el supervisor
 perdió la guardia; Motion registró una solicitud de cancelación y el estado

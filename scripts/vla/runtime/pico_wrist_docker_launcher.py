@@ -373,6 +373,9 @@ def launch(payload, *, verified_provenance=None):
         app, ros = discover_containers()
         directory = tempfile.mkdtemp(prefix='pico-wrist-live-', dir='/tmp')
         verify_shared_tmp(directory, app)
+        # Do not attach stderr to potentially blocking storage. Structured
+        # guard fault events are retained by GuardPipe; native stderr remains
+        # unavailable until an independently safe drain exists.
         child = _track_stream_start('guard', uncertain_children, output,
             ros, '/opt/ros/humble/setup.bash', payload['guard_source'], session,
             stderr=subprocess.DEVNULL,
@@ -384,6 +387,14 @@ def launch(payload, *, verified_provenance=None):
         now = time.monotonic()
         pipe = bridge.GuardPipe(child, lease, now-session['age_at_handoff_s'],
                                 enable_guard_heartbeat=True)
+        # Read only plain process/heartbeat state when the coordinator records
+        # a failure after attempting cancellation. Never perform ROS I/O here.
+        pipe.status_diagnostics = lambda: {
+            'guard_process_returncode': child.poll(),
+            'pc_heartbeat_failure': pc.failure,
+            'pc_heartbeat_last_monotonic': pc.last,
+            'operator_output_failed': output.failed,
+        }
         def start_worker(lease_path, intent_path, intent_uid):
             request = {'manifest': payload['manifest'], 'urdf_text': payload['urdf_text'],
                        'transmissions_text': payload['transmissions_text'], 'lease_path': str(lease_path),

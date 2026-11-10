@@ -1,5 +1,20 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-GUARD-DIAGNOSTICS-20261110
+
+**10-11-2026, Europe/Madrid — VERIFICADO EN TESTS LOCALES; SIN NUEVA
+CONSULTA NI MOVIMIENTO.** La causa de `guard_lost_during_trial` de la sesión
+731084 sigue pendiente; el XML y marker de ese intento permanecen en Motion.
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo y destino | PC, fuentes de `scripts/vla/`: conservar el motivo y eventos de guardia que antes se reducían a un mensaje genérico, y presentar evidencia acotada al operador sin añadir E/S en el lector de guardia. No se modifica el SDK ni software instalado del robot. |
+| Fuentes | `arm_native_lease_bridge.py` SHA256 `cbb71d9171c2f1375c158f532961fd5dd61e846333b40fd00c15ed0498195c18`; `runtime/pico_wrist_native_coordinator.py` `91acdfb096a30ed0d9a0e792826bcb9a7854f29f297dad489f65ece9ced5c981`; `runtime/pico_wrist_docker_launcher.py` `1b48349e32ebe9dafc81743cdae1f6089914b4e4df261ba3cfd97b7252a83c0b`; tests `test_arm_native_lease_bridge.py` y `test_pico_wrist_native_coordinator.py`. Cambiar fuentes invalida bindings anteriores que las incluyan. |
+| Comportamiento | El lector guarda en memoria el primer `OPERATOR_ALERT` y eventos recientes acotados; preserva el primer fallo si llega EOF posterior. El coordinador toma un snapshot de la última muestra validada, estado de guardia/progreso y latido, con límites de tamaño y fallback. Después de intentar cancelar, emite aviso resumido antes del fsync del journal. La ausencia de un evento no demuestra que no ocurriera, ni que el actuador se detuviera. El stderr nativo de la guardia sigue en `DEVNULL`. |
+| Verificación | Pasan 76 tests locales: `test_arm_native_lease_bridge.py` 30, `test_pico_wrist_native_coordinator.py` 20, `test_pico_wrist_docker_launcher.py` 4, `test_pico_wrist_stream_start.py` 15 y `test_check_pico_wrist_full_passive.py` 7. Auditoría independiente sin defecto nuevo inequívoco. No se ha hecho `--check` en el robot con estas fuentes ni se han probado guardia/cancelación físicas. |
+| Reversión y evidencia | Backup de las cinco fuentes/tests anteriores al cambio desde `0d76e50`: `../Humanoide-vla-evidence/ARM_PICO_GUARD_DIAGNOSTICS_20261110/before-0d76e50.tar`, SHA256 `ab05abfeccdd3daf319744cd18bf493e4eb7d013893fc45e8658bdbf80d57208`. Backup de cuatro documentos en el estado previo, incluidos cambios ajenos no comprometidos: `../Humanoide-vla-evidence/PICO_NATIVE_WRIST_TRIAL/run-731084b3e4f94527a37de07297724bf1/before-guard-diagnostics-docs.tar`, SHA256 `cdfecd26e5d43ec90ecd0f0141b101e4c34d693c194869c2741eee7e6cf6941c`. Revertir selectivamente preservando trabajo posterior y ajeno. |
+| Deuda | El stderr de guardia se descarta; no se conocen detalles perdidos de la prueba original. `lease.fail()` ejecuta fsync síncrono antes de pedir cancelación: una operación de disco bloqueada podría retrasar esa solicitud; no está demostrado que ocurriera en 731084. No se cambió la secuencia de control. No reintentar ni enviar HOME, y no retirar marker/XML sin procedimiento de recuperación específico; no se habilita el VLA físico. |
+
 ## ARM-PICO-ATTEMPT-731084-20261110
 
 **10-11-2026, Europe/Madrid — ENSAYO FÍSICO INTERRUMPIDO; acción observada

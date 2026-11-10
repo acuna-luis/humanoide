@@ -1,5 +1,14 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-GUARD-DIAGNOSTICS-20261110.** Preparado diagnóstico
+de la primera alerta y eventos recientes de guardia para el journal y un aviso
+resumido tras solicitar cancelación; 76 tests locales pasan, sin check en
+Motion. stderr de guardia sigue descartado y la causa de 731084 permanece
+desconocida. El `fsync` de revocación previo a cancelar podría retrasar el
+pedido si disco se bloquea; no se sabe si ocurrió. Sin movimiento nuevo ni
+retiro del marker/XML; VLA físico pendiente.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#diagnóstico-de-pérdida-de-guardia--10-11-2026).
+
 **10-11-2026 — ARM-PICO-ATTEMPT-731084-20261110.** Una tarea nativa de
 muñeca fue aceptada y el supervisor perdió la guardia; Motion registró una
 solicitud de cancelación y el mismo UUID aparece cancelado. La muñeca cambió +0,009875001 rad y el codo derecho

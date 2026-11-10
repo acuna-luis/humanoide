@@ -8,6 +8,7 @@ import sys
 import tempfile
 import threading
 import time
+import types
 import unittest
 from unittest.mock import patch
 
@@ -155,6 +156,42 @@ raise SystemExit(rc)
 
 
 class CoordinatorTests(unittest.TestCase):
+    def test_concurrent_guard_event_copy_failure_preserves_first_alert(self):
+        class ChangedHistory:
+            def __iter__(self):
+                raise RuntimeError('deque mutated during iteration')
+        def host_failed():
+            raise OSError('host status unavailable')
+        guard = types.SimpleNamespace(
+            failure='guard_reported:OPERATOR_ALERT', channel_failed=False,
+            auto_cancel_requested=True, guard_events=ChangedHistory(),
+            first_guard_fault={'event':'OPERATOR_ALERT','reason':'source_stale_or_future:body'},
+            latest=None, status_diagnostics=host_failed)
+        result = coordinator.failure_diagnostics(guard, {'started':True})
+        self.assertEqual(result['failure'], 'guard_reported:OPERATOR_ALERT')
+        self.assertEqual(result['first_guard_fault']['reason'], 'source_stale_or_future:body')
+        self.assertIn('deque mutated', result['guard_events_error'])
+        self.assertIn('host status unavailable', result['host_liveness_error'])
+
+    def test_oversized_snapshot_retains_first_guard_cause(self):
+        guard = types.SimpleNamespace(
+            failure='guard_reported:OPERATOR_ALERT', first_guard_fault={'reason':'unsafe_joint'},
+            guard_events=[{'reason':'x'*512} for _ in range(100)], latest=None)
+        result = coordinator.failure_diagnostics(guard, {})
+        self.assertEqual(result['first_guard_fault']['reason'], 'unsafe_joint')
+        self.assertEqual(result['failure'], 'guard_reported:OPERATOR_ALERT')
+        self.assertIn('guard_diagnostics_too_large', result['diagnostic_error'])
+
+    def test_operator_notice_fits_even_when_unicode_escapes_expand(self):
+        long_unicode = '\U0001f9ef' * 1000
+        notice = coordinator.failure_notice({
+            'failure':long_unicode, 'reason':long_unicode,
+            'first_guard_fault':{'reason':long_unicode},
+            'host_liveness':{'pc_heartbeat_failure':long_unicode}})
+        self.assertLess(len(json.dumps(notice, separators=(',', ':')).encode('utf-8')), 4096)
+        self.assertEqual(notice['guard_reason'], long_unicode[:64])
+        self.assertFalse(notice['physical_stop_verified'])
+
     def test_real_worker_pc_loss_after_dispatch_cancels_exact_uuid(self):
         manifest = prep.prepare(state(), urdf(), transmissions())
         with tempfile.TemporaryDirectory() as directory:
@@ -163,6 +200,7 @@ class CoordinatorTests(unittest.TestCase):
             lease = bridge.GuardLease(directory, manifest['input']['reference_20d'], lambda: True)
             guard = FakeGuard(lease)
             processes = []
+            notices = []
             def spawn(path, intent, uid):
                 child = real_worker_with_fake_transport(manifest, path, intent, uid, lease.session_id, 'hang')
                 processes.append(child)
@@ -170,6 +208,18 @@ class CoordinatorTests(unittest.TestCase):
             def event_sink(row):
                 if row.get('event') == 'dispatched':
                     guard.failure = 'simulated_pc_liveness_lost'
+                    guard.first_guard_fault = {'event':'OPERATOR_ALERT',
+                        'reason':'source_stale_or_future:body', 'physical_stop_confirmed':False}
+                    guard.guard_events = [{'event':'UNRESOLVED_MONITORING','reason':'x'*512}
+                                          for _ in range(16)]
+                    guard.status_diagnostics = lambda: {'pc_heartbeat_failure':'simulated_failure'}
+                if row.get('event') == 'guard_diagnostic_alert':
+                    # The safety attempt precedes the nonblocking operator
+                    # alert; durable failure records have not yet been written.
+                    self.assertEqual(guard.cancelled, [GOAL])
+                    journal = control/('worker-events-'+lease.session_id+'.jsonl')
+                    self.assertNotIn('coordinator_failure', journal.read_text())
+                    notices.append(row)
                 return True
             try:
                 with patch.object(coordinator, 'GLOBAL_RECEIPT_DIR', control):
@@ -179,6 +229,19 @@ class CoordinatorTests(unittest.TestCase):
                             verified_provenance=('host', lease.session_id, 'b'*64, 'c'*64))
                 self.assertEqual(guard.cancelled, [GOAL])
                 self.assertTrue(lease.failed)
+                rows = [json.loads(line) for line in
+                        (control/('worker-events-'+lease.session_id+'.jsonl')).read_text().splitlines()]
+                names = [row.get('event') for row in rows]
+                self.assertLess(names.index('independent_cancel_requested'), names.index('guard_diagnostics'))
+                diagnostic = next(row for row in rows if row.get('event') == 'guard_diagnostics')
+                self.assertEqual(diagnostic['failure'], 'simulated_pc_liveness_lost')
+                self.assertEqual(diagnostic['first_guard_fault']['reason'], 'source_stale_or_future:body')
+                self.assertEqual(diagnostic['host_liveness']['pc_heartbeat_failure'], 'simulated_failure')
+                self.assertFalse(diagnostic['physical_stop_verified'])
+                self.assertEqual(len(diagnostic['recent_guard_events']), 16)
+                self.assertEqual(len(notices), 1)
+                self.assertLess(len(json.dumps(notices[0]).encode()), 4096)
+                self.assertEqual(notices[0]['guard_reason'], 'source_stale_or_future:body')
             finally:
                 guard.close()
                 for process in processes:
@@ -404,9 +467,10 @@ class CoordinatorTests(unittest.TestCase):
                     self.assertEqual(guard.cancelled, [])
                 else:
                     self.assertIn('coordinator_failure', [x['event'] for x in events])
-                    self.assertEqual(events[-1]['event'], 'independent_cancel_requested')
+                    self.assertEqual(events[-2]['event'], 'independent_cancel_requested')
+                    self.assertEqual(events[-1]['event'], 'guard_diagnostics')
                     self.assertEqual(guard.cancelled, [GOAL])
-                    self.assertFalse(events[-1]['physical_stop_verified'])
+                    self.assertFalse(events[-2]['physical_stop_verified'])
                     if mode == 'crash_disk':
                         self.assertIn('lease_revocation_failed', [x['event'] for x in events])
             finally:
