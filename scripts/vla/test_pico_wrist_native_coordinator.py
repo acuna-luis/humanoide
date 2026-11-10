@@ -66,6 +66,13 @@ class FakeGuard:
         self.cancelled.append(goal_id)
         return {'goal_id':goal_id, 'request_sent':True, 'physical_stop_verified':False}
 
+    def prepare_normal_shutdown(self):
+        with self.lease.lock:
+            if self.failure or self.lease.failed or not self.lease.guard_alive():
+                raise RuntimeError('fake_guard_unhealthy_at_shutdown')
+            self.stop_event.set()
+            self.lease.fail()
+
     def close(self):
         self.stop_event.set(); self.thread.join(2)
 

@@ -77,6 +77,7 @@ HEAD_PITCH_SPEED_RAD_S = .5
 HEAD_YAW_SPEED_RAD_S = .1
 SAMPLE_AGE_S = .5
 STOP_AGE_S = 6.0
+SUPERVISOR_HEARTBEAT_TIMEOUT_S = .6
 TASK = 'move_components_json'
 ACTIVE_STATUSES = frozenset((1, 2, 3))
 TASK_SHA = 'bfcfc097dfefb3e81fcb2acc913d7db55545b3ea3b853b345b9ba1836c01b797'
@@ -162,6 +163,28 @@ def physical_release_gate():
     # The safety review remains open. Never infer a release from a user flag,
     # a successful dry run, a candidate corridor or a ROS action response.
     raise RuntimeError('physical_dispatch_blocked_unqualified_arm_stop_and_trajectory')
+
+
+class SupervisorHeartbeat:
+    """Motion-local watchdog for one supervisor; a timeout is not a stop."""
+    def __init__(self, session_id, guard_id):
+        self.session_id, self.guard_id = session_id, guard_id
+        self.sequence, self.last = -1, None
+
+    def accept(self, command, now):
+        if (not isinstance(command, dict) or set(command) != {'event', 'session_id', 'guard_id', 'sequence'}
+                or command['event'] != 'supervisor_heartbeat'
+                or command['session_id'] != self.session_id or command['guard_id'] != self.guard_id
+                or type(command['sequence']) is not int or command['sequence'] != self.sequence + 1
+                or type(now) not in (int, float) or not math.isfinite(now)
+                or (self.last is not None and now < self.last)):
+            raise ValueError('invalid_supervisor_heartbeat')
+        self.sequence, self.last = command['sequence'], now
+
+    def require_fresh(self, now):
+        if (self.last is None or type(now) not in (int, float) or not math.isfinite(now)
+                or not 0 <= now - self.last <= SUPERVISOR_HEARTBEAT_TIMEOUT_S):
+            raise ValueError('supervisor_heartbeat_expired')
 
 
 def motion_result_ok(response):
@@ -489,12 +512,15 @@ def main(preflight, *, dry_run, monitor_only=False, guard_can_cancel=False):
             guard_fault_at = None
             guard_still_since = None
             guard_last_reminder = 0.0
+            supervisor = SupervisorHeartbeat(preflight['session_id'], uuid_bytes.hex())
             while True:
                 try:
                     rclpy.spin_once(node, timeout_sec=.01)
                     if guard_fault is None:
                         if guard_can_cancel and not uuid_cancel_client.service_is_ready():
                             raise ValueError('cancel_service_unavailable')
+                        if guard_can_cancel and state['own'] is not None:
+                            supervisor.require_fresh(time.monotonic())
                         checked(initial)
                 except Exception as exc:
                     if not guard_can_cancel or state['own'] is None:
@@ -588,7 +614,20 @@ def main(preflight, *, dry_run, monitor_only=False, guard_can_cancel=False):
                         command = json.loads(line)
                         if not isinstance(command, dict):
                             raise ValueError('invalid_guard_command')
+                        if command.get('event') == 'supervisor_heartbeat':
+                            if not guard_can_cancel:
+                                raise ValueError('heartbeat_requires_cancel_mode')
+                            supervisor.accept(command, time.monotonic())
+                            continue
                         if command == {'event': 'stop_guard', 'session_id': preflight['session_id']}:
+                            # After a UUID is handed off, never leave a live
+                            # goal unmonitored merely because the host asks.
+                            # Terminal status plus sampled rest are observations,
+                            # not evidence of braking distance or future rest.
+                            if (guard_can_cancel and state['own'] is not None and
+                                    (own_status(state['statuses'], state['own']) not in (4, 5, 6)
+                                     or not observed_standstill())):
+                                raise ValueError('guard_stop_without_terminal_and_still')
                             emit('ARM_GUARD_STOPPED', movement_commands=0,
                                  physical_stop_confirmed=False)
                             return 0
@@ -631,6 +670,8 @@ def main(preflight, *, dry_run, monitor_only=False, guard_can_cancel=False):
                         checked(initial)
                         if guard_can_cancel and not uuid_cancel_client.service_is_ready():
                             raise ValueError('cancel_service_unavailable')
+                        if guard_can_cancel:
+                            supervisor.require_fresh(time.monotonic())
                         state['own'] = uuid.UUID(command['goal_id']).bytes
                         emit('goal_uuid_ready', session_id=command['session_id'],
                              guard_id=command['guard_id'], goal_id=command['goal_id'],

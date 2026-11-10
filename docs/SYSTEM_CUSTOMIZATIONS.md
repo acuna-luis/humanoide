@@ -1,5 +1,33 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-GUARD-HEARTBEAT-20261110
+
+**10-11-2026, Europe/Madrid — corrección local comprobada en simulación y
+check pasivo.** El gate
+físico sigue cerrado; no se envió ninguna meta ni se movió el robot.
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo y destino | Árbol PC `scripts/vla/`: vigilar latido del supervisor en el modo de guardia con cancelación y evitar dar por cerrado un monitor sin confirmación. No se modificó configuración remota. |
+| Fuentes del check | Según `sources-sha256.json` del check: `arm_from_pico_supervised` SHA256 `8e666a23d28c977a250913158d2eda2a3501d8a897bc1ec2daf708b1a8cf7bad`; `arm_native_lease_bridge` `29aa9109f4c05c857a8d66b36c8b55498f104f2c3173d78685c12156f6501450`; `pico_wrist_native_coordinator` `63fb4135f08582eb8f80dba7b8c24d0932b5113f80f7b1ff60448f99172a2bff`; `pico_wrist_docker_launcher` `4efb739b3b264b7869470231de5ec5acd4e6920b5dbc8e790a03dec42d194cd5`. El archivo de hashes completo tiene SHA256 `4cba8889f1ea86240fda7388ed08c51c2155bcc5441629330e123ed53901f04b`. No asumir que posteriores fuentes son idénticas. |
+| Verificación y limitación | 89 tests de una versión en desarrollo: 23 guardia, 26 lease/puente, 15 coordinador, 3 docker launcher, 17 lanzador PC y 5 admisión. `../Humanoide-vla-evidence/PICO_FULL_PASSIVE_CHECK/check-429a4a835ee14e25ab8f0800c8ca091c/` pasó con `guard_can_cancel=False`, sin goals; `stdout.jsonl` SHA256 `f820c0d9eb09730029f3535deecfbb83bf110ed445885e63615031c8d4f7cc4d`. El check no prueba el latido activo, envío de cancelación ni parada física. |
+| Reversión | Backup de las siete fuentes y tests previos del commit `ed9f7fc` en `../Humanoide-vla-evidence/ARM_PICO_GUARD_HEARTBEAT_20261110/before-ed9f7fc.tar`, SHA256 `56459d4b832abd390b217444fdd32fbe1b7d6ae2027971afd34a5b8adc6333af`; reversión selectiva con cuidado de preservar trabajo posterior y ajeno. Sin configuración remota persistente que restaurar. |
+| Deuda | La habilitación de muñeca sigue sin implementar: falta vincular al despacho los bytes efectivamente cargados y la sesión, no sólo comparar archivos después de importar. Un borrador de dicha vinculación se retiró por comprobar el bundle después de ejecutar su inicialización. Probar cuando corresponda el circuito efectivo de latido, respuesta a fallo, parada y condiciones físicas; no asumir frenado por cancelación. |
+
+## SMOLVLA-ARMTASK-ARGS-STATIC-20261110
+
+**10-11-2026, Europe/Madrid — OBSERVADO por lectura y VERIFICADO por análisis
+estático; ejecución dinámica PENDIENTE.** No hubo metas, movimiento, cambios
+remotos, instalación ni recarga. Este hallazgo no habilita el VLA físico.
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo y destino | Determinar el paso de `ArmTask.yaml_args` al blackboard de Motion; consultas de lectura en `walker-motion.manipulation_robot_app-1` y análisis de copias privadas en el PC. No se cambia configuración. |
+| Identidad | `robot_app` `/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app` SHA256 `fb77e863303d8964e9821bd9efadb2dba86807ed4ec265d56ec7bb1e39bdeff4`; `libuser_interfaces.so` `595d5f843900d9a1cd23e638dd90c95e55f3967a218752280af0d7c186bcdc0f`; `libmc_task_msgs.so` `a6307c253e024593c8f31d3c73bad9df2681beb5b481a2a79ad115483db61ea2`; `libmeta_move.so` `bfeab1c7a295b58cd96fddd20916fc3f7fe16bd8c8ad1e77720f48aad34ccc69`; IDL `ArmTask.action` `64ecf688b57d21ed5415721522f8d85f3a2981e31e43479c3fa7460e64351150`. |
+| Hallazgo y verificación | `HandleAccepted` copia dos strings del goal y fija estado 1; el bucle `robot_app` lee ambos, parsea el segundo como JSON y lo guarda con clave `task_json_args`. La IDL y el constructor identifican el segundo como `yaml_args`; MetaMove consulta esa clave. En `/proc/65/maps`, bibliotecas con inodes 4217087, 4219086 y 4215362 coinciden con `stat` de esas rutas, y `/proc/65/exe` con el hash del ejecutable. Observación puntual, no hash de memoria; detalles y offsets en [análisis](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#handoff-de-argumentos-armtask--10-11-2026). |
+| Evidencia y reversión | `../Humanoide-vla-evidence/MOTION_ROBOT_APP_ARG_HANDOFF_3344c4e217e8/` conserva copias de dos binarios, IDL, extractos, mapa del proceso y `SHA256SUMS`; `before-docs/` respalda los cuatro documentos anteriores, índice `before-docs.sha256` SHA256 `1f98a34f0ab07271718002d33a95535e2d0190b307c9001bbb211a567da77fe8`. Sin cambio remoto que revertir; las copias privadas pueden eliminarse selectivamente sin afectar al robot. |
+| Deuda | Aceptación y ejecución dinámica no probadas; orden efectivo de ejes, trayectoria, geometría v4, control exclusivo, frenado y mano pendientes. Comparar de nuevo los bytes y estado tras cambios o antes de una prueba física. |
+
 ## ARM-PICO-PREDISPATCH-SUPERVISION-20261110
 
 **10-11-2026, Europe/Madrid — cambios locales comprobados en simulación y
@@ -156,7 +184,7 @@ No se ordenaron movimientos, modos, controladores, instalación ni recarga.
 | Estado previo | Conversor vivo del commit `bd30c84`; genera XML estático sin ejecución. Las vías de brazo, mano y parada no están cualificadas. Elementos no seguidos preexistentes conservados. |
 | Hallazgo | Catálogo `/mc/action/list` anuncia `move_components_json` disponible para v4; XML Motion `.../config/move_components_json.xml` SHA256 `bfcfc097dfefb3e81fcb2acc913d7db55545b3ea3b853b345b9ba1836c01b797`. Biblioteca instalada `libmeta_move.so` `bfeab1c7a295b58cd96fddd20916fc3f7fe16bd8c8ad1e77720f48aad34ccc69`, igual a copia estática `../Humanoide-vla-evidence/20260914_MOTION_INTERNAL_CONTRAST/libmeta_move.so`. El XML activa `json_args`; el binario lee listas de componentes y matriz de objetivos del blackboard. `right_arm` figura en `cruzr_s2_robot_description.yaml`, sin demostrar configuración en memoria. |
 | Fuente y prueba | `scripts/vla/prepare_ball_native_arm_step.py` SHA256 `c3169832f292c2879c9996c85fd187ccab8a875c4548e9224426728824e84ca3`, test `5e8f9f828bcf5f402f4c9dda5a4dec4117ad14c5ffb0ad1522b6fa8f4c924eba`. Siete tests pasan; shadow previo `../Humanoide-vla-evidence/20261110_NATIVE_LIVE_3ndpJ8/shadow.jsonl` produce borrador para una fila de siete valores. `--run` bloqueado. [Receta y límites](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#tarea-dinámica-nativa-encontrada--10-11-2026). |
-| Deuda y reversión | `ArmTask.yaml_args`→blackboard, orden efectivo, carga, planificador, límites, supervisión, parada y mano permanecen sin calificar. No usar el borrador para control. Revertir selectivamente los cambios locales respecto a `bd30c84`; no hay cambios remotos que revertir. |
+| Deuda y reversión | El paso `ArmTask.yaml_args`→blackboard tiene evidencia estática posterior en `SMOLVLA-ARMTASK-ARGS-STATIC-20261110`; ejecución dinámica, orden efectivo, carga, planificador, límites, supervisión, parada y mano permanecen sin calificar. No usar el borrador para control. Revertir selectivamente los cambios locales respecto a `bd30c84`; no hay cambios remotos que revertir. |
 
 ## SMOLVLA-NATIVE-LIVE-20261110
 

@@ -195,9 +195,25 @@ class ArmActionTests(unittest.TestCase):
 
 
 class ContinuousGuardTests(unittest.TestCase):
+    def test_heartbeat_scope_sequence_and_expiry(self):
+        guard = arm.SupervisorHeartbeat('a'*32, 'b'*32)
+        with self.assertRaisesRegex(ValueError, 'expired'):
+            guard.require_fresh(1.0)
+        row = {'event':'supervisor_heartbeat', 'session_id':'a'*32,
+               'guard_id':'b'*32, 'sequence':0}
+        guard.accept(row, 1.0)
+        guard.require_fresh(1.1)
+        with self.assertRaisesRegex(ValueError, 'invalid_supervisor'):
+            guard.accept(row, 1.2)
+        with self.assertRaisesRegex(ValueError, 'invalid_supervisor'):
+            guard.accept(dict(row, session_id='c'*32, sequence=1), 1.2)
+        guard.accept(dict(row, sequence=1), 1.2)
+        with self.assertRaisesRegex(ValueError, 'expired'):
+            guard.require_fresh(1.2 + arm.SUPERVISOR_HEARTBEAT_TIMEOUT_S + .01)
+
     def simulate_guard(self, scenario):
         fake = FakeArmRun('success')
-        faults = ('guard_estop', 'guard_stale', 'guard_stdout', 'guard_eof', 'guard_badjson', 'guard_ros_error', 'cancel_unknown_then_active')
+        faults = ('guard_estop', 'guard_stale', 'guard_stdout', 'guard_eof', 'guard_badjson', 'guard_ros_error', 'cancel_unknown_then_active', 'supervisor_timeout', 'guard_stop_early')
         if scenario in ('cancel', 'cancel_disabled') + faults:
             fake.goal_id = list(uuid.UUID('12345678-1234-1234-1234-123456789abc').bytes)
         original_spin = fake.spin
@@ -216,7 +232,7 @@ class ContinuousGuardTests(unittest.TestCase):
                     fake.subs['/mc/whole_joint_states'] = lambda message: None
             if fake.cancelled and hasattr(fake, 'saved_body_callback'):
                 fake.subs['/mc/whole_joint_states'] = fake.saved_body_callback
-            if fake.cancelled and scenario in faults:
+            if fake.cancelled and scenario in faults + ('cancel',):
                 status = types.SimpleNamespace(status=5, goal_info=types.SimpleNamespace(
                     goal_id=types.SimpleNamespace(uuid=fake.goal_id)))
                 fake.subs['/mc/manipulation/action/_action/status'](types.SimpleNamespace(status_list=[status]))
@@ -247,6 +263,10 @@ class ContinuousGuardTests(unittest.TestCase):
                        'guard_id': guard['goal_uuid'], 'goal_id': '12345678-1234-1234-1234-123456789abc',
                        'challenge': 'c'*32}
             if read_count == 2 or scenario == 'duplicate':
+                if read_count == 2 and scenario in ('cancel',) + faults:
+                    heartbeat = {'event':'supervisor_heartbeat', 'session_id':'a'*32,
+                                 'guard_id':guard['goal_uuid'], 'sequence':0}
+                    return (json.dumps(heartbeat)+'\n'+json.dumps(command)+'\n').encode()
                 return (json.dumps(command)+'\n').encode()
             if read_count == 3 and scenario in ('guard_eof', 'cancel_unknown_then_active'): return b''
             if read_count == 3 and scenario == 'guard_badjson': return b'{bad json}\n'
@@ -255,7 +275,7 @@ class ContinuousGuardTests(unittest.TestCase):
                         'goal_id':command['goal_id'], 'challenge':'e'*32})+'\n').encode()
             return (json.dumps({'event':'stop_guard', 'session_id':'a'*32})+'\n').encode()
         def select_input(r, w, x, timeout):
-            if (scenario in ('guard_stale', 'guard_stdout', 'guard_estop', 'guard_ros_error')
+            if (scenario in ('guard_stale', 'guard_stdout', 'guard_estop', 'guard_ros_error', 'supervisor_timeout')
                     and any(e['event'] == 'goal_uuid_ready' for e in fake.emitted)):
                 return ([], [], [])
             return (r, [], [])
@@ -316,6 +336,19 @@ class ContinuousGuardTests(unittest.TestCase):
                     arm.main(session, dry_run=True, monitor_only=True)
         self.assertEqual(fake.send_count, 0)
         return fake.emitted
+
+    def test_supervisor_timeout_cancels_exact_handshaken_uuid(self):
+        events = self.simulate_guard('supervisor_timeout')
+        alert = next(row for row in events if row['event'] == 'OPERATOR_ALERT')
+        self.assertIn('supervisor_heartbeat_expired', alert['reason'])
+        self.assertTrue(any(row['event'] == 'guard_auto_cancel_requested' for row in events))
+        self.assertFalse(alert['physical_stop_confirmed'])
+
+    def test_guard_refuses_stop_before_terminal_and_still(self):
+        events = self.simulate_guard('guard_stop_early')
+        alert = next(row for row in events if row['event'] == 'OPERATOR_ALERT')
+        self.assertIn('guard_stop_without_terminal_and_still', alert['reason'])
+        self.assertTrue(any(row['event'] == 'guard_auto_cancel_requested' for row in events))
 
     def test_guard_whitelists_one_uuid_then_stops_without_dispatch(self):
         events = self.simulate_guard('success')

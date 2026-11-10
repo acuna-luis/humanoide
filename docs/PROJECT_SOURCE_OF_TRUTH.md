@@ -1,5 +1,23 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-GUARD-HEARTBEAT-20261110: corrección de guardia
+comprobada localmente.** Se añadió un latido del supervisor y se reforzó el cierre
+cuando el estado de la guardia es incierto. En esta versión
+pasaron 89 tests y un check pasivo sin goal; éste no ejercita ni acredita el
+latido activo ni la cancelación física. El ejecutor sigue bloqueado: falta
+vincular los bytes efectivamente cargados a la sesión. Gate físico cerrado.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#latido-y-cierre-de-guardia--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-guard-heartbeat-20261110).
+
+**10-11-2026 — SMOLVLA-ARMTASK-ARGS-STATIC-20261110: enlace de argumentos
+analizado en binarios Motion.** Lecturas y desensamblado muestran que el
+servidor ArmTask copia `yaml_args`, que `robot_app` lo analiza como JSON y lo
+asigna a `task_json_args`; MetaMove consume esa clave. El proceso observado
+tenía mapeadas las bibliotecas revisadas. La correspondencia es estática, sin
+meta ni prueba dinámica de aceptación, trayectoria o parada. No se cambió ni
+movió el robot. [Detalle y receta](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#handoff-de-argumentos-armtask--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-armtask-args-static-20261110).
+
 **10-11-2026 — ARM-PICO-PREDISPATCH-SUPERVISION-20261110: cambios locales
 comprobados en simulación e integración pasiva.** El coordinador comprueba una
 muestra fresca e inmóvil de la guardia antes del ACK, conservando lease y

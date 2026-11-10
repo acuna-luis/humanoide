@@ -1,5 +1,96 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Latido y cierre de guardia — 10-11-2026
+
+**Estado: comprobación local completada; gate físico cerrado.** En el modo de
+guardia previsto para cancelar por UUID, el monitor incorpora un plazo de
+latido del supervisor, con identificación de sesión y secuencia. El puente
+emite el latido tras muestras válidas y mientras el lease sigue vigente. El
+cierre normal requiere observar estado terminal y reposo antes de aceptar el
+mensaje de parada de guardia; si la salida es incierta, se mantiene la
+advertencia y no se declara una parada física. Una solicitud de cancelación o
+una muestra inmóvil no certifica distancia de frenado.
+
+En esta versión pasaron 89 tests: `test_arm_from_pico_supervised`
+(23), `test_arm_native_lease_bridge` (26), `test_pico_wrist_native_coordinator`
+(15), `test_pico_wrist_docker_launcher` (3), `test_run_pico_wrist_native_trial`
+(17) y `test_pico_wrist_trial_admission` (5). El check integrado
+`check-429a4a835ee14e25ab8f0800c8ca091c` pasó PC→Motion con cero goals y
+`guard_can_cancel=False`: **no ejercita el latido activo, la cancelación ni la
+detención física**. Los hashes exactos de esa ejecución están en su
+`sources-sha256.json` y en la [ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-guard-heartbeat-20261110).
+
+La habilitación del ejecutor de muñeca sigue pendiente: el lanzador importa
+módulos antes de comprobar sus archivos; un borrador que verificaba el bundle
+después de ejecutar su inicialización fue retirado. Una solución debe vincular
+los bytes que se cargan con la sesión antes de permitir el despacho. No se ha instalado ni ejecutado tarea
+física ni SmolVLA. Las fuentes previas están respaldadas en
+`../Humanoide-vla-evidence/ARM_PICO_GUARD_HEARTBEAT_20261110/before-ed9f7fc.tar`.
+
+Para reproducir los tests, ejecutar `python3 -B -m unittest discover -s
+scripts/vla -p 'test_NOMBRE.py' -q` para cada archivo indicado. El check pasivo
+se ejecuta con `python3 -B scripts/vla/run_pico_wrist_native_trial.py --check`
+y las rutas `--manifest`, `--urdf` y `--transmissions` de la preparación
+`../Humanoide-vla-evidence/PICO_WRIST_PREP_20261110T103237Z_078897/`.
+Esas pruebas no habilitan la salida física.
+
+## Handoff de argumentos ArmTask — 10-11-2026
+
+**VERIFICADO ESTÁTICAMENTE, no probado mediante envío de meta.** El proceso
+`robot_app` y sus bibliotecas se leyeron desde el contenedor Motion
+`walker-motion.manipulation_robot_app-1`, sin escribir en el robot, crear un
+goal o moverlo. La IDL actual `ArmTask.action` (SHA256
+`64ecf688b57d21ed5415721522f8d85f3a2981e31e43479c3fa7460e64351150`)
+declara dos strings: `task_name` y `yaml_args` con JSON. La fuente generada
+`ArmTask.cxx` (SHA256
+`1af37bdf750595219476602de7b1bfefb8a3710816b0cbd80fac1c9abb4e87be`)
+y el copy constructor compilado de `libmc_task_msgs.so` SHA256
+`a6307c253e024593c8f31d3c73bad9df2681beb5b481a2a79ad115483db61ea2`,
+offsets `0x217860–0x2178b7`, sitúan el segundo string en desplazamiento `0x20`.
+
+En `libuser_interfaces.so` SHA256
+`595d5f843900d9a1cd23e638dd90c95e55f3967a218752280af0d7c186bcdc0f`,
+`UserInterfacesClient::HandleAccepted` offsets `0x3a948–0x3a9b4` copia los
+strings del goal a los offsets `0` y `0x20` del cliente y fija su estado a 1.
+En `robot_app` SHA256
+`fb77e863303d8964e9821bd9efadb2dba86807ed4ec265d56ec7bb1e39bdeff4`,
+`main::{lambda()#6}` comprueba ese estado en `0x5ad38–0x5ad45`, copia el
+segundo string en `0x5c401–0x5c452`, lo analiza con el parser JSON en
+`0x5c64e`, conserva el resultado en `0x5c6c7–0x5c6ff` y llama a
+`Blackboard::set` con la clave `task_json_args` en `0x5ca34–0x5ca57`.
+El `libmeta_move.so` con hash `bfeab1c7a295b58cd96fddd20916fc3f7fe16bd8c8ad1e77720f48aad34ccc69`
+lee esa clave y los campos `component_names`, `goals`, `mode`, `durations`.
+Esto relaciona estáticamente la entrada del goal con la lectura de MetaMove;
+no demuestra que el formato concreto se acepte o se ejecute correctamente.
+
+En la observación del 10-11 a las 11:35:57 UTC el PID 65 dentro del contenedor
+tenía `/proc/65/exe` con el hash anterior y mostraba en `/proc/65/maps` las
+tres bibliotecas con inodes 4217087, 4219086 y 4215362, coincidentes con las
+rutas y hashes de disco. Esto vincula las rutas al proceso en ese momento; no
+es un hash de páginas en RAM ni acredita configuración dinámica. Los extractos
+y `process-map-snapshot.json` están en
+`../Humanoide-vla-evidence/MOTION_ROBOT_APP_ARG_HANDOFF_3344c4e217e8/`, con
+`SHA256SUMS`. Las copias `robot_app` y `libuser_interfaces.so` se comprobaron
+contra sus hashes remotos; el constructor de `libmc_task_msgs.so` se extrajo
+por lectura remota y se asoció al hash observado, sin copia completa de esa
+biblioteca. El respaldo de documentos anteriores está en `before-docs/`.
+
+Receta de lectura: desde la raíz usar `collect_estop_available_readonly.execute`
+para descubrir `docker ps`, y en el contenedor redescubierto leer `sha256sum`
+y `base64 -w0` de `robot_app` y `libuser_interfaces.so`; decodificar en una
+carpeta privada y comparar hash antes de analizar. Leer `ArmTask.action` y el
+constructor en `.../mc_task_msgs/share/mc_task_msgs/src/mc_task_msgs/action/ArmTask.cxx`.
+Sobre las copias ejecutar `objdump -d -C` para los intervalos anteriores;
+el constructor de `libmc_task_msgs.so` se puede leer con el mismo `objdump`
+en el contenedor. Para proceso, comparar `/proc/<pid>/exe` y
+`/proc/<pid>/maps` con `stat` y SHA256 de las rutas; `process-map-snapshot.json`
+conserva la consulta concreta. Son sólo lecturas: no llamar a los servicios de
+ejecución durante esta investigación.
+
+Siguen pendientes la aceptación dinámica, orden efectivo de las siete juntas,
+trayectoria, geometría v4, exclusividad, frenado y mando de mano. No se ha
+abierto el gate físico ni probado el ciclo de SmolVLA.
+
 ## Guardia previa y entrega incierta — 10-11-2026
 
 **Estado: comprobado en simulación y parcialmente en integración pasiva.** El ensayo
@@ -350,9 +441,10 @@ configurado y la carga efectiva del proceso no quedan demostrados por el archivo
 
 El conversor genera ahora `candidate_dynamic_task`: nombre de tarea y una
 hipótesis de argumentos para un solo brazo, con una fila de siete objetivos,
-modo 0 y duración experimental. Es un **borrador**, no un ejecutor: faltan
-demostrar el paso de `ArmTask.yaml_args` al blackboard en esta ruta, la
-identidad/carga efectiva de la tarea, la semántica y trayectorias del
+modo 0 y duración experimental. Es un **borrador**, no un ejecutor: el paso de
+`ArmTask.yaml_args` al blackboard tiene evidencia estática posterior, pero
+faltan demostrarlo dinámicamente, la identidad/carga efectiva de la tarea y la
+semántica y trayectorias del
 planificador, límites, control exclusivo y parada. No se envía la tarea, no se
 instala ni recarga nada, y `--run` continúa bloqueado. El catálogo por sí solo
 no prueba carga o efecto físico. La consulta del catálogo se reproduce con la

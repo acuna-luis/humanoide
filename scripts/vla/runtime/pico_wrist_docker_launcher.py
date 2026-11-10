@@ -265,6 +265,26 @@ def _observe_uncertain_child(child, output, role, phase):
             time.sleep(.1)
 
 
+def _observe_uncertain_guard_exit(child, output):
+    """Keep the process alive on uncertain guard shutdown; its reader owns stdout."""
+    notice = float('-inf')
+    while True:
+        try:
+            rc = child.poll()
+            if rc is not None:
+                return rc
+            now = time.monotonic()
+            if now - notice >= 5:
+                output.emit({'event':'UNRESOLVED_MONITORING', 'role':'guard',
+                             'reason':'guard_shutdown_unconfirmed', 'no_retry':True,
+                             'physical_stop_confirmed':False})
+                notice = now
+            time.sleep(.1)
+        except (KeyboardInterrupt, OSError):
+            output.emit({'event':'OPERATOR_ALERT', 'reason':'guard_shutdown_unconfirmed',
+                         'no_retry':True, 'physical_stop_confirmed':False})
+
+
 def pc_preflight_handoff(session, output, input_fd):
     """Bound PC-to-Motion preflight age without comparing host clocks."""
     challenge = uuid.uuid4().hex
@@ -329,7 +349,8 @@ def launch(payload):
                                   lambda: child.poll() is None and pc.alive() and not output.failed,
                                   session_id=session['session_id'])
         now = time.monotonic()
-        pipe = bridge.GuardPipe(child, lease, now-session['age_at_handoff_s'])
+        pipe = bridge.GuardPipe(child, lease, now-session['age_at_handoff_s'],
+                                enable_guard_heartbeat=True)
         def start_worker(lease_path, intent_path, intent_uid):
             request = {'manifest': payload['manifest'], 'urdf_text': payload['urdf_text'],
                        'transmissions_text': payload['transmissions_text'], 'lease_path': str(lease_path),
@@ -360,14 +381,29 @@ def launch(payload):
         # do not signal a worker, resend, or mistake exit for physical stop.
         for role, phase, uncertain_child in uncertain_children:
             _observe_uncertain_child(uncertain_child, output, role, phase)
-        if completed and pipe is not None:
-            pipe.stop()
-        if completed and child is not None:
-            try: child.wait(timeout=3)
-            except subprocess.TimeoutExpired: pass
-        if pc is not None:
-            pc.close()
-        os.close(lock_fd)
+        shutdown_failure = None
+        try:
+            if completed and pipe is not None and not pipe.stop():
+                output.emit({'event':'OPERATOR_ALERT', 'reason':'guard_stop_unconfirmed',
+                             'no_retry':True, 'physical_stop_confirmed':False})
+                _observe_uncertain_guard_exit(child, output)
+                shutdown_failure = 'guard_stop_unconfirmed'
+            if completed and child is not None and shutdown_failure is None:
+                try: rc = child.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    output.emit({'event':'OPERATOR_ALERT', 'reason':'guard_exit_unconfirmed',
+                                 'no_retry':True, 'physical_stop_confirmed':False})
+                    _observe_uncertain_guard_exit(child, output)
+                    shutdown_failure = 'guard_exit_unconfirmed'
+                else:
+                    if rc != 0:
+                        shutdown_failure = 'guard_exit_failed'
+        finally:
+            if pc is not None:
+                pc.close()
+            os.close(lock_fd)
+        if shutdown_failure:
+            raise RuntimeError(shutdown_failure)
 
 
 if __name__ == '__main__':

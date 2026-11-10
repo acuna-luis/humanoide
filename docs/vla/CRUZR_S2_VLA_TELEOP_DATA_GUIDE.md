@@ -1,5 +1,17 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-GUARD-HEARTBEAT-20261110.** Se preparó latido y
+cierre vigilado; 89 tests locales y un check pasivo pasan.
+El check no prueba latido activo ni cancelación física; el ejecutor sigue en
+implementación y permanece bloqueado. Gate cerrado.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#latido-y-cierre-de-guardia--10-11-2026).
+
+**10-11-2026 — SMOLVLA-ARMTASK-ARGS-STATIC-20261110.** Un análisis estático
+de los binarios Motion y sus mapeos vincula `ArmTask.yaml_args` al JSON del
+blackboard que lee MetaMove. La ejecución dinámica sigue sin probar; no se
+enviaron metas ni se habilitó el control físico.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#handoff-de-argumentos-armtask--10-11-2026).
+
 **10-11-2026 — ARM-PICO-PREDISPATCH-SUPERVISION-20261110.** Preparados cambios
 locales para comprobar la guardia antes del ACK y conservar la observación ante
 entrega o supervisión incierta. Tests locales y check pasivo pasan; gates

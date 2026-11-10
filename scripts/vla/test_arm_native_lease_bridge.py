@@ -164,6 +164,39 @@ class HandshakeTests(unittest.TestCase):
                 self.assertTrue(gate.failed)
                 self.assertIsNone(gate.goal_id)
 
+    def test_pc_or_coordinator_loss_during_ack_never_grants_send(self):
+        for failed in ('pc', 'coordinator'):
+            clock = box_tests.FakeClock(); clock.value = 10.0
+            live = {'pc': True, 'coordinator': True}
+            with self.subTest(failed=failed), tempfile.TemporaryDirectory() as directory:
+                gate = bridge.GuardLease(directory, dict(bridge.arm.BODY),
+                                         lambda: live['pc'] and live['coordinator'], clock=clock)
+                gate.heartbeat(telemetry(clock()))
+                def exchange(request, timeout):
+                    live[failed] = False
+                    return dict(request, event='goal_uuid_ready', goal_uuid=request['guard_id'], monotonic=clock())
+                with self.assertRaisesRegex(RuntimeError, 'uuid_handshake_failed'):
+                    gate.synchronize_uuid(box_tests.GOAL_ID, exchange)
+                self.assertTrue(gate.failed)
+                self.assertIsNone(gate.goal_id)
+
+    def test_supervisor_pulse_requires_live_pc_and_coordinator(self):
+        for failed in ('pc', 'coordinator'):
+            live = {'pc': True, 'coordinator': True}
+            pipe = object.__new__(bridge.GuardPipe)
+            pipe.lease = types.SimpleNamespace(session_id='a'*32, failed=False,
+                                               guard_alive=lambda: live['pc'] and live['coordinator'])
+            pipe.guard_id = 'b'*32
+            pipe.heartbeat_sequence = 0
+            rows = []
+            pipe._send = lambda row, deadline: rows.append(row)
+            pipe._send_guard_heartbeat()
+            self.assertEqual(rows[0]['sequence'], 0)
+            live[failed] = False
+            with self.assertRaisesRegex(RuntimeError, 'guard_heartbeat_requires_live_supervisor'):
+                pipe._send_guard_heartbeat()
+            self.assertEqual(len(rows), 1)
+
     def test_ack_happens_before_native_request_can_be_sent(self):
         events = []
         class FakeBase:
@@ -239,7 +272,11 @@ while True:
   if not line: break
   cmd=json.loads(line)
   if cmd['event']=='stop_guard':
-   emit('ARM_GUARD_STOPPED',movement_commands=0,physical_stop_confirmed=False);break
+   if mode=='bad_stop_ack':
+    emit('ARM_GUARD_STOPPED',movement_commands=0,physical_stop_confirmed=True)
+   else:
+    emit('ARM_GUARD_STOPPED',movement_commands=0,physical_stop_confirmed=False)
+   break
   if cmd['event']=='prepare_goal_uuid' and mode!='no_ack':
    cmd['event']='goal_uuid_ready'
    if mode=='bad_ack':cmd['goal_id']='00000000-0000-0000-0000-000000000000'
@@ -258,6 +295,42 @@ while True:
 
 
 class GuardPipeProcessTests(unittest.TestCase):
+    def test_normal_shutdown_precedes_coordinator_progress_end(self):
+        child = simulated_guard('d'*32, 'success')
+        progress = {'alive': True}
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                lease = bridge.GuardLease(directory, dict(bridge.arm.BODY),
+                    lambda: child.poll() is None and progress['alive'], session_id='d'*32)
+                pipe = bridge.GuardPipe(child, lease, time.monotonic())
+                pipe.await_ready(3)
+                pipe.prepare_normal_shutdown()
+                progress['alive'] = False
+                time.sleep(.15)
+                self.assertIsNone(pipe.failure)
+                self.assertTrue(pipe.stop())
+                self.assertEqual(child.wait(timeout=3), 0)
+        finally:
+            if child.poll() is None: child.terminate()
+            child.wait(timeout=3)
+            for stream in (child.stdin, child.stdout, child.stderr): stream.close()
+
+    def test_stop_without_exact_ack_is_not_success(self):
+        child = simulated_guard('d'*32, 'bad_stop_ack')
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                lease = bridge.GuardLease(directory, dict(bridge.arm.BODY),
+                                          lambda: child.poll() is None, session_id='d'*32)
+                pipe = bridge.GuardPipe(child, lease, time.monotonic())
+                pipe.await_ready(3)
+                self.assertFalse(pipe.stop())
+                self.assertFalse(pipe.stop_ack)
+                self.assertTrue(pipe.channel_failed)
+        finally:
+            if child.poll() is None: child.terminate()
+            child.wait(timeout=3)
+            for stream in (child.stdin, child.stdout, child.stderr): stream.close()
+
     def exercise(self, mode):
         session = 'd'*32
         child = simulated_guard(session, mode)

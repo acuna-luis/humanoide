@@ -174,7 +174,8 @@ class GuardPipe:
     and puts a hard wall-clock timeout on the UUID ACK exchange. Any failure
     expires the lease permanently. A shared Motion monotonic clock is required.
     """
-    def __init__(self, process, lease, inventory_started, *, clock=time.monotonic):
+    def __init__(self, process, lease, inventory_started, *, clock=time.monotonic,
+                 enable_guard_heartbeat=False):
         if process.stdin is None or process.stdout is None:
             raise ValueError('guard_pipes_required')
         if lease.guard_alive() is not True:
@@ -191,9 +192,14 @@ class GuardPipe:
         self.channel_failed = False
         self.auto_cancel_requested = False
         self.stopping = False
+        self.stop_ack = False
         self.latest = None
         self.handoff = False
         self.guard_id = None
+        if type(enable_guard_heartbeat) is not bool:
+            raise ValueError('guard_heartbeat_mode_invalid')
+        self.enable_guard_heartbeat = enable_guard_heartbeat
+        self.heartbeat_sequence = 0
         self.thread = threading.Thread(target=self._reader, daemon=True)
         self.thread.start()
 
@@ -258,6 +264,8 @@ class GuardPipe:
                                 self.failure = 'guard_telemetry_invalid:' + str(exc)
                             else:
                                 self.latest = row
+                                if self.enable_guard_heartbeat:
+                                    self._send_guard_heartbeat()
                     elif not self.ready.is_set():
                         self.latest = row
                 elif event == 'pre_dispatch_ready':
@@ -293,6 +301,8 @@ class GuardPipe:
                                    abs(velocities[n]) > .001 for n in arm.BODY)):
                         raise ValueError('guard_reference_changed')
                     self.lease.heartbeat(self.latest)
+                    if self.enable_guard_heartbeat:
+                        self._send_guard_heartbeat()
                     self.ready.set()
                 elif event in ('goal_uuid_ready', 'guard_cancel_requested'):
                     if not self.ready.is_set():
@@ -313,6 +323,10 @@ class GuardPipe:
                         if event == 'guard_auto_cancel_requested':
                             self.auto_cancel_requested = True
                 elif event == 'ARM_GUARD_STOPPED' and self.stopping:
+                    if (row.get('goal_uuid') != self.guard_id or row.get('movement_commands') != 0
+                            or row.get('physical_stop_confirmed') is not False):
+                        raise ValueError('invalid_guard_stop_ack')
+                    self.stop_ack = True
                     return
                 else:
                     raise ValueError('unexpected_guard_event:' + str(event))
@@ -326,6 +340,15 @@ class GuardPipe:
                     self.failure += ':lease_revocation_failed:' + str(revoke_error)
                 finally:
                     self.ready.set()  # wake waiters; they must inspect failure
+
+    def _send_guard_heartbeat(self):
+        """Pulse only after validated telemetry and live PC/coordinator lease."""
+        if not self.lease.guard_alive() or self.lease.failed or self.guard_id is None:
+            raise RuntimeError('guard_heartbeat_requires_live_supervisor')
+        self._send({'event': 'supervisor_heartbeat', 'session_id': self.lease.session_id,
+                    'guard_id': self.guard_id, 'sequence': self.heartbeat_sequence},
+                   time.monotonic() + .1)
+        self.heartbeat_sequence += 1
 
     def checked_snapshot(self):
         """Atomically return only a fresh, successfully checked sample."""
@@ -379,7 +402,16 @@ class GuardPipe:
         except (OSError, ValueError, TimeoutError):
             pass
         self.thread.join(timeout)
-        return not self.thread.is_alive()
+        return self.stop_ack and not self.thread.is_alive() and not self.channel_failed and not self.failure
+
+    def prepare_normal_shutdown(self):
+        """End renewal atomically after postflight, before progress is stopped."""
+        with self.lease.lock:
+            if self.failure or self.lease.failed or not self.ready.is_set() or not self.lease.guard_alive():
+                raise RuntimeError('guard_unhealthy_at_shutdown')
+            native.check_lease(self.lease.path, self.clock())
+            self.stopping = True
+            self.lease.fail()
 
     def cancel_goal(self, goal_id):
         """Ask independent guard to cancel only the handshaken UUID once.

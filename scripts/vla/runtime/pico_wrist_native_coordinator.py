@@ -280,9 +280,13 @@ def coordinate(lease, guard_pipe, manifest, urdf_text, transmissions_text,
     previous_guard_alive = lease.guard_alive
     lease.guard_alive = lambda: previous_guard_alive() and progress.alive()
     try:
-        return _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_text,
-                                  start_worker, timeout=timeout, event_sink=event_sink,
-                                  progress=progress)
+        result = _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_text,
+                                    start_worker, timeout=timeout, event_sink=event_sink,
+                                    progress=progress)
+        # The reader and progress watchdog share this transition: a telemetry
+        # sample after progress.stop() must not be mistaken for a runtime fault.
+        guard_pipe.prepare_normal_shutdown()
+        return result
     finally:
         progress.stop()
         if owns_lock:
