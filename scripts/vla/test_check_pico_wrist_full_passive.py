@@ -144,8 +144,10 @@ ack=json.loads(sys.stdin.readline())
 assert ack['session_id']==session['session_id'] and ack['challenge']=='b'*32
 telemetry()
 send('ARM_GUARD_READY',session_id=session['session_id'],movement_commands=0,physical_control_qualified=False)
+next_sample=time.monotonic()+.1
 while True:
- telemetry()
+ if time.monotonic()>=next_sample:
+  telemetry(); next_sample=time.monotonic()+.1
  readable,_,_=select.select([sys.stdin],[],[],0.05)
  if not readable: continue
  line=sys.stdin.readline()

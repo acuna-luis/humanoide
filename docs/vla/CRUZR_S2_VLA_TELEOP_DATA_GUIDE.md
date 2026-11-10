@@ -1,5 +1,20 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — SMOLVLA-LOCK-REAL-CHECKS-20261110.** El puente revisado pasó
+un watchdog en Motion con servidor sintético y un check de modelo real con
+197 latidos y permiso, sin metas físicas. El modelo propuso cambios grandes en
+codo que no se enviaron. La cancelación/frenado reales, la causa de 731084 y el
+despacho SmolVLA siguen pendientes; gate cerrado.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-lock-real-checks-20261110),
+[detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#guardia-y-modelo-con-puente-revisado--10-11-2026).
+
+**10-11-2026 — ARM-PICO-LOCK-ACK-REVALIDATE-20261110.** Nueva versión local
+acota adquisición del lock y revalida ACK y snapshot; suites y revisión offline
+pasan. Esto no limita E/S bloqueada ni acredita revocación, envío o frenado.
+Los checks posteriores sin metas físicas figuran arriba; gate físico cerrado.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-lock-ack-revalidate-20261110),
+[detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#revalidación-de-lock-y-ack--10-11-2026).
+
 **10-11-2026 — ARM-PICO-LOCK-ACK-REVIEW-20261110.** Se descartó otro
 candidato de lock/ACK sobre el cliente aislado: 41 tests del puente pasaron,
 pero la auditoría encontró un posible retraso de `guard_alive()` tras validar

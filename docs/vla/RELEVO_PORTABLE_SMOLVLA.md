@@ -1,7 +1,9 @@
 # Relevo portable: SmolVLA de la pelota — 10-11-2026
 
 Este documento permite a otro agente o persona retomar el piloto sin depender
-del historial del chat. Es un resumen del estado **registrado**, no una lectura
+del historial del chat. La última instrucción fue detener el trabajo físico y
+cambiar a Claude; la solicitud posterior autoriza actualizar el relevo, no
+reanudar movimiento. Es un resumen del estado **registrado**, no una lectura
 del robot en este momento. No concede control físico ni sustituye las fuentes
 del proyecto. Léase junto a `AGENTS.md`, `docs/PROJECT_SOURCE_OF_TRUTH.md`,
 `docs/vla/CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md` y las fichas enlazadas abajo.
@@ -9,18 +11,21 @@ Los documentos globales incluyen hechos históricos de otros efectores y tareas;
 no confundirlos con el estado reciente de este piloto. Si la salida de lectura
 se trunca, leer el archivo completo por segmentos.
 
-**Para el traslado:** en este PC se prepara la carpeta privada
-`/home/lacuna/proyectos/Robots/RELEVO_TRASLADO_20261110/` con copias de los
-dos paquetes siguientes, en los subdirectorios `RELEVO_SMOLVLA_20261110/` y
-`RELEVO_CRUZR_SDK_20261110/`, y con una copia externa actualizada de esta guía
-junto a `LEEME.md`. Para reanudar desde otro PC se traslada la carpeta completa
-por un canal privado y se verifican ambos paquetes por separado con sus hashes
-obtenidos independientemente. La guía y el LEEME son complementos externos,
-no modifican los manifiestos de los paquetes. La preparación en este PC no
-acredita que se haya trasladado ni restaurado en otro equipo.
+**Entrada de Claude y traslado:** lee primero `CLAUDE.md` y `AGENTS.md` del
+checkout; esta guía resume el relevo, no autoriza por sí misma control físico.
+La carpeta de entrega prevista para la versión posterior a las últimas pruebas
+es `/home/lacuna/proyectos/Robots/RELEVO_CLAUDE_20261110/`, con paquete
+`RELEVO_SMOLVLA_ACTUALIZADO/`, SDK separado `RELEVO_CRUZR_SDK_20261110/` y
+su `LEEME.md`. Consulta ese LEEME y los manifiestos para confirmar qué se creó,
+sus hashes y si falta algún dato; si la carpeta o los manifiestos no existen, la
+entrega actualizada sigue pendiente. Trasladar por canal privado y verificar los
+hashes por un canal independiente; preparar una copia en este PC no acredita su
+transferencia ni restauración en otro. La copia anterior
+`RELEVO_TRASLADO_20261110/` se generó antes de las últimas pruebas y cambios:
+**no restaure sus fuentes ni su guía encima de la versión posterior**.
 
-**Resultado del export, 10-11-2026:** la copia para traslado del paquete privado
-está en este PC en
+**Export histórico, 10-11-2026 — OBSOLETO para el estado reciente:** la copia
+anterior del paquete privado está en este PC en
 `/home/lacuna/proyectos/Robots/RELEVO_TRASLADO_20261110/RELEVO_SMOLVLA_20261110`;
 su `manifest.json` tiene
 SHA256 `a1029fc48c7be5a250b19511ff9cde735f1917bea23596ad7285738dc1472b1f`.
@@ -28,17 +33,18 @@ Conserva el commit `943bc7b07655ac8b1e754ac6bdaf2e718489c799`, 476 archivos
 no seguidos elegidos y evidencia seleccionada sin faltantes; su manifiesto
 registra 18 exclusiones. La verificación y una restauración en directorio
 temporal pasaron **en este PC**; no se ha transferido ni probado en otro. Esta
-actualización documental es posterior al paquete y no se encuentra en su bundle.
-El archivo privado de hash independiente es
+actualización documental y las pruebas y correcciones posteriores no se
+encuentran en su bundle. No confundir sus resultados históricos con el estado
+actual. El archivo privado de hash independiente es
 `../Humanoide-vla-evidence/PORTABLE_HANDOFF_20261110/portable-manifest.SHA256`,
 cuyo SHA256 es `8410a85a3fb73b982138e9d7dd0a5fc8f42c7aa390fba6ffeeacc154c921065a`.
 El paquete no está cifrado y la historia Git contiene una credencial preexistente:
 no subirlo a la nube ni publicarlo sin saneamiento y protección.
 
-**SDK complementario, también privado:**
-`/home/lacuna/proyectos/Robots/RELEVO_TRASLADO_20261110/RELEVO_CRUZR_SDK_20261110/`
-es la copia para traslado de un segundo paquete separado, no incluido en el
-manifiesto principal. Conserva la ruta
+**SDK complementario, también privado:** el paquete
+`RELEVO_CRUZR_SDK_20261110/` es independiente del manifiesto principal; se
+encuentra en la carpeta histórica de traslado y, si consta en el `LEEME.md` de
+la nueva entrega, en esa carpeta actualizada. No modifica el SDK original. Conserva la ruta
 original del SDK y 12 archivos (298149970 bytes), cotejados con el origen por
 SHA256 y tamaño. Su `manifest.json` SHA256 es
 `432791258fe0254bf9c418c3a281e2838f93332b6612a0db37593ff7050f7e2e`; registra
@@ -50,6 +56,42 @@ Hay que transferir **ambos paquetes** y verificar cada uno antes de restaurar.
 Los modos de origen están registrados; no se promete una restauración automática
 de esos modos. La copia SDK no incluye ni certifica imágenes/volúmenes Docker
 de Ada y tampoco ha sido trasladada a otro PC.
+
+## Inicio directo para Claude u otro agente
+
+El usuario quiere validar el ciclo completo con el robot físico, acepta un
+resultado impreciso y prefiere comprobaciones mínimas justificadas. En la última
+sesión pidió **detenerse y cambiar de agente**; la petición actual solo autoriza
+la preparación del relevo. No reanudes pruebas o movimientos hasta una nueva
+petición de trabajo físico. No presupongas que la confirmación física anterior
+sigue vigente; evita pedir de nuevo información que ya está documentada si no
+es necesaria para comprobar el estado actual.
+
+1. Desde el checkout correcto, lee `CLAUDE.md`, `AGENTS.md`, la fuente global y
+   las guías aplicables en el orden indicado por `AGENTS.md`. Comprueba
+   `git status --short --branch` y conserva los cambios locales, incluidos los
+   pendientes anteriores a este relevo. Lee las secciones más recientes de
+   `docs/SYSTEM_CUSTOMIZATIONS.md` y de `SMOLVLA_NATIVE_ARM_STEP_20261110.md`;
+   algunas anotaciones antiguas son historia y quedaron superadas por pruebas
+   posteriores. Si la salida se corta, lee los archivos completos por segmentos.
+2. Para comprender el entrenamiento lee
+   [piloto SmolVLA](PELOTA_SMOLVLA_PILOTO_20261109.md) y el apartado de
+   entrenamiento de esta guía. El checkpoint es un experimento con muy pocos
+   datos, no una demostración de que pueda coger la pelota.
+3. Distingue tres cosas: el incidente 731084 fue una prueba física **fija**;
+   la predicción de SmolVLA y su permiso se han observado sin goal; el watchdog
+   se ha probado contra un servidor **ficticio**. No se ha ejecutado una
+   política SmolVLA sobre el brazo ni se ha acreditado frenado físico.
+4. El bloqueo preciso es `model_wrist_dispatch_not_enabled` en
+   `scripts/vla/verified_pico_wrist_pc_loader.py` y
+   `scripts/vla/run_pico_wrist_native_trial.py`. El control preparado limita el
+   candidato a +0,01 rad de muñeca, sin mano; no ejecuta coger/subir/bajar/soltar.
+   No retire ni soslaye el gate por un binding antiguo u otra ruta; examine las
+   condiciones reales, la revocación y la seguridad del envío y parada.
+5. Para reanudar desde otro PC, use la receta de abajo con la entrega actualizada
+   y compruebe las omisiones del manifiesto. En este PC `../Humanoide-vla-evidence/`
+   contiene evidencia privada externa a Git; no asuma que transferir el código
+   transfiere checkpoints, dataset, SDK, credenciales o el entorno de Ada.
 
 ## Objetivo solicitado
 
@@ -79,13 +121,17 @@ sea una orden v4 equivalente o que sus unidades y fuerza estén cualificadas.
   entrenamiento en Ada en 390,12 s; 58/60 etiquetas de mano coincidieron en
   las **mismas muestras de entrenamiento**, no en una evaluación independiente.
   Detalles, recetas y hashes: [piloto](PELOTA_SMOLVLA_PILOTO_20261109.md).
-- **Inferencia real, 10-11-2026:** Ada produjo predicciones con imágenes y estado
-  reales. Con la guardia real de Motion activa, el PC validó una propuesta y
-  Motion recibió un permiso por el canal de latido; no hubo goal, UUID entregado
-  a guardia, staging, cancelación ni movimiento. Esa comprobación no ejecutó el
-  coordinador/worker físico, ni midió la edad completa de imagen desde Vision.
-  El modelo propuso cambios grandes también en otros ejes: no enviarlos sin una
-  vía y validación específicas. [Resultado](SMOLVLA_NATIVE_ARM_STEP_20261110.md#modelo-y-guardia-reales-sin-meta--10-11-2026).
+- **Inferencia real más reciente, 10-11-2026:** `PASS_PC_MODEL_GUARD_PERMIT_NO_GOAL`
+  con modelo Ada, observación real y guardia real, 197 latidos y permiso de
+  muñeca recibido; cero goals, movimientos, cancelaciones y handoffs UUID a la
+  guardia. La propuesta incluía muñeca +0,19524 rad, codo yaw +1,1664 rad y
+  codo roll +0,6713 rad; no se enviaron. El candidato acotado contempla solo
+  +0,01 rad de muñeca. Evidencia privada
+  `../Humanoide-vla-evidence/PICO_FULL_PASSIVE_CHECK/check-5a2bec6027294d7badf713ed6cca1370/`,
+  decisión SHA256 `bec6633225e95b2b7a571d839a2b2fb9531dea48c939480c2dfee20a142bbca0`.
+  No se ejercitaron coordinador/worker de envío físico, cancelación, frenado,
+  ni se midió la edad de imagen Vision→PC. Ninguna inferencia fue una ejecución
+  del VLA físico.
 - **Paso candidato:** el código preparado acepta el objetivo fijo de +0,01 rad
   de muñeca derecha en 4 s solo si la propuesta respalda su dirección y al menos
   el desplazamiento restante hasta ese objetivo desde el estado observado.
@@ -109,37 +155,51 @@ sea una orden v4 equivalente o que sus unidades y fuerza estén cualificadas.
   automáticamente. La admisión específica de sucesor está solo simulada y es
   una excepción al bloqueo anterior, no una recuperación completada.
   [Incidente y límites](SMOLVLA_NATIVE_ARM_STEP_20261110.md#intento-supervisado-interrumpido-731084--10-11-2026).
-- **Supervisión, 10-11-2026:** la lectura de respuestas de guardia se separó de
-  una escritura de renovación que puede bloquearse; se probó localmente, no en
-  Motion. Una escritura positiva ya iniciada aún puede publicar su plazo previo
-  hasta un máximo de 0,5 s y una revocación puede quedar pendiente. También se
-  reprodujo localmente contención del lock: un ACK fresco puede caducar antes de
-  llegar al worker y se rechaza. El intento de corrección de esa contención se
-  descartó por regresión; no se sabe si causó 731084. ACK, cancelación y
-  velocidad publicada cero no demuestran frenado físico.
-- **Último check sintético, 10-11-2026:** se preparó una copia de guardia y
-  servidor ROS ficticio aislado para observar cancelación sin mover el robot.
-  Los intentos quedaron antes de UUID/goal por lectura de cargador y, tras la
-  desconexión comunicada, por `battery_invalid_or_below_30_percent`. La lectura
-  posterior registró dos baterías aproximadamente al 26,2 % y 28,4 %; el
-  monitor PICO de esta prueba exige al menos 30 % en **cada** batería. El usuario
-  dijo que avisaría tras cargar y desconectar; no consta cuándo empezó la carga
-  ni el estado actual. No se probó aún la cancelación sintética o física.
+- **Correcciones en PC, 10-11-2026:** el cliente VLA aislado
+  `scripts/vla/pico_wrist_action_client.py` consulta el reloj **después** de
+  leer el lease, rechazando offline un vencimiento durante la lectura. El
+  cliente y el pin de la ruta de cajas se conservaron intactos: su antiguo
+  helper conserva la limitación previa. Un parche posterior de
+  `arm_native_lease_bridge.py` acota la adquisición del lock y revalida la
+  edad del ACK y del snapshot después de consultar la guardia. Se revisó y
+  probó offline; la espera acotada no limita toda la E/S y persisten la carrera
+  entre revocación y envío, así como el frenado no acreditado. No se conoce si
+  ninguna de estas cuestiones causó 731084. Según el estado observado al
+  interrumpirse la sesión, bridge y dos tests estaban **sin commit**; comprobar
+  `git status`, el diff y los hashes, preservando igualmente cambios ajenos.
+  Los bindings de versiones anteriores no acreditan los bytes actuales.
+- **Watchdog sintético más reciente, 10-11-2026:** con las fuentes revisadas,
+  un servidor ROS ficticio aceptó la cancelación de un goal sintético tras
+  cortar el latido (`SYNTHETIC_WATCHDOG_CANCEL_PASSED`, cero goals físicos).
+  Evidencia `../Humanoide-vla-evidence/PICO_SYNTHETIC_CANCEL_CHECK/check-4e9c02c69f324edb8d64cef1c4a00878/`.
+  Este check no ejecuta el coordinador físico ni demuestra frenado real. El
+  postcheck puntual no observó procesos sintéticos residuales y conservó los
+  hashes del marker y XML de 731084. En el check posterior modelo+guardia
+  tampoco se observaron procesos temporales en Motion, Vision y Ada; son
+  observaciones puntuales, no prueba de exclusividad futura.
+- **Batería y cargador:** el usuario volvió a desconectar el cargador y una
+  lectura puntual posterior mostró topic `0` y baterías aproximadamente
+  49,3/50,8 %. Antes, tras una desconexión anterior, el robot informó `2` y
+  baterías `charging`; no se conoce la semántica vendor del `2`. El supervisor
+  exige ≥30 % en cada batería y cargador desconectado. Ninguna de estas
+  observaciones establece el estado actual.
 
 ## Reanudación mínima
 
 1. Comprobar la carpeta y preservar todo cambio previo: `git status --short
-   --branch`. El HEAD del relevo era `a45c150` en la rama local `74-jacob`, pero
-   un paquete puede incorporar cambios posteriores y archivos aún sin commit.
-   No limpiar, sobrescribir, reiniciar o restaurar estados transitorios.
+   --branch`. La rama observada fue `74-jacob`; HEAD, parches y archivos aún sin
+   commit pueden diferir entre este PC y el paquete. Revisar el manifiesto y los
+   diffs antes de aplicar nada. No limpiar, sobrescribir, reiniciar o restaurar
+   estados transitorios.
 2. Confirmar qué pide el usuario en la nueva sesión y su autorización vigente;
    no reutilizar una confirmación física antigua. Ante peligro inmediato,
    accionar el E-stop disponible **sin esperar a enviar HOME**. La recuperación
    o un apagado planificado se tratan después cuando la trayectoria sea segura.
-3. Cuando el usuario indique que terminó la carga, comprobar de nuevo las dos
-   baterías y cargador por lectura actual; el umbral del supervisor de esta
-   prueba es 30 % por batería, con cargador desconectado. No cambiar ni falsear
-   la protección. No inferir la postura o los contactos por una captura histórica.
+3. Comprobar de nuevo las dos baterías y cargador por lectura actual; el
+   umbral del supervisor de esta prueba es 30 % por batería, con cargador
+   desconectado. El usuario ya comunicó una desconexión posterior a la carga;
+   no pedirle que repita una carga solo por datos antiguos. No cambiar ni falsear
+   la protección ni inferir postura o contactos por una captura histórica.
 4. Revisar el código y `--help` actuales, redescubrir contenedores/endpoints y
    generar una nueva referencia y binding revisados; los anteriores no acreditan
    la postura actual ni coinciden necesariamente con las fuentes actuales. El
@@ -147,8 +207,10 @@ sea una orden v4 equivalente o que sus unidades y fuerza estén cualificadas.
    crea procesos ROS temporales y un goal **ficticio** en un namespace aislado;
    no es una simple lectura. Revisar sus límites, ejecutar solo la prueba
    pertinente y verificar la limpieza por separado en Motion/Vision/Ada.
-5. Resolver el bloqueo de acceso compartido y el comportamiento de cancelación,
-   conservando evidencia del incidente. El gate sigue cerrado y no debe eludirse
+5. Revisar la corrección del acceso compartido ya preparada y los pendientes de
+   revocación, envío y parada, conservando evidencia del incidente. No repetir
+   ensayos ya registrados salvo cambios o dudas que lo justifiquen. El gate
+   sigue cerrado y no debe eludirse
    mediante un binding legacy o cliente alternativo. Una solicitud de cancelación
    no acredita el frenado. Antes de cualquier movimiento volver a comprobar mano
    instalada/objeto sujeto, postura, baterías, cargador, ambos paros, ruedas,

@@ -1,5 +1,47 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Guardia y modelo con puente revisado — 10-11-2026
+
+**OBSERVADO EN MOTION Y ADA, SIN META FÍSICA.** Con el puente revisado se
+recrearon referencia y binding. El diagnóstico de watchdog con guardia remapeada
+a servidor ROS ficticio registró una meta sintética, caducidad de latido,
+cancelación aceptada y estado terminal 5; `physical_goals=0`. El check no prueba
+la cancelación del servidor físico ni frenado.
+
+Otro check usó guardia real, lectura nativa e inferencia real de SmolVLA en Ada:
+`PASS_PC_MODEL_GUARD_PERMIT_NO_GOAL`, 197 latidos, permiso recibido, ninguna meta,
+handoff UUID, cancelación o movimiento. El modelo propuso delta de muñeca derecha
++0,19524 rad y deltas de codo roll +0,67134 rad y yaw +1,16643 rad. El candidato
+acotado seleccionaba +0,01 rad de muñeca y no enviaba los demás deltas; no se
+mandó nada. No mide edad Vision→PC ni acredita trayectoria, envío o parada.
+
+Un postcheck puntual no observó procesos temporales de prueba en Motion, Vision
+ni Ada y encontró marker/XML históricos intactos. No demuestra exclusividad
+futura. El gate físico permanece cerrado y el usuario después ordenó detenerse;
+no asumir condiciones físicas actuales ni reanudar automáticamente.
+[Ficha, hashes y límites](../SYSTEM_CUSTOMIZATIONS.md#smolvla-lock-real-checks-20261110).
+
+## Revalidación de lock y ACK — 10-11-2026
+
+**VERIFICADO OFFLINE Y REVISADO; CHECKS EN MOTION SIN GOAL FÍSICO ARRIBA.**
+El puente acota la espera de adquisición del lock en sincronización UUID y
+snapshot; al fallar solicita revocación asíncrona. Después de comprobar la
+vivacidad vuelve a validar el ACK y el estado de fallo, y en snapshot vuelve a
+comprobar la edad de la muestra. Los tests fuerzan contención y retrasos de
+vivacidad. La auditoría independiente no comunicó otro defecto concreto.
+
+Una primera ejecución de integración pasiva falló `guard_snapshot_lock_timeout`
+con un fixture que emitía telemetría sin límite; se alineó el fixture con los
+0,1 s programados en la guardia y después pasaron las 14 pruebas. Un test
+separado fuerza la contención y comprueba rechazo. Esto no demuestra cadencia
+real ni progreso con disco o E/S lentos: el timeout acota adquisición del lock,
+no todo lo que sucede mientras se posee. Revocación, carreras entre comprobación
+y envío, cancelación y frenado siguen sin demostrarse. No se conoce la causa de
+731084. El binding anterior quedó obsoleto por cambio de fuentes; se generaron
+nuevos bindings para los checks de arriba. `model_wrist_dispatch_not_enabled`
+permanece cerrado.
+[Fuentes, pruebas y reversión](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-lock-ack-revalidate-20261110).
+
 ## Revisión del lock con cliente aislado — 10-11-2026
 
 **CANDIDATO LOCAL DESCARTADO; CÓDIGO RESTAURADO.** Se reevaluó una modificación

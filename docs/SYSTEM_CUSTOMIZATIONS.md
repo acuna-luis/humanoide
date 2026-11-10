@@ -1,5 +1,34 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-LOCK-REAL-CHECKS-20261110
+
+**10-11-2026, Europe/Madrid — OBSERVADO CON ACCIÓN SINTÉTICA Y MODELO REAL;
+CERO GOALS FÍSICOS.** El usuario pidió detenerse después. No asumir estado físico
+actual ni reanudar automáticamente.
+
+| Campo | Registro |
+| --- | --- |
+| Fuentes | En ambos checks se empleó el puente revisado `scripts/vla/arm_native_lease_bridge.py` SHA256 `09f48aa8a33c91d15bc5b571d3c72a7d523353b825d844fdf5b2a20ce64e5039`; el cliente VLA aislado SHA256 `7cef03f8ec1a93d011a898409544a7f3d7eee4d1a8eb6458abbe71d266df7512`. Las condiciones observadas no acreditan que estos bytes sigan cargados o que el estado actual sea el mismo. |
+| Watchdog sintético | `../Humanoide-vla-evidence/PICO_SYNTHETIC_CANCEL_CHECK/check-4e9c02c69f324edb8d64cef1c4a00878/` devolvió `SYNTHETIC_WATCHDOG_CANCEL_PASSED`, con una meta sintética, cancelación aceptada, status 5 y cero metas físicas; `stdout.jsonl` SHA256 `38694460b2e274b65e2133cea74344e7db9783ae27dfb893a9bed6989982d068`. Guardia remapeada y servidor ficticio; no prueba cancelación o frenado físicos. Binding `../Humanoide-vla-evidence/PICO_LOCK_LIVE_20261110T171644Z_24a52c80/binding/`, `review-binding.json` SHA256 `85134c70b9b8a1881a8ccd545df2021964caeb6b92198f64f5ad3a0999aa044a`. Topic cargador 0 y baterías 49,3/51,0 % al inicio, lecturas puntuales. |
+| Modelo y guardia | `../Humanoide-vla-evidence/PICO_FULL_PASSIVE_CHECK/check-5a2bec6027294d7badf713ed6cca1370/`: `PASS_PC_MODEL_GUARD_PERMIT_NO_GOAL`, 197 latidos y permiso correlacionado, cero metas, handoffs UUID, cancelaciones y movimientos; `stdout.jsonl` SHA256 `3ac0f7f9939014a69a97149e3c7a456ce909f4ddfb658b92feeaa72af115764d`. La decisión interna SHA256 `bec6633225e95b2b7a571d839a2b2fb9531dea48c939480c2dfee20a142bbca0`; el archivo `model-decision.json` tiene SHA256 distinto `775ae563b31adb97d57afaf6cb28b67e07c264936f45c73033d6d8dfb1bea2cc`. Binding `../Humanoide-vla-evidence/PICO_MODEL_PASSIVE_20261110T171815Z_efd0ebf0/binding/`, `review-binding.json` SHA256 `b119d77d726584392b0c106ed53f61a33b94a4d88159d0f7d160403df9aee590`. Topic cargador 0 y baterías 49,3/50,8 % al inicio. |
+| Predicción | Muñeca derecha +0,195239963 rad; codo roll +0,671337878 rad y yaw +1,166426989 rad. La decisión limitaba la propuesta a una muñeca +0,01 rad y mantenía los demás ejes; no se envió orden alguna. No equivale a la tarea de pelota ni prueba la calidad o viabilidad física de los deltas completos. |
+| Postchecks | Tras el primer check, a las 17:17:14 UTC, la lectura puntual observó app Motion `rosa/robot_app`, ROS Motion `bash` y daemon habitual, sin procesos identificados como sintéticos en host. Tras el segundo, a las 17:19:08 UTC, se observaron esos procesos Motion, Vision ROS solo `bash`, ningún capturador Vision identificable y ningún contenedor Ada `cruzr-ball-live-shadow-*`. En ambos marker SHA256 `e174d2895dda0a2e0784cbb7296b2c5b7524bc31add8f28cc80255a326e8252c`, XML `d4c704e6ab369d250658a596cd6a5704258accf130971d3046748a8d132b616b`, XML dev45/inode3584597. No se guardó archivo propio de postcheck; registros de herramientas. Inventarios puntuales no garantizan exclusividad futura. |
+| Alcance y deuda | El watchdog es remapeado y el check de modelo no entrega UUID a la guardia, no hace staging, no ejecuta coordinador/worker físico y no mide la edad Vision→PC. No acredita cancelación, trayectoria o frenado físicos, ni explica el incidente 731084. La carrera entre revocación y orden en vuelo sigue pendiente; `model_wrist_dispatch_not_enabled` permanece cerrado. Las referencias y bindings no prueban estado físico vigente. |
+| Backup documental | Antes de este registro se guardaron las cuatro fuentes en `../Humanoide-vla-evidence/CLAUDE_PENDING_AUDIT_20261110T172131Z/before-docs.tar`, SHA256 `3866359fc85116fc8d24f9f22b570775c927892d77f159b5313e6bc6a4fe1f95`; incluye cambios ajenos previos. Preservar y no restaurar estados transitorios. |
+
+## ARM-PICO-LOCK-ACK-REVALIDATE-20261110
+
+**10-11-2026, Europe/Madrid — CAMBIO LOCAL COMPROBADO OFFLINE; CHECKS
+POSTERIORES EN MOTION SIN GOAL FÍSICO; SIN HABILITACIÓN FÍSICA.**
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo y comportamiento | `scripts/vla/arm_native_lease_bridge.py` acota adquisición del lock para la sincronización UUID y el snapshot. Ante fallo solicita revocación asíncrona; tras consultar `guard_alive()` revalida estado y plazo/edad del ACK, y vuelve a validar frescura de la muestra de snapshot. El timeout de adquisición no acota E/S bloqueada dentro del lock. |
+| Fuentes | Bridge SHA256 `09f48aa8a33c91d15bc5b571d3c72a7d523353b825d844fdf5b2a20ce64e5039`; `test_arm_native_lease_bridge.py` `2d96c7a8218348a8d1528e7807c4a4cfce004d93910978b3c995a7abb6ccfe2b`; fixture `test_check_pico_wrist_full_passive.py` `42451af9e7b8971b6f8ca47eb242664c52cc84639acf68ddc78b6ddbf78468eb`. Estos cambios invalidan el binding anterior: preparar una referencia y binding nuevos para cualquier prueba. |
+| Verificación offline | Revisión independiente sin otro defecto concreto comunicado. Bridge 43/43, fork 6/6 (incluye 38 pruebas heredadas), worker 16/16, coordinador 29/29, heartbeat 12/12, sintético 11/11, bridge pasivo 6/6, integración pasiva 14/14, launcher 19/19, binding 6/6, loader 17/17, admisión 12/12 y plan 4/4. La integración falló inicialmente por `guard_snapshot_lock_timeout` con fixture de telemetría sin límite; se alineó su emisión a 0,1 s, cadencia programada en la guardia, y pasó 14/14. Otra prueba fuerza contención y rechazo. No demuestra cadencia real ni progreso bajo E/S lenta. |
+| Límites | No se acota toda operación de E/S, ni se hace atómica la revocación respecto a una orden en vuelo; ACK, cancelación y muestra sin velocidad no prueban frenado físico. No se conoce la causa del incidente 731084. Los checks posteriores sin goal físico se registran en SMOLVLA-LOCK-REAL-CHECKS-20261110. `model_wrist_dispatch_not_enabled` sigue cerrado. |
+| Respaldo y reversión | Previo a código: `../Humanoide-vla-evidence/PICO_LOCK_REVALIDATE_20261110T171406Z_07f239ca/` contiene bridge SHA256 `34c3e133de7485a7f9a5073a63c5458daadb24180b11a82a0e6b982e3759da28`, test `5071b7b70825d6359eaf239225dc78e0f390369232382b22369b527d9725e4fd` y `test_check_pico_wrist_full_passive.before.py` `1d25909c9fa0a41b4d926067bbf03b24a66e9f36fa0962eeefd34b9e8be41213`; restaurar solo esos archivos y sin sobreescribir cambios ajenos. Previo a esta documentación: `../Humanoide-vla-evidence/PICO_LOCK_REVALIDATE_DOCS_20261110T171623Z/before-docs.tar` SHA256 `facc55739308e80f0062c81ce2674e9ca692745d13183f21aa6624df9e72a4c6`. No restaurar estados transitorios del robot. |
+
 ## ARM-PICO-LOCK-ACK-REVIEW-20261110
 
 **10-11-2026, Europe/Madrid — CANDIDATO DESCARTADO; SIN CAMBIO PRODUCTIVO

@@ -1,5 +1,25 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-LOCK-REAL-CHECKS-20261110: guardia y modelo sin movimiento.**
+Con el puente revisado pasó en Motion un watchdog con servidor sintético aislado
+(una meta ficticia y cero físicas). Un segundo check combinó guardia real,
+197 latidos y una inferencia real en Ada con permiso correlacionado; no creó
+metas ni entregó UUID a la guardia. El modelo propuso deltas grandes en codo que
+no se enviaron. El postcheck no observó procesos temporales en Motion, Vision ni
+Ada y conservó marker/XML históricos. No acredita cancelación ni frenado reales,
+el envío completo sigue bloqueado y se desconoce la causa de 731084.
+[Ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-lock-real-checks-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#guardia-y-modelo-con-puente-revisado--10-11-2026).
+
+**10-11-2026 — ARM-PICO-LOCK-ACK-REVALIDATE-20261110: cambio local.**
+El puente limita la espera para adquirir el lock, revalida ACK/estado tras
+`guard_alive()` y comprueba frescura del snapshot tras esa llamada. Pruebas y
+auditoría offline pasan. La adquisición acotada no limita la E/S bloqueada,
+revocación o envío; tampoco acredita frenado. Luego se realizaron los checks sin metas físicas descritos arriba; no acreditan
+frenado ni causa de 731084, y el gate SmolVLA permanece cerrado.
+[Ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-lock-ack-revalidate-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#revalidación-de-lock-y-ack--10-11-2026).
+
 **10-11-2026 — ARM-PICO-LOCK-ACK-REVIEW-20261110: candidato descartado.**
 Reevaluada sobre el cliente VLA corregido una modificación de la contención de
 lock/ACK. Aunque 41 pruebas del puente pasaron, la auditoría encontró que

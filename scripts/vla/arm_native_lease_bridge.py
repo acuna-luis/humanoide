@@ -161,8 +161,12 @@ class GuardLease:
 
     def synchronize_uuid(self, goal_id, exchange):
         """Ask the guard to whitelist exactly this UUID before network send."""
+        deadline = time.monotonic() + HANDSHAKE_S
         try:
-            with self.lock:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not self.lock.acquire(timeout=remaining):
+                raise TimeoutError('uuid_handshake_lock_timeout')
+            try:
                 if self.failed or not self.guard_alive() or self.guard_id is None:
                     raise RuntimeError('guard_not_ready')
                 if self.goal_id is not None or not isinstance(goal_id, str) or not UUID.fullmatch(goal_id):
@@ -172,8 +176,16 @@ class GuardLease:
                 request = {'event': 'prepare_goal_uuid', 'session_id': self.session_id,
                            'guard_id': self.guard_id, 'goal_id': goal_id, 'challenge': challenge}
                 began = self.clock()
-            ack = exchange(request, HANDSHAKE_S)
-            with self.lock:
+            finally:
+                self.lock.release()
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError('uuid_handshake_timeout')
+            ack = exchange(request, remaining)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not self.lock.acquire(timeout=remaining):
+                raise TimeoutError('uuid_handshake_lock_timeout')
+            try:
                 elapsed = self.clock()-began
                 expected = dict(request, event='goal_uuid_ready')
                 if (not isinstance(ack, dict) or set(ack) != set(expected) | {'goal_uuid', 'monotonic'}
@@ -189,9 +201,18 @@ class GuardLease:
                 # Waiting for ACK must not extend a stale guard lease. The caller
                 # must deliver independently verified fresh telemetry as needed.
                 native.check_lease_current(self.path, self.clock)
+                alive = self.guard_alive()
+                now_ack = self.clock()
+                if (self.failed or not alive or not math.isfinite(now_ack)
+                        or not 0 <= now_ack - ack['monotonic'] <= MAX_AGE_S
+                        or time.monotonic() >= deadline):
+                    raise RuntimeError('uuid_handshake_failed')
                 self.goal_id = goal_id
+            finally:
+                self.lock.release()
         except Exception:
-            self.fail()
+            # Do not wait behind a stalled lock or fsync after failure.
+            self.fail_async()
             raise
 
 
@@ -506,7 +527,10 @@ class GuardPipe:
 
     def checked_snapshot(self):
         """Atomically return only a fresh, successfully checked sample."""
-        with self.lease.lock:
+        if not self.lease.lock.acquire(timeout=MAX_AGE_S):
+            self.lease.fail_async()
+            raise TimeoutError('guard_snapshot_lock_timeout')
+        try:
             if self.failure or self.lease.failed or not self.ready.is_set() or not self.lease.guard_alive():
                 raise RuntimeError('guard_not_healthy_for_snapshot')
             native.check_lease_current(self.lease.path, self.clock)
@@ -515,8 +539,15 @@ class GuardPipe:
                     or not math.isfinite(sample['monotonic'])
                     or not 0 <= self.clock()-sample['monotonic'] <= MAX_AGE_S):
                 raise RuntimeError('postflight_telemetry_stale')
+            alive = self.lease.guard_alive()
+            now = self.clock()
+            if (self.failure or self.lease.failed or not alive or not math.isfinite(now)
+                    or not 0 <= now-sample['monotonic'] <= MAX_AGE_S):
+                raise RuntimeError('guard_unhealthy_or_stale_for_snapshot')
             # Return independent containers so callers cannot alter the sample.
             return dict(sample, position=dict(sample['position']), velocity=dict(sample['velocity']))
+        finally:
+            self.lease.lock.release()
 
     def await_ready(self, timeout):
         if not self.ready.wait(timeout) or self.failure or not self.lease.guard_alive():

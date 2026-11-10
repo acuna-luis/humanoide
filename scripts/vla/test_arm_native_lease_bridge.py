@@ -25,10 +25,8 @@ def telemetry(now, initial=None):
 
 
 class LeaseTests(unittest.TestCase):
-    def test_uuid_ack_can_expire_while_waiting_for_lease_lock(self):
-        # Reproduce the current fail-closed limitation without a fake clock:
-        # the ACK is fresh when returned by the transport, but an ongoing
-        # lease operation can hold the lock until that ACK is too old.
+    def test_uuid_ack_lock_timeout_fails_closed_without_waiting_for_writer(self):
+        # A writer can hold the lock after an otherwise immediate ACK.
         with tempfile.TemporaryDirectory() as directory:
             lease = bridge.GuardLease(directory, dict(bridge.arm.BODY), lambda: True)
             lease.heartbeat(telemetry(time.monotonic()))
@@ -56,16 +54,41 @@ class LeaseTests(unittest.TestCase):
                     return_ack.set()
                     self.assertTrue(ack_returned.wait(2))
                     self.assertLess(time.monotonic()-response['returned_at'], .2)
-                    time.sleep(bridge.MAX_AGE_S + .1)
-                    self.assertTrue(thread.is_alive())
+                    thread.join(bridge.HANDSHAKE_S + .3)
+                    self.assertFalse(thread.is_alive())
+                    self.assertTrue(lease.failed)
+                    self.assertIsNone(lease.goal_id)
             finally:
                 return_ack.set()
                 thread.join(3)
+                if lease._async_failure_thread is not None:
+                    self.assertTrue(lease._async_failure_done.wait(3))
             self.assertFalse(thread.is_alive())
-            self.assertIsInstance(response.get('error'), RuntimeError)
-            self.assertEqual(str(response['error']), 'uuid_handshake_invalid_ack')
+            self.assertIsInstance(response.get('error'), TimeoutError)
+            self.assertEqual(str(response['error']), 'uuid_handshake_lock_timeout')
             self.assertTrue(lease.failed)
             self.assertIsNone(lease.goal_id)
+
+    def test_snapshot_lock_timeout_fails_without_waiting_for_writer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            lease = bridge.GuardLease(directory, dict(bridge.arm.BODY), lambda: True)
+            lease.heartbeat(telemetry(time.monotonic()))
+            pipe = object.__new__(bridge.GuardPipe); pipe.lease = lease
+            result = {}; started = threading.Event()
+            def snapshot():
+                started.set()
+                try: pipe.checked_snapshot()
+                except Exception as exc: result['error'] = exc
+            with lease.lock:
+                thread = threading.Thread(target=snapshot); thread.start()
+                self.assertTrue(started.wait(1))
+                thread.join(bridge.MAX_AGE_S + .3)
+                self.assertFalse(thread.is_alive())
+                self.assertTrue(lease.failed)
+            self.assertTrue(lease._async_failure_done.wait(3))
+            self.assertIsInstance(result.get('error'), TimeoutError)
+            self.assertEqual(str(result['error']), 'guard_snapshot_lock_timeout')
+            self.assertEqual(json.loads(lease.path.read_text())['deadline'], 0)
 
     def test_guard_heartbeat_is_required_and_fault_is_permanent(self):
         clock = box_tests.FakeClock(); clock.value = 1.0
@@ -210,7 +233,8 @@ class HandshakeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             gate = self.gate(directory, clock)
             def exchange(request, timeout):
-                self.assertEqual(timeout, bridge.HANDSHAKE_S)
+                self.assertGreater(timeout, 0)
+                self.assertLessEqual(timeout, bridge.HANDSHAKE_S)
                 return dict(request, event='goal_uuid_ready', goal_uuid=request['guard_id'], monotonic=clock())
             gate.synchronize_uuid(box_tests.GOAL_ID, exchange)
             self.assertEqual(gate.goal_id, box_tests.GOAL_ID)
@@ -232,6 +256,7 @@ class HandshakeTests(unittest.TestCase):
                     gate.synchronize_uuid(box_tests.GOAL_ID, exchange)
                 self.assertTrue(gate.failed)
                 self.assertIsNone(gate.goal_id)
+                self.assertTrue(gate._async_failure_done.wait(3))
 
     def test_pc_or_coordinator_loss_during_ack_never_grants_send(self):
         for failed in ('pc', 'coordinator'):
@@ -248,6 +273,65 @@ class HandshakeTests(unittest.TestCase):
                     gate.synchronize_uuid(box_tests.GOAL_ID, exchange)
                 self.assertTrue(gate.failed)
                 self.assertIsNone(gate.goal_id)
+                self.assertTrue(gate._async_failure_done.wait(3))
+
+    def test_ack_rechecked_after_delayed_lease_read(self):
+        clock = box_tests.FakeClock(); clock.value = 10.0
+        with tempfile.TemporaryDirectory() as directory:
+            gate = self.gate(directory, clock); reads = []
+            def delayed_read(*_):
+                reads.append(None)
+                if len(reads) == 2: clock.value += bridge.MAX_AGE_S + .01
+            def exchange(request, timeout):
+                return dict(request, event='goal_uuid_ready', goal_uuid=request['guard_id'], monotonic=clock())
+            with patch.object(bridge.native, 'check_lease_current', side_effect=delayed_read):
+                with self.assertRaisesRegex(RuntimeError, 'uuid_handshake_failed'):
+                    gate.synchronize_uuid(box_tests.GOAL_ID, exchange)
+            self.assertTrue(gate.failed); self.assertIsNone(gate.goal_id)
+            self.assertTrue(gate._async_failure_done.wait(3))
+
+    def test_ack_deadline_rechecked_after_slow_or_failed_liveness(self):
+        for mode in ('slow', 'async_failure'):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
+                gate = bridge.GuardLease(directory, dict(bridge.arm.BODY), lambda: True)
+                gate.heartbeat(telemetry(time.monotonic()))
+                reads = []
+                def check(*_): reads.append(None)
+                def alive():
+                    if len(reads) >= 2:
+                        if mode == 'slow': time.sleep(bridge.HANDSHAKE_S + .05)
+                        else: gate.fail_async()
+                    return True
+                gate.guard_alive = alive
+                def exchange(request, timeout):
+                    return dict(request, event='goal_uuid_ready', goal_uuid=request['guard_id'],
+                                monotonic=time.monotonic())
+                with patch.object(bridge.native, 'check_lease_current', side_effect=check):
+                    with self.assertRaisesRegex(RuntimeError, 'uuid_handshake_failed'):
+                        gate.synchronize_uuid(box_tests.GOAL_ID, exchange)
+                self.assertTrue(gate.failed); self.assertIsNone(gate.goal_id)
+                self.assertTrue(gate._async_failure_done.wait(3))
+
+    def test_snapshot_rechecks_age_and_failure_after_liveness(self):
+        for mode in ('slow', 'async_failure'):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
+                gate = bridge.GuardLease(directory, dict(bridge.arm.BODY), lambda: True)
+                gate.heartbeat(telemetry(time.monotonic()))
+                pipe = object.__new__(bridge.GuardPipe); pipe.lease = gate
+                pipe.failure = None; pipe.ready = threading.Event(); pipe.ready.set()
+                pipe.clock = time.monotonic; pipe.latest = telemetry(time.monotonic())
+                calls = []
+                def alive():
+                    calls.append(None)
+                    if len(calls) == 2:
+                        if mode == 'slow': time.sleep(bridge.MAX_AGE_S + .05)
+                        else: gate.fail_async()
+                    return True
+                gate.guard_alive = alive
+                with patch.object(bridge.native, 'check_lease_current'):
+                    with self.assertRaisesRegex(RuntimeError, 'guard_unhealthy_or_stale'):
+                        pipe.checked_snapshot()
+                if mode == 'async_failure': self.assertTrue(gate._async_failure_done.wait(3))
 
     def test_supervisor_pulse_requires_live_pc_and_coordinator(self):
         for failed in ('pc', 'coordinator'):
