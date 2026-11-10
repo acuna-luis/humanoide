@@ -1,5 +1,14 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-ATTEMPT-731084-20261110.** Una tarea nativa de
+muñeca fue aceptada y el supervisor perdió la guardia; Motion registró una
+solicitud de cancelación y el mismo UUID aparece cancelado. La muñeca cambió +0,009875001 rad y el codo derecho
++0,002205097 rad en la muestra posterior, con velocidades cero y actuadores
+habilitados sin error. El operador confirma inmovilidad sin anomalías. Causa
+PENDIENTE; no repetir ni enviar HOME, el XML y marker siguen. No es ejecución
+física de SmolVLA.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#intento-supervisado-interrumpido-731084--10-11-2026).
+
 **10-11-2026 — ARM-PICO-RESUME-PREP-20261110.** Tras archivar el intento
 interrumpido se prepararon muestra, candidato y binding nuevos y pasó un check
 pasivo; no se ha enviado otra tarea física ni ejecutado SmolVLA.

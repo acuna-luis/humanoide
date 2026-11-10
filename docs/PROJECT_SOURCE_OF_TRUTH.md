@@ -1,5 +1,17 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-ATTEMPT-731084-20261110: muñeca movida, ensayo
+interrumpido.** Motion aceptó una tarea estática de muñeca y el supervisor
+perdió la guardia; Motion registró una solicitud de cancelación y el estado
+posterior de ese UUID fue cancelado. Una muestra
+mostró la muñeca +0,009875001 rad, el codo derecho +0,002205097 rad y velocidad
+cero; los 20 actuadores comprobaron estado habilitado y sin error. El operador
+observó inmovilidad sin anomalías. La causa del fallo no se identificó; el
+marker y el XML del intento permanecen. No reintentar ni enviar HOME sin
+diagnóstico y recuperación. No se ejecutó SmolVLA.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#intento-supervisado-interrumpido-731084--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-attempt-731084-20261110).
+
 **10-11-2026 — ARM-PICO-RESUME-PREP-20261110: reanudación preparada, no
 ejecutada.** Una nueva muestra, candidato y binding se verificaron; el check
 pasivo pasó sin goal. La postura y los codos próximos a límites SPS siguen

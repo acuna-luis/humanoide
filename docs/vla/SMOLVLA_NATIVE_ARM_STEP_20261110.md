@@ -1,5 +1,63 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Intento supervisado interrumpido 731084 — 10-11-2026
+
+**OBSERVADO: acción aceptada y luego estado cancelado; éxito de tarea y causa
+del fallo no demostrados.** Tras confirmación actual del operador se ejecutó
+una sola tarea nativa de muñeca derecha, sin retorno automático. La sesión
+`731084b3e4f94527a37de07297724bf1` preparó el XML SHA256
+`d4c704e6ab369d250658a596cd6a5704258accf130971d3046748a8d132b616b`
+en Motion (receipt dev 45/inode 3584597). El goal
+`2e20ea8d-34d9-4e4d-9192-e5e0c11e921d` se envió y fue aceptado; el último
+feedback conservado decía RUNNING a 3,29 s. El coordinador falló con
+`guard_lost_during_trial` y el journal registró
+`independent_cancel_unconfirmed` / `guard_cancel_request_timeout`.
+Una lectura posterior del estado ROS para ese mismo UUID mostró status 5,
+cancelado. El log de Motion registra para el mismo UUID `HandleGoal` a
+20:17:59,622915, inicio del XML a 20:17:59,632869, `HandleCancel` a
+20:18:03,138975 y árbol cancelado a 20:18:03,537316, según el reloj de Motion
+no sincronizado. Acredita recepción de una solicitud de cancelación; no
+establece quién la solicitó, por qué ni la distancia de frenado. El mismo log
+registra en `component_group.cpp:483` los siete objetivos exactos del
+manifiesto y duración de 4 s; el controlador de manipulación ya estaba
+running. Tras `HandleCancel` se registró `MetaMove TickEnd`. Esto demuestra la
+interpretación de esa consigna en el log, no éxito ni seguimiento exacto de
+los siete ejes físicos.
+
+La muestra articular posterior situó `R_wrist_roll_joint` en
+`0,011121360712170899` rad: `+0,009875001` rad respecto a la referencia.
+`R_elbow_roll_joint` cambió `+0,002205097` rad, por encima del umbral de
+deriva observacional `LOCKED_DRIFT_RAD=0,002`; la muestra por sí sola no
+identifica la causa de la interrupción o evolución entre muestras. Todas las
+velocidades publicadas eran cero en esa muestra. La consulta ROS2 posterior
+de actuadores pasó `check_actuators`: 20 actuadores corporales habilitados y
+sin error. La primera consulta nativa de actuadores había agotado tiempo. El
+operador confirmó robot inmóvil y sin contacto ni movimientos inesperados.
+La lectura de procesos posterior no mostraba Python en los contenedores app y
+ROS; no certifica exclusividad posterior o parada general.
+
+La razón precisa del fallo permanece **PENDIENTE**: el error visible era
+genérico y stderr de guardia se descartó. No atribuir la cancelación al codo o
+a una protección concreta sin evidencia. Las lecturas adicionales de logs de
+hardware/ROS no revelaron la causa y no permiten inferir qué ocurrió dentro de
+la guardia cuyo stderr se descartó. La tarea XML y el marker
+`/var/tmp/cruzr-pico-v4-wrist-control/PENDING_OR_UNRESOLVED.json` permanecen;
+el journal y stderr del worker también se conservan. El lease
+`/tmp/pico-wrist-live-xdhdhgsd/arm-lease-731084b3e4f94527a37de07297724bf1.json`
+tenía `deadline=0.0`. No repetir, enviar HOME
+ni borrar archivos automáticamente. El procedimiento usado para la sesión
+anterior `ccfbd5...`, interrumpida antes de UUID, no es válido para esta
+acción aceptada. Cualquier retorno físico exige otra acción revisada.
+
+Evidencia privada en
+`../Humanoide-vla-evidence/PICO_NATIVE_WRIST_TRIAL/run-731084b3e4f94527a37de07297724bf1/`:
+`host-stdout.log`, `host-stderr.log`, `post-attempt-readonly.json`,
+`remote-state-readonly.json`, `actuators-readonly.json`,
+`motion-log-tail-readonly.json`, `retained-state-readonly.json` y
+`lease-readonly.json`; hashes y respaldo
+documental en [la ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-attempt-731084-20261110).
+Esto no ejecutó el modelo ni valida la tarea de la pelota y la mano v4.
+
 ## Reanudación de muñeca preparada — 10-11-2026
 
 **PREPARADA, NO EJECUTADA.** Después del archivado del intento interrumpido se
