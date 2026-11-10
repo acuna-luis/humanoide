@@ -206,6 +206,17 @@ sanear el historial es una tarea pendiente separada; no añadir más secretos.
    `smolvla_ball_server/run_offline.sh` (≈7 min/1000 pasos) y cambiar
    `checkpoint` en `ADA` del puente. Ver [guía de datos](CRUZR_S2_VLA_TELEOP_DATA_GUIDE.md)
    y [piloto](PELOTA_SMOLVLA_PILOTO_20261109.md).
+   **Decisión del usuario (10-11-2026) sobre la cabeza:** se graba con las
+   gafas PICO como siempre; el operador baja la cabeza para ver mesa, aro,
+   pelota y mano (incluida la pelota elevada) y la mantiene quieta durante
+   cada demostración. Una grabación por demo:
+   `python3 -B scripts/vla/capture_passive_episode.py --seconds 60 --task pelota_demo_NN`
+   (esperar `CAPTURA_LISTA`; dejar que termine sola). `head_pitch_joint` y
+   `head_yaw_joint` quedan en `samples.jsonl`: calcular su mediana y descartar
+   demos con variación excesiva. Al ejecutar, **antes** del puente, llevar la
+   cabeza a esa mediana con un `MetaMove` de cabeza (opción por añadir al
+   puente, junto con `--start-pose` del brazo). El modelo no controla la
+   cabeza; no debe moverse mientras corre la política.
 4. Con una política en distribución se puede subir `--max-step-rad` (≤0,15) y
    bajar la duración de los pasos, siempre con persona en el paro.
 
