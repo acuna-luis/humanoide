@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-SDK-AGE-20261110: auditoría de timeout.** El usuario
+pidió continuar SmolVLA y confirmó condiciones físicas; no se enviaron órdenes.
+El controlador VLA anunciado usa `StandardSdkController`; su binario compara
+la edad por junta con 10 ms cuando la comprobación está activada y omite la
+escritura vencida, sin demostrar frenado. La lógica PICO de corriente y
+sobrecorriente de mano no está expuesta como control aislado verificado.
+Puente, parada y control de mano siguen PENDIENTES. [Detalle](vla/SMOLVLA_SDK_COMMAND_AGE_20261110.md),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-sdk-age-20261110).
+
 **10-11-2026 — HEAD-PICO-SUPERVISED-20261110: tarea de cabeza completada.**
 Tras check y confirmación física, una única tarea de cabeza desde PICO/v4
 respondió SUCCEED y se observó reposo; pitch final−0,430665rad y sin cambios

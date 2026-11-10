@@ -1,5 +1,11 @@
 # Preparación del puente SmolVLA de pelota — 10-11-2026
 
+**Revisión posterior 10-11 — SMOLVLA-SDK-AGE-20261110.** La auditoría del
+controlador VLA muestra una comparación de antigüedad de 10 ms por junta si
+está habilitada; la rama vencida no demuestra frenado. La lógica nativa PICO
+de corriente/sobrecorriente no tiene API aislada verificada para mano derecha.
+No se enviaron órdenes ni se cambiaron modos. [Detalle, evidencia y receta](SMOLVLA_SDK_COMMAND_AGE_20261110.md).
+
 **Estado: inferencia histórica a bordo verificada; ejecución física pendiente.**
 El usuario pidió crear las piezas que faltan para el piloto. No se enviaron
 órdenes de movimiento ni llamadas a servicios de cambio de controlador. Las

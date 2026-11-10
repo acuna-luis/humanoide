@@ -1,5 +1,19 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-SDK-AGE-20261110
+
+**10-11-2026, Europe/Madrid — auditoría estática OBSERVADA; ejecución
+física PENDIENTE.** El usuario solicitó continuar SmolVLA y confirmó las
+condiciones presenciales. Se consultaron controladores y bibliotecas; no se
+enviaron órdenes de movimiento ni se cambiaron controladores o modos.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | Cabeza bajada correctamente desde PICO/v4 y pelota distinguible en la imagen; shadow Ada con cuatro propuestas, máxima diferencia propuesta−estado1,146906rad; sin puente ni parada física VLA cualificados. Documentos previos en `4d7eb30`: blobs global `8257e1bbcecce75cd59e4979099c38193824269e`, registro `18cb481b506a165a6718cacbb62de054f4f9c226`, puente `58ce0fb3f92d34cca974e6f8c26f7fccff630d91`, guía VLA `20969a16fa121fe314f06cce3c1e5f7645a227e7`. |
+| Evidencia y fuentes | `../Humanoide-vla-evidence/20261110T095147Z_SMOLVLA_SDK_AGE_READONLY/sdk-age-readonly.json`, SHA256 `cc62374fbb20edf8ecda7948837b85f1a643a3650cfb9d00834f765c40cb008c`; captura nueva, privada, con inventario y disassembly. Motion `libsdk_controller.so` SHA256 `e77cc237226e08f5c833d6f2db5a3ccda88598acadcfa63e741a1c7b80932c96`, mapeada por `rosa_control_node`; la identidad en disco no prueba contenido activo en memoria. PICO `libmeta_teleoperation.so` `05187431f27915bb2c869ca566ade88ca9adc302087a4fe9e20e658ce28a45c8`. [Receta y alcance](vla/SMOLVLA_SDK_COMMAND_AGE_20261110.md). |
+| Resultado | ROSA: VLA `initialized`, tipo `sdk_controller::StandardSdkController`; manipulación `running`. Análisis estático: umbral0,01s por junta si flag activada; timeout omite escritura, sin mostrar hold/velocidad0 en esa rama. `starting` activa el flag, pero estado vivo no medido y `stopping` no demuestra frenado; no se llamó servicio para desactivar la comprobación. PICO v4 tiene lectura de estado y banderas de sobrecorriente dentro del objeto Teleoperation; no se encontró API aislada de mano derecha. Trece XML con acción derecha de siete ejes `controller_mode=2` incluyen otros movimientos; enum interno2=`kTorque` no valida la cadena completa a hardware. No se ejecutaron. |
+| Reversión y deuda | Sólo consultas y nueva evidencia/documentación local; no hay configuración remota que revertir. Preservar o retirar selectivamente la carpeta privada si procede y revertir el documento y entradas tras comparar cambios frente a `4d7eb30`. Pendientes autoridad/cambio y retorno SDK, estrategia de parada efectiva, ejecutor local y cadencia, límites/trayectoria/escena, control v4 y fases de agarre. No extrapolar confirmación física a una acción posterior. |
+
 ## HEAD-PICO-SUPERVISED-20261110
 
 **10-11-2026, Europe/Madrid — ejecución de cabeza VERIFICADA por Motion y

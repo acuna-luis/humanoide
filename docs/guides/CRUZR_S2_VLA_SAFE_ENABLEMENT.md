@@ -1,5 +1,13 @@
 # Integración segura del VLA suministrado para Cruzr S2
 
+**10-11-2026 — SMOLVLA-SDK-AGE-20261110.** La clase anunciada para el
+controlador VLA compara por junta la antigüedad con 10 ms si su bandera está
+activada; la rama estática vencida omite escribir el comando, sin demostrar
+parada del servo. No se ha probado el valor activo de la bandera ni se ha
+deshabilitado. La inferencia Ada medida por sí sola no suministra esa cadencia;
+faltan ejecutor local supervisado, parada efectiva y mano v4. No se movió el
+robot. [Detalle](../vla/SMOLVLA_SDK_COMMAND_AGE_20261110.md).
+
 **10-11-2026 — SMOLVLA-HAND-V4-SOURCES-20261110.** El manual SDK describe
 cambio de autoridad y control de posición v4, pero no demuestra equivalencia
 con los Trigger `motion_sdk` ni parada de una consigna aceptada. El URDF v4
