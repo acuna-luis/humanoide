@@ -1,5 +1,19 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-BALL-BRIDGE-PREP-20261110: preparación parcial.**
+Se auditaron por nombre las propuestas de brazo y las dos grabaciones de mano;
+no se creó un puente físico. El código instalado de manos indica estáticamente
+modo5=`Position`, modo7=`Current`, este último usa el campo `torque`; unidades
+y comportamiento físico PENDIENTES. El perfil SPS leído contiene un cambio
+de controladores diferente del histórico e incluye chasis; no se ha probado
+qué servicio lo usa. Paquetes y base ARM64 parciales preparados en PC; en Vision
+se importó la base, compiló `evdev`, se instaló LeRobot CPU aislado y el
+checkpoint de pelota produjo una inferencia real con una muestra grabada:
+62,932 s para una predicción, sin ROS ni movimiento. No acredita ejecución en
+vivo ni control físico. No se enviaron comandos ni cambios de controlador.
+[Detalle](vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-ball-bridge-prep-20261110).
+
 **10-11-2026 — CODEX-VSCODE-GRAY-20261110: diagnóstico de pantalla gris,
 PENDIENTE de resolución.** En el PC, VS Code 1.145.2 y la extensión Codex
 26.1021.22027 registraron que la vista lateral no recibió mensajes del

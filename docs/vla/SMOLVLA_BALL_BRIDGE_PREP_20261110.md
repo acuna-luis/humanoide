@@ -1,0 +1,126 @@
+# Preparación del puente SmolVLA de pelota — 10-11-2026
+
+**Estado: inferencia histórica a bordo verificada; ejecución física pendiente.**
+El usuario pidió crear las piezas que faltan para el piloto. No se enviaron
+órdenes de movimiento ni llamadas a servicios de cambio de controlador. Las
+lecturas son puntuales y no acreditan el estado físico posterior.
+
+## Brazo y controladores
+
+`scripts/vla/audit_ball_arm_proposals.py --check RUTA/live-run.jsonl` comprueba
+el checkpoint, estructura y secuencia de un resultado shadow y relaciona sus
+siete valores de brazo por nombre con el orden histórico del SDK. `--run` se
+rechaza. Sobre la sesión del 09-11 procesó nueve propuestas y reprodujo la
+diferencia máxima propuesta−estado de 1,165707 rad en `R_elbow_yaw_joint`.
+No genera `RobotCommand`, no prueba trayectoria ni verifica límites físicos.
+
+En una lectura Motion del 10-11 aparecieron `manipulation_controller`,
+`dexterous_hand_controller` y `chassis_controller` activos, y ambos controladores
+SDK inicializados. ROS2 anunciaba `/mc/motion_sdk/switch_to_vla` y
+`/mc/motion_sdk/switch_to_manipulation`, sin llamarlos. El perfil declarado era
+`cruzr_s2_v1_sps`. El `switch_controllers.yaml` SPS leído, SHA256
+`21eb3b878f578c3e9ecc29914e34d2079f1154f40f76fae28b23a7b4c0b8b317`, menciona
+iniciar `sdk_controller` y detener tanto manipulación como chasis, distinto del
+archivo v1 histórico. No se ha demostrado qué archivo usa cada servicio ni su
+efecto real; no extrapolar el cambio v1 a SPS. El YAML del controlador VLA de
+ambos perfiles coincide, pero el orden de archivo no valida el transporte:
+mapear siempre por nombre. Lecturas y comandos reproducibles están en
+`../Humanoide-vla-evidence/20261110_SMOLVLA_BRIDGE_PREP/controller/`.
+
+El backend histórico conserva el último setpoint en Motion. Destruir el
+publicador no demuestra frenado, anulación de consigna ni retorno a
+manipulación. Siguen pendientes semántica oficial, estrategia de exclusividad,
+monitor y parada efectiva comprobados, trayectoria y límites para PICO/v4.
+
+## Mano derecha
+
+`scripts/vla/audit_ball_hand_recordings.py RUTA/samples.jsonl` analiza las
+grabaciones originales sin escribirlas. Se contaron 52.754 y 98.944 comandos
+derechos, respectivamente, con siete nombres; todos los arrays de aceleración
+estaban vacíos. Los modos uniformes 5 y 7 aparecen en ambas tomas; algunos
+vectores del campo `torque` se repiten en ambos. La observación no identifica
+por sí sola el gatillo ni prueba que las órdenes se aplicaran.
+
+El análisis estático independiente de la biblioteca instalada del controlador
+de manos, SHA256
+`5f0bf11b51040346cfc8cb750617af50ae83c277ae68bdf0f83a70ceeb7f58ba`,
+indica que el modo 5 se traduce a `Position` y copia el campo `position`;
+el modo 7 a `Current` y copia el campo llamado `torque`. El getter instalado
+confirma los offsets leídos y se observó un proceso que tiene mapeada la ruta
+de la biblioteca. Esto es evidencia estática, no confirma que los bytes en
+memoria sean idénticos ni establece unidades, conversión corriente/par, límites
+o efecto físico. No equiparar corriente y par ni reutilizar valores capturados
+como receta. La evidencia y comandos están en
+`../Humanoide-vla-evidence/20261110_SMOLVLA_BRIDGE_PREP/hand/`.
+
+Los XML vendor individuales de apertura y cierre derechos describen un solo
+`MetaMove` de efector derecho, pero no se comprobó su registro/carga ni su
+seguridad desde PICO. `scripts/vla/audit_ball_hand_intent.py --predictions
+RUTA/live-run.jsonl` permite comparar el escalar con anotaciones opcionales de
+fases. El umbral es exploratorio, las fases son externas y no verificadas, y no
+produce comandos. En el shadow de nueve muestras faltan anotaciones y las
+imágenes no se guardaron; no permite evaluar cierres correctos.
+
+## Entorno ARM64 de inferencia
+
+Vision es ARM64 con L4T 36.3; el entorno CUDA Ada del entrenamiento es x86-64
+y no es directamente ejecutable allí. El host observado no tiene Python 3.12,
+PyTorch ni LeRobot, ni ruta de Internet general; no alterar la red del robot.
+`scripts/vla/prepare_arm64_cpu_wheelhouse.py --help` prepara y verifica ocho
+artefactos fijados en una carpeta nueva. Se descargaron ocho en el PC en
+`../Humanoide-vla-evidence/20261110_SMOLVLA_CPU_ARM64_PREP_V2/`; la salida marca
+`complete_wheelhouse=false`. Las 331 fuentes Python del wheel de LeRobot 0.5.1
+coinciden byte a byte con el commit de entrenamiento
+`1396b9fab7aecddd10006c33c47a487ffdcb54b4`; esto no compara metadatos extra.
+
+En el Docker del PC se descargó por digest la base ARM64 Python 3.12, antes
+ausente: manifiesto
+`sha256:df540bfd30bd380e89a349611ce42aa67bcb542d58c047706616eb6ba2f86a1b`,
+ID `sha256:4703adf8fdd93b1441114e4f87ce2c62f7373fc5f88bda6a546c551625bcc71c`,
+sin tag. Su copia privada `python312-arm64-base.tar` tiene SHA256
+`47a52dc83e013b728d74aafdedf0f365881632e64f88c4aa1a1bd913471309e6`.
+Para revertir, confirmar que nadie use esa imagen y retirar selectivamente su
+referencia por digest; conservar o retirar la copia privada según necesidad.
+No borrar otras imágenes ni limpiar Docker globalmente.
+
+Existe un Dockerfile candidato y un compilador experimental con herramientas
+host montadas sólo lectura; ver
+[`smolvla_arm64_cpu/README.md`](../../scripts/vla/smolvla_arm64_cpu/README.md).
+En Vision se cargó la base en Docker y se preparó un directorio nuevo con
+fuentes fijadas. El constructor aislado produjo la wheel
+`evdev-2.0.0-cp312-cp312-linux_aarch64.whl` SHA256
+`608caec9870027cc36b7c1b552b849b096e5fa001fb3264da49e2efb698f98bb`;
+un segundo contenedor ARM64 sin red la instaló en un venv temporal e importó
+sus tres extensiones. Ensayos fallidos anteriores y correcciones se conservan.
+El contenedor temporal terminó y no se actualizó firmware. Esto verifica
+`evdev`, no el modelo.
+
+En el PC se reunieron 100 wheels candidatas (492 MiB), con manifiesto
+`SHA256SUMS` SHA256 `a92db7e630c79b22f5b36f5eabf6f136a36b51db40bf314b456bc39258daed4f`;
+el comprobador verificó cobertura y hashes. La copia a Vision se interrumpió
+tras unos 239 MiB; el usuario restableció el Wi-Fi y se reanudó sin sustituir
+archivos. La comprobación de hashes pasó y se instaló el venv CPU en un
+contenedor acotado: `pip check` no encontró conflictos y la clase SmolVLA se
+importó en aarch64. El usuario conectó Ethernet y las entradas del checkpoint
+se copiaron y verificaron. Un primer intento rechazó la ruta VLM, sin cargar
+el modelo; se corrigió el wrapper y un segundo contenedor CPU sin red/ROS
+produjo una predicción para una muestra **grabada**, no en vivo. El cálculo
+tardó 62,932s y la mayor diferencia propuesta−estado fue 1,188865 rad en
+`R_elbow_yaw_joint`, que no es movimiento ni límite seguro. Terminó rc0 y el
+contenedor fue retirado. Evidencia `vision-inference-run-v2.jsonl` SHA256
+`d08bf262b984c8388bb87a6a7d1c30060bc2f939e76ef065f882cab37c9a80d2`, log
+`169b7b887c1f29ec23a4b165d9ae1466d9d1357a5ae9cdc005cbab4d14edf133`.
+No se modificó configuración de red por el agente.
+
+Faltan prueba con observaciones en vivo a bordo y evaluación de rendimiento
+sostenido. Una inferencia aislada en CPU no habilita control. Véase la ficha
+para rutas exactas y reversión.
+
+## Reanudación
+
+Evaluar el checkpoint en vivo y rendimiento sostenido; aclarar con evidencia
+el handoff SPS y la parada; establecer la semántica y los límites
+de mano, correlacionando gatillo y estados y ensayando supervisadamente en
+vacío; construir el puente con límites, control exclusivo y monitor. Antes de
+cualquier movimiento comprobar de nuevo hardware, postura, entorno y paros.
+El shadow y los auditores no son ese puente físico ni su certificación.

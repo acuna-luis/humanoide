@@ -1,5 +1,15 @@
 # Evaluación offline de SmolVLA y revisión de cabeza — 09-11-2026
 
+**10-11-2026 — SMOLVLA-BALL-BRIDGE-PREP-20261110.** El usuario pidió preparar
+las piezas restantes. Se añadieron auditores offline de brazo, intención y
+comandos de mano y se prepararon parcialmente artefactos ARM64. Se
+investigaron por lectura controladores, modos de mano y configuraciones SPS:
+la semántica de fuerza y el cambio/retorno efectivos siguen sin cualificar.
+No hay aún puente físico; se importó la base en Vision, se compiló `evdev` y
+se instaló LeRobot CPU. El checkpoint de pelota produjo una inferencia en
+62,932s sobre una muestra histórica, sin red ni ROS. Sin movimiento ni llamadas
+a servicios de cambio. [Hallazgos y evidencia](SMOLVLA_BALL_BRIDGE_PREP_20261110.md).
+
 **SMOLVLA-BALL-LIVE-SHADOW-20261109 — VERIFICADO en vivo, sin movimiento.**
 El usuario pidió avanzar hacia una prueba física. Se conectó el colector
 pasivo de Vision a un modelo aislado en GPU Ada, no a los actuadores: en 20 s

@@ -1,5 +1,16 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — SMOLVLA-BALL-BRIDGE-PREP-20261110.** Auditores de propuestas
+y grabaciones preparados y probados offline; no son un puente físico. El
+controlador de manos instalado vincula estáticamente modo5 a posición y modo7
+a corriente usando el campo `torque`, sin demostrar unidades ni seguridad. El
+perfil SPS leído difiere del histórico de controladores, con chasis mencionado.
+Base ARM64 importada en Vision; `evdev` compilado, LeRobot instalado y
+checkpoint de pelota ejecutado en CPU aislada con una muestra grabada:
+una inferencia en62,932s, sin ROS ni movimiento. No es prueba en vivo ni de
+control físico.
+[Detalles y reanudación](SMOLVLA_BALL_BRIDGE_PREP_20261110.md).
+
 **09-11-2026 — SMOLVLA-BALL-LIVE-SHADOW-20261109.** Shadow en vivo del
 checkpoint de pelota: nueve observaciones Vision y nueve propuestas en GPU
 Ada, sin control físico. La mayor diferencia propuesta−estado fue 1,165707 rad
