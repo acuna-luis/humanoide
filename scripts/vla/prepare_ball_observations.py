@@ -149,8 +149,10 @@ def latest_intent(commands, times, image_ns, max_age_ms):
             'age_ms': age, 'source_line': line, 'provisional': True}
 
 
-def export(spec_path, output, max_age_ms):
+def export(spec_path, output, max_age_ms, task=TASK):
     segments = load_segments(spec_path)
+    if not isinstance(task, str) or not task.strip():
+        raise ValueError('task instruction must be non-empty')
     if not math.isfinite(max_age_ms) or max_age_ms <= 0:
         raise ValueError('max command age must be positive and finite')
     out = output.expanduser().resolve()
@@ -187,7 +189,7 @@ def export(spec_path, output, max_age_ms):
                 raise ValueError(f"{segment['id']}: source image checksum mismatch at {n}")
 
     out.mkdir()  # Never overwrite; a partial directory is intentionally retained on error.
-    manifest = {'schema': 'cruzr_ball_observations_v1', 'task': TASK, 'training_ready': False,
+    manifest = {'schema': 'cruzr_ball_observations_v1', 'task': task, 'training_ready': False,
                 'physical_control_qualified': False, 'has_action_column': False,
                 'segments_spec_sha256': digest(spec_path), 'command_max_age_ms': max_age_ms,
                 'limitations': ['observation export only; not a LeRobot training dataset',
@@ -236,9 +238,10 @@ def main(argv=None):
     p.add_argument('--segments', type=Path, required=True, help='JSON specification with manually reviewed segment intervals')
     p.add_argument('--output', type=Path, required=True, help='new directory; parent must already exist')
     p.add_argument('--max-command-age-ms', type=float, default=80.0, help='observation annotation freshness threshold, not a control limit')
+    p.add_argument('--task', default=TASK, help='instrucción de lenguaje para el modelo (por defecto, la del piloto 09-11)')
     args = p.parse_args(argv)
     try:
-        manifest = export(args.segments, args.output, args.max_command_age_ms)
+        manifest = export(args.segments, args.output, args.max_command_age_ms, args.task)
     except (OSError, ValueError, KeyError) as exc:
         print(f'ERROR: {exc}', file=sys.stderr)
         return 1

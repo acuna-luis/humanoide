@@ -1,0 +1,85 @@
+{
+  "segments": [
+    {
+      "id": "pelota_demo_03x_a00_61_226",
+      "source_dir": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261110T192558Z_EPISODE_7974607c",
+      "start_frame": 61,
+      "end_frame": 226,
+      "status": "candidate_success",
+      "split": "inspection_train",
+      "notes": "Auto: intento 0 desde postura PICO; cabeza bajada desde frame 61; 1 cierres, máximo 10.8 s; éxito = cierre >= 4.0 s (confirmado por el operador 10-11-2026)."
+    },
+    {
+      "id": "pelota_demo_03x_a01_322_419",
+      "source_dir": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261110T192558Z_EPISODE_7974607c",
+      "start_frame": 322,
+      "end_frame": 419,
+      "status": "failed",
+      "split": "inspection_train",
+      "notes": "Auto: intento 1 desde postura PICO; cabeza bajada desde frame 322; 1 cierres, máximo 2.3 s; éxito = cierre >= 4.0 s (confirmado por el operador 10-11-2026)."
+    },
+    {
+      "id": "pelota_demo_03x_a02_440_517",
+      "source_dir": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261110T192558Z_EPISODE_7974607c",
+      "start_frame": 440,
+      "end_frame": 517,
+      "status": "failed",
+      "split": "inspection_train",
+      "notes": "Auto: intento 2 desde postura PICO; cabeza bajada desde frame 440; 2 cierres, máximo 1.1 s; éxito = cierre >= 4.0 s (confirmado por el operador 10-11-2026)."
+    },
+    {
+      "id": "pelota_demo_03x_a03_564_774",
+      "source_dir": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261110T192558Z_EPISODE_7974607c",
+      "start_frame": 564,
+      "end_frame": 774,
+      "status": "failed",
+      "split": "inspection_train",
+      "notes": "Auto: intento 3 desde postura PICO; cabeza bajada desde frame 564; 1 cierres, máximo 0.6 s; éxito = cierre >= 4.0 s (confirmado por el operador 10-11-2026)."
+    },
+    {
+      "id": "pelota_demo_03x_a04_813_894",
+      "source_dir": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261110T192558Z_EPISODE_7974607c",
+      "start_frame": 813,
+      "end_frame": 894,
+      "status": "candidate_success",
+      "split": "inspection_train",
+      "notes": "Auto: intento 4 desde postura PICO; cabeza bajada desde frame 813; 2 cierres, máximo 6.4 s; éxito = cierre >= 4.0 s (confirmado por el operador 10-11-2026)."
+    },
+    {
+      "id": "pelota_demo_03x_a05_914_975",
+      "source_dir": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261110T192558Z_EPISODE_7974607c",
+      "start_frame": 914,
+      "end_frame": 975,
+      "status": "failed",
+      "split": "inspection_train",
+      "notes": "Auto: intento 5 desde postura PICO; cabeza bajada desde frame 914; 0 cierres, máximo 0.0 s; éxito = cierre >= 4.0 s (confirmado por el operador 10-11-2026)."
+    },
+    {
+      "id": "pelota_demo_03x_a06_987_1082",
+      "source_dir": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261110T192558Z_EPISODE_7974607c",
+      "start_frame": 987,
+      "end_frame": 1082,
+      "status": "candidate_success",
+      "split": "inspection_train",
+      "notes": "Auto: intento 6 desde postura PICO; cabeza bajada desde frame 987; 1 cierres, máximo 7.3 s; éxito = cierre >= 4.0 s (confirmado por el operador 10-11-2026)."
+    },
+    {
+      "id": "pelota_demo_03x_a07_1094_1163",
+      "source_dir": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261110T192558Z_EPISODE_7974607c",
+      "start_frame": 1094,
+      "end_frame": 1163,
+      "status": "failed",
+      "split": "inspection_train",
+      "notes": "Auto: intento 7 desde postura PICO; cabeza bajada desde frame 1094; 0 cierres, máximo 0.0 s; éxito = cierre >= 4.0 s (confirmado por el operador 10-11-2026)."
+    },
+    {
+      "id": "pelota_demo_03x_a08_1179_1251",
+      "source_dir": "/home/lacuna/proyectos/Robots/Humanoide-vla-evidence/20261110T192558Z_EPISODE_7974607c",
+      "start_frame": 1179,
+      "end_frame": 1251,
+      "status": "failed",
+      "split": "inspection_train",
+      "notes": "Auto: intento 8 desde postura PICO; cabeza bajada desde frame 1179; 1 cierres, máximo 1.0 s; truncado por fin de grabación; éxito = cierre >= 4.0 s (confirmado por el operador 10-11-2026)."
+    }
+  ]
+}

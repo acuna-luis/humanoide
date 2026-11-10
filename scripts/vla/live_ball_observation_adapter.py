@@ -10,6 +10,7 @@ from collections import deque
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import struct
 import sys
@@ -117,7 +118,7 @@ class Pairer:
             raise ValueError('unexpected RGB PNG or checksum')
         j, h = selected['joints'], selected['hand_right']
         self.produced += 1
-        return {'schema': 'cruzr_ball_live_observation_v1', 'task': TASK,
+        return {'schema': 'cruzr_ball_live_observation_v1', 'task': os.environ.get('CRUZR_SVLA_TASK') or TASK,
                 'state_names': self.joint_names + RIGHT_HAND, 'state27': j[2] + h[2],
                 'image_source_ns': image_ns, 'joint_source_ns': j[0], 'hand_source_ns': h[0],
                 'image_sha256': row['png_sha256'], 'png_b64': row['png_b64'],

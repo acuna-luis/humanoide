@@ -8,14 +8,20 @@ IMAGE_ID='sha256:4d15e9e6c5a1071bfe522a5258a8db07b448bc29f698c4a48c43c252754f36f
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 usage() {
   cat <<'EOF'
-Uso: bash shadow_live_inference.sh TRAIN_DIR MODEL_VOLUME CHECKPOINT_DIR DEVICE SEED MAX_SAMPLES
+Uso: bash shadow_live_inference.sh TRAIN_DIR MODEL_VOLUME CHECKPOINT_DIR DEVICE SEED MAX_SAMPLES [PINS_B64]
+PINS_B64 (opcional): JSON base64 con train_manifest_sha256 y checkpoint_files para otro checkpoint.
 Entrada: JSONL de observaciones por stdin. Salida: eventos ready/prediction/done por stdout.
 El proceso termina en EOF, al máximo (1..1000 muestras) o al límite de 300 s.
 Ejecuta modelo verificado en Docker sin red ni ROS; sin acciones físicas.
 EOF
 }
 if [[ $# == 1 && ( $1 == '--help' || $1 == '-h' ) ]]; then usage; exit 0; fi
-[[ $# == 6 ]] || { usage >&2; exit 2; }
+[[ $# == 6 || $# == 7 ]] || { usage >&2; exit 2; }
+pins_args=()
+if [[ $# == 7 ]]; then
+  [[ "$7" =~ ^[A-Za-z0-9+/=]{16,8192}$ ]] || { printf 'PINS_B64 inválido\n' >&2; exit 2; }
+  pins_args=(--pins-b64 "$7")
+fi
 train="$(realpath -e -- "$1")"
 volume="$2"
 checkpoint="$(realpath -e -- "$3")"
@@ -59,4 +65,4 @@ timeout --signal=TERM --kill-after=10 300 \
   --mount "type=bind,src=$SCRIPT_DIR/train_offline.py,dst=/opt/cruzr/train_offline.py,readonly" \
   "$IMAGE" python -u -B /opt/cruzr/shadow_live_inference.py \
   --train /train --checkpoint /checkpoint --vlm /models/smolvlm2_500m_video \
-  --device "$4" --seed "$5" --max-samples "$6"
+  --device "$4" --seed "$5" --max-samples "$6" "${pins_args[@]}"

@@ -6,6 +6,7 @@ when inference is busy; a partial write is never silently spliced into another
 record. Run from a trusted PC with a separately staged, pinned server runner.
 """
 import argparse
+import base64
 import collections
 import json
 import math
@@ -75,6 +76,13 @@ def observation_state(row):
             'received_monotonic_ns': stamp}
 
 
+def expected_model_sha256(args):
+    """Hash del modelo esperado: el del piloto o el de --pins-file."""
+    if getattr(args, 'pins_file', None):
+        return json.loads(Path(args.pins_file).read_text(encoding='utf-8'))['checkpoint_files']['model.safetensors']
+    return MODEL_SHA256
+
+
 def server_command(args):
     if not re.fullmatch(r'[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+', args.host):
         raise ValueError('host must be user@host without shell characters')
@@ -85,6 +93,9 @@ def server_command(args):
         raise ValueError('invalid volume')
     remote = ['bash', args.runner, args.train, args.volume, args.checkpoint,
               args.device, str(args.seed), str(args.max_samples)]
+    if getattr(args, 'pins_file', None):
+        pins = json.loads(Path(args.pins_file).read_text(encoding='utf-8'))
+        remote.append(base64.b64encode(json.dumps(pins, sort_keys=True).encode()).decode())
     return ['ssh', '-T', '-p', str(args.port), '-o', 'BatchMode=yes',
             '-o', 'StrictHostKeyChecking=yes', '-o', 'ConnectTimeout=8',
             '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax=2',
@@ -227,7 +238,7 @@ def run(args):
                         if event == 'ready':
                             if (ready or row.get('schema') != 'cruzr_ball_live_shadow_v1'
                                     or row.get('physical_control_qualified') is not False
-                                    or row.get('model_sha256') != MODEL_SHA256):
+                                    or row.get('model_sha256') != expected_model_sha256(args)):
                                 raise ValueError('unexpected or duplicate model readiness')
                             ready = True
                             emit({'event': 'model_ready', 'model_sha256': row['model_sha256'],
@@ -237,8 +248,14 @@ def run(args):
                                        SSH_ASKPASS_REQUIRE='force', DISPLAY=os.environ.get('DISPLAY', ':0'))
                             source = subprocess.Popen(collector_command(container, args.seconds, args.fps),
                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, bufsize=0)
+                            # La instrucción la fija el dataset del modelo cargado (evento ready);
+                            # sin ella (servidor del piloto) el adaptador usa la del piloto.
+                            adapter_env = dict(os.environ)
+                            if isinstance(row.get('task'), str) and row['task'].strip():
+                                adapter_env['CRUZR_SVLA_TASK'] = row['task']
                             adapter = subprocess.Popen([sys.executable, '-B', '-u', str(HERE / 'live_ball_observation_adapter.py')],
-                                stdin=source.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
+                                stdin=source.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0,
+                                env=adapter_env)
                             source.stdout.close()
                             collector_source = {'bytes': (HERE / 'passive_episode_remote.py').read_bytes(),
                                                 'offset': 0, 'started': time.monotonic()}
@@ -331,6 +348,7 @@ def main():
     p.add_argument('--one-shot', action='store_true',
                    help='send at most one observation and drain capture before summary')
     p.add_argument('--startup-timeout', type=int, default=120)
+    p.add_argument('--pins-file', help='JSON local con hashes esperados de un checkpoint distinto del piloto')
     args = p.parse_args()
     if not (1 <= args.port <= 65535 and 1 <= args.seconds <= 240 and .5 <= args.fps <= 2
             and ((args.one_shot and args.max_samples == 1) or

@@ -74,9 +74,18 @@ def run(args):
     train, checkpoint, vlm = (Path(x).resolve(strict=True) for x in (args.train, args.checkpoint, args.vlm))
     if any(not p.is_dir() for p in (train, checkpoint, vlm)):
         raise ValueError('entradas inexistentes')
-    if sha256(train / 'manifest.json') != TRAIN_MANIFEST_SHA:
+    train_sha, checkpoint_files = TRAIN_MANIFEST_SHA, CHECKPOINT_FILES
+    if args.pins_b64:
+        # Hashes esperados enviados por el PC para otro checkpoint; mismos archivos
+        # que el piloto. Sigue siendo una verificación fijada, no autocertificada.
+        pins = json.loads(base64.b64decode(args.pins_b64, validate=True))
+        train_sha, checkpoint_files = pins['train_manifest_sha256'], pins['checkpoint_files']
+        if (not isinstance(train_sha, str) or len(train_sha) != 64 or not isinstance(checkpoint_files, dict)
+                or set(checkpoint_files) != set(CHECKPOINT_FILES)):
+            raise ValueError('pins inválidos: deben cubrir los mismos archivos del checkpoint')
+    if sha256(train / 'manifest.json') != train_sha:
         raise ValueError('manifest de entrenamiento inesperado')
-    verify_hashes(checkpoint, CHECKPOINT_FILES)
+    verify_hashes(checkpoint, checkpoint_files)
     verify_hashes(vlm, VLM_FILES)
     training = verify_dataset(train)
     validate_checkpoint(checkpoint, vlm)
@@ -105,7 +114,8 @@ def run(args):
     names = training['action_names'][:7]
     indices = [training['state_names'].index(name) for name in names]
     emit({'event': 'ready', 'schema': 'cruzr_ball_live_shadow_v1', 'physical_control_qualified': False,
-          'model_sha256': CHECKPOINT_FILES['model.safetensors'], 'max_samples': args.max_samples})
+          'model_sha256': checkpoint_files['model.safetensors'], 'max_samples': args.max_samples,
+          'task': training['task']})
     previous_image_ns = None
     count = 0
     while count < args.max_samples:
@@ -133,6 +143,10 @@ def run(args):
                 chunk = model.predict_action_chunk(batch)
                 if tuple(chunk.shape) != (1, 8, 8): raise ValueError('forma de predicción inválida')
                 decoded = post(chunk[:, 0, :])
+                # Bloque completo (8 acciones a la cadencia del dataset) para
+                # ejecución por tramos en el puente; la primera = `prediction`.
+                full_chunk = [post(chunk[:, i, :]).detach().cpu().reshape(-1).tolist()
+                              for i in range(chunk.shape[1])]
             if args.device == 'cuda': torch.cuda.synchronize()
             elapsed = time.perf_counter() - start
             prediction = decoded.detach().cpu().reshape(-1).tolist()
@@ -142,6 +156,7 @@ def run(args):
         emit({'event': 'prediction', 'index': count, 'image_sha256': row['image_sha256'],
               'image_source_ns': row['image_source_ns'], 'prediction': prediction,
               'proposed_minus_observed_rad': delta, 'inference_seconds': elapsed,
+              'chunk': full_chunk if all(math.isfinite(v) for row_ in full_chunk for v in row_) else None,
               'physical_control_qualified': False})
         count += 1
     emit({'event': 'done', 'samples': count, 'physical_control_qualified': False})
@@ -153,6 +168,7 @@ if __name__ == '__main__':
     parser.add_argument('--device', choices=('cpu', 'cuda'), default='cpu')
     parser.add_argument('--seed', type=int, default=20261109)
     parser.add_argument('--max-samples', type=int, default=10)
+    parser.add_argument('--pins-b64', default='', help='JSON base64 con hashes esperados de otro checkpoint')
     try:
         run(parser.parse_args())
     except (OSError, ValueError, KeyError, TypeError, OverflowError, importlib.metadata.PackageNotFoundError) as exc:

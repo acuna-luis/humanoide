@@ -45,6 +45,8 @@ URDF_LIMITS = [(-2.8623, 2.8623), (-1.885, 0.1222), (-2.9322, 2.9322), (-2.6529,
 # Posturas de dedos v4 medidas en la toma 2 (935-1008): abierta y sujetando la pelota.
 HAND_OPEN = [0.8, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 HAND_CLOSED = [1.824, 0.737, 1.018, 1.638, 0.853, 0.76, 0.234]
+# Postura PICO inicial del brazo derecho (igual en todas las demos del 10-11).
+PICO_POSE = [0.0, -0.15, 1.57, -1.57, -2.88, 0.0, 0.0]
 ADA = dict(host='luisacuna@192.168.1.43', port='2649',
            runner='/home/luisacuna/cruzr-smolvla-ball-20261109/live-shadow-20261109-2144/shadow_live_inference.sh',
            train='/home/luisacuna/cruzr-smolvla-ball-20261109/dataset-v2/lerobot-experiment',
@@ -122,6 +124,57 @@ def step_xml(target, duration, hand=None):
     return ('<root main_tree_to_execute="MainTree">\n  <BehaviorTree ID="MainTree">\n'
             '    <Sequence name="smolvla_step">\n' + body +
             '    </Sequence>\n  </BehaviorTree>\n</root>\n')
+
+
+def plan_chunk(chunk, k, obs, start, *, max_step, envelope, margin):
+    """Objetivos para las k primeras acciones del bloque, recortando cada una
+    respecto a la anterior (la primera respecto al estado observado)."""
+    targets, prev = [], obs
+    for action in chunk[:k]:
+        target = []
+        for i, (p, a) in enumerate(zip(prev, action[:7])):
+            t = p + max(-max_step, min(max_step, float(a) - p))
+            t = max(start[i] - envelope, min(start[i] + envelope, t))
+            lo, hi = URDF_LIMITS[i]
+            target.append(max(lo + margin, min(hi - margin, t)))
+        if not all(map(math.isfinite, target)):
+            raise ValueError('chunk_invalido')
+        targets.append(target)
+        prev = target
+    return targets
+
+
+def arm_action(target, duration):
+    return ('<Action ID="MetaMove" type="arm" location="right" joint_angles="%s" duration="%.3f" />'
+            % (';'.join('%.6f' % x for x in target), duration))
+
+
+def chunk_xml(targets, duration, hand=None):
+    """Secuencia de MetaMove de brazo; la mano (si cambia) en paralelo con el primero."""
+    moves = [arm_action(t, duration) for t in targets]
+    if hand is not None:
+        fingers = ';'.join('%.4f' % x for x in (HAND_CLOSED if hand == 'closed' else HAND_OPEN))
+        moves[0] = ('<Parallel threshold="2">' + moves[0] +
+                    '<Action ID="MetaMove" type="effector" location="right" eef_joint_commands="%s" '
+                    'duration="%.3f" /></Parallel>' % (fingers, duration))
+    return ('<root main_tree_to_execute="MainTree">\n  <BehaviorTree ID="MainTree">\n'
+            '    <Sequence name="smolvla_chunk">\n' + ''.join('      %s\n' % m for m in moves) +
+            '    </Sequence>\n  </BehaviorTree>\n</root>\n')
+
+
+def setup_xml(head, arm_pose, duration):
+    """Preparación antes de la política: cabeza (yaw, pitch), brazo y mano abierta."""
+    actions = []
+    if head is not None:
+        actions.append('<Action ID="MetaMove" type="head" location="single" joint_angles="%.4f; %.4f" '
+                       'duration="%.3f" />' % (head[0], head[1], duration))
+    if arm_pose is not None:
+        actions.append(arm_action(arm_pose, duration))
+        actions.append('<Action ID="MetaMove" type="effector" location="right" eef_joint_commands="%s" '
+                       'duration="%.3f" />' % (';'.join('%.4f' % x for x in HAND_OPEN), duration))
+    return ('<root main_tree_to_execute="MainTree">\n  <BehaviorTree ID="MainTree">\n'
+            '    <Parallel threshold="%d">\n' % len(actions) + ''.join('      %s\n' % a for a in actions) +
+            '    </Parallel>\n  </BehaviorTree>\n</root>\n')
 
 
 # ---------------------------------------------------------------- transporte
@@ -207,12 +260,23 @@ def preflight(motion):
             'ok': estops == (0, 0) and min(socs) >= 30 and not active}
 
 
+def read_arm_and_head(motion):
+    """Sólo lectura de /mc/joint_states: (brazo derecho 7, (yaw, pitch) cabeza)."""
+    import yaml
+    out = motion.ros2('timeout 8 ros2 topic echo --once /mc/joint_states', timeout=40).stdout
+    msg = yaml.safe_load(out.split('---')[0])
+    pos = dict(zip(msg['name'], msg['position']))
+    return [pos[j] for j in JOINTS], (pos['head_yaw_joint'], pos['head_pitch_joint'])
+
+
 def start_shadow(args):
     cmd = [sys.executable, '-B', str(REPO / 'scripts/vla/run_ball_live_shadow.py'),
-           '--host', ADA['host'], '--port', ADA['port'], '--runner', ADA['runner'],
-           '--train', ADA['train'], '--volume', ADA['volume'], '--checkpoint', ADA['checkpoint'],
+           '--host', ADA['host'], '--port', ADA['port'], '--runner', args.runner,
+           '--train', args.train, '--volume', ADA['volume'], '--checkpoint', args.checkpoint,
            '--device', 'cuda', '--seconds', str(args.seconds), '--fps', str(args.fps),
            '--max-samples', str(args.seconds * 2 + 10), '--startup-timeout', '120']
+    if args.pins_file:
+        cmd += ['--pins-file', args.pins_file]
     proc = subprocess.Popen(cmd, cwd=REPO, stdout=subprocess.PIPE, text=True, bufsize=1)
     q = queue.Queue()
 
@@ -248,7 +312,22 @@ def main():
     p.add_argument('--grasp-near-rad', type=float, default=0.15,
                    help='sólo cerrar si max|delta del modelo| < este valor')
     p.add_argument('--allow-charger', action='store_true', help='aceptar cargador conectado')
+    p.add_argument('--train', default=ADA['train'], help='dataset de entrenamiento en Ada (estadísticas)')
+    p.add_argument('--checkpoint', default=ADA['checkpoint'], help='checkpoint en Ada')
+    p.add_argument('--runner', default=ADA['runner'], help='shadow_live_inference.sh en Ada')
+    p.add_argument('--pins-file', help='JSON local con hashes esperados (checkpoint distinto del piloto)')
+    p.add_argument('--chunk-steps', type=int, default=1,
+                   help='acciones del bloque ejecutadas por paso (1-8); >1 usa --action-duration-s')
+    p.add_argument('--action-duration-s', type=float, default=0.5,
+                   help='duración de cada acción del bloque (cadencia del dataset: 0,5 s a 2 Hz)')
+    p.add_argument('--head-pose', help='YAW,PITCH de cabeza antes de empezar (p. ej. -0.49,-0.65)')
+    p.add_argument('--start-pose', choices=('pico',), help='llevar el brazo a la postura PICO y abrir la mano antes')
+    p.add_argument('--setup-duration-s', type=float, default=5.0)
     args = p.parse_args()
+    if not 1 <= args.chunk_steps <= 8:
+        raise SystemExit('--chunk-steps debe estar en 1-8')
+    if args.chunk_steps > 1 and (args.action_duration_s < 0.5 or args.max_step_rad > 0.10):
+        raise SystemExit('Con bloques: duración por acción >= 0,5 s y paso <= 0,10 rad')
     if not 1 <= args.seconds <= 240 or not .5 <= args.fps <= 2:
         raise SystemExit('--seconds debe estar en 1-240 y --fps en 0,5-2 (límites del shadow)')
     if args.duration_s < 1.0 or args.max_step_rad > 0.15 or args.envelope_rad > 1.5:
@@ -286,6 +365,29 @@ def main():
         if ready.get('event') != 'executor_ready':
             raise SystemExit('Ejecutor remoto no disponible')
 
+    head = tuple(float(x) for x in args.head_pose.split(',')) if args.head_pose else None
+    if head is not None and (len(head) != 2 or not -0.8 <= head[0] <= 0.8 or not -0.7 <= head[1] <= 0.3):
+        raise SystemExit('--head-pose fuera de rango (yaw ±0,8, pitch -0,7..0,3)')
+    if head is not None or args.start_pose:
+        arm_now, head_now = read_arm_and_head(motion)
+        dev = max(abs(a - b) for a, b in zip(arm_now, PICO_POSE))
+        log({'event': 'setup_state', 'arm': arm_now, 'head_yaw_pitch': head_now, 'max_dev_from_pico': dev})
+        print('Estado actual: max|brazo-PICO|=%.3f rad, cabeza yaw/pitch=%.3f/%.3f' % (dev, *head_now))
+        if args.start_pose and dev > 0.6:
+            raise SystemExit('El brazo está a %.2f rad de la postura PICO (>0,6); llévelo cerca antes.' % dev)
+        xml = setup_xml(head, PICO_POSE if args.start_pose else None, args.setup_duration_s)
+        log({'event': 'setup_plan', 'xml': xml})
+        if not args.dry_run:
+            executor.stdin.write(json.dumps({'name': 'setup', 'task': task_rel + '/setup', 'xml': xml,
+                                             'timeout': args.setup_duration_s + 15}) + '\n')
+            executor.stdin.flush()
+            result = json.loads(executor.stdout.readline() or '{"event":"executor_eof"}')
+            log(dict(result, step='setup'))
+            print('Preparación (cabeza/brazo/mano): %s en %.2f s' % (
+                'SUCCEED' if result.get('succeed') else 'FALLO', result.get('seconds', -1)))
+            if not result.get('succeed'):
+                raise SystemExit('Preparación no completada: ' + str(result.get('tail', ''))[-300:])
+
     gate = HandGate(args.hand_threshold, args.hand_confirm, args.grasp_near_rad) if args.hand else None
     shadow, q = start_shadow(args)
     start = last_target = None
@@ -322,18 +424,29 @@ def main():
                 start = obs
                 log({'event': 'start_pose', 'joints': JOINTS, 'obs': obs})
             name = 'step_%03d' % steps
-            hand = gate.update(info['hand_scalar_ignored'], info['model_delta']) if gate else None
+            chunk = row.get('chunk') if args.chunk_steps > 1 else None
+            if args.chunk_steps > 1 and not chunk:
+                raise ValueError('el servidor no devuelve bloque (chunk); actualice shadow_live_inference.py en Ada')
+            targets = plan_chunk(chunk, args.chunk_steps, obs, start, max_step=args.max_step_rad,
+                                 envelope=args.envelope_rad, margin=args.margin_rad) if chunk else [target]
+            target = targets[-1]
+            hand_scalar = (sum(a[7] for a in chunk[:args.chunk_steps]) / args.chunk_steps
+                           if chunk else info['hand_scalar_ignored'])
+            hand = gate.update(hand_scalar, info['model_delta']) if gate else None
             log({'event': 'plan', 'hand_command': hand, 'hand_state': gate.state if gate else None, 'step': steps, 'index': row.get('index'),
-                 'image_sha256': row.get('image_sha256'), 'obs': obs, 'target': target, **info})
+                 'image_sha256': row.get('image_sha256'), 'obs': obs, 'target': target,
+                 'targets': targets, 'hand_scalar': hand_scalar, **info})
             print('%s modelo Δ=%s  enviado Δ=%s  mano=%.2f%s' % (
                 name, ['%+.3f' % x for x in info['model_delta']], ['%+.3f' % x for x in info['sent_delta']],
-                info['hand_scalar_ignored'], (' -> ' + hand.upper()) if hand else ''))
+                hand_scalar, (' -> ' + hand.upper()) if hand else ''))
             if args.dry_run:
                 steps += 1; step_end = arrival
                 continue
             executor.stdin.write(json.dumps({'name': name, 'task': task_rel + '/' + name,
-                                             'xml': step_xml(target, args.duration_s, hand),
-                                             'timeout': args.duration_s + 12}) + '\n')
+                                             'xml': (chunk_xml(targets, args.action_duration_s, hand) if chunk
+                                                     else step_xml(target, args.duration_s, hand)),
+                                             'timeout': (args.action_duration_s * len(targets) if chunk
+                                                         else args.duration_s) + 12}) + '\n')
             executor.stdin.flush()
             result = json.loads(executor.stdout.readline() or '{"event":"executor_eof"}')
             step_end = time.monotonic()
