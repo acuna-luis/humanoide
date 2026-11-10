@@ -1,5 +1,10 @@
 # Preparación del puente SmolVLA de pelota — 10-11-2026
 
+**Revisión posterior 10-11 — SMOLVLA-NATIVE-ARM-DRAFT-20261110.** Se añadió
+una conversión offline desde un shadow a un borrador `MetaMove` de brazo
+derecho. Reutiliza el formato nativo, pero no valida el orden, trayectoria,
+parada o mano y no instala ni ejecuta tareas. [Detalle y receta](SMOLVLA_NATIVE_ARM_STEP_20261110.md).
+
 **Revisión posterior 10-11 — SMOLVLA-SDK-AGE-20261110.** La auditoría del
 controlador VLA muestra una comparación de antigüedad de 10 ms por junta si
 está habilitada; la rama vencida no demuestra frenado. La lógica nativa PICO

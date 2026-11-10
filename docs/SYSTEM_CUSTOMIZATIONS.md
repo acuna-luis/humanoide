@@ -1,5 +1,19 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-NATIVE-ARM-DRAFT-20261110
+
+**10-11-2026, Europe/Madrid — conversión offline VERIFICADA; puente y ciclo
+físico PENDIENTES.** A petición del usuario se reutilizó la vía nativa y un
+shadow ya grabado, sin repetir entrenamiento ni inferencia. No se consultó ni
+movió el robot ni se instaló una tarea en Motion.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | Checkpoint de pelota disponible, shadow con cabeza bajada; salida física sin cualificar. `MetaMove` admite en ejemplos una acción `type=arm`, `location=right`, `joint_angles` con siete valores; la semántica y el orden efectivos para este puente siguen pendientes. Documentos previos en `bae5866`: blobs global `e6f2047e00b41f78857830cc80c1af59b916b9ea`, registro `5d4b3bf2b70882821a603bd230035439cb98c996`, puente `9a36cea92d4aa59889b95b5668fda20ba4f0c4c9`. |
+| Fuentes | `scripts/vla/prepare_ball_native_arm_step.py` SHA256 `ca02f2cd1745b76f68e1dd1c7985f2ad85cb0d5f23366bdff73add83ff09e490`; test `scripts/vla/test_prepare_ball_native_arm_step.py` `ece161e79ab32af2dbda0336aa0673217b8891772c86db27ccef30788a43fa90`. Usa auditor versionado, Python estándar y modelo `e707eea07b58e14b979e78463b94ba75a52b1c18abf8076aebc8aa34ac77f8da`. [Guía y receta](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md). |
+| Aplicación y verificación | `--check` procesa un resultado shadow completo, selecciona una propuesta y recorta cada diferencia al salto explícito. Se probó la primera muestra de `../Humanoide-vla-evidence/20261109_SMOLVLA_LIVE_SHADOW/live-run.jsonl`, SHA256 `5be819ea4a7941c3b136c40aa66494bbda42c5b6b116fbe431686cf2b85e8131`, con salto hipotético0,05rad y duración4s. Produce un JSON con un XML candidato, no una orden enviada; paso/tiempo no son límites del robot. Cuatro tests pasan y `--run` devuelve2 antes de leer datos o conectar. |
+| Deuda y reversión | El recorte cambia la salida del modelo; el resultado no prueba control, orden nativo, colisiones, frenado, mano ni tarea. No usar el XML en el robot. Revertir selectivamente script, test y documentos comparando cambios posteriores con `bae5866`. No hay cambios remotos que revertir. |
+
 ## SMOLVLA-SDK-AGE-20261110
 
 **10-11-2026, Europe/Madrid — auditoría estática OBSERVADA; ejecución

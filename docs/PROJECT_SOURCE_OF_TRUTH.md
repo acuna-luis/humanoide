@@ -1,5 +1,13 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-NATIVE-ARM-DRAFT-20261110: conversión offline.**
+Para acortar la integración se preparó un paso candidato al formato nativo
+`MetaMove` de brazo derecho a partir de un shadow grabado, sin otra inferencia.
+El recorte del objetivo es experimental; orden, trayectoria y parada siguen
+PENDIENTES, así como la mano. No se instaló tarea ni se movió el robot.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-native-arm-draft-20261110).
+
 **10-11-2026 — SMOLVLA-SDK-AGE-20261110: auditoría de timeout.** El usuario
 pidió continuar SmolVLA y confirmó condiciones físicas; no se enviaron órdenes.
 El controlador VLA anunciado usa `StandardSdkController`; su binario compara
