@@ -1,5 +1,24 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — CODEX-VSCODE-GRAY-20261110: diagnóstico de pantalla gris,
+PENDIENTE de resolución.** En el PC, VS Code 1.145.2 y la extensión Codex
+26.1021.22027 registraron que la vista lateral no recibió mensajes del
+renderizador durante 30 s: `renderer_ready_timeout` el 10-11 a las 08:32:52;
+el mismo síntoma aparece en el registro del 09-11. Los 22.544 archivos de la
+vista instalada coinciden por SHA-256 con la copia VSIX local, lo que no
+acredita que esa copia o la ejecución sean correctas. La causa y la reparación
+siguen PENDIENTES. Evidencia local: `~/.config/Code/logs/20261110T083218/window1/`
+(`renderer.log` y `exthost/openai.chatgpt/Codex.log`). Sin cambios en el
+perfil habitual de VS Code, robot o configuración persistente del PC.
+**Prueba temporal:** se copió el VSIX local a
+`/tmp/codex-gray-20261110/codex.vsix` y se instaló con
+`code --user-data-dir /tmp/codex-gray-20261110/user --extensions-dir /tmp/codex-gray-20261110/extensions --install-extension /tmp/codex-gray-20261110/codex.vsix`.
+Se abrió una ventana con los mismos directorios y `--new-window`; Codex se
+activó. Resultado visual del panel PENDIENTE de confirmación del usuario.
+Reversión de la prueba: cerrar esa ventana y retirar selectivamente
+`/tmp/codex-gray-20261110`; no borrar conversaciones del perfil habitual.
+[Ficha, hash y receta](SYSTEM_CUSTOMIZATIONS.md#codex-vscode-gray-20261110).
+
 **09-11-2026 — SMOLVLA-BALL-LIVE-SHADOW-20261109: inferencia en vivo
 VERIFICADA sin movimiento.** El checkpoint de pelota se cargó en GPU Ada en
 contenedor aislado y procesó nueve observaciones pasivas recientes de cámara,

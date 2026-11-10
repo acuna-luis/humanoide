@@ -1,5 +1,20 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## CODEX-VSCODE-GRAY-20261110
+
+**10-11-2026, Europe/Madrid — prueba aislada temporal OBSERVADA; solución y
+resultado visual PENDIENTES.** La vista lateral de Codex quedó gris. La prueba
+busca distinguir un fallo del perfil habitual de VS Code de uno que también
+aparezca en un perfil nuevo; no modifica el perfil habitual ni el robot.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | VS Code 1.145.2 y extensión Codex 26.1021.22027. El registro habitual `~/.config/Code/logs/20261110T083218/window1/exthost/openai.chatgpt/Codex.log` muestra `renderer_ready_timeout` sin mensajes a las 08:32:52 tras 30 s; también consta el 09-11. Causa PENDIENTE. Los 22.544 archivos de la vista instalada coincidieron por SHA-256 con la copia VSIX local; esto no verifica la ejecución. |
+| Destino, fuente y respaldo | PC: perfil temporal `/tmp/codex-gray-20261110/user`, extensiones temporales `/tmp/codex-gray-20261110/extensions` y copia `/tmp/codex-gray-20261110/codex.vsix`. Fuente previa preservada: `~/.config/Code/CachedExtensionVSIXs/openai.chatgpt-26.51021.22027-linux-x64`. Ambas copias VSIX tenían SHA-256 `08e18d1d3f7a056e55e3ada27edefe967fdbc7a68ea67ccf89563f87bcd5304f`. El perfil normal y su historial se mantienen intactos. |
+| Receta y activación | Copiar la fuente VSIX citada a la ruta temporal citada. Instalar con `code --user-data-dir /tmp/codex-gray-20261110/user --extensions-dir /tmp/codex-gray-20261110/extensions --install-extension /tmp/codex-gray-20261110/codex.vsix`; abrir con `code --user-data-dir /tmp/codex-gray-20261110/user --extensions-dir /tmp/codex-gray-20261110/extensions --new-window`. Requiere VS Code y entorno gráfico; no instala en el perfil habitual. |
+| Verificación | La extensión se instaló en la ruta aislada y Codex se activó en la ventana temporal. La observación visual del panel por el usuario sigue PENDIENTE; activación no demuestra que renderice o funcione correctamente. No se ha demostrado causa ni reparación. |
+| Reversión y deuda | Cerrar la ventana temporal y retirar sólo `/tmp/codex-gray-20261110` tras conservar la evidencia necesaria; no tocar la copia VSIX original ni las conversaciones o el perfil normal. Reversión aún PENDIENTE. Confirmar el resultado visual y continuar el diagnóstico en función de éste. |
+
 ## SMOLVLA-BALL-LIVE-SHADOW-20261109
 
 **09-11-2026, Europe/Madrid — shadow en vivo VERIFICADO sin movimiento;
