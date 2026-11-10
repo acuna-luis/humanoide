@@ -1,10 +1,12 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
-**10-11-2026 — HEAD-PICO-SUPERVISED-20261110: ejecutor supervisado preparado.**
-La prueba pasiva integral desde PICO/v4 terminó sin órdenes; usuario autorizó
-una tarea de cabeza y confirmó condiciones físicas. Resultado físico
-PENDIENTE en esta ficha. El monitor no certifica frenado ni evita intervención
-presencial; sin cambio de modo, HOME o reintento automático.
+**10-11-2026 — HEAD-PICO-SUPERVISED-20261110: tarea de cabeza completada.**
+Tras check y confirmación física, una única tarea de cabeza desde PICO/v4
+respondió SUCCEED y se observó reposo; pitch final−0,430665rad y sin cambios
+muestreados en otros ejes. La imagen recibida permite distinguir la pelota;
+shadow Ada generó cuatro propuestas sin órdenes. Cabeza permanece bajada, sin
+cambio de modo o HOME; parada/cancelación no certificadas y control VLA físico
+sigue pendiente.
 [Detalle](vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#ejecutor-supervisado-de-cabeza-desde-pico--preparación-10-11-2026),
 [ficha](SYSTEM_CUSTOMIZATIONS.md#head-pico-supervised-20261110).
 

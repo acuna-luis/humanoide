@@ -1,9 +1,10 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
-**10-11-2026 — HEAD-PICO-SUPERVISED-20261110.** Preparada una tarea fija de
-cabeza desde PICO/v4 con monitor, sin activar teleop ni cambiar modo. Check
-integral sin órdenes pasó; el ensayo físico figura PENDIENTE hasta registrar
-su resultado. [Detalle](../vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#ejecutor-supervisado-de-cabeza-desde-pico--preparación-10-11-2026),
+**10-11-2026 — HEAD-PICO-SUPERVISED-20261110.** Una tarea fija de cabeza desde
+PICO/v4 respondió SUCCEED y quedó en reposo, pitch−0,430665rad; los otros ejes
+no variaron en las muestras. No se activó teleop ni cambió modo. Se distingue
+la pelota en la imagen recibida. Cancelación y parada física no certificadas;
+la cabeza permanece bajada. [Detalle](../vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#ejecutor-supervisado-de-cabeza-desde-pico--preparación-10-11-2026),
 [ficha](../SYSTEM_CUSTOMIZATIONS.md#head-pico-supervised-20261110).
 
 **10-11-2026 — HEAD-PICO-CANDIDATE-20261110.** Nuevo comprobador PICO/v4 pasó

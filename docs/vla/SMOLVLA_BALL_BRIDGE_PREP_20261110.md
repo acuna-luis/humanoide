@@ -43,7 +43,39 @@ python3 -B scripts/vla/run_head_from_pico_supervised.py --check
 python3 -B scripts/vla/run_head_from_pico_supervised.py --run --physical-confirmed
 ```
 
-**Estado de esta preparación: pendiente del resultado del ensayo físico.**
+**Resultado físico observado — 10:43 CET:** se envió una única tarea,
+aceptada con UUID `1bbbcb355d7545a0a4ecee8ea010ed65`. Motion respondió
+`SUCCEED/status=4` a los2,330s; el supervisor observó reposo durante1s y
+terminó a los3,331s sin alertas ni cancelación. Pitch muestreado pasó de
+−0,003451 a −0,430569 rad, velocidad máxima observada0,335103rad/s; yaw y
+otros18 ejes sin variación en las muestras, paros0/0. El registro no contiene
+posiciones de dedos, aunque el monitor comprobó su deriva. El final normal no
+certifica la cancelación ni la distancia de parada física.
+
+Lectura posterior puntual: pitch−0,430665 rad, yaw0 y velocidades0 en cuerpo,
+ruedas y manos; actuadores corporales error0, baterías73,3/75,6%, cargador0,
+paros0/0, acción status4 y modo CC `joystick`. Sin supervisor residual ni
+recibo pendiente. La cabeza permanece bajada; no se envió HOME ni retorno.
+Las lecturas no acreditan condiciones físicas posteriores. En una imagen
+recibida tras el movimiento se distinguió la pelota amarilla en la zona de
+trabajo; no se conservaron píxeles y los relojes no están calibrados.
+
+Después se ejecutó shadow Ada durante5s/1Hz: cuatro observaciones y cuatro
+propuestas, cero órdenes. Máxima diferencia propuesta−estado1,146906rad
+(aprox.66°); inferencia0,168–0,595s y adaptador PC hasta predicción
+0,284–0,732s, sin transporte Vision→PC. No se guardaron los píxeles de esas
+observaciones ni se demuestra que el modelo reconozca la pelota o complete la
+tarea. El colector Vision y contenedor Ada terminaron. El control físico VLA
+sigue pendiente de puente y parada cualificados.
+
+Evidencia privada:
+`../Humanoide-vla-evidence/HEAD_PICO_SUPERVISED/run-20261110T094317.578062Z-f5148f1f/`;
+`remote-stdout.jsonl` SHA256 `4cf6010e3609167aae5cd7571393bf00d44eae12749152e76cad03e347709998`,
+`result.json` `f8de29df73c7a941e1b9887daf9463d0ce300bc91f6f2898dcf8e14560c161f5`,
+`intent.json` `991871b39b66ea450e55f85493ac519e8c7135d62b0185f05e0f3c17ad6e5527`.
+El inventario previo no se conservó íntegro en el log; no se afirma su copia
+bruta. Fuentes exactas del monitor y handoff están en el directorio de la
+ejecución. No se cambió ningún archivo o configuración persistente en Motion.
 
 ## Candidato de cabeza PICO v4 — 10-11-2026
 
