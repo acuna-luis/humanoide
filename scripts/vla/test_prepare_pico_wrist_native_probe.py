@@ -31,6 +31,22 @@ def transmissions():
 
 
 class PicoWristPreparationTests(unittest.TestCase):
+    def test_nominal_duration_is_explicit_and_defaults_to_historical_four_seconds(self):
+        initial = subject.check_body(state())
+        target = [initial[n] for n in subject.ARM]
+        target[-1] += .01
+        self.assertEqual(subject.nominal_arm_limits(urdf(), initial, target),
+                         subject.nominal_arm_limits(urdf(), initial, target, duration_s=4))
+        with self.assertRaisesRegex(ValueError, 'necessary_average_speed'):
+            subject.nominal_arm_limits(urdf(.001), initial, target, duration_s=4)
+        self.assertGreater(subject.nominal_arm_limits(urdf(), initial, target, duration_s=2)
+                           [subject.ARM_AXIS]['average_rad_s'],
+                           subject.nominal_arm_limits(urdf(), initial, target, duration_s=4)
+                           [subject.ARM_AXIS]['average_rad_s'])
+        for duration in (0, -1, True, math.nan, math.inf):
+            with self.subTest(duration=duration), self.assertRaisesRegex(ValueError, 'invalid_nominal_duration'):
+                subject.nominal_arm_limits(urdf(), initial, target, duration_s=duration)
+
     def test_single_right_wrist_action_and_native_goal(self):
         bundle = subject.prepare(state(), urdf(), transmissions())
         c = bundle['candidate']

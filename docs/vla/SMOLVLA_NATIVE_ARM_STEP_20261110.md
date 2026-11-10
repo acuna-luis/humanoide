@@ -1,5 +1,46 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Telemetría emparejada y cotejo nominal — 10-11-2026
+
+**VERIFICADO LOCAL, SIN ÓRDENES.** El adaptador empareja las posiciones
+articulares y la imagen como antes y añade las velocidades 20D disponibles y
+el instante monotónico PC en que procesó el registro articular. Si faltan
+velocidades conserva el shadow, pero no las sustituye por ceros. El relay
+conserva esa muestra para asociarla a la predicción por `image_sha256` y
+`image_source_ns`; rechaza sellos de imagen duplicados o no crecientes y
+predicciones sin observación pendiente. Un productor antiguo sin los campos
+nuevos continúa funcionando en shadow; metadata parcialmente presente falla.
+
+El conversor existente `prepare_ball_native_arm_step.py --stream` conserva su
+vista previa antigua si no recibe parámetros nominales. Con todos los
+parámetros siguientes activa el cotejo opcional:
+
+```text
+--urdf RUTA --transmissions RUTA --max-state-age-ns ENTERO
+--max-prediction-age-ns ENTERO --min-sps-margin-rad VALOR
+```
+
+También requiere `--max-step-rad` y `--duration-s` explícitos. En esta vía se
+exigen velocidades y nombres 20D, orden de modelo igual al orden nominal de
+brazo, postura PICO/head-down estacionaria, sellos de recepción y predicción
+válidos en el mismo reloj PC y coherencia de los siete deltas con la muestra.
+Se rechaza cualquier delta mayor que la cota aportada. Se revisan los siete
+extremos de brazo con el URDF y los 20 extremos con las transmisiones SPS
+aportadas; la duración elegida se usa para el promedio mínimo necesario, no
+para certificar picos. El margen opcional es de diagnóstico definido por el
+llamador, no se añade como límite del fabricante.
+
+La salida conserva `physical_control_qualified=false` y
+`physical_commands_sent=0`. El sello PC sólo indica cuándo el adaptador
+procesó el registro; no mide cuánto tardó desde Vision ni calibra relojes.
+No se verifica interpolación real, escena, geometría de mano, fuerza,
+controlador o frenado. El formato y el resultado nominal no habilitan un
+despacho y la guardia debe verificar el estado de nuevo justo antes de éste.
+Pasan 33 tests locales y el manifiesto anterior de muñeca sigue recalculando
+igual. Sin inferencia, captura, modificación del robot ni movimiento en esta
+intervención. Rutas, hashes y backup están en la
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-paired-nominal-20261110).
+
 ## Carga verificada de fuentes — 10-11-2026
 
 **Estado: preparado y probado localmente; gate físico cerrado.** El cargador

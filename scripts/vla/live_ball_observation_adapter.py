@@ -23,11 +23,11 @@ MAX_SOURCE_AGE_NS = 80_000_000
 MAX_RECEIPT_AGE_NS = 500_000_000
 
 
-def positions(row, names):
+def positions(row, names, field='position'):
     msg = row.get('message')
     if not isinstance(msg, dict):
         raise ValueError('joint message missing')
-    keys, values = msg.get('name'), msg.get('position')
+    keys, values = msg.get('name'), msg.get(field)
     if (not isinstance(keys, list) or not isinstance(values, list) or len(keys) != len(values)
             or any(not isinstance(k, str) for k in keys) or len(set(keys)) != len(keys)):
         raise ValueError('joint names and positions malformed')
@@ -36,7 +36,7 @@ def positions(row, names):
     for name in names:
         v = mapping.get(name)
         if type(v) not in (int, float) or not math.isfinite(v):
-            raise ValueError('missing or nonfinite joint position: ' + name)
+            raise ValueError('missing or nonfinite joint ' + field + ': ' + name)
         result.append(v)
     return result
 
@@ -84,7 +84,14 @@ class Pairer:
             if not valid_stamp(row.get('source_ns')) or not valid_stamp(row.get('received_monotonic_ns')):
                 raise ValueError('invalid state timestamps')
             names = self.joint_names if kind == 'joints' else RIGHT_HAND
-            self.history[kind].append((row['source_ns'], row['received_monotonic_ns'], positions(row, names)))
+            # PC receipt time and Vision receipt time are different clocks.
+            # Preserve the former separately; never subtract across machines.
+            velocity = None
+            message = row.get('message')
+            if kind == 'joints' and isinstance(message, dict) and message.get('velocity'):
+                velocity = positions(row, names, 'velocity')
+            self.history[kind].append((row['source_ns'], row['received_monotonic_ns'],
+                                       positions(row, names), velocity, time.monotonic_ns()))
             return None
         if kind != 'rgb' or not self.ready:
             return None
@@ -115,6 +122,7 @@ class Pairer:
                 'image_source_ns': image_ns, 'joint_source_ns': j[0], 'hand_source_ns': h[0],
                 'image_sha256': row['png_sha256'], 'png_b64': row['png_b64'],
                 'received_monotonic_ns': {'image': receipt_ns, 'joint': j[1], 'hand': h[1]},
+                'state20_velocity_rad_s': j[3], 'pc_joint_received_monotonic_ns': j[4],
                 'remote_image_received_ns': row.get('received_ns'),
                 'pc_received_monotonic_ns': time.monotonic_ns()}
 

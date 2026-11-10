@@ -31,8 +31,11 @@ TASK_ROOT = '/opt/walker/manipulation_task_manager/share/manipulation_task_manag
 LIB_META_SHA256 = 'bfeab1c7a295b58cd96fddd20916fc3f7fe16bd8c8ad1e77720f48aad34ccc69'
 
 
-def nominal_arm_limits(urdf_text, initial, target):
+def nominal_arm_limits(urdf_text, initial, target, duration_s=DURATION_S):
     """Check endpoint limits and necessary average speeds, not the path."""
+    if (type(duration_s) not in (int, float) or not math.isfinite(duration_s)
+            or duration_s <= 0):
+        raise ValueError('invalid_nominal_duration')
     root = ET.fromstring(urdf_text)
     if root.tag != 'robot':
         raise ValueError('expected_robot_urdf')
@@ -56,7 +59,7 @@ def nominal_arm_limits(urdf_text, initial, target):
         start = initial[name]
         if not (low <= start <= high and low <= end <= high):
             raise ValueError('nominal_endpoint_outside_urdf:' + name)
-        required = abs(end - start) / DURATION_S
+        required = abs(end - start) / duration_s
         if required > speed:
             raise ValueError('necessary_average_speed_above_urdf:' + name)
         result[name] = {'lower_rad': low, 'upper_rad': high, 'speed_rad_s': speed,

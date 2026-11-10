@@ -17,6 +17,38 @@ spec.loader.exec_module(relay)
 
 
 class RelayTests(unittest.TestCase):
+    def test_old_observations_without_new_metadata_remain_shadow_compatible(self):
+        old = {'state_names': list(relay.BODY_NAMES) + ['hand_'+str(i) for i in range(7)],
+               'state27': [0.0]*27}
+        self.assertIsNone(relay.observation_state(old))
+        partial = dict(old, state20_velocity_rad_s=[0.0]*20)
+        with self.assertRaisesRegex(ValueError, 'metadata_incomplete'):
+            relay.observation_state(partial)
+
+    def test_duplicate_image_identity_is_rejected_before_pending_replacement(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            (directory / 'passive_episode_remote.py').write_text('# synthetic source\n')
+            (directory / 'live_ball_observation_adapter.py').write_text(
+                'import sys\nfor line in sys.stdin: print(line, end="", flush=True)\n')
+            server = ('import json,sys\n'
+                      'print(json.dumps({"event":"ready","schema":"cruzr_ball_live_shadow_v1",'
+                      '"physical_control_qualified":False,"model_sha256":'
+                      + repr(relay.MODEL_SHA256) + '}),flush=True)\n'
+                      'for line in sys.stdin: pass\n')
+            row = {'schema':'cruzr_ball_live_observation_v1', 'image_sha256':'a'*64, 'image_source_ns':123}
+            source = ('import sys,time,json; sys.stdin.buffer.read(); row='+repr(row)+'; '
+                      'row["pc_received_monotonic_ns"]=time.monotonic_ns(); '
+                      'print(json.dumps(row),flush=True); print(json.dumps(row),flush=True)')
+            args = SimpleNamespace(startup_timeout=5, seconds=2, fps=.5)
+            with (patch.object(relay, 'HERE', directory),
+                  patch.object(relay, 'discover_vision', return_value='fake'),
+                  patch.object(relay, 'collector_command', return_value=[sys.executable,'-u','-c',source]),
+                  patch.object(relay, 'server_command', return_value=[sys.executable,'-u','-c',server]),
+                  contextlib.redirect_stdout(io.StringIO()),
+                  self.assertRaisesRegex(ValueError, 'duplicate_or_non_increasing_observation_identity')):
+                relay.run(args)
+
     def test_stream_bounds_and_fragmentation(self):
         buffers = {}
         self.assertEqual(relay.line_buffer(buffers, 'x', b'{"a":'), [])
@@ -50,8 +82,11 @@ for line in sys.stdin:
     print(json.dumps({"event":"prediction","physical_control_qualified":False,"prediction":[0.0]*8,"proposed_minus_observed_rad":[0.0]*7,"image_sha256":row["image_sha256"],"image_source_ns":row["image_source_ns"]}),flush=True)
 print(json.dumps({"event":"done","physical_control_qualified":False,"samples":count}),flush=True)
 '''
-            row = {'schema':'cruzr_ball_live_observation_v1', 'image_sha256':'a'*64, 'image_source_ns':123}
+            row = {'schema':'cruzr_ball_live_observation_v1', 'image_sha256':'a'*64, 'image_source_ns':123,
+                   'state_names':list(relay.BODY_NAMES)+['hand_'+str(i) for i in range(7)],
+                   'state27':[0.0]*27, 'state20_velocity_rad_s':[0.0]*20}
             source = ('import sys,time,json; sys.stdin.buffer.read(); row=' + repr(row) + '; '
+                      'row["pc_joint_received_monotonic_ns"]=time.monotonic_ns(); '
                       'row["pc_received_monotonic_ns"]=time.monotonic_ns(); print(json.dumps(row), flush=True)')
             args = SimpleNamespace(startup_timeout=5, seconds=2, fps=.5)
             with (patch.object(relay, 'HERE', directory),
@@ -63,6 +98,10 @@ print(json.dumps({"event":"done","physical_control_qualified":False,"samples":co
             events = [json.loads(line) for line in output.getvalue().splitlines()]
             self.assertEqual([e['event'] for e in events], ['model_ready', 'prediction', 'done', 'summary'])
             self.assertGreaterEqual(events[1]['pc_adapter_to_prediction_seconds'], 0)
+            self.assertEqual(events[1]['paired_state20']['names'], list(relay.BODY_NAMES))
+            self.assertEqual(events[1]['paired_state20']['velocities'], [0.0]*20)
+            self.assertLessEqual(events[1]['paired_state20']['received_monotonic_ns'],
+                                 events[1]['prediction_received_monotonic_ns'])
             self.assertEqual(events[-1]['observations_sent'], 1)
             self.assertEqual(events[-1]['movement_commands'], 0)
 

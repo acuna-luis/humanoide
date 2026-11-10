@@ -1,5 +1,20 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-PAIRED-NOMINAL-20261110
+
+**10-11-2026, Europe/Madrid — VERIFICADO EN PRUEBAS LOCALES; sin habilitar ni
+probar movimiento.** Un único par sintético de observación y predicción puede
+revisarse frente a URDF/SPS proporcionados, sin crear clientes ROS ni metas.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | `3639cd6`; el relay shadow no adjuntaba a la predicción una muestra 20D con velocidades y sello PC. El conversor anterior generaba sólo borradores a partir de los siete deltas y no cotejaba la muestra completa. |
+| Fuentes | `scripts/vla/live_ball_observation_adapter.py` SHA256 `b47469b37c093326307b5a7d4a2cfbe292c3b461ab0672e1d99d92c6683fe7da`; `run_ball_live_shadow.py` `f815dbbec6289199d1cecae6552912086c1a87a9cc0d0ab762025c6f0575eb1a`; `prepare_ball_native_arm_step.py` `759bc18ed7586d69d93fe36a9fb55cf502d784202280bd6a6e18947cd909f5c4`; `prepare_pico_wrist_native_probe.py` `e22abe821381139b9b6ec69e462317780656ffa9f300524cce105c7d7a1f5627`; tests relacionados en `scripts/vla/`. |
+| Comportamiento | Pairer conserva velocidades y sello monotónico PC cuando existen; el relay enlaza la muestra con la predicción por hash y sello de imagen y rechaza identidades repetidas. El check nominal requiere nombres y velocidades 20D, muestra PICO estacionaria, consistencia de deltas, URDF/SPS y cotas de edad/salto/margen expresamente suministradas. Rechaza saltos que superan la cota en vez de recortar. Sin opciones nominales conserva el flujo shadow previo. |
+| Verificación | 33 tests locales: 7 adaptador, 6 relay, 12 conversor y 8 preparador de muñeca. Recalculado el manifiesto previo `PICO_WRIST_PREP_20261110T103237Z_078897/candidate/manifest.json`: coincide y no autoriza control. No se repitieron inferencia, captura o movimiento. Ver [receta y alcance](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#telemetría-emparejada-y-cotejo-nominal--10-11-2026). |
+| Reversión y evidencia | Backup de las ocho fuentes/tests y cuatro documentos anteriores en `../Humanoide-vla-evidence/SMOLVLA_PAIRED_NOMINAL_20261110/before-3639cd6.tar`, SHA256 `86d040f118bf6708fa329a06cc60deb0e5343579c9d24f44df3094ac16cebc06`; restaurar sólo esta intervención preservando cambios simultáneos ajenos. Sin cambios remotos. El cambio de `prepare_pico_wrist_native_probe.py` invalida bindings previos que incluyan esa fuente; regenerar y verificar antes de usar versiones nuevas. |
+| Límites | El sello PC mide cuándo el adaptador procesó el registro, no el transporte Vision→PC ni la sincronización de relojes. URDF y SPS son configuraciones aportadas, no límites efectivos garantizados. No se validan interpolación, colisión, mano, fuerza o parada; una muestra no reemplaza la guardia fresca antes de una acción. |
+
 ## ARM-PICO-VERIFIED-LOAD-20261110
 
 **10-11-2026, Europe/Madrid — VERIFICADO local y OBSERVADO en check pasivo;

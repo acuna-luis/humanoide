@@ -19,6 +19,8 @@ import subprocess
 import sys
 import time
 
+from ball_arm_preview_guard import BODY_NAMES, named_values
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 MAX_LINE = 12 * 1024 * 1024
@@ -44,6 +46,33 @@ def line_buffer(buffers, key, block):
 
 def emit(row):
     print(json.dumps(row, allow_nan=False, separators=(',', ':')), flush=True)
+
+
+def observation_state(row):
+    """Extract paired state without images; it carries no motion authority.
+
+    The PC monotonic stamp records when the adapter consumed the joint record;
+    it does not measure Vision-to-PC transport latency or synchronize clocks.
+    Old observation producers may omit these fields and remain shadow-only.
+    """
+    new_fields = {'pc_joint_received_monotonic_ns', 'state20_velocity_rad_s'}
+    present = new_fields.intersection(row)
+    if not present:
+        return None
+    if present != new_fields:
+        raise ValueError('paired_state_metadata_incomplete')
+    names, values = row.get('state_names'), row.get('state27')
+    stamp, velocity = row.get('pc_joint_received_monotonic_ns'), row.get('state20_velocity_rad_s')
+    if (not isinstance(names, list) or len(names) != 27 or any(not isinstance(n, str) for n in names)
+            or set(names[:20]) != set(BODY_NAMES)
+            or len(set(names)) != 27 or not isinstance(values, list) or len(values) != 27
+            or any(type(v) not in (int, float) or not math.isfinite(v) for v in values)
+            or type(stamp) is not int or stamp <= 0 or stamp > time.monotonic_ns()):
+        raise ValueError('paired_state_invalid')
+    if velocity is not None:
+        named_values(names[:20], values[:20], velocity)
+    return {'names': names[:20], 'positions': values[:20], 'velocities': velocity,
+            'received_monotonic_ns': stamp}
 
 
 def server_command(args):
@@ -117,6 +146,7 @@ def run(args):
     current = pending = None
     collector_source = None
     sent_times = collections.OrderedDict()
+    last_image_source_ns = 0
     started_capture = False
     end_seen = False
     finished_input = False
@@ -168,7 +198,8 @@ def run(args):
                         raise RuntimeError('model closed input early') from exc
                     current['offset'] += count
                     if current['offset'] == len(current['bytes']):
-                        sent_times[(current['image_sha256'], current['image_source_ns'])] = current['arrived']
+                        sent_times[(current['image_sha256'], current['image_source_ns'])] = {
+                            'arrived': current['arrived'], 'state': current['state']}
                         while len(sent_times) > 128:
                             sent_times.popitem(last=False)
                         sent += 1
@@ -229,11 +260,14 @@ def run(args):
                                     raise ValueError('invalid prediction values')
                             predictions += 1
                             image_hash = row.get('image_sha256')
-                            arrived = sent_times.pop((image_hash, row.get('image_source_ns')), None)
-                            if arrived is None:
+                            sent_observation = sent_times.pop((image_hash, row.get('image_source_ns')), None)
+                            if sent_observation is None:
                                 raise ValueError('prediction does not match a sent observation')
-                            if arrived is not None:
-                                row['pc_adapter_to_prediction_seconds'] = round(time.monotonic() - arrived, 6)
+                            now_ns = time.monotonic_ns()
+                            row['pc_adapter_to_prediction_seconds'] = round(now_ns / 1e9 - sent_observation['arrived'], 6)
+                            if sent_observation['state'] is not None:
+                                row['paired_state20'] = sent_observation['state']
+                                row['prediction_received_monotonic_ns'] = now_ns
                             emit(row)
                         elif event == 'done':
                             if row.get('physical_control_qualified') is not False or row.get('samples') != predictions:
@@ -251,12 +285,19 @@ def run(args):
                         image_source_ns = row.get('image_source_ns')
                         if type(image_source_ns) is not int or image_source_ns <= 0:
                             raise ValueError('observation without valid source timestamp')
+                        # The adapter normally enforces monotonic stamps, but
+                        # validate again at this trust boundary. This prevents
+                        # reusing a correlation key even after a prediction
+                        # has been consumed or an observation was dropped.
+                        if image_source_ns <= last_image_source_ns:
+                            raise ValueError('duplicate_or_non_increasing_observation_identity')
+                        last_image_source_ns = image_source_ns
                         received_pc_ns = row.get('pc_received_monotonic_ns')
                         if type(received_pc_ns) is not int or not 0 < received_pc_ns <= time.monotonic_ns():
                             raise ValueError('observation without valid PC receipt timestamp')
                         if pending is not None:
                             dropped += 1
-                        pending = {'bytes': line + b'\n', 'offset': 0,
+                        pending = {'bytes': line + b'\n', 'offset': 0, 'state': observation_state(row),
                                    'arrived': received_pc_ns / 1e9, 'image_sha256': image_hash,
                                    'image_source_ns': image_source_ns}
         if not ready or not started_capture or source.wait(timeout=2) != 0 or adapter.wait(timeout=2) != 0:

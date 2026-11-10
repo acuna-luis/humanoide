@@ -20,8 +20,11 @@ class LivePairingTests(unittest.TestCase):
     def state(self, kind, stamp, receipt, names=None, values=None):
         names = names or (self.names if kind == 'joints' else RIGHT_HAND)
         values = values if values is not None else [0.0] * len(names)
+        message = {'name': names, 'position': values}
+        if kind == 'joints':
+            message['velocity'] = [0.0] * len(names)
         return {'kind': kind, 'source_ns': stamp, 'received_monotonic_ns': receipt,
-                'message': {'name': names, 'position': values}}
+                'message': message}
 
     def frame(self, stamp=1_000_000_000, receipt=2_000_000_000):
         return {'kind': 'rgb', 'source_ns': stamp, 'received_monotonic_ns': receipt,
@@ -38,6 +41,21 @@ class LivePairingTests(unittest.TestCase):
         self.assertEqual(out['state27'], [1.0]*20 + [2.0]*7)
         self.assertEqual(out['received_monotonic_ns']['joint'], 1_980_000_000)
         self.assertEqual(out['joint_source_ns'], 980_000_000)
+        self.assertEqual(out['state20_velocity_rad_s'], [0.0]*20)
+        self.assertGreater(out['pc_joint_received_monotonic_ns'], 0)
+
+    def test_missing_velocity_preserves_shadow_but_not_a_velocity_claim(self):
+        joint = self.state('joints', 980_000_000, 1_980_000_000)
+        del joint['message']['velocity']
+        self.p.accept(joint)
+        self.p.accept(self.state('hand_right', 990_000_000, 1_990_000_000))
+        self.assertIsNone(self.p.accept(self.frame())['state20_velocity_rad_s'])
+
+    def test_nonfinite_velocity_is_not_replaced_by_zero(self):
+        joint = self.state('joints', 980_000_000, 1_980_000_000)
+        joint['message']['velocity'][0] = float('nan')
+        with self.assertRaisesRegex(ValueError, 'velocity'):
+            self.p.accept(joint)
 
     def test_skips_future_and_stale_states(self):
         self.p.accept(self.state('joints', 919_999_999, 1_990_000_000))

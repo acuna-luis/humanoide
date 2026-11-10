@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-PAIRED-NOMINAL-20261110: observaciones y propuestas
+emparejadas con cotejo nominal local.** El relay conserva posiciones y
+velocidades 20D asociadas a cada predicción y, opcionalmente, el conversor
+comprueba sus extremos con URDF/SPS aportados. Pasan 33 tests locales. El
+reloj de recepción PC no mide el transporte desde Vision; el diagnóstico no
+autoriza movimiento ni demuestra trayectoria, agarre o parada. Sin órdenes.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#telemetría-emparejada-y-cotejo-nominal--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-paired-nominal-20261110).
+
 **10-11-2026 — ARM-PICO-VERIFIED-LOAD-20261110: carga verificada preparada.**
 El cargador aislado comprueba las fuentes Python retenidas antes de importarlas;
 los bootstraps verifican fuente, payload y sesión antes de ejecutar código.

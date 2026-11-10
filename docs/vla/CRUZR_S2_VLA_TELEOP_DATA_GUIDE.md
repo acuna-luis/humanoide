@@ -1,5 +1,11 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — SMOLVLA-PAIRED-NOMINAL-20261110.** Un diagnóstico opcional
+asocia la muestra 20D a su predicción y comprueba extremos nominales con datos
+proporcionados. Pasan 33 tests sin robot; el sello del PC no garantiza frescura
+del origen y no hay autorización o prueba de movimiento.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#telemetría-emparejada-y-cotejo-nominal--10-11-2026).
+
 **10-11-2026 — ARM-PICO-VERIFIED-LOAD-20261110.** Se preparó la verificación
 previa a imports y ejecución de bundles, con 71 tests y un check pasivo sin
 goals. Los gates siguen cerrados y queda pendiente conectar la admisión para

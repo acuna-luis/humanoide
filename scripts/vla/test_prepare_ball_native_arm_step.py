@@ -1,8 +1,12 @@
 import io
+import copy
 import json
 import math
+from pathlib import Path
+import tempfile
 import unittest
 import xml.etree.ElementTree as ET
+import yaml
 from unittest.mock import patch
 
 import prepare_ball_native_arm_step as subject
@@ -24,6 +28,94 @@ def shadow_rows():
 
 
 class NativeArmDraftTests(unittest.TestCase):
+    def paired_case(self):
+        initial = subject.probe.BODY
+        # Deliberately reorder telemetry; conversion must map by name.
+        names = list(reversed(initial))
+        state = {'names': names, 'positions': [initial[n] for n in names],
+                 'velocities': [0.0]*20, 'received_monotonic_ns': 1000}
+        target = [initial[n] for n in MODEL_ORDER]
+        target[-1] += .01
+        row = {'index':0, 'image_source_ns':123, 'paired_state20':state,
+               'prediction_received_monotonic_ns':1050, 'prediction':target+[.5],
+               'proposed_minus_observed_rad':[target[i]-initial[n] for i,n in enumerate(MODEL_ORDER)]}
+        urdf = '<robot>' + ''.join('<joint name="%s" type="revolute"><limit lower="-3" upper="3" velocity="1"/></joint>' % n
+                                   for n in MODEL_ORDER) + '</robot>'
+        config = {'transmissions':{n:{'joint':{'name':n, 'limit':{'lower':-3.0,'upper':3.0}}}
+                                   for n in initial}}
+        options = {'urdf_text':urdf, 'transmissions_text':yaml.safe_dump(config),
+                   'max_state_age_ns':100, 'max_prediction_age_ns':100,
+                   'min_sps_margin_rad':0.0, 'now_ns':1100}
+        return row, config, options
+
+    def test_paired_live_nominal_check_uses_names_and_never_authorizes(self):
+        row, _, options = self.paired_case()
+        result = subject.checked_live_step(row, .02, 4, **options)
+        self.assertEqual(result['joint_order_hypothesis'], list(MODEL_ORDER))
+        self.assertEqual(result['nominal_endpoint_check']['state_age_pc_ns'], 100)
+        self.assertEqual(result['nominal_endpoint_check']['prediction_age_pc_ns'], 50)
+        self.assertIs(result['physical_control_qualified'], False)
+        self.assertEqual(result['physical_commands_sent'], 0)
+        self.assertAlmostEqual(result['joints'][-1]['candidate_target_rad'], row['prediction'][6])
+
+    def test_paired_live_rejects_stale_wrong_axes_nonfinite_and_excessive(self):
+        row, _, options = self.paired_case()
+        bad = copy.deepcopy(row); bad['paired_state20']['received_monotonic_ns'] = 999
+        with self.assertRaisesRegex(ValueError, 'stale'): subject.checked_live_step(bad, .02, 4, **options)
+        bad = copy.deepcopy(row); bad['paired_state20']['names'][0] = 'wrong_axis'
+        with self.assertRaises(ValueError): subject.checked_live_step(bad, .02, 4, **options)
+        bad = copy.deepcopy(row); bad['paired_state20']['velocities'] = None
+        with self.assertRaises(ValueError): subject.checked_live_step(bad, .02, 4, **options)
+        bad = copy.deepcopy(row); bad['prediction'][0] = float('nan')
+        with self.assertRaises(ValueError): subject.checked_live_step(bad, .02, 4, **options)
+        bad = copy.deepcopy(row); bad['prediction'][0] += .1; bad['proposed_minus_observed_rad'][0] += .1
+        with self.assertRaisesRegex(ValueError, 'exceeds_supplied_limit'): subject.checked_live_step(bad, .02, 4, **options)
+        bad = copy.deepcopy(row); bad['proposed_minus_observed_rad'][0] += .01
+        with self.assertRaisesRegex(ValueError, 'observation_mismatch'): subject.checked_live_step(bad, .02, 4, **options)
+        with patch.object(subject.probe, 'ARM', tuple(reversed(subject.probe.ARM))):
+            with self.assertRaisesRegex(ValueError, 'model_native_arm_order_mismatch'):
+                subject.checked_live_step(row, .02, 4, **options)
+
+    def test_paired_live_applies_supplied_sps_margin_to_other_body_axes(self):
+        row, config, options = self.paired_case()
+        name = 'L_elbow_yaw_joint'
+        q = subject.probe.BODY[name]
+        config['transmissions'][name]['joint']['limit']['upper'] = q + .001
+        options['transmissions_text'] = yaml.safe_dump(config)
+        options['min_sps_margin_rad'] = .002
+        with self.assertRaisesRegex(ValueError, 'sps_endpoint_margin_below_supplied_threshold:' + name):
+            subject.checked_live_step(row, .02, 4, **options)
+
+    def test_stream_nominal_mode_uses_paired_telemetry(self):
+        row, _, options = self.paired_case()
+        options.pop('now_ns')
+        prediction = dict(shadow_rows()[1], **row)
+        preview = subject.LivePreview(.02, 4, nominal=options)
+        preview.accept(shadow_rows()[0])
+        with patch.object(subject.time, 'monotonic_ns', return_value=1100):
+            result = preview.accept(prediction)
+        self.assertEqual(result['input_source'], 'paired_live_shadow_nominal_check')
+        self.assertEqual(result['event'], 'native_step_preview')
+        self.assertIs(result['physical_control_qualified'], False)
+
+    def test_cli_invalid_yaml_reports_error_without_traceback(self):
+        row, _, options = self.paired_case()
+        prediction = dict(shadow_rows()[1], **row)
+        data = ''.join(json.dumps(item)+'\n' for item in [shadow_rows()[0], prediction]).encode()
+        source = io.TextIOWrapper(io.BytesIO(data), encoding='utf-8')
+        with tempfile.TemporaryDirectory() as tmp:
+            urdf = Path(tmp)/'robot.urdf'; urdf.write_text(options['urdf_text'])
+            sps = Path(tmp)/'transmissions.yaml'; sps.write_text('transmissions: [unterminated')
+            args = ['--stream', '--max-step-rad', '.02', '--duration-s', '4', '--urdf', str(urdf),
+                    '--transmissions', str(sps), '--max-state-age-ns', '100',
+                    '--max-prediction-age-ns', '100', '--min-sps-margin-rad', '0']
+            with patch('sys.stdin', source), patch('sys.stdout', new_callable=io.StringIO), \
+                 patch('sys.stderr', new_callable=io.StringIO) as error, \
+                 patch.object(subject.time, 'monotonic_ns', return_value=1100):
+                self.assertEqual(subject.main(args), 1)
+            self.assertIn('DRAFT_ERROR:', error.getvalue())
+            self.assertNotIn('Traceback', error.getvalue())
+
     def test_one_right_arm_step_clips_each_axis_and_keeps_order(self):
         result = subject.draft(shadow_rows(), 0, .05, 4.0)
         self.assertFalse(result['physical_control_qualified'])

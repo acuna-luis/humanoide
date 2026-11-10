@@ -6,14 +6,19 @@ The seven-value MetaMove ordering and all limits remain unqualified on this
 robot. No ROS, network, task installation, or physical execution is provided.
 """
 import argparse
+import hashlib
 import json
 import math
 from pathlib import Path
 import re
 import sys
+import time
 import xml.etree.ElementTree as ET
+import yaml
 
 from audit_ball_arm_proposals import MODEL_ORDER, MODEL_SHA256, audit, finite_vector, read_rows
+from ball_arm_preview_guard import named_values
+import prepare_pico_wrist_native_probe as probe
 
 
 def positive(value, label):
@@ -104,12 +109,78 @@ def draft(rows, index, max_step_rad, duration_s):
     return result
 
 
+def checked_live_step(row, max_step_rad, duration_s, *, urdf_text, transmissions_text,
+                      max_state_age_ns, max_prediction_age_ns, min_sps_margin_rad, now_ns):
+    """Review one paired live prediction against supplied nominal configuration.
+
+    The timestamps must be from the same PC monotonic clock. Receipt time does
+    not measure Vision-to-PC delay and cannot prove that the source is fresh.
+    Reject excessive deltas; do not silently clip them. This is not a motion
+    plan, controller handoff, collision/stop check or physical authorization.
+    A live supervisor must recheck state before dispatch; the hand is untouched.
+    """
+    max_step = positive(max_step_rad, 'max_step_rad')
+    duration = positive(duration_s, 'duration_s')
+    if (type(now_ns) is not int or now_ns <= 0 or
+            any(type(age) is not int or age <= 0 for age in (max_state_age_ns, max_prediction_age_ns))):
+        raise ValueError('invalid_pc_monotonic_time_or_age')
+    if (type(min_sps_margin_rad) not in (int, float) or
+            not math.isfinite(min_sps_margin_rad) or min_sps_margin_rad < 0):
+        raise ValueError('invalid_supplied_sps_margin')
+    if not isinstance(urdf_text, str) or not isinstance(transmissions_text, str):
+        raise ValueError('nominal_configuration_required')
+    if tuple(MODEL_ORDER) != tuple(probe.ARM):
+        raise ValueError('model_native_arm_order_mismatch')
+    state = row.get('paired_state20')
+    if not isinstance(state, dict):
+        raise ValueError('paired_state20_required')
+    state_stamp, prediction_stamp = state.get('received_monotonic_ns'), row.get('prediction_received_monotonic_ns')
+    if (type(state_stamp) is not int or type(prediction_stamp) is not int or
+            not 0 < state_stamp <= prediction_stamp <= now_ns or
+            now_ns-state_stamp > max_state_age_ns or now_ns-prediction_stamp > max_prediction_age_ns):
+        raise ValueError('pc_receipt_stale_future_or_out_of_order')
+    measured = named_values(state.get('names'), state.get('positions'), state.get('velocities'))
+    msg = {'name': state['names'], 'position': state['positions'], 'velocity': state['velocities']}
+    # Existing PICO/v4 named reference, SPS and stationary checks; a receipt
+    # is only one sample, not sustained stationarity or physical clearance.
+    initial = probe.check_body(msg)
+    values, differences = row.get('prediction'), row.get('proposed_minus_observed_rad')
+    if not finite_vector(values, 8) or not finite_vector(differences, 7):
+        raise ValueError('prediction_or_difference_invalid')
+    joints = {}
+    for i, name in enumerate(MODEL_ORDER):
+        observed = measured[name][0]
+        if not math.isclose(values[i]-observed, differences[i], rel_tol=1e-6, abs_tol=1e-6):
+            raise ValueError('prediction_observation_mismatch:' + name)
+        if abs(values[i]-observed) > max_step:
+            raise ValueError('prediction_step_exceeds_supplied_limit:' + name)
+        joints[name] = {'derived_observed_rad': observed, 'model_value_rad': values[i]}
+    target = [values[i] for i in range(7)]
+    urdf_limits = probe.nominal_arm_limits(urdf_text, initial, target, duration_s=duration)
+    sps_limits = probe.hardware_endpoints(transmissions_text, initial, target)
+    for name, detail in sps_limits.items():
+        if detail['minimum_endpoint_margin_rad'] < min_sps_margin_rad:
+            raise ValueError('sps_endpoint_margin_below_supplied_threshold:' + name)
+    result = draft_joints(joints, row['index'], row['image_source_ns'], max_step, duration,
+                          'paired_live_shadow_nominal_check')
+    result['nominal_endpoint_check'] = {
+        'urdf_sha256': hashlib.sha256(urdf_text.encode('utf-8')).hexdigest(),
+        'transmissions_sha256': hashlib.sha256(transmissions_text.encode('utf-8')).hexdigest(),
+        'arm_urdf': urdf_limits, 'body_sps': sps_limits,
+        'minimum_sps_margin_supplied_rad': min_sps_margin_rad,
+        'state_age_pc_ns': now_ns-state_stamp, 'prediction_age_pc_ns': now_ns-prediction_stamp,
+    }
+    result['limitations'].append('nominal endpoints and PC receipt age do not establish source freshness, trajectory, collision, force, or physical stopping')
+    return result
+
+
 class LivePreview:
     """Validate the actual relay lifecycle and emit drafts without dispatch."""
 
-    def __init__(self, max_step_rad, duration_s):
+    def __init__(self, max_step_rad, duration_s, *, nominal=None):
         self.max_step = positive(max_step_rad, 'max_step_rad')
         self.duration = positive(duration_s, 'duration_s')
+        self.nominal = nominal
         self.ready = self.done = self.summary = False
         self.count = self.last_stamp = 0
 
@@ -139,8 +210,12 @@ class LivePreview:
             joints = {name: {'model_value_rad': values[i],
                              'derived_observed_rad': values[i] - differences[i]}
                       for i, name in enumerate(MODEL_ORDER)}
-            result = draft_joints(joints, self.count, stamp, self.max_step,
-                                  self.duration, 'live_shadow_relay')
+            if self.nominal is None:
+                result = draft_joints(joints, self.count, stamp, self.max_step,
+                                      self.duration, 'live_shadow_relay')
+            else:
+                result = checked_live_step(row, self.max_step, self.duration,
+                                           now_ns=time.monotonic_ns(), **self.nominal)
             result['event'] = 'native_step_preview'
             result['image_sha256'] = digest
             result['hand_scalar_uninterpreted'] = values[7]
@@ -179,6 +254,11 @@ def main(argv=None):
     parser.add_argument('--sample', type=int, default=0)
     parser.add_argument('--max-step-rad', type=float)
     parser.add_argument('--duration-s', type=float)
+    parser.add_argument('--urdf', type=Path, help='optional nominal URDF for paired stream check')
+    parser.add_argument('--transmissions', type=Path, help='optional nominal SPS transmissions for paired stream check')
+    parser.add_argument('--max-state-age-ns', type=int, help='caller-supplied PC receipt age limit')
+    parser.add_argument('--max-prediction-age-ns', type=int, help='caller-supplied PC prediction age limit')
+    parser.add_argument('--min-sps-margin-rad', type=float, help='caller-supplied endpoint diagnostic margin')
     args = parser.parse_args(argv)
     if args.run:
         print('BLOCKED: native arm mapping, trajectory and physical stopping remain unqualified', file=sys.stderr)
@@ -187,7 +267,18 @@ def main(argv=None):
         if args.stream:
             if args.sample != 0:
                 raise ValueError('--sample is only supported with --check')
-            preview = LivePreview(args.max_step_rad, args.duration_s)
+            optional = (args.urdf, args.transmissions, args.max_state_age_ns,
+                        args.max_prediction_age_ns, args.min_sps_margin_rad)
+            nominal = None
+            if any(value is not None for value in optional):
+                if any(value is None for value in optional):
+                    raise ValueError('complete_nominal_configuration_required')
+                nominal = {'urdf_text':args.urdf.read_bytes().decode('utf-8'),
+                           'transmissions_text':args.transmissions.read_bytes().decode('utf-8'),
+                           'max_state_age_ns':args.max_state_age_ns,
+                           'max_prediction_age_ns':args.max_prediction_age_ns,
+                           'min_sps_margin_rad':args.min_sps_margin_rad}
+            preview = LivePreview(args.max_step_rad, args.duration_s, nominal=nominal)
             for raw in iter(lambda: sys.stdin.buffer.readline(1024 * 1024 + 1), b''):
                 if len(raw) > 1024 * 1024 or not raw.endswith(b'\n'):
                     raise ValueError('relay line too long or incomplete')
@@ -196,10 +287,13 @@ def main(argv=None):
                     print(json.dumps(result, separators=(',', ':'), allow_nan=False), flush=True)
             preview.finish()
         else:
+            if any(value is not None for value in (args.urdf, args.transmissions, args.max_state_age_ns,
+                                                    args.max_prediction_age_ns, args.min_sps_margin_rad)):
+                raise ValueError('nominal_check_only_supported_with_stream')
             result = draft(read_rows(args.check), args.sample, args.max_step_rad, args.duration_s)
             print(json.dumps(result, indent=2, allow_nan=False))
         return 0
-    except (OSError, ValueError, TypeError, KeyError, OverflowError) as exc:
+    except (OSError, ValueError, TypeError, KeyError, OverflowError, yaml.YAMLError) as exc:
         print('DRAFT_ERROR: ' + str(exc), file=sys.stderr)
         return 1
 
