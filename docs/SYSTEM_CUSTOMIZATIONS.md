@@ -1,5 +1,18 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-PASSIVE-20261110
+
+**10-11-2026, Europe/Madrid — monitor pasivo OBSERVADO; ejecución de brazo
+PENDIENTE.** Se preparó y ejecutó una comprobación de lectura solicitada como
+parte de la validación física. No se enviaron comandos ni cambiaron modos.
+
+| Campo | Registro |
+| --- | --- |
+| Estado anterior | Commit `2e073b8`; supervisor de cabeza funcional sólo para cabeza y adaptador de brazo sin despacho. El operador confirmó las condiciones descritas en la [guía](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#monitor-pasivo-de-brazo--10-11-2026). |
+| Fuentes | `scripts/vla/runtime/arm_from_pico_supervised.py` SHA256 `34fc60409b07ea503c2777b9389f8ca93a0234f596993e7a342a0a018b192ef8`; `scripts/vla/check_arm_from_pico_supervised.py` `24f116c10a23461bbd3e9c3889508627959ddbfefe0ee11352516e82c64926ad`; test `1874f6a7d1b6afdcddf60d96f982450d3ae057611fcdd61165184c8b0fee94be`. Reutilizan el monitor y el transporte de cabeza; `--run` rechaza antes de conectar. |
+| Resultado | Cuatro pruebas locales pasan; `--check` pasó con datos vivos, cero órdenes. Evidencia privada `../Humanoide-vla-evidence/ARM_PICO_SUPERVISED_CHECK/check-e2d8398271624b6da418abb798dec3ad/`; `result.json` SHA256 `7486bc40f7ea32e395e2cc5bd7d7804c5b93b8c16e824c634c3400f40b5233c1`; `remote-stdout.jsonl` `5dc12f6ad776b6f5423d6d8bef60fea12745dc9cb753872e942666ff87e14818`. Supervisor temporal terminado. Sin cambios remotos persistentes. |
+| Deuda y reversión | El monitor pasivo no despacha ni demuestra cancelación, frenado, trayectoria o colisiones. No habilita VLA físico. Revertir selectivamente estos tres archivos y notas respecto a `2e073b8`; no hay configuración remota que restaurar. Conservar evidencia privada según necesidad. |
+
 ## SMOLVLA-DYNAMIC-TASK-20261110
 
 **10-11-2026, Europe/Madrid — vía dinámica OBSERVADA; ejecución física

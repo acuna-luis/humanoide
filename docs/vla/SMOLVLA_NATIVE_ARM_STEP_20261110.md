@@ -1,5 +1,31 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Monitor pasivo de brazo — 10-11-2026
+
+El operador confirmó manos v4 vacías, postura PICO con cabeza bajada, zona
+libre, ruedas bloqueadas, cargador desconectado, ambos paros accesibles y
+persona junto al paro, sin otro control activo. La batería observada en la
+lectura puntual era 68,6/71,1 %. Esa confirmación y lectura no acreditan
+condiciones posteriores.
+
+Se adaptó el monitor de cabeza a esta referencia y se preparó un comprobador
+pasivo. Éste valida controladores y ausencia de publicador SDK, hash de la
+tarea dinámica, estado de articulaciones, salud de actuadores, manos, ambos
+paros y comunicación de supervisión. Un único `--check` en Motion pasó y
+terminó sin comandos. No quedó proceso de monitor observado. Cuatro tests
+locales pasan; comprueban además el rechazo de movimientos excesivos en una
+función de corredor, pero el check en vivo no mueve el eje ni prueba esa
+función durante una trayectoria. El paso de muñeca de 0,01 rad y umbrales del
+código son hipótesis experimentales, no límites certificados.
+
+El código **no envía objetivos ni tiene un procedimiento de cancelación de
+brazo probado**; `--run` y `dry_run=False` están bloqueados. La recepción de
+argumentos de `move_components_json`, planificador y parada física siguen
+pendientes. La autorización del usuario existe, pero esta observación no
+cumple los gates de ejecución del VLA ni valida geometría de manos o escena.
+Receta pasiva: `python3 -B scripts/vla/check_arm_from_pico_supervised.py --check`.
+No repetirla para suplantar la verificación necesaria antes de un movimiento.
+
 ## Tarea dinámica nativa encontrada — 10-11-2026
 
 La consulta de catálogo de Motion devolvió `move_components_json` como

@@ -1,5 +1,12 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-PASSIVE-20261110: monitor pasivo preparado y
+comprobado en Motion.** Telemetría, controladores y handoff de supervisión
+pasaron sin órdenes. El observador no implementa envío ni cancelación del
+brazo; geometría, trayectoria y habilitación física VLA siguen PENDIENTES.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#monitor-pasivo-de-brazo--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-passive-20261110).
+
 **10-11-2026 — SMOLVLA-DYNAMIC-TASK-20261110: vía nativa encontrada.** Motion
 lista `move_components_json` para v4; XML y análisis estático muestran una
 acción MetaMove que admite argumentos dinámicos. Preparado un borrador para
