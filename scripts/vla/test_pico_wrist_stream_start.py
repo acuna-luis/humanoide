@@ -1,5 +1,7 @@
 """Offline bootstrap failure tests. No Docker, ROS or robot access."""
 from pathlib import Path
+import hashlib
+import os
 import shlex
 import subprocess
 import sys
@@ -175,7 +177,9 @@ class StreamStartTests(unittest.TestCase):
         session = {'session_id': 'a'*32, 'age_at_handoff_s': 0.0}
         payload = {'session': session, 'manifest': {'input': {'reference_20d': {}}},
                    'urdf_text': '', 'transmissions_text': '',
-                   'guard_source': 'pass', 'worker_source': 'pass', 'operator_confirmed': True}
+                   'guard_source': 'pass', 'worker_source': 'pass', 'operator_confirmed': True,
+                   'source_digests': {'guard': hashlib.sha256(b'pass').hexdigest(),
+                                      'worker': hashlib.sha256(b'pass').hexdigest()}}
         def coordinate(_lease, _pipe, _manifest, _urdf, _sps, start_worker, *_args, **_kwargs):
             return start_worker(lease.path, Path('/tmp/intent.json'), 1000)
         with patch.object(launcher.arm, 'physical_release_gate'), \
@@ -220,6 +224,81 @@ class StreamStartTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertNotIn('SOURCE_EXECUTED', result.stdout)
         self.assertIn('incomplete source', result.stderr)
+
+    def test_verified_guard_rejects_changed_source_before_exec(self):
+        child = child_process()
+        source = 'print("VERIFIED_ORIGINAL")'
+        scope = {'role': 'guard', 'source_sha256': hashlib.sha256(source.encode()).hexdigest(),
+                 'session_id': 'a'*32}
+        delivered = []
+        with patch.object(launcher.subprocess, 'Popen', return_value=child) as spawn, \
+             patch.object(launcher, 'write_stream', side_effect=lambda _fd, data, _timeout: delivered.append(data)), \
+             patch.object(launcher.uuid, 'uuid4') as token:
+            token.return_value.hex = 'b'*32
+            launcher.start_streamed('ros', '/opt/ros/humble/setup.bash', source,
+                                    {'session_id': 'a'*32}, stderr=None, verified=scope)
+        command = shlex.split(spawn.call_args.args[0][-1])
+        bootstrap = command[command.index('-c')+1]
+        altered = delivered[0].replace(b'VERIFIED_ORIGINAL', b'VERIFIED_TAMPERED', 1)
+        self.assertEqual(len(altered), len(delivered[0]))
+        result = subprocess.run([sys.executable, '-B', '-c', bootstrap],
+                                input=altered+delivered[1]+delivered[2],
+                                capture_output=True, timeout=3)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn(b'VERIFIED_TAMPERED', result.stdout)
+        self.assertIn(b'source_digest_mismatch', result.stderr)
+
+    def test_verified_worker_uses_exact_scope_and_rejects_wrong_session(self):
+        child = child_process()
+        source = 'print("NO_ACTION_SHOULD_EXECUTE")'
+        digest = hashlib.sha256(source.encode()).hexdigest()
+        scope = {'role': 'worker', 'source_sha256': digest, 'session_id': 'a'*32}
+        writes = []
+        with patch.object(launcher.subprocess, 'Popen', return_value=child) as spawn, \
+             patch.object(launcher, 'write_stream', side_effect=lambda _fd, data, _timeout: writes.append(data)):
+            launcher.start_streamed('app', '/opt/walker/setup.bash', source,
+                                    {'session_id': 'c'*32}, stderr=None, verified=scope)
+        command = shlex.split(spawn.call_args.args[0][-1])
+        bootstrap = command[command.index('-c')+1]
+        result = subprocess.run([sys.executable, '-B', '-c', bootstrap],
+                                input=b''.join(writes), capture_output=True, timeout=3)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn(b'NO_ACTION_SHOULD_EXECUTE', result.stdout)
+        self.assertIn(b'payload_session_mismatch', result.stderr)
+
+    def test_binding_digest_mismatch_rejects_before_child_start(self):
+        scope = {'role': 'worker', 'source_sha256': 'f'*64, 'session_id': 'a'*32}
+        with patch.object(launcher.subprocess, 'Popen') as spawn:
+            with self.assertRaisesRegex(ValueError, 'reviewed_source_digest_mismatch'):
+                launcher.start_streamed('app', '/opt/walker/setup.bash', 'pass',
+                                        {'session_id': 'a'*32}, stderr=None, verified=scope)
+            spawn.assert_not_called()
+
+    def test_verified_stream_replays_session_and_preserves_next_fd_message(self):
+        source = ('import json,os,sys\n'
+                  'print("BRIDGE_READY",flush=True)\n'
+                  'p=json.loads(sys.stdin.readline())\n'
+                  'print("SESSION="+p["session_id"],flush=True)\n'
+                  'print("NEXT="+os.read(sys.stdin.fileno(),32).decode(),flush=True)\n')
+        scope = {'role': 'worker', 'source_sha256': hashlib.sha256(source.encode()).hexdigest(),
+                 'session_id': 'a'*32}
+        real_popen = subprocess.Popen
+        def launch_local(args, **kwargs):
+            command = shlex.split(args[-1])
+            bootstrap = command[command.index('-c')+1]
+            return real_popen([sys.executable, '-B', '-u', '-c', bootstrap], **kwargs)
+        with patch.object(launcher.subprocess, 'Popen', side_effect=launch_local):
+            child = launcher.start_streamed('app', '/opt/walker/setup.bash', source,
+                {'session_id': 'a'*32}, stderr=subprocess.PIPE, verified=scope)
+        try:
+            os.write(child.stdin.fileno(), b'heartbeat\n')
+            stdout, stderr = child.communicate(timeout=3)
+            self.assertEqual(child.returncode, 0, stderr)
+            self.assertEqual(stdout.splitlines(), [b'BRIDGE_READY', b'SESSION='+b'a'*32, b'NEXT=heartbeat', b''])
+        finally:
+            if child.poll() is None:
+                child.kill()
+                child.wait(timeout=3)
 
 
 if __name__ == '__main__':

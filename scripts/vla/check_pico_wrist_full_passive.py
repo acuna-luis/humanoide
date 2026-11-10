@@ -40,6 +40,7 @@ def source_bundle():
         'prepare_pico_wrist_native_probe': VLA / 'prepare_pico_wrist_native_probe.py',
         'arm_native_lease_bridge': VLA / 'arm_native_lease_bridge.py',
         'pico_wrist_pc_heartbeat': VLA / 'pico_wrist_pc_heartbeat.py',
+        'pico_wrist_verified_stream': VLA / 'pico_wrist_verified_stream.py',
         'pico_wrist_trial_admission': VLA / 'pico_wrist_trial_admission.py',
         'pico_wrist_native_coordinator': RUNTIME / 'pico_wrist_native_coordinator.py',
         'pico_wrist_docker_launcher': RUNTIME / 'pico_wrist_docker_launcher.py',

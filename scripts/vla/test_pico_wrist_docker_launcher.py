@@ -1,4 +1,5 @@
 """Candidate host launcher tests; no docker, network or robot use."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -51,6 +52,22 @@ class HostLauncherTests(unittest.TestCase):
         _, failures = self.handoff(wrong=True)
         self.assertTrue(failures)
         self.assertIn('invalid_or_stale', str(failures[0]))
+
+    def test_payload_requires_exact_reviewed_source_digests(self):
+        source = 'pass'
+        digest = hashlib.sha256(source.encode()).hexdigest()
+        session = {'session_id': 'a'*32}
+        payload = {'session': session, 'manifest': {}, 'urdf_text': '', 'transmissions_text': '',
+                   'guard_source': source, 'worker_source': source, 'operator_confirmed': True,
+                   'source_digests': {'guard': digest, 'worker': digest}}
+        with patch.object(launcher.arm, 'validate_preflight'), patch.object(launcher.probe, 'validate'):
+            self.assertIs(launcher.validate_payload(payload), session)
+            payload['source_digests']['worker'] = 'f'*64
+            with self.assertRaisesRegex(ValueError, 'reviewed_source_digest_mismatch:worker'):
+                launcher.validate_payload(payload)
+            del payload['source_digests']
+            with self.assertRaisesRegex(ValueError, 'invalid_launcher_payload'):
+                launcher.validate_payload(payload)
 
 
 if __name__ == '__main__':

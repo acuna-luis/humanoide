@@ -21,6 +21,7 @@ import uuid
 import check_arm_native_bridge_live as passive
 import run_head_from_pico_supervised as head
 import pico_wrist_pc_heartbeat as heartbeat
+import pico_wrist_verified_stream as verified_stream
 import prepare_pico_wrist_native_probe as probe
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -48,6 +49,7 @@ def source_bundle(*, include_sources=False):
         'pico_wrist_trial_admission': VLA/'pico_wrist_trial_admission.py',
         'pico_wrist_native_coordinator': RUNTIME/'pico_wrist_native_coordinator.py',
         'pico_wrist_pc_heartbeat': VLA/'pico_wrist_pc_heartbeat.py',
+        'pico_wrist_verified_stream': VLA/'pico_wrist_verified_stream.py',
         'pico_wrist_docker_launcher': RUNTIME/'pico_wrist_docker_launcher.py',
     }
     sources = {name: (path.read_bytes().decode('utf-8'), str(path)) for name, path in paths.items()}
@@ -83,6 +85,7 @@ def controlled_pc_sources():
     """Snapshot direct project-controlled PC inputs; not the full runtime."""
     paths = {
         'trial_launcher': VLA/'run_pico_wrist_native_trial.py',
+        'verified_pc_loader': VLA/'verified_pico_wrist_pc_loader.py',
         'review_binding': VLA/'pico_wrist_review_binding.py',
         'full_passive_check': VLA/'check_pico_wrist_full_passive.py',
         'bridge_check': VLA/'check_arm_native_bridge_live.py',
@@ -147,12 +150,18 @@ def verify_bundle_evidence(outdir, index_digest):
             raise RuntimeError('bundle_evidence_changed:' + name)
 
 
-def host_command(sentinel):
-    bootstrap = ('import sys\nparts=[]\nfor line in sys.stdin:\n'
-                 ' if line=='+repr(sentinel+'\n')+': break\n'
-                 ' parts.append(line)\n'
-                 'else: raise SystemExit("incomplete source")\n'
-                 'exec(compile("".join(parts),"<pico-host>","exec"))\n')
+def host_command(sentinel, *, verified=None):
+    if verified is None:
+        # The existing passive path does not dispatch or start the worker.
+        bootstrap = ('import sys\nparts=[]\nfor line in sys.stdin:\n'
+                     ' if line=='+repr(sentinel+'\n')+': break\n'
+                     ' parts.append(line)\n'
+                     'else: raise SystemExit("incomplete source")\n'
+                     'exec(compile("".join(parts),"<pico-host>","exec"))\n')
+    else:
+        bootstrap = verified_stream.build_bootstrap(
+            verified['source_size'], sentinel, verified['source_sha256'],
+            verified['payload_sha256'], verified['session_id'], role='host')
     remote = ['python3', '-B', '-u', '-c', bootstrap]
     return ['setsid', '-w', 'ssh', '-T', '-o', 'StrictHostKeyChecking=yes',
             '-o', 'ConnectTimeout=5', '-o', 'TCPKeepAlive=yes',
@@ -357,9 +366,15 @@ def run_candidate(manifest_path, urdf_path, transmissions_path, physical_confirm
     probe.validate(manifest, urdf, transmissions)
     source_snapshot = source_bundle(include_sources=True)
     pc_sources = controlled_pc_sources()
-    verify_candidate_binding(binding_path, binding_sha256, manifest_raw, urdf_raw,
-                             transmissions_raw, source_snapshot=source_snapshot,
-                             pc_snapshot=pc_sources)
+    bound = verify_candidate_binding(binding_path, binding_sha256, manifest_raw, urdf_raw,
+                                     transmissions_raw, source_snapshot=source_snapshot,
+                                     pc_snapshot=pc_sources)
+    # Re-read and authenticate the same index bytes before using the expected
+    # digests; a later file replacement cannot choose the transmitted source.
+    index_raw = (binding_path/'bundle-evidence.json').read_bytes()
+    if hashlib.sha256(index_raw).hexdigest() != bound['bundle_evidence_sha256']:
+        raise ValueError('bundle_evidence_index_changed_during_handoff')
+    binding_hashes = json.loads(index_raw)['sha256']
     EVIDENCE.mkdir(mode=0o700, parents=True, exist_ok=True)
     token = uuid.uuid4().hex
     outdir = EVIDENCE/('run-'+token); outdir.mkdir(mode=0o700)
@@ -377,7 +392,9 @@ def run_candidate(manifest_path, urdf_path, transmissions_path, physical_confirm
                'age_at_handoff_s':time.monotonic()-started, 'session_id':token, 'mode':'check'}
     payload = {'session':session, 'manifest':manifest, 'urdf_text':urdf,
                'transmissions_text':transmissions, 'guard_source':guard,
-               'worker_source':worker, 'operator_confirmed':True}
+               'worker_source':worker, 'operator_confirmed':True,
+               'source_digests': {'guard': binding_hashes['bundle-guard.py'],
+                                  'worker': binding_hashes['bundle-worker.py']}}
     sentinel = 'PICO_HOST_END_' + uuid.uuid4().hex
     if sentinel in host: raise RuntimeError('host_source_sentinel_collision')
     env = dict(os.environ, CRUZR_INTERNAL_ASKPASS='1', SSH_ASKPASS=str(ROOT/'scripts/cruzr_recover_to_home.sh'),
@@ -387,8 +404,15 @@ def run_candidate(manifest_path, urdf_path, transmissions_path, physical_confirm
     # Keep a separate fail-closed gate until a reviewed attestation protocol
     # binds this digest and the complete PC/runtime dependencies.
     raise RuntimeError('reviewed_bundle_attestation_not_implemented')
+    if hashlib.sha256(host.encode('utf-8')).hexdigest() != binding_hashes['bundle-host.py']:
+        raise ValueError('reviewed_host_source_mismatch')
+    encoded_payload = json.dumps(payload, allow_nan=False).encode('utf-8')
+    verified_host = {'source_size':len(host.encode('utf-8')),
+                     'source_sha256':binding_hashes['bundle-host.py'],
+                     'payload_sha256':hashlib.sha256(encoded_payload).hexdigest(),
+                     'session_id':token}
     try:
-        process = start_host_streamed(host_command(sentinel), host, sentinel, payload, env)
+        process = start_host_streamed(host_command(sentinel, verified=verified_host), host, sentinel, payload, env)
     except HostStartUncertain as exc:
         if exc.source_may_have_executed or not exc.local_cleanup_observed:
             observe_uncertain_host(exc.process, outdir, exc.phase)

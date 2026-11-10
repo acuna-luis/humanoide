@@ -1,5 +1,49 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Carga verificada de fuentes — 10-11-2026
+
+**Estado: preparado y probado localmente; gate físico cerrado.** El cargador
+`scripts/vla/verified_pico_wrist_pc_loader.py`, ejecutado con Python aislado,
+comprueba el binding, su índice y las copias retenidas antes de compilar e
+importar los módulos Python del proyecto. El bootstrap que genera
+`scripts/vla/pico_wrist_verified_stream.py` comprueba exactamente los bytes de
+la fuente y del payload, además de la sesión, antes de ejecutar el bundle; no
+lee por adelantado los latidos posteriores del descriptor. La vía de host
+propuesta pasa a guardia y worker los hashes de fuente del índice ya
+verificado. Las pruebas de esos procesos son locales y no habilitan movimiento.
+
+Pasaron 71 tests locales: `test_verified_pico_wrist_pc_loader` (12),
+`test_pico_wrist_verified_stream` (9), `test_pico_wrist_stream_start` (15),
+`test_pico_wrist_docker_launcher` (4), `test_run_pico_wrist_native_trial`
+(18), `test_pico_wrist_review_binding` (6) y `test_check_pico_wrist_full_passive`
+(7). La importación aislada pasó con el binding
+`../Humanoide-vla-evidence/PICO_WRIST_VERIFIED_LOAD_20261110/binding-final/`,
+SHA256 `6b9974e6e3af5b31b15cc369818ec7d5adad850f11c095def4a81ced6248eb1e`.
+El check `check-d8ad18cd316e4ebe83a3eeb3ae0a6b84` pasó sin goals; utiliza modo
+pasivo y no prueba el arranque verificado físico, `--run` o cancelación real.
+
+El binding conserva una copia de la revisión anterior a este registro; no es
+una aprobación ni demuestra la configuración o páginas cargadas en Motion.
+El bootstrap PC que comienza antes de verificarse, el intérprete, las
+bibliotecas y procesos externos, ROS/SDK y el script shell de askpass no quedan
+atestados. La comparación de los bytes tampoco verifica escena o parada.
+Los gates incondicionales y `reviewed_bundle_attestation_not_implemented`
+continúan bloqueando el despacho; queda por integrar una admisión específica
+que vincule tarea, sesión y UUID sin habilitar control directo ni VLA. No se
+instaló ni ejecutó una tarea física ni SmolVLA.
+
+Reproducción de importación, desde la raíz del repositorio:
+
+```bash
+python3 -I -B scripts/vla/verified_pico_wrist_pc_loader.py --check \
+  --binding ../Humanoide-vla-evidence/PICO_WRIST_VERIFIED_LOAD_20261110/binding-final \
+  --binding-sha256 6b9974e6e3af5b31b15cc369818ec7d5adad850f11c095def4a81ced6248eb1e
+```
+
+Evidencia, fuentes, hashes y backup previo en la
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-verified-load-20261110). Esta
+receta no conecta al robot ni cambia su postura.
+
 ## Latido y cierre de guardia — 10-11-2026
 
 **Estado: comprobación local completada; gate físico cerrado.** En el modo de

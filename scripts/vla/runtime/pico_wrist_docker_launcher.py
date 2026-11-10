@@ -28,7 +28,7 @@ import scenario1_action_client as native
 
 def validate_payload(payload):
     required = {'session', 'manifest', 'urdf_text', 'transmissions_text',
-                'guard_source', 'worker_source', 'operator_confirmed'}
+                'guard_source', 'worker_source', 'source_digests', 'operator_confirmed'}
     if not isinstance(payload, dict) or set(payload) != required:
         raise ValueError('invalid_launcher_payload')
     if payload['operator_confirmed'] is not True:
@@ -36,9 +36,18 @@ def validate_payload(payload):
     session = payload['session']
     arm.validate_preflight(session, 0, dry_run=True)
     probe.validate(payload['manifest'], payload['urdf_text'], payload['transmissions_text'])
-    for key in ('guard_source', 'worker_source'):
+    digests = payload['source_digests']
+    if not isinstance(digests, dict) or set(digests) != {'guard', 'worker'}:
+        raise ValueError('invalid_reviewed_source_digests')
+    for role in ('guard', 'worker'):
+        key = role + '_source'
         if not isinstance(payload[key], str) or not 0 < len(payload[key]) <= 1_000_000:
             raise ValueError('invalid_' + key)
+        digest = digests[role]
+        if (not isinstance(digest, str) or len(digest) != 64
+                or any(char not in '0123456789abcdef' for char in digest)
+                or hashlib.sha256(payload[key].encode('utf-8')).hexdigest() != digest):
+            raise ValueError('reviewed_source_digest_mismatch:' + role)
         compile(payload[key], '<'+key+'>', 'exec')
     return session
 
@@ -104,24 +113,43 @@ def _reap_unstarted_bootstrap(child):
             child.wait(timeout=1)
 
 
-def start_streamed(container, setup, source, payload, *, stderr):
+def start_streamed(container, setup, source, payload, *, stderr, verified=None):
     sentinel = 'PICO_SOURCE_END_' + uuid.uuid4().hex
     if sentinel in source:
         raise ValueError('source_sentinel_collision')
-    bootstrap = ('import sys\nparts=[]\nfor line in sys.stdin:\n'
-                 ' if line=='+repr(sentinel+'\n')+': break\n'
-                 ' parts.append(line)\n'
-                 'else: raise SystemExit("incomplete source")\n'
-                 'exec(compile("".join(parts),"<pico-streamed-source>","exec"))\n')
+    encoded_payload = json.dumps(payload, allow_nan=False).encode('utf-8')
+    source_bytes = source.encode('utf-8')
+    if verified is None:
+        # Existing passive checks do not dispatch goals and retain the old
+        # framing. Physical callers must provide the binding-derived scope.
+        bootstrap = ('import sys\nparts=[]\nfor line in sys.stdin:\n'
+                     ' if line=='+repr(sentinel+'\n')+': break\n'
+                     ' parts.append(line)\n'
+                     'else: raise SystemExit("incomplete source")\n'
+                     'exec(compile("".join(parts),"<pico-streamed-source>","exec"))\n')
+    else:
+        if (not isinstance(verified, dict) or
+                set(verified) != {'role', 'source_sha256', 'session_id'} or
+                verified['role'] not in ('guard', 'worker')):
+            raise ValueError('invalid_verified_stream_scope')
+        # Expected source digest is supplied by the PC's previously verified
+        # binding. The dynamic per-child payload is constructed by this host;
+        # its wire digest protects that exact payload and session in transit.
+        if hashlib.sha256(source_bytes).hexdigest() != verified['source_sha256']:
+            raise ValueError('reviewed_source_digest_mismatch:' + verified['role'])
+        import pico_wrist_verified_stream as stream_verifier
+        bootstrap = stream_verifier.build_bootstrap(
+            len(source_bytes), sentinel, verified['source_sha256'],
+            hashlib.sha256(encoded_payload).hexdigest(), verified['session_id'],
+            role=verified['role'])
     command = ('source '+setup+'; export ROS2CLI_DISABLE_DAEMON=1; '
                'exec python3 -B -u -c '+shlex.quote(bootstrap))
-    encoded_payload = (json.dumps(payload, allow_nan=False)+'\n').encode()
     child = subprocess.Popen(['docker', 'exec', '-i', container, 'bash', '-lc', command],
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=stderr, bufsize=0)
     try:
         # Before attempting any sentinel, source cannot be executed even if
         # the full source write completed immediately before an interrupt.
-        write_stream(child.stdin.fileno(), (source+'\n').encode(), 10.0)
+        write_stream(child.stdin.fileno(), source_bytes+b'\n', 10.0)
     except BaseException as exc:
         reaped = False
         try:
@@ -141,7 +169,7 @@ def start_streamed(container, setup, source, payload, *, stderr):
         raise StreamStartUncertain(child, 'sentinel', exc,
                                    source_may_have_executed=True) from exc
     try:
-        write_stream(child.stdin.fileno(), encoded_payload, 10.0)
+        write_stream(child.stdin.fileno(), encoded_payload+b'\n', 10.0)
     except BaseException as exc:
         # Once sentinel is accepted, the source may run and EOF might turn a
         # partial last line into valid JSON. Preserve the handle; no signal,
@@ -344,7 +372,9 @@ def launch(payload):
         verify_shared_tmp(directory, app)
         child = _track_stream_start('guard', uncertain_children, output,
             ros, '/opt/ros/humble/setup.bash', payload['guard_source'], session,
-            stderr=subprocess.DEVNULL)
+            stderr=subprocess.DEVNULL,
+            verified={'role': 'guard', 'source_sha256': payload['source_digests']['guard'],
+                      'session_id': session['session_id']})
         lease = bridge.GuardLease(directory, payload['manifest']['input']['reference_20d'],
                                   lambda: child.poll() is None and pc.alive() and not output.failed,
                                   session_id=session['session_id'])
@@ -359,7 +389,9 @@ def launch(payload):
             error_log = coordinator.GLOBAL_RECEIPT_DIR/('worker-stderr-'+session['session_id']+'.log')
             with error_log.open('x', encoding='utf-8') as errors:
                 worker = _track_stream_start('worker', uncertain_children, output,
-                    app, '/opt/walker/setup.bash', payload['worker_source'], request, stderr=errors)
+                    app, '/opt/walker/setup.bash', payload['worker_source'], request, stderr=errors,
+                    verified={'role': 'worker', 'source_sha256': payload['source_digests']['worker'],
+                              'session_id': session['session_id']})
             worker_holder.append(worker)
             return worker
         result = coordinator.coordinate(lease, pipe, payload['manifest'], payload['urdf_text'],

@@ -1,5 +1,20 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-VERIFIED-LOAD-20261110
+
+**10-11-2026, Europe/Madrid — VERIFICADO local y OBSERVADO en check pasivo;
+ejecución física PENDIENTE.** No hubo goals ni movimiento y los gates siguen
+cerrados. El mecanismo trata integridad de bytes, no seguridad física.
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo y destino | Árbol local del PC `scripts/vla/`: cargar fuentes retenidas antes de ejecutarlas; verificar el transporte de host, guardia y worker del ensayo candidato de muñeca. No se modificó el SDK ni la configuración del robot. |
+| Fuentes | `verified_pico_wrist_pc_loader.py` SHA256 `f0f57aa3730f645d740db21987a4176afde53f785ef511728e0f5d1061f10180`; `pico_wrist_verified_stream.py` `b71ab1a906f3c07d99623a36c8053dad0929c859b203c6f45c395cee909e6888`; `run_pico_wrist_native_trial.py` `1e7546718f51a8e3c74f4a6a62354be326b2f059009a61d30333367474d0dc8a`; `runtime/pico_wrist_docker_launcher.py` `05367693a9e7f99494bc3bff07b1f272ba61265ae8326971737e23bcdecfc7fe`; `check_pico_wrist_full_passive.py` `3d9c5355a5385ced8297a47a4006197be5b62eaef6e6f1c3a65b671318d773f0`. Tests relacionados bajo `scripts/vla/`. |
+| Binding y aplicación | `../Humanoide-vla-evidence/PICO_WRIST_VERIFIED_LOAD_20261110/binding-final/`, `review-binding.json` SHA256 `6b9974e6e3af5b31b15cc369818ec7d5adad850f11c095def4a81ced6248eb1e`; su índice `bundle-evidence.json` tiene SHA256 `2978fd0098e5213ae58b730ab52a6cb4b22fb81f3a58b55167e96f854b66360d`. La revisión incluida se copió antes de esta entrada. Es una instantánea de integridad, no acredita revisor ni carga efectiva del runtime o autorización física. |
+| Verificación | 71 tests locales (12, 9, 15, 4, 18, 6 y 7 por familia detallada en la guía). `python3 -I -B ...verified_pico_wrist_pc_loader.py --check` importó fuentes verificadas sin ROS ni acceso al robot. `../Humanoide-vla-evidence/PICO_FULL_PASSIVE_CHECK/check-d8ad18cd316e4ebe83a3eeb3ae0a6b84/` pasó PC→Motion con cero goals y control físico no cualificado; no ejercita `--run` ni el arranque verificado físico. Los bootstraps físicos de guardia y worker se probaron sólo en procesos locales sustitutos. |
+| Reversión | Backup de archivos tracked previos de `3c81cc5` en `../Humanoide-vla-evidence/PICO_WRIST_VERIFIED_LOAD_20261110/before-3c81cc5.tar`, SHA256 `4f70752aada121979833d7198b8b5852fcf96a25025716e7c82cc9912bf5702a`; restaurar selectivamente y retirar sólo los cuatro archivos nuevos de loader y tests, preservando trabajo ajeno. Check pasivo creó recursos efímeros y terminó; no se declara cambio remoto persistente. |
+| Deuda y límites | Los gates incondicionales y `reviewed_bundle_attestation_not_implemented` siguen activos; falta una admisión para tarea/sesión/UUID y unirla al flujo real sin abrir VLA ni mando directo. El bootstrap PC previo a su autocomprobación, intérprete, bibliotecas externas, ROS/SDK, script shell de askpass y estado físico quedan fuera de la garantía de la copia. Falta cualificar trayectoria, geometría y respuesta física. |
+
 ## ARM-PICO-GUARD-HEARTBEAT-20261110
 
 **10-11-2026, Europe/Madrid — corrección local comprobada en simulación y

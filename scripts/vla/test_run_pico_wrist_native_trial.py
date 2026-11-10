@@ -4,6 +4,7 @@ import hashlib
 import io
 import json
 import os
+import shlex
 from pathlib import Path
 import subprocess
 import sys
@@ -29,6 +30,32 @@ def execute_streamed(source, payload):
 
 
 class LauncherTests(unittest.TestCase):
+    def test_verified_host_bootstrap_checks_source_before_execution(self):
+        sentinel = 'PICO_HOST_END_' + 'b'*32
+        payload = {'session': {'session_id': 'a'*32}}
+        source = ('import json,sys\n'
+                  'print(json.loads(sys.stdin.readline())["session"]["session_id"], flush=True)\n')
+        raw = source.encode()
+        payload_raw = json.dumps(payload, allow_nan=False).encode()
+        verified = {'source_size':len(raw), 'source_sha256':hashlib.sha256(raw).hexdigest(),
+                    'payload_sha256':hashlib.sha256(payload_raw).hexdigest(), 'session_id':'a'*32}
+        command = shlex.split(launcher.host_command(sentinel, verified=verified)[-1])
+        child = launcher.start_host_streamed(command, source, sentinel, payload, dict(os.environ))
+        try:
+            self.assertEqual(child.stdout.readline(), b'a'*32+b'\n')
+            self.assertEqual(child.wait(timeout=3), 0)
+        finally:
+            for stream in (child.stdin, child.stdout, child.stderr): stream.close()
+        verified['source_sha256'] = '0'*64
+        command = shlex.split(launcher.host_command(sentinel, verified=verified)[-1])
+        child = launcher.start_host_streamed(command, source, sentinel, payload, dict(os.environ))
+        try:
+            self.assertEqual(child.stdout.read(), b'')
+            self.assertNotEqual(child.wait(timeout=3), 0)
+            self.assertIn(b'source_digest_mismatch', child.stderr.read())
+        finally:
+            for stream in (child.stdin, child.stdout, child.stderr): stream.close()
+
     def test_controlled_pc_sources_exist_and_are_readable(self):
         sources = launcher.controlled_pc_sources()
         self.assertIn('estop_reader', sources)

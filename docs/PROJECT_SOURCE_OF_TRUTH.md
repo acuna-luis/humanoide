@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-VERIFIED-LOAD-20261110: carga verificada preparada.**
+El cargador aislado comprueba las fuentes Python retenidas antes de importarlas;
+los bootstraps verifican fuente, payload y sesión antes de ejecutar código.
+Pasan 71 tests y un check pasivo sin goals; el check no ejercita el despacho
+físico. La ejecución de muñeca y SmolVLA sigue bloqueada; faltan integrar la
+admisión específica y completar la atestación. El bootstrap, intérprete,
+dependencias externas y estado físico no quedan acreditados por los hashes.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#carga-verificada-de-fuentes--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-verified-load-20261110).
+
 **10-11-2026 — ARM-PICO-GUARD-HEARTBEAT-20261110: corrección de guardia
 comprobada localmente.** Se añadió un latido del supervisor y se reforzó el cierre
 cuando el estado de la guardia es incierto. En esta versión

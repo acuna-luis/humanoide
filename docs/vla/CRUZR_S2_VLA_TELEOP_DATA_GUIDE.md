@@ -1,5 +1,11 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-VERIFIED-LOAD-20261110.** Se preparó la verificación
+previa a imports y ejecución de bundles, con 71 tests y un check pasivo sin
+goals. Los gates siguen cerrados y queda pendiente conectar la admisión para
+una tarea de muñeca; no es ejecución física de SmolVLA.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#carga-verificada-de-fuentes--10-11-2026).
+
 **10-11-2026 — ARM-PICO-GUARD-HEARTBEAT-20261110.** Se preparó latido y
 cierre vigilado; 89 tests locales y un check pasivo pasan.
 El check no prueba latido activo ni cancelación física; el ejecutor sigue en
