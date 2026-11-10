@@ -1,5 +1,11 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — SMOLVLA-DYNAMIC-TASK-20261110.** La tarea nativa
+`move_components_json` aparece disponible en catálogo v4 y su XML usa la rama
+de argumentos dinámicos de MetaMove. Se prepara una hipótesis para `right_arm`,
+sin ejecución; handoff, parada y trayectoria siguen pendientes.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#tarea-dinámica-nativa-encontrada--10-11-2026).
+
 **10-11-2026 — SMOLVLA-HAND-V4-SOURCES-20261110.** Manual SDK: la mano v4
 admite posición y el ejemplo enumera siete nombres; el demo Cruzr inspeccionado
 usa seis. URDF EVT3 de Descargas describe 11 juntas móviles sin acoplamiento

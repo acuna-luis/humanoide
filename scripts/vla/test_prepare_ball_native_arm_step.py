@@ -40,6 +40,12 @@ class NativeArmDraftTests(unittest.TestCase):
         self.assertEqual([float(v) for v in actions[0].attrib['joint_angles'].split(';')],
                          [.05, -.05, .02, 0, 0, 0, 0])
         self.assertEqual(float(actions[0].attrib['duration']), 4.0)
+        dynamic = result['candidate_dynamic_task']
+        self.assertEqual(dynamic['task_name'], 'move_components_json')
+        self.assertEqual(dynamic['yaml_args_hypothesis']['component_names'], ['right_arm'])
+        self.assertEqual(dynamic['yaml_args_hypothesis']['goals'], [[.05, -.05, .02, 0, 0, 0, 0]])
+        self.assertEqual(dynamic['yaml_args_hypothesis']['durations'], [4.0])
+        self.assertEqual(dynamic['yaml_args_hypothesis']['mode'], 0)
 
     def test_invalid_model_provenance_and_nonfinite_values_are_rejected(self):
         for value in (math.nan, math.inf, True):

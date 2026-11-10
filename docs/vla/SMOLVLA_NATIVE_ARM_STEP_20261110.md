@@ -1,5 +1,31 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Tarea dinámica nativa encontrada — 10-11-2026
+
+La consulta de catálogo de Motion devolvió `move_components_json` como
+disponible para mano v4. Su XML instalado, SHA256
+`bfcfc097dfefb3e81fcb2acc913d7db55545b3ea3b853b345b9ba1836c01b797`,
+contiene una sola acción `MetaMove json_args="true"`. El `libmeta_move.so`
+instalado, SHA256 `bfeab1c7a295b58cd96fddd20916fc3f7fe16bd8c8ad1e77720f48aad34ccc69`,
+coincide con la copia analizada. En ésta, `GetRequestFromXmlNode` lee ese
+booleano y llama a `UpdateRequestFromBlackboard`, que consulta `task_json_args`,
+lee `component_names` como lista de nombres y `goals` como matriz de números;
+también contiene lecturas de `mode` y `durations`. El archivo de descripción
+de Cruzr leído en Motion declara un componente `right_arm`. El componente
+configurado y la carga efectiva del proceso no quedan demostrados por el archivo.
+
+El conversor genera ahora `candidate_dynamic_task`: nombre de tarea y una
+hipótesis de argumentos para un solo brazo, con una fila de siete objetivos,
+modo 0 y duración experimental. Es un **borrador**, no un ejecutor: faltan
+demostrar el paso de `ArmTask.yaml_args` al blackboard en esta ruta, la
+identidad/carga efectiva de la tarea, la semántica y trayectorias del
+planificador, límites, control exclusivo y parada. No se envía la tarea, no se
+instala ni recarga nada, y `--run` continúa bloqueado. El catálogo por sí solo
+no prueba carga o efecto físico. La consulta del catálogo se reproduce con la
+receta de la guía del puente, cambiando el filtro por `move_components_json`.
+Se conservaron la sesión shadow previa y se probaron siete tests locales; no
+se repitió entrenamiento, captura ni movimiento.
+
 **Estado: conversión en vivo verificada sin control físico; ejecución PENDIENTE.** El
 usuario solicitó acortar la prueba y reutilizar lo ya disponible. Las tareas
 de fábrica y `scripts/custom_tasks/heart_v4_fingers.xml` muestran el formato

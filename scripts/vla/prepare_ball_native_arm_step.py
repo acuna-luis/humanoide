@@ -65,6 +65,17 @@ def draft_joints(joints, index, image_source_ns, max_step_rad, duration_s, sourc
         'duration_s_experimental': duration,
         'joints': details,
         'candidate_xml': ET.tostring(root, encoding='unicode'),
+        # Static analysis of the installed json_args branch indicates this
+        # shape; neither the blackboard handoff nor robot execution is proven.
+        'candidate_dynamic_task': {
+            'task_name': 'move_components_json',
+            'yaml_args_hypothesis': {
+                'component_names': ['right_arm'],
+                'goals': [[j['candidate_target_rad'] for j in details]],
+                'mode': 0,
+                'durations': [duration],
+            },
+        },
         'physical_control_qualified': False,
         'candidate_actions': 1,
         'physical_commands_sent': 0,
@@ -74,6 +85,7 @@ def draft_joints(joints, index, image_source_ns, max_step_rad, duration_s, sourc
             'max step and duration are experimental inputs, not robot safety limits',
             'clipping alters the model action and does not establish task success',
             'no joint, velocity, acceleration, collision, task registration or stopping qualification',
+            'dynamic task argument handoff, path planner, runtime configuration and physical stop are not verified',
             'no hand action, ROS communication, task installation or execution is performed',
         ],
     }

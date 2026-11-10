@@ -1,5 +1,18 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-DYNAMIC-TASK-20261110
+
+**10-11-2026, Europe/Madrid — vía dinámica OBSERVADA; ejecución física
+PENDIENTE.** Sólo consultas remotas de lectura y cambio local del conversor.
+No se ordenaron movimientos, modos, controladores, instalación ni recarga.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | Conversor vivo del commit `bd30c84`; genera XML estático sin ejecución. Las vías de brazo, mano y parada no están cualificadas. Elementos no seguidos preexistentes conservados. |
+| Hallazgo | Catálogo `/mc/action/list` anuncia `move_components_json` disponible para v4; XML Motion `.../config/move_components_json.xml` SHA256 `bfcfc097dfefb3e81fcb2acc913d7db55545b3ea3b853b345b9ba1836c01b797`. Biblioteca instalada `libmeta_move.so` `bfeab1c7a295b58cd96fddd20916fc3f7fe16bd8c8ad1e77720f48aad34ccc69`, igual a copia estática `../Humanoide-vla-evidence/20260914_MOTION_INTERNAL_CONTRAST/libmeta_move.so`. El XML activa `json_args`; el binario lee listas de componentes y matriz de objetivos del blackboard. `right_arm` figura en `cruzr_s2_robot_description.yaml`, sin demostrar configuración en memoria. |
+| Fuente y prueba | `scripts/vla/prepare_ball_native_arm_step.py` SHA256 `c3169832f292c2879c9996c85fd187ccab8a875c4548e9224426728824e84ca3`, test `5e8f9f828bcf5f402f4c9dda5a4dec4117ad14c5ffb0ad1522b6fa8f4c924eba`. Siete tests pasan; shadow previo `../Humanoide-vla-evidence/20261110_NATIVE_LIVE_3ndpJ8/shadow.jsonl` produce borrador para una fila de siete valores. `--run` bloqueado. [Receta y límites](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#tarea-dinámica-nativa-encontrada--10-11-2026). |
+| Deuda y reversión | `ArmTask.yaml_args`→blackboard, orden efectivo, carga, planificador, límites, supervisión, parada y mano permanecen sin calificar. No usar el borrador para control. Revertir selectivamente los cambios locales respecto a `bd30c84`; no hay cambios remotos que revertir. |
+
 ## SMOLVLA-NATIVE-LIVE-20261110
 
 **10-11-2026, Europe/Madrid — integración de observación y conversión

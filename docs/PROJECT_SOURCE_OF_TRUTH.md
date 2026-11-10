@@ -1,5 +1,12 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-DYNAMIC-TASK-20261110: vía nativa encontrada.** Motion
+lista `move_components_json` para v4; XML y análisis estático muestran una
+acción MetaMove que admite argumentos dinámicos. Preparado un borrador para
+`right_arm`; handoff de argumentos, trayectoria, parada y control físico siguen
+PENDIENTES. Sin cambios remotos ni movimientos. [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#tarea-dinámica-nativa-encontrada--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-dynamic-task-20261110).
+
 **10-11-2026 — SMOLVLA-NATIVE-LIVE-20261110: conversión en vivo sin
 movimiento.** Cuatro observaciones actuales produjeron cuatro borradores
 `MetaMove` del brazo derecho en un flujo integrado; el recorte experimental
