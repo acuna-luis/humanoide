@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import os
 import socket
+import subprocess
 import struct
 import sys
 import time
@@ -180,6 +181,69 @@ class AvcFlvDemuxer:
                 return access_unit, keyframe
 
 
+def adb_listener_state(serial: str, port: int) -> str | None:
+    """Estado del listener del PICO leído por ADB sin abrir conexión.
+
+    Devuelve 'any' (0.0.0.0/::), 'loopback', 'other' o None si no escucha.
+    Lee /proc/net/tcp y tcp6: un connect de sondeo consumiría la única sesión.
+    """
+    try:
+        out = subprocess.run(
+            ["adb", "-s", serial, "shell", "cat /proc/net/tcp /proc/net/tcp6 2>/dev/null"],
+            capture_output=True, text=True, timeout=5,
+        ).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    hex_port = f"{port:04X}"
+    found = None
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) < 4 or ":" not in parts[1] or parts[3] != "0A":  # 0A = LISTEN
+            continue
+        address, _, local_port = parts[1].rpartition(":")
+        if local_port.upper() != hex_port:
+            continue
+        if set(address) <= {"0"}:
+            return "any"
+        if address in ("0100007F", "00000000000000000000000001000000",
+                       "0000000000000000FFFF00000100007F"):
+            found = found or "loopback"
+        else:
+            found = "other"
+    return found
+
+
+def connect_pico_usb(serial: str, port: int, wait_seconds: int) -> socket.socket:
+    """Vídeo por USB: esperar el listener real y sólo entonces usar adb forward.
+
+    adb forward acepta localmente aunque el visor no escuche (falso conectado,
+    Broken pipe del 10-11-2026), por eso se comprueba antes por /proc/net.
+    """
+    deadline = time.monotonic() + wait_seconds
+    next_notice = 0.0
+    while time.monotonic() < deadline:
+        state = adb_listener_state(serial, port)
+        if state in ("any", "loopback"):
+            log(f"PICO_USB_LISTENER={state}:{port}; creando adb forward")
+            subprocess.run(["adb", "-s", serial, "forward", f"tcp:{port}", f"tcp:{port}"],
+                           check=True, capture_output=True, timeout=5)
+            sock = socket.create_connection(("127.0.0.1", port), timeout=2)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            sock.settimeout(5)
+            return sock
+        if state == "other":
+            raise RelayError(
+                f"XRoboToolkit escucha {port} sólo en una IP no loopback; "
+                "adb forward no puede alcanzarlo (use Wi-Fi)")
+        now = time.monotonic()
+        if now >= next_notice:
+            log(f"esperando Listen de XRoboToolkit en el PICO (USB, puerto {port}) "
+                f"({max(0, int(deadline - now))}s)")
+            next_notice = now + 5
+        time.sleep(0.5)
+    raise RelayError(f"XRoboToolkit no abrió el puerto {port} en {wait_seconds}s (USB)")
+
+
 def connect_pico(host: str, port: int, wait_seconds: int) -> socket.socket:
     deadline = time.monotonic() + wait_seconds
     last_error: OSError | None = None
@@ -225,7 +289,10 @@ def open_source(url: str, timeout: int) -> BinaryIO:
 
 def relay(args: argparse.Namespace) -> int:
     log(f"destino PICO={args.pico_ip}:{args.port}")
-    pico = connect_pico(args.pico_ip, args.port, args.wait_seconds)
+    if args.adb_serial:
+        pico = connect_pico_usb(args.adb_serial, args.port, args.wait_seconds)
+    else:
+        pico = connect_pico(args.pico_ip, args.port, args.wait_seconds)
     log("PICO_CAMERA_LISTENER_CONNECTED=1")
     source: BinaryIO | None = None
     frames = 0
@@ -309,6 +376,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source", help="URL HTTP-FLV de SRS")
     parser.add_argument("--pico-ip", help="IP Wi-Fi del PICO")
     parser.add_argument("--port", type=int, default=12345)
+    parser.add_argument("--adb-serial",
+                        help="vídeo por USB: esperar listener vía ADB y conectar por adb forward")
     parser.add_argument("--wait-seconds", type=int, default=60)
     parser.add_argument("--source-timeout", type=int, default=10)
     parser.add_argument("--ready-file")

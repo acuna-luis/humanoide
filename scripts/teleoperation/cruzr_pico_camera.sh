@@ -461,9 +461,15 @@ Esto sólo transmite vídeo y no envía START ni órdenes al robot.
 EOF
     start_camera_stream
     start_camera_heartbeat
+    usb_args=()
+    if [[ "$pico_ip" == "127.0.0.1" ]]; then
+      # Vídeo por USB: el relay espera el listener real vía ADB antes del forward.
+      usb_args=(--adb-serial "${pico_adb_target:-$pico_serial}")
+    fi
     "$relay" \
       --source "$source_url" \
       --pico-ip "$pico_ip" \
+      "${usb_args[@]}" \
       --port "$pico_port" \
       --wait-seconds "$camera_wait_seconds" \
       --ready-file "$ready_file"

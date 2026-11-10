@@ -1,5 +1,19 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**10-11-2026 ~19:58 — vídeo PICO por USB con espera real del listener.** El
+usuario quiere todo por USB/Ethernet (sin Wi-Fi). `pico_camera_relay.py` admite
+`--adb-serial`: lee `/proc/net/tcp*` del visor por ADB (sin connect de sondeo)
+hasta ver LISTEN en 12345, y sólo entonces crea `adb forward tcp:12345` y
+conecta a 127.0.0.1. Evita el falso "conectado" de las 19:47. Si el listener
+sólo escucha en una IP no loopback, falla con mensaje (usar Wi-Fi).
+`cruzr_pico_camera.sh` lo activa cuando la IP del PICO es 127.0.0.1. Parser
+verificado contra el listener real 63901 (`any`). Prueba con el visor real:
+PENDIENTE. Comando: `PICO_CAMERA_PICO_IP=127.0.0.1 PICO_PC_IP=127.0.0.1
+CRUZR_IFACE=eno1 CRUZR_PC_IP=192.168.11.250 bash scripts/teleoperation/probar_pico_v4.sh --teleoperate`;
+en el visor `Camera source IP` = 127.0.0.1 y Listen una vez. Sustituye la
+recomendación Wi-Fi de las 19:50 como opción preferida; Wi-Fi sigue disponible
+omitiendo `PICO_CAMERA_PICO_IP`.
+
 **10-11-2026 ~19:50 — vídeo por `adb forward` DESCARTADO; check antes de START.**
 Con `forward tcp:12345` el relay "conectó" (19:47:07) al socket local de ADB,
 que acepta aunque XRoboToolkit no escuche, escribió el primer keyframe en su
