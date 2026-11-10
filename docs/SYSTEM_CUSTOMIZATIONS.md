@@ -1,5 +1,22 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## RELEVO-PORTABLE-20261110
+
+**10-11-2026, Europe/Madrid — PREPARADO EN PC; EXPORT Y TRANSFERENCIA A OTRO
+PC PENDIENTES.** El relevo es documental: no habilita, modifica ni mueve el robot.
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo | Permitir que otro agente y ordenador recuperen el estado del piloto de pelota, fuentes, cambios locales y evidencia seleccionada, distinguiendo datos privados y comprobaciones físicas actuales. [Relevo](vla/RELEVO_PORTABLE_SMOLVLA.md). |
+| Instrucciones | `CLAUDE.md` añade punto de entrada para agentes compatibles y remite a `AGENTS.md` y al relevo. En `AGENTS.md` se corrige la ambigüedad: ante peligro inmediato se acciona E-stop sin esperar HOME; HOME se considera solo en parada planificada y con trayectoria despejada. Los requisitos de supervisión, paros y límites no se rebajan. |
+| Exportador | `scripts/vla/export_smolvla_handoff.py` SHA256 `60bb60fad33569424c02b9713b2cb4f81faf9e92d7771840f76efd11b6c392b7`; `scripts/vla/test_export_smolvla_handoff.py` SHA256 `724e96a8675756d23c2cc516c50012d690c46c0bcc0b799a20c82cd35b266d11`. Consultar `--help`; `--output` exige directorio nuevo privado fuera del repo y evidencia. Se registran bundle Git, parches staged/unstaged, inventario y solo no seguidos expresamente seleccionados, y evidencia elegida. `--light` excluye datos grandes; `--verify --manifest-sha256` compara integridad con hash independiente y `--restore-untracked` restaura los no seguidos incluidos sin pisar ni aplicar parches. Resultado con faltantes se distingue de un export completo. |
+| Datos | Dataset Ada `dataset-v2/lerobot-experiment` copiado a `../Humanoide-vla-evidence/PORTABLE_HANDOFF_20261110/ada-dataset-v2/`, nueve archivos ~45 MiB; índice `ada-dataset-v2.SHA256` SHA256 `2492012858bbb868f2d2bb9a65e4e356cde2e816d0d3cd953189fe3d759e296a`. Las dos capturas y el checkpoint se encuentran en el directorio de evidencia externo; el export copia la selección definida y deja constancia de omisiones. Ada, Docker y robot no se reconstruyen automáticamente. |
+| Seguridad y límites | **Se detectó una credencial literal preexistente en Git y puede haber más datos sensibles en historia, parches o evidencia.** El bundle conserva historia y el export no cifra ni autentica contenido. Tratar todo como privado: no subir a nube ni publicar sin saneamiento y protección adecuados; gestión/rotación de credenciales por canal aparte, sin registrar valores. El checksum prueba integridad respecto a un hash independiente, no autenticidad. La exclusividad local no demuestra ausencia de otros PC o controladores. |
+| Corrección documental | `scripts/vla/smolvla_ball_server/EVALUATION_TRAIN_ONLY.md` ahora indica que la evaluación en Ada sobre 60 muestras sí ocurrió, sin tratarla como evaluación independiente ni habilitación física. Versión nueva SHA256 `916b0d7b972c9fb6ab5b2ebee5a1dff1577adf804772aa9fef63c8b0ffe09bef`; no altera entrenamiento o robot. |
+| Verificación | 13 pruebas locales del exportador y auditoría independiente; creación/verificación de un paquete real y restauración en otro PC quedan PENDIENTES hasta ejecutar y conservar evidencia. Un paquete generado en este PC no demuestra copia, acceso a servidores ni estado físico posterior. Su hash de manifiesto debe guardarse separadamente por canal privado. |
+| Respaldo/reversión | `../Humanoide-vla-evidence/PORTABLE_HANDOFF_20261110/before-handoff-docs.tar` SHA256 `82921dc049004e9d93439f29198aef5fc25740ea4d18ae48dae8186e04aea1fe`, incluye documentos previos con cambios locales ajenos. `AGENTS.before.md` SHA256 `e32a692bfe9f811016aa78971c9cdabcc69753e3e099564341e7b4241f1ff42c`; `evaluation-train-only.before.md` SHA256 `ccd0b926db5fdd86dc88da82f19529b30b3df087e99c642d5ab0abbfd6fdf13a`. Revertir selectivamente solo los cambios de esta intervención, sin sobrescribir trabajo previo ni restaurar estados transitorios. |
+| Pendiente | Generar y verificar el artefacto privado después de cerrar las fuentes; registrar el SHA de su manifiesto en evidencia externa. Transferencia real a otro PC, saneamiento/rotación de credenciales y validación del entorno de destino siguen pendientes. El usuario indicó que avisaría tras carga; no asumir estado actual ni dar por habilitado SmolVLA físico. |
+
 ## ARM-PICO-SNAPSHOT-LOCK-20261110
 
 **10-11-2026, Europe/Madrid — OBSERVADO Y REPRODUCIDO EN PC; SIN CAMBIO

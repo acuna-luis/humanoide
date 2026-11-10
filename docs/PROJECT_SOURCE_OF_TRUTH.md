@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — RELEVO-PORTABLE-20261110: preparación para otro agente/PC.**
+Se añadió `CLAUDE.md`, un [relevo de SmolVLA](vla/RELEVO_PORTABLE_SMOLVLA.md)
+y un exportador/verificador privado de fuentes y evidencia seleccionada. Se
+corrigió la instrucción de E-stop: ante peligro inmediato se acciona sin esperar
+HOME. El dataset v2 de Ada tiene copia local verificada; paquete y transferencia
+efectiva a otro PC siguen pendientes. **Historia Git contiene una credencial
+preexistente**: el export no está saneado ni cifrado y no debe publicarse ni
+subirse a nube sin revisar y proteger. No hubo movimiento ni habilitación física.
+[Ficha](SYSTEM_CUSTOMIZATIONS.md#relevo-portable-20261110).
+
 **10-11-2026 — ARM-PICO-SNAPSHOT-LOCK-20261110: limitación reproducida
 localmente.** `checked_snapshot()` puede esperar el lock del lease ocupado;
 un ACK UUID fresco puede caducar durante esa espera y rechazarse antes del ACK

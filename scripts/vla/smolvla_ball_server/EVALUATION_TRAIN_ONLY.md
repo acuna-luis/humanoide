@@ -25,4 +25,7 @@ Son las mismas muestras usadas en entrenamiento: **NO es un conjunto de prueba
 independiente** y ninguna métrica prueba generalización, 20 cm, HOME o seguridad.
 El modelo sigue sin cualificar para órdenes físicas y el umbral no es una
 decisión validada de control. El semillado no garantiza igualdad bit a bit GPU.
-Este procedimiento está preparado pero aún no se ha ensayado con el servidor.
+El procedimiento se ejecutó en Ada con las 60 muestras del entrenamiento;
+véase [el piloto](../../../docs/vla/PELOTA_SMOLVLA_PILOTO_20261109.md) para
+el resultado y sus límites. No es una evaluación independiente ni una prueba
+de control físico.

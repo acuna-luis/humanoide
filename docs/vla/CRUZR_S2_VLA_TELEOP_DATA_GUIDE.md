@@ -1,5 +1,13 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — RELEVO-PORTABLE-20261110.** Un [relevo](RELEVO_PORTABLE_SMOLVLA.md)
+y un exportador privado preparan fuentes y evidencia seleccionada para otro PC;
+no acreditan transferencia o restauración efectiva. El dataset v2 Ada tiene
+copia local verificada. La historia Git contiene una credencial preexistente:
+el paquete no está saneado ni cifrado y no debe publicarse ni subirse a nube sin
+protección y revisión. La corrección de E-stop y las limitaciones de control
+físico se registran en la [ficha](../SYSTEM_CUSTOMIZATIONS.md#relevo-portable-20261110).
+
 **10-11-2026 — ARM-PICO-SNAPSHOT-LOCK-20261110.** Una prueba local reproduce
 que el lock del lease puede retrasar `checked_snapshot()` y hacer caducar un
 ACK UUID antes de entregarlo al worker. No se probó en Motion ni se atribuye
