@@ -1,5 +1,31 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-SNAPSHOT-LOCK-20261110
+
+**10-11-2026, Europe/Madrid — OBSERVADO Y REPRODUCIDO EN PC; SIN CAMBIO
+PRODUCTIVO NI PRUEBA EN ROBOT.**
+
+| Campo | Registro |
+| --- | --- |
+| Hallazgo | `checked_snapshot()` puede esperar el lock del lease ocupado, incluso si una escritura queda bloqueada. Las llamadas revisadas ocurren antes del ACK al worker o en postflight; no se ha demostrado movimiento sin cancelación por este hallazgo. No hay evidencia de que causara el incidente 731084. |
+| Reproducción | En ocho intentos manuales con telemetría simulada, dos ACK recibidos en unos 8 ms se validaron tras esperar 0,747 y 1,696 s y fueron rechazados como caducados antes del ACK al worker. El test `LeaseTests.test_uuid_ack_can_expire_while_waiting_for_lease_lock` fuerza la contención con reloj real y comprueba rechazo, lease fallido y UUID no asignado. No es una prueba del robot. |
+| Fuentes | `scripts/vla/arm_native_lease_bridge.py` SHA256 `1c9a55dffc1fc8dbac4992b9b498e76c6351eff5d440085efdbfc528c1ec73a3`, sin cambio respecto al HEAD previo `7b4c89b2d790b3c62abbbf1901538e2d0ae0c3cf`. `scripts/vla/test_arm_native_lease_bridge.py` SHA256 `0de86669ce49568ccc0c10a15def92a5777a4cd82b234c85649cb16091c1ef10`; reemplaza la versión de test citada en [ARM-PICO-FSYNC-TRANSPORT-20261110](#arm-pico-fsync-transport-20261110). El fixture de cancelación simula 10 Hz y dos pruebas esperan limpieza del lease antes de retirar su directorio; estos cambios no corrigen el lock. |
+| Verificación | `python3 -B -m unittest discover -s scripts/vla -p 'test_arm_native_lease_bridge.py' -q`: 39 pruebas pasaron tres veces consecutivas según el autor. Una corrección productiva tentativa se descartó por regresión; no se aplicó ni probó en Motion. No se cambió ningún límite o protección. |
+| Respaldo y continuación | Antes del registro se conservaron las cuatro fuentes documentales con los cambios previos en `../Humanoide-vla-evidence/PICO_SUPERVISOR_SNAPSHOT_LOCK_20261110/before-docs-working.tar`, SHA256 `1b0d475565997cc335c9b74990514708c09de312f160147c52b0971c2b90057c`. Revertir selectivamente los cambios de prueba y esta ficha sin sobrescribir trabajo ajeno. Estudiar una solución sin reintroducir la regresión y conservar la evidencia; no habilitar el gate físico por este test. |
+
+## SMOLVLA-SYNTHETIC-START-CLEANUP-20261110
+
+**10-11-2026, Europe/Madrid — PREPARADO EN PC Y PROBADO LOCALMENTE.** La
+corrección no se ha desplegado ni probado en Motion y no habilita movimiento.
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo | Conservar el handle si la entrega de fuente, sentinel o payload de un hijo diagnóstico queda incierta; intentar limpieza local de todos los hijos aunque falle uno y conservar la excepción original. Un fallo de limpieza local impide declarar PASS. La limpieza remota sigue sin confirmarse por la salida local de `docker exec`. |
+| Fuentes | `scripts/vla/runtime/pico_wrist_synthetic_cancel_host.py` SHA256 `bf0b5f0c8fd90e06b4ab9894f4a3c7559647787a830db355d163449478be431d`; `scripts/vla/test_pico_wrist_synthetic_cancel.py` SHA256 `ee7b7614fed6f6e2f1be5823615d784503f1da986997a4c9a5524ef85fb2b313`. Sustituyen las versiones indicadas en la ficha histórica [SMOLVLA-SYNTHETIC-CANCEL-20261110](#smolvla-synthetic-cancel-20261110). |
+| Verificación | Once tests locales del diagnóstico pasan, incluidos arranques inciertos en tres fases y fallo de limpieza de un hijo sin omitir el siguiente. Revisión independiente sin otro defecto material en el diff. No se consultó ni movió el robot. |
+| Aplicación y reversión | El wrapper [check_pico_wrist_synthetic_cancel.py](../scripts/vla/check_pico_wrist_synthetic_cancel.py) compone la fuente local del host al ejecutar el check; exige binding y estado vigentes. Para revertir, restaurar selectivamente los dos archivos desde Git HEAD previo `7b4c89b2d790b3c62abbbf1901538e2d0ae0c3cf`, sin sobrescribir otros cambios. Respaldo de documentos previos: `../Humanoide-vla-evidence/PICO_SYNTHETIC_START_CLEANUP_20261110T162527Z/before-docs.tar`, SHA256 `b3fbbbafccf928dbd0c9c1b929f657e06e324de03ff1cb742a89414f1583bec8`; las dos fuentes globales con cambios previos están en `before-global-docs.tar` del mismo directorio, SHA256 `6328d70050565403c25aaeac758bcf7ee3f2da31a652c4b22e604c19117a36a3`. |
+| Límites | El timeout/corte de SSH o fin local de `docker exec` no acreditan que el proceso remoto haya terminado: comprobar limpieza independiente. El diagnóstico usa una acción sintética, no prueba cancelación ni frenado del brazo. Falta probar esta versión en Motion tras carga y desconexión del cargador comunicadas por el usuario. |
+
 ## ARM-PICO-FSYNC-TRANSPORT-20261110
 
 **10-11-2026, Europe/Madrid — PREPARADO EN PC Y PROBADO LOCALMENTE;
@@ -32,6 +58,8 @@ NO PROBADO EN MOTION.** No se ha actuado sobre el robot con este cambio.
 
 **10-11-2026, Europe/Madrid — DOS CHECKS SIN MOVIMIENTO, PREFLIGHT FALLIDO.**
 No hubo goal físico ni sintético, cancelación ni cambio persistente en Motion.
+Los hashes de host y test abajo corresponden a esos ensayos; sus versiones
+vigentes se registran en [SMOLVLA-SYNTHETIC-START-CLEANUP-20261110](#smolvla-synthetic-start-cleanup-20261110).
 
 | Campo | Registro |
 | --- | --- |

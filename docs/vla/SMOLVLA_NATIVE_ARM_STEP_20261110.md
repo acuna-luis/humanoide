@@ -1,5 +1,33 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Espera del lock y ACK caducado — 10-11-2026
+
+**REPRODUCIDO LOCALMENTE; SIN PRUEBA EN MOTION.** `checked_snapshot()` puede
+esperar el lock del lease mientras otra operación lo mantiene, por ejemplo
+durante una escritura bloqueada. En las llamadas revisadas se utiliza antes
+del ACK al worker o en postflight; este hallazgo no demuestra movimiento sin
+cancelar. En ocho intentos con telemetría simulada, dos ACK recibidos en
+aproximadamente 8 ms se validaron tras esperar 0,747 y 1,696 s: caducaron y se
+rechazaron antes de entregar el ACK al worker. Una prueba local independiente
+fuerza la contención y verifica el rechazo y que no se asigne el UUID al lease.
+
+No se conoce si esta espera causó el incidente 731084. La corrección tentativa
+se descartó por una regresión, sin modificar la implementación productiva. El
+fixture de cancelación usa ahora telemetría simulada a 10 Hz y se reforzó la
+limpieza de pruebas; no corrigen la limitación. El gate físico SmolVLA sigue
+cerrado. [Fuentes, pruebas y respaldo](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-snapshot-lock-20261110).
+
+## Limpieza ante arranque incierto del diagnóstico — 10-11-2026
+
+**PROBADO LOCALMENTE; SIN CONSULTA NI MOVIMIENTO EN ROBOT.** El host conserva
+el proceso si la transmisión de fuente, sentinel o payload queda incierta e
+intenta limpiar todos los hijos aunque alguno falle. Conserva el error original
+y evita declarar PASS ante un fallo de limpieza local. Un `docker exec` terminado
+no demuestra terminación remota; esa comprobación sigue siendo independiente.
+Once tests locales pasan y la revisión independiente no encontró otro defecto
+material en el cambio. Falta ejecutarlo en Motion con batería y carga válidas.
+[Fuentes, versiones y respaldo](../SYSTEM_CUSTOMIZATIONS.md#smolvla-synthetic-start-cleanup-20261110).
+
 ## Lectura de guardia con escritura bloqueada — 10-11-2026
 
 **PREPARADO Y PROBADO LOCALMENTE; NO PROBADO EN MOTION.** La lectura del

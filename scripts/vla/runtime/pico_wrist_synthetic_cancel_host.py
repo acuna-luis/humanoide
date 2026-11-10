@@ -87,6 +87,46 @@ class GuardOutputAudit:
         return self.source.close()
 
 
+def start_diagnostic_child(uncertain_children, *args, **kwargs):
+    """Keep a handle when source delivery is uncertain, without asserting cleanup."""
+    try:
+        return launch.start_streamed(*args, **kwargs)
+    except launch.StreamStartUncertain as exc:
+        # The assignment in the caller did not finish, but the subprocess may
+        # exist and its source may already have executed. Retain the handle so
+        # the local best-effort cleanup can run. docker exec exit alone does
+        # not establish that its process in the container has ended.
+        uncertain_children.append(exc.process)
+        raise RuntimeError('synthetic_child_start_uncertain_remote_cleanup_unconfirmed:'
+                           + str(exc.phase)) from exc
+
+
+def cleanup_diagnostic_children(children):
+    """Attempt local cleanup of every child; never claim remote cleanup."""
+    failures=[]
+    for index, child in enumerate(children):
+        if child is None:
+            continue
+        try:
+            if child.poll() is None:
+                child.terminate()
+                try:
+                    child.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                    child.wait(timeout=3)
+        except Exception as exc:
+            failures.append('child_%d:%s' % (index,type(exc).__name__))
+        for name in ('stdin','stdout'):
+            try:
+                stream=getattr(child,name,None)
+                if stream is not None:
+                    stream.close()
+            except Exception as exc:
+                failures.append('child_%d_%s:%s' % (index,name,type(exc).__name__))
+    return failures
+
+
 def check(payload):
     required = {'session','manifest','urdf_text','transmissions_text','guard_source',
                 'guard_sha256','synthetic_server_source','synthetic_server_sha256',
@@ -115,20 +155,21 @@ def check(payload):
         raise RuntimeError('operator_output_unavailable')
     pc=heartbeat.PcHeartbeat(sys.stdin.fileno(),session['session_id'],output.emit)
     guard=server=pipe=None
+    uncertain_children=[]
     try:
         pc.await_ready(3)
         app,ros=launch.discover_containers()
         with tempfile.TemporaryDirectory(prefix='synthetic-wrist-cancel-',dir='/tmp') as directory:
             launch.verify_shared_tmp(directory,app)
             try:
-                server=launch.start_streamed(ros,'/opt/ros/humble/setup.bash',
+                server=start_diagnostic_child(uncertain_children,ros,'/opt/ros/humble/setup.bash',
                     payload['synthetic_server_source'],{'endpoint':endpoint,'goal_id':goal_id},
                     stderr=sys.stderr)
                 events=Lines(server.stdout)
                 ready=events.get('SYNTHETIC_SERVER_READY',12,goal_id)
                 if ready.get('endpoint') != endpoint:
                     raise RuntimeError('synthetic_endpoint_mismatch')
-                guard=launch.start_streamed(ros,'/opt/ros/humble/setup.bash', guard_source,
+                guard=start_diagnostic_child(uncertain_children,ros,'/opt/ros/humble/setup.bash', guard_source,
                     session,stderr=sys.stderr,
                     verified={'role':'guard','session_id':session['session_id'],
                               'source_sha256':payload['guard_sha256']})
@@ -177,15 +218,18 @@ def check(payload):
             finally:
                 if pipe is not None:
                     pipe.enable_guard_heartbeat=False
-                for child in (server,guard):
-                    if child is not None:
-                        if child.poll() is None:
-                            child.terminate()
-                            try: child.wait(timeout=3)
-                            except subprocess.TimeoutExpired:
-                                child.kill(); child.wait(timeout=3)
-                        for stream in (child.stdin,child.stdout):
-                            if stream is not None: stream.close()
+                had_error=sys.exc_info()[0] is not None
+                failures=cleanup_diagnostic_children((server,guard,*uncertain_children))
+                if failures:
+                    try:
+                        print('synthetic_local_cleanup_failed_remote_cleanup_uncertain:' +
+                              ','.join(failures), file=sys.stderr, flush=True)
+                    except Exception:
+                        pass  # The diagnostic's original failure has priority.
+                    # Do not hide the original exception. A run that otherwise
+                    # succeeded must not report PASS if local cleanup failed.
+                    if not had_error:
+                        raise RuntimeError('synthetic_local_cleanup_failed_remote_cleanup_uncertain')
     finally:
         pc.close()
 

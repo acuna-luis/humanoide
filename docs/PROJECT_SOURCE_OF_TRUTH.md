@@ -1,5 +1,22 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-SNAPSHOT-LOCK-20261110: limitación reproducida
+localmente.** `checked_snapshot()` puede esperar el lock del lease ocupado;
+un ACK UUID fresco puede caducar durante esa espera y rechazarse antes del ACK
+al worker. Se reprodujo con telemetría simulada; no se atribuye al incidente
+731084 ni demuestra movimiento sin cancelación. La corrección tentativa se
+descartó por regresión; el código productivo no cambió y el gate físico de
+SmolVLA sigue cerrado. [Ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-snapshot-lock-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#espera-del-lock-y-ack-caducado--10-11-2026).
+
+**10-11-2026 — SMOLVLA-SYNTHETIC-START-CLEANUP-20261110: corrección local.**
+El check sintético retiene el proceso cuyo arranque queda incierto, intenta
+limpiar todos sus hijos y conserva el error original si la limpieza local falla.
+Once tests y revisión independiente pasan; no se ha probado en Motion ni se
+acredita limpieza remota por el fin de `docker exec`. No hubo movimiento.
+[Ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-synthetic-start-cleanup-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#limpieza-ante-arranque-incierto-del-diagnóstico--10-11-2026).
+
 **10-11-2026 — ARM-PICO-FSYNC-TRANSPORT-20261110: supervisión local
 reforzada.** El lector del canal de guardia ya no espera a una renovación de
 lease bloqueada en disco para recibir alertas o el ACK de solicitud de

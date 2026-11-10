@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 HERE=Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE/'runtime'))
@@ -78,6 +79,34 @@ class SyntheticCancelTests(unittest.TestCase):
         stream=host.GuardOutputAudit(io.BytesIO(raw))
         self.assertEqual(stream.readline(8192),raw)
         self.assertIsNone(stream.preflight_reason)
+
+    def test_uncertain_child_delivery_retains_handle_for_cleanup(self):
+        child=object()
+        for phase in ('source','sentinel','payload'):
+            retained=[]
+            error=host.launch.StreamStartUncertain(child,phase,TimeoutError(),
+                                                   source_may_have_executed=phase!='source')
+            with patch.object(host.launch,'start_streamed',side_effect=error):
+                with self.assertRaisesRegex(RuntimeError,
+                        'synthetic_child_start_uncertain_remote_cleanup_unconfirmed:'+phase):
+                    host.start_diagnostic_child(retained,'unused')
+            self.assertEqual(retained,[child])
+
+    def test_cleanup_continues_after_first_child_failure(self):
+        class Child:
+            def __init__(self, fail):
+                self.fail=fail; self.terminated=False; self.stdin=io.BytesIO(); self.stdout=io.BytesIO()
+            def poll(self): return None
+            def terminate(self):
+                self.terminated=True
+                if self.fail: raise OSError('injected')
+            def wait(self, timeout): return 0
+        first,second=Child(True),Child(False)
+        failures=host.cleanup_diagnostic_children((first,second))
+        self.assertEqual(failures,['child_0:OSError'])
+        self.assertTrue(first.terminated and second.terminated)
+        self.assertTrue(all(stream.closed for child in (first,second)
+                            for stream in (child.stdin,child.stdout)))
 
 
 if __name__=='__main__':unittest.main()

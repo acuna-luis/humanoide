@@ -1,5 +1,19 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-SNAPSHOT-LOCK-20261110.** Una prueba local reproduce
+que el lock del lease puede retrasar `checked_snapshot()` y hacer caducar un
+ACK UUID antes de entregarlo al worker. No se probó en Motion ni se atribuye
+al incidente 731084. La corrección tentativa se descartó por regresión, sin
+cambio de producción; el gate físico de SmolVLA permanece cerrado.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-snapshot-lock-20261110).
+
+**10-11-2026 — SMOLVLA-SYNTHETIC-START-CLEANUP-20261110.** Corregida y probada
+localmente la limpieza del check sintético ante arranque incierto; se conserva
+el error y se informa de la incertidumbre remota. Once tests y revisión
+independiente pasan, sin prueba en Motion ni movimiento.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-synthetic-start-cleanup-20261110),
+[detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#limpieza-ante-arranque-incierto-del-diagnóstico--10-11-2026).
+
 **10-11-2026 — ARM-PICO-FSYNC-TRANSPORT-20261110.** La lectura de la
 guardia y el registro de renovación se separaron para que una escritura
 bloqueada no impida recibir el ACK de solicitud de cancelación. Pruebas y

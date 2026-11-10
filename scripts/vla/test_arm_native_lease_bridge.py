@@ -25,6 +25,48 @@ def telemetry(now, initial=None):
 
 
 class LeaseTests(unittest.TestCase):
+    def test_uuid_ack_can_expire_while_waiting_for_lease_lock(self):
+        # Reproduce the current fail-closed limitation without a fake clock:
+        # the ACK is fresh when returned by the transport, but an ongoing
+        # lease operation can hold the lock until that ACK is too old.
+        with tempfile.TemporaryDirectory() as directory:
+            lease = bridge.GuardLease(directory, dict(bridge.arm.BODY), lambda: True)
+            lease.heartbeat(telemetry(time.monotonic()))
+            exchange_started = threading.Event(); return_ack = threading.Event()
+            ack_returned = threading.Event()
+            response = {}
+            def exchange(request, timeout):
+                exchange_started.set()
+                if not return_ack.wait(2): raise TimeoutError('test_ack_not_released')
+                ack = dict(request, event='goal_uuid_ready', goal_uuid='a'*32,
+                           monotonic=time.monotonic())
+                response['returned_at'] = time.monotonic()
+                ack_returned.set()
+                return ack
+            def handshake():
+                try:
+                    lease.synchronize_uuid(box_tests.GOAL_ID, exchange)
+                except Exception as exc:
+                    response['error'] = exc
+            thread = threading.Thread(target=handshake)
+            thread.start()
+            try:
+                self.assertTrue(exchange_started.wait(2))
+                with lease.lock:
+                    return_ack.set()
+                    self.assertTrue(ack_returned.wait(2))
+                    self.assertLess(time.monotonic()-response['returned_at'], .2)
+                    time.sleep(bridge.MAX_AGE_S + .1)
+                    self.assertTrue(thread.is_alive())
+            finally:
+                return_ack.set()
+                thread.join(3)
+            self.assertFalse(thread.is_alive())
+            self.assertIsInstance(response.get('error'), RuntimeError)
+            self.assertEqual(str(response['error']), 'uuid_handshake_invalid_ack')
+            self.assertTrue(lease.failed)
+            self.assertIsNone(lease.goal_id)
+
     def test_guard_heartbeat_is_required_and_fault_is_permanent(self):
         clock = box_tests.FakeClock(); clock.value = 1.0
         with tempfile.TemporaryDirectory() as directory:
@@ -356,6 +398,7 @@ assert ack['session_id']==session and ack['challenge']=='c'*32
 telemetry()
 emit('ARM_GUARD_READY',session_id=session,movement_commands=0,physical_control_qualified=False)
 injected=False
+next_sample=time.monotonic()+.1
 while True:
  ready,_,_=select.select([sys.stdin],[],[],.05)
  if ready:
@@ -381,7 +424,8 @@ while True:
     emit('telemetry',position=bad,velocity={n:0.0 for n in body},estop=0,servo_stop=0);injected=True
   if cmd['event']=='cancel_goal_uuid':
    cmd['event']='guard_cancel_requested';cmd['physical_stop_confirmed']=False;emit(**cmd)
- telemetry()
+ if mode!='cancel' or time.monotonic()>=next_sample:
+  telemetry();next_sample=time.monotonic()+.1
 '''
     return subprocess.Popen([sys.executable, '-u', '-c', code, session, mode,
                              json.dumps(bridge.arm.BODY)], stdin=subprocess.PIPE,
@@ -448,32 +492,43 @@ class GuardPipeProcessTests(unittest.TestCase):
                 lease = bridge.GuardLease(directory, dict(bridge.arm.BODY),
                                           lambda: child.poll() is None, session_id='d'*32)
                 pipe = bridge.GuardPipe(child, lease, time.monotonic(), enable_guard_heartbeat=True)
-                pipe.await_ready(3)
-                lease.synchronize_uuid(box_tests.GOAL_ID, pipe.exchange)
-                began = threading.Event(); original = lease._write
-                def stalled(deadline):
-                    if deadline > 0:
-                        began.set()
-                        if not release.wait(4): raise RuntimeError('test_stall_not_released')
-                    original(deadline)
-                with patch.object(lease, '_write', side_effect=stalled):
-                    self.assertTrue(began.wait(2))
-                    old = pipe.latest; sequence = pipe.heartbeat_sequence
-                    started = time.monotonic()
-                    result = pipe.cancel_goal(box_tests.GOAL_ID)
-                    self.assertTrue(result['request_sent'])
-                    self.assertTrue(result['lease_revocation_pending'])
-                    self.assertFalse(result['physical_stop_verified'])
-                    self.assertLess(time.monotonic()-started, 1)
-                    # Returning a late positive write cannot publish the
-                    # observation or rearm a failed lease/heartbeat.
-                    time.sleep(bridge.LEASE_S+.05)
+                try:
+                    pipe.await_ready(3)
+                    lease.synchronize_uuid(box_tests.GOAL_ID, pipe.exchange)
+                    began = threading.Event(); original = lease._write
+                    def stalled(deadline):
+                        if deadline > 0:
+                            began.set()
+                            if not release.wait(4): raise RuntimeError('test_stall_not_released')
+                        original(deadline)
+                    with patch.object(lease, '_write', side_effect=stalled):
+                        self.assertTrue(began.wait(2))
+                        old = pipe.latest; sequence = pipe.heartbeat_sequence
+                        started = time.monotonic()
+                        result = pipe.cancel_goal(box_tests.GOAL_ID)
+                        self.assertTrue(result['request_sent'])
+                        self.assertTrue(result['lease_revocation_pending'])
+                        self.assertFalse(result['physical_stop_verified'])
+                        self.assertLess(time.monotonic()-started, 1)
+                        # Returning a late positive write cannot publish the
+                        # observation or rearm a failed lease/heartbeat.
+                        time.sleep(bridge.LEASE_S+.05)
+                        release.set()
+                        self.assertTrue(lease._async_failure_done.wait(2))
+                        self.assertEqual(json.loads(lease.path.read_text())['deadline'], 0)
+                        self.assertIs(pipe.latest, old)
+                        self.assertEqual(pipe.heartbeat_sequence, sequence)
+                        self.assertTrue(lease.failed)
+                finally:
+                    # Failure during handshake can still start asynchronous
+                    # revocation, which must finish before deleting its dir.
                     release.set()
-                    self.assertTrue(lease._async_failure_done.wait(2))
-                    self.assertEqual(json.loads(lease.path.read_text())['deadline'], 0)
-                    self.assertIs(pipe.latest, old)
-                    self.assertEqual(pipe.heartbeat_sequence, sequence)
-                    self.assertTrue(lease.failed)
+                    if child.poll() is None: child.terminate()
+                    child.wait(timeout=3)
+                    pipe.transport_thread.join(3)
+                    pipe.thread.join(3)
+                    if lease._async_failure_thread is not None:
+                        self.assertTrue(lease._async_failure_done.wait(3))
         finally:
             release.set()
             if child.poll() is None: child.terminate()
@@ -599,7 +654,14 @@ while True:
                     release.set()
                     if child.poll() is None: child.terminate()
                     child.wait(timeout=3)
+                    pipe.transport_thread.join(3)
                     pipe.thread.join(3)
+                    # The transport's EOF and the simulated fault both start
+                    # an asynchronous lease revocation. It must finish before
+                    # TemporaryDirectory begins removing its files.
+                    if lease._async_failure_thread is not None:
+                        self.assertTrue(lease._async_failure_done.wait(3),
+                                        'lease revocation did not finish before cleanup')
         finally:
             release.set()
             if child.poll() is None: child.kill()
@@ -657,7 +719,11 @@ while True:
                 except (RuntimeError, TimeoutError, OSError, ValueError):
                     pass
                 child.wait(timeout=3)
+                pipe.transport_thread.join(3)
                 pipe.thread.join(3)
+                if lease._async_failure_thread is not None:
+                    self.assertTrue(lease._async_failure_done.wait(3),
+                                    'lease revocation did not finish before cleanup')
                 self.assertEqual(pipe.first_guard_fault['reason'],
                                  'outside_nominal_sps_limit:R_elbow_yaw_joint')
                 self.assertEqual(pipe.first_guard_fault['event'], 'OPERATOR_ALERT')
