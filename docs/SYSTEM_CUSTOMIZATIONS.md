@@ -1,5 +1,20 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## HEAD-PICO-SUPERVISED-20261110
+
+**10-11-2026, Europe/Madrid — preparación y check VERIFICADOS; resultado
+físico PENDIENTE.** El usuario autorizó una tarea de cabeza y confirmó las
+condiciones. El ejecutor no cambia modo ni protecciones; la persona presente
+supervisa el robot y el paro. No hay prueba de parada física certificada.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | PICO/v4, cabeza cerca0, controlador manipulación activo; XML de cabeza hash `f3a73626f97b471d4a0a03c98c24de32243651116c497328e69b5ddc57ea46c1` y YAML PICO hash `01a5ca8acba16bbe136a3bdbcb4a593667d672f8ee9613b98631699fc429b582`. Documentos anteriores y checker previo en commit `b2e556d`. No se tocaron locks o archivos sin seguimiento preexistentes. |
+| Fuentes | Wrapper `scripts/vla/run_head_from_pico_supervised.py` SHA256 `d5475680d4b3718a8a0ecfe9af91ef5b3e714357c52769191a8b7b1f9f183bcc`, runtime `scripts/vla/runtime/head_from_pico_supervised.py` `53065e48512169303dd4aea71caea4614fda5e69bd93fe6c6aaf4d8cbb43bb4d`; checker `scripts/vla/head_from_pico_check.py` `dfa647b4921ef4533838aea984685c4db59504ec6068bb22bcf430f0460ad29e`. Pruebas wrapper `ba70d3a2881cf849d66e0f02b831e4e5057ebd79d6e9867f42f6a52b4f683e7b`, runtime `cdd48ec76dcc71f67cfdd1435562cfc9e6a73d1737a6569736da1c5c2385fdcf`, checker `d9bd2fcddf626a089c05fa733962526d6c9d55dfa3c9afb69aff961685637f99`. El checker conserva su observador y ahora expone inventario separado. |
+| Preparación y resultado | 37 tests locales con ROS simulado; un check rechazó inventario caducado sin envío; tras eliminar duplicación de observación, check integral rc0, edad15,606s, 0 órdenes, en `../Humanoide-vla-evidence/HEAD_PICO_SUPERVISED/check-20261110T094148.545132Z-7613fe55/`. Proceso de monitor terminó; sesiones CC status.get son temporales. Resultado físico **PENDIENTE**, actualizar esta ficha tras cualquier ejecución. |
+| Aplicación | [Receta y límites](vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#ejecutor-supervisado-de-cabeza-desde-pico--preparación-10-11-2026). Se conserva evidencia privada por invocación y recibo bloqueante en fallo/incertidumbre; no limpiar ni reintentar automáticamente. El check no certifica parada. |
+| Reversión y deuda | Código y documentos locales se pueden revertir selectivamente frente a `b2e556d`, tras comparar cambios; no altera SDK ni parámetros remotos. Un cambio físico de postura no se revierte con Git. Persisten límites: control exclusivo no puede demostrarse para otras máquinas, cancelación no certifica frenado, pérdida de SSH puede impedir observación; la supervisión y paro físico siguen necesarios. |
+
 ## HEAD-PICO-CANDIDATE-20261110
 
 **10-11-2026, Europe/Madrid — comprobación pasiva VERIFICADA; ejecutor físico

@@ -1,5 +1,13 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — HEAD-PICO-SUPERVISED-20261110: ejecutor supervisado preparado.**
+La prueba pasiva integral desde PICO/v4 terminó sin órdenes; usuario autorizó
+una tarea de cabeza y confirmó condiciones físicas. Resultado físico
+PENDIENTE en esta ficha. El monitor no certifica frenado ni evita intervención
+presencial; sin cambio de modo, HOME o reintento automático.
+[Detalle](vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#ejecutor-supervisado-de-cabeza-desde-pico--preparación-10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#head-pico-supervised-20261110).
+
 **10-11-2026 — HEAD-PICO-CANDIDATE-20261110: candidato bloqueado y check
 pasivo.** A solicitud del usuario se preparó una revisión de cabeza desde
 PICO/v4; `--check` observó durante 1,001 s el estado requerido y emitió cero

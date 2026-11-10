@@ -5,6 +5,46 @@ El usuario pidió crear las piezas que faltan para el piloto. No se enviaron
 órdenes de movimiento ni llamadas a servicios de cambio de controlador. Las
 lecturas son puntuales y no acreditan el estado físico posterior.
 
+## Ejecutor supervisado de cabeza desde PICO — preparación 10-11-2026
+
+Por petición explícita del usuario se preparó
+[`run_head_from_pico_supervised.py`](../../scripts/vla/run_head_from_pico_supervised.py)
+para una única tarea instalada `cruzr/move_head_lower` desde PICO/v4, sin
+recarga de teleop, cambio de modo, HOME ni reintento. El inventario confirma
+hashes, controladores, estado de acción y ausencia observada de escritor SDK;
+el supervisor verifica durante la aceptación y ejecución postura por nombre,
+salud de actuadores, manos, cargador, baterías, ambos paros y cadencia, deriva
+de cuerpo y dedos, envolvente y velocidad de cabeza. Los límites y umbrales
+no certifican frenado o colisión; vigilar físicamente y actuar sobre el paro
+si es necesario. El usuario confirmó manos vacías, recorrido despejado, ruedas
+bloqueadas, cargador desconectado, paros accesibles con persona presente y
+ausencia de otros mandos antes de la tarea. Antes de cualquier ejecución
+posterior se requiere una confirmación nueva.
+
+Se asocia UUID antes de enviar, se monitorea aceptación, y ante fallo se avisa,
+se solicita cancelación para el goal identificado y no se presupone frenado.
+No se reenvía la tarea; aceptación incierta, caída de SSH o monitor no
+establecen reposo y no autorizan HOME. Se mantiene un recibo persistente que
+bloquea reintentos tras fallo; el código, trazas y resultado se conservan en
+`../Humanoide-vla-evidence/HEAD_PICO_SUPERVISED/` con directorio único.
+
+`--check` recorre el mismo monitor y los handoffs pero sale antes de construir
+o enviar un goal. El primer check de versión congelada rechazó por edad del
+inventario27,498s más margen3s >30s, sin movimiento. Se eliminó la lectura
+duplicada y el segundo check terminó rc0, edad15,606s, cero órdenes, evidencia
+`check-20261110T094148.545132Z-7613fe55`. Se conserva el TTL30s y el RTT
+máximo3s. Pasaron37 pruebas locales con ROS simulado; sus mensajes de acción
+no corresponden a movimiento real. El check no certifica parada o escena.
+
+Receta, tras comprobación física nueva y revisión de esta ficha:
+
+```bash
+python3 -B scripts/vla/run_head_from_pico_supervised.py --check
+python3 -B scripts/vla/run_head_from_pico_supervised.py --run --physical-confirmed
+```
+
+**Estado de esta preparación: pendiente del resultado del ensayo físico.**
+
 ## Candidato de cabeza PICO v4 — 10-11-2026
 
 El usuario solicitó un ejecutor nuevo desde la postura actual. Se preparó

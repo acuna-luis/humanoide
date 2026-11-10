@@ -78,7 +78,8 @@ def action_status(text):
         raise ValueError('action_active_or_unknown')
 
 
-def check():
+def inventory():
+    """Read and validate inventory only; no subscriptions or movement."""
     m, r = parse_containers(execute('motion', ['docker', 'ps', '--format', '{{.Names}}']))
     queries = {
         'xml': ['docker', 'exec', m, 'sha256sum', TASK_PATH],
@@ -98,7 +99,11 @@ def check():
     if not re.search(r'^Writer count:\s*0\s*$', reads['writers'].get('stdout', ''), re.M):
         raise ValueError('sdk_writer_present_or_unknown')
     action_status(reads['action_status'].get('stdout', ''))
+    return m, r
 
+
+def check():
+    _, r = inventory()
     # Load the existing stop-monitor functions in memory, then stream the new
     # read-only observer to Motion. Neither is copied onto the robot.
     old = (RUNTIME / 'metamove_head_probe.py').read_text(encoding='utf-8')

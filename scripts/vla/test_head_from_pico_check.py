@@ -19,6 +19,33 @@ def sample():
 
 
 class HeadFromPicoCheckTests(unittest.TestCase):
+    def test_inventory_has_no_observer_and_validates_all_checks(self):
+        responses = [
+            {'returncode':0,'stdout':'walker-motion.manipulation_robot_app-1\nwalker-ros.ros2-1\n'},
+            {'returncode':0,'stdout':wrapper.TASK_SHA+'  xml\n'},
+            {'returncode':0,'stdout':wrapper.PICO_SHA+'  yaml\n'},
+            {'returncode':0,'stdout':'controllers'},
+            {'returncode':0,'stdout':'Writer count: 0\n'},
+            {'returncode':0,'stdout':'status'},
+        ]
+        with patch.object(wrapper, 'execute', side_effect=responses) as execute, \
+             patch.object(wrapper, 'controller_states') as controllers, \
+             patch.object(wrapper, 'action_status') as status, \
+             patch.object(wrapper.subprocess, 'run', side_effect=AssertionError('observer must not run')):
+            self.assertEqual(wrapper.inventory(), ('walker-motion.manipulation_robot_app-1','walker-ros.ros2-1'))
+            self.assertEqual(execute.call_count, 6)
+            controllers.assert_called_once_with('controllers')
+            status.assert_called_once_with('status')
+
+    def test_check_still_runs_passive_observer_after_inventory(self):
+        result = type('Result', (), {'stdout':'READ_ONLY\n','stderr':'','returncode':0})()
+        with patch.object(wrapper, 'inventory', return_value=('motion','walker-ros.ros2-1')), \
+             patch.object(wrapper.subprocess, 'run', return_value=result) as run, \
+             patch('sys.stdout', new_callable=io.StringIO):
+            self.assertEqual(wrapper.check(), 0)
+            self.assertIn('timeout 35 python3 -B -u -', ' '.join(run.call_args.args[0]))
+            self.assertIn('pico_v4_head_readonly_admission', run.call_args.kwargs['input'])
+
     def test_run_rejected_before_remote_or_files(self):
         with patch.object(wrapper, 'check', side_effect=AssertionError('must not connect')):
             with patch('sys.stderr', new_callable=io.StringIO) as err:
