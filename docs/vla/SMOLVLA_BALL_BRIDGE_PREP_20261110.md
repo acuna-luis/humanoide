@@ -41,6 +41,84 @@ brazos y manos; el seguimiento histórico de cabeza no demuestra una vía
 aislada segura. La autorización del usuario existe; la limitación es técnica.
 No se enviaron órdenes, cancelaciones ni cambios de modo.
 
+## Análisis de independencia de cabeza — 10-11-2026
+
+El usuario pidió usar la tarea de HOME y otro efector desde PICO, y confirmó
+en ese momento manos vacías, cabeza y recorrido despejados, ruedas bloqueadas,
+cargador desconectado, paros accesibles, persona junto al paro y ausencia de
+otros mandos. Lecturas posteriores no sustituyen una nueva comprobación antes
+de una acción. A las 10:18 CET se observó posición PICO, velocidades cero en
+una muestra de 20 ejes y manos, actuadores error 0, paros0/0, cargador0 y
+baterías77,1/79,1 %. Manipulación/manos/chasis `running`, VLA/SDK `initialized`,
+topic SDK sin escritores y último status de acción `5`; no prueba exclusividad
+futura. En PC la UI estaba inactiva y no se observaron procesos ni conexiones
+PICO en la consulta. No se enviaron órdenes ni se cambiaron modos.
+
+La tarea instalada `cruzr/move_head_lower` conserva SHA256
+`f3a73626f97b471d4a0a03c98c24de32243651116c497328e69b5ddc57ea46c1`
+y está disponible en el catálogo: un solo MetaMove de cabeza, yaw0,
+pitch−0,43 rad, duración2s. En el ensayo histórico desde HOME con abrazaderas
+terminó normalmente y los otros ejes cambiaron como máximo 0,0000959 rad.
+Eso apoya que la orden es de cabeza, no demuestra cobertura de colisión o
+parada física desde PICO con v4. El cliente no llama explícitamente un cambio
+de modo; tampoco se ha establecido si el servidor introduce alguna transición
+al recibir `ArmTask` en el estado actual. El incidente de HOME conocido
+ocurrió tras un cambio explícito a `auto_task`, no demuestra que un goal
+directo cause HOME. El ejecutor existente conserva su preflight HOME y el
+monitor documenta que la cancelación no prueba frenado; no se han saltado.
+
+Como revisión geométrica **parcial**, la muestra de articulaciones con sello de
+origen `1794302254.881649502` se evaluó en 101 posiciones interpoladas de
+cabeza desde pitch−0,003451 a −0,43 rad, con el resto fijo. Cinemática del URDF
+vendor `06083544f182b9336ad6f40040a5a79955c19897cb0b78d9f597888dce0c2fa0`
+y mallas del ZIP SDK `7cb7f856223ce99a86d44349be475a2b5925d57ca694ee069a96c808802e297e`:
+distancia mínima de orígenes `L/R_sixforce_link` a caja modelada de cabeza
+0,49319/0,49313 m; sin intersecciones muestreadas con cajas de brazos,
+excluidos efectores. La muestra no se conservó en archivo y los relojes no se
+calibraron. Una cota geométrica del URDF v4 EVT3 de Descargas,
+SHA256 `96f957ee0d346b8ff0654e219891ba23ebe5f2a315ca793a83dde9741019e561`,
+encierra cada modelo de mano en radio 0,259076/0,258927 m desde su propia base.
+No se conoce el montaje real base↔sensor, correspondencia hardware/modelo,
+salientes de cabeza o escena. Muestreo discreto no certifica el recorrido
+continuo ni sus tolerancias. No se movió la cabeza.
+
+La revisión de 101 puntos se reproduce con una **nueva** lectura pasiva; no
+reconstruye la muestra puntual no guardada. Desde la raíz del repositorio:
+
+```bash
+.venv/general-home/bin/python -B - <<'PY'
+import sys,json,math
+from pathlib import Path
+import numpy as np
+sys.path.insert(0,'scripts'); sys.path.insert(0,'scripts/vla')
+from collect_estop_available_readonly import execute,ros
+import analyze_vla_fixture_collision_e4_1c as fk
+import analyze_vla_self_collision_e6_0b as ob
+# Descubrir primero el contenedor actual; el nombre es el observado en esta sesión.
+r=execute('motion',ros('walker-motion.manipulation_robot_app-1','rosa topic echo --once --no-daemon --qos-reliability best_effort /mc/whole_joint_states',True))
+assert r['returncode']==0
+s=r['stdout']; msg=json.loads(s[s.find('{'):]); state=dict(zip(msg['name'],msg['position']))
+u=Path('../Humanoide-vla-evidence/20260903T093408_E4.1C/artifacts/vendor_cruzr_s2_v1.urdf')
+z=Path('Cruzr S2-20260803T070710Z-1-003/Cruzr S2/SDK/URDF/cruzr_s2_description.zip')
+j,b,_=fk.load_robot(u,z); mins={side:[math.inf,None] for side in ('L','R')}; overlaps={}
+for i in range(101):
+ t=i/100; q=dict(state); q['head_pitch_joint']=state['head_pitch_joint']*(1-t)-.43*t; q['head_yaw_joint']=state['head_yaw_joint']*(1-t)
+ poses=fk.forward_kinematics(j,q); c,a,e=ob.obb_for_link(poses['head_pitch_link'],b['head_pitch_link'])
+ for side in ('L','R'):
+  point=poses[side+'_sixforce_link'][:3,3]; local=a.T@(point-c); d=float(np.linalg.norm(np.maximum(np.abs(local)-e,0)))
+  if d<mins[side][0]: mins[side]=[d,i]
+  for link in b:
+   if not link.startswith(side+'_') or any(x in link for x in ('pgc','finger')): continue
+   if ob.obb_overlap((c,a,e),ob.obb_for_link(poses[link],b[link])): overlaps.setdefault(link,[]).append(i)
+print(msg['header']['stamp'],mins,overlaps)
+PY
+```
+
+La esfera de cada mano se calculó en memoria sumando, para cada enlace de
+colisión, las normas de las traslaciones de sus juntas desde la base, la
+traslación de la malla y el máximo radio de sus vértices; se tomó el máximo
+por lado. No es una medición de la mano instalada ni del montaje.
+
 ## Prueba breve en vivo — 10-11-2026
 
 Tras la petición de acortar las pruebas, a las 10:04 CET se ejecutó la

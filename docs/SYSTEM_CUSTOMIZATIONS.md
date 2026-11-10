@@ -1,5 +1,20 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## HEAD-PICO-GEOMETRY-20261110
+
+**10-11-2026, Europe/Madrid — revisión parcial OBSERVADA; movimiento
+PENDIENTE.** El usuario pidió usar la tarea existente para orientar cabeza
+desde PICO y confirmó manos vacías, despeje, bloqueo de ruedas, cargador fuera,
+paros accesibles con persona presente y fin del uso de otros mandos. No se
+envió una tarea, cambio de modo, cancelación o HOME.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | Robot reportado en PICO; tarea head-only histórica con ensayo normal desde HOME/abrazaderas, sin parada certificada; ejecutor actual exige HOME. Documentos previos en `191eaf6`: blobs global `a2dbf1406a8c7e3ef750fe712b4b02af055e5ab3`, registro `f973451428864ccd265999af69d219ac1b454b7f`, puente `9e2430359b6fba1671b687dd51ccbd18030ba75e`, teleop `1c54b3e419abdc547f8d061d90e4991e72e95a1d`. |
+| Comprobación actual | A las10:18 CET muestra compatible con PICO y velocidad0 en ejes y manos; actuadores error0; baterías77,1/79,1 %, cargador0, paros0/0. Controladores de manipulación/manos/chasis activos, SDK inicializados y cero escritores SDK; último status5 y último log visible TeleopMode→JoystickMode. UI PC inactiva y proceso PICO no observado. Instantáneas, no prueban control exclusivo futuro. XML `cruzr/move_head_lower` SHA256 `f3a73626f97b471d4a0a03c98c24de32243651116c497328e69b5ddc57ea46c1`, catálogo disponible, único MetaMove cabeza yaw0/pitch−0,43rad/2s. No hay parámetros de desactivación de colisión en XML/cliente, pero cobertura nativa no acreditada. |
+| Análisis geométrico | En memoria se evaluaron 101 posiciones de cabeza con articulaciones medidas fijas, URDF vendor y ZIP SDK. Mínimo origen de sensor de muñeca a caja de cabeza0,49319/0,49313m; sin solapamientos muestreados con cajas de brazo, excluidas manos. Modelo v4 EVT3 acotado a radio0,259076/0,258927m desde su base propia. Montaje respecto al sensor, geometría física real, escena, salientes, interpolación continua y errores no validados: no es certificación. Valores, hashes, código reproducible de barrido y limitaciones en [detalle](vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#análisis-de-independencia-de-cabeza--10-11-2026). Estado puntual raw e imágenes no guardados. |
+| Reversión y deuda | Sin cambios de software ni estado remoto que revertir; consultas de catálogo/ROS sólo lectura. Cambio local documental reversible selectivamente comparando `191eaf6`. Diseñar una admisión PICO nueva con supervisión y recorrido cualificados; el monitor histórico requiere HOME y cancelar un goal no demuestra frenado. Comprobar también efectos internos de enviar ArmTask en el modo actual: los HOME documentados siguieron un cambio explícito de modo y no prueban efecto de un goal directo. |
+
 ## HEAD-PICO-CAMERA-READONLY-20261110
 
 **10-11-2026, Europe/Madrid — diagnóstico OBSERVADO; movimiento de cabeza y

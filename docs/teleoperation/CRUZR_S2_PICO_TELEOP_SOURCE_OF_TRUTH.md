@@ -1,5 +1,13 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**10-11-2026 — HEAD-PICO-GEOMETRY-20261110.** El usuario solicitó orientar
+cabeza usando la tarea existente y confirmó condiciones físicas. El XML de la
+tarea actual contiene sólo un MetaMove de cabeza; un análisis parcial de 101
+posturas mostró separación entre muñecas y caja modelada de cabeza. No se ha
+verificado montaje real de manos v4, colisión del planificador o parada desde
+PICO; no se enviaron órdenes ni cambios de modo. [Detalle y receta](../vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#análisis-de-independencia-de-cabeza--10-11-2026),
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#head-pico-geometry-20261110).
+
 **10-11-2026 — HEAD-PICO-CAMERA-READONLY-20261110.** El usuario indicó que
 había situado el robot en PICO y pidió orientar la cabeza. Una muestra fue
 compatible con PICO y velocidades cero; a continuación los actuadores

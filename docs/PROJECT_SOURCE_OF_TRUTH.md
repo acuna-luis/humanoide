@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — HEAD-PICO-GEOMETRY-20261110: análisis parcial.** El usuario
+pidió mover la cabeza usando la tarea de HOME y confirmó condiciones físicas.
+El XML instalado y el ensayo histórico apoyan que la tarea ordena sólo cabeza.
+Un barrido parcial de brazos/cabeza en PICO mostró separación de las muñecas
+modeladas; montaje real de manos v4, cobertura de colisión, transición interna
+y parada siguen PENDIENTES. No se envió movimiento ni se cambiaron modos.
+[Detalle y receta](vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#análisis-de-independencia-de-cabeza--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#head-pico-geometry-20261110).
+
 **10-11-2026 — HEAD-PICO-CAMERA-READONLY-20261110: diagnóstico actual.** El
 usuario indicó postura PICO y autorizó orientar la cabeza; no se envió la
 orden por falta de ejecutor cualificado desde PICO/v4. Una lectura puntual
