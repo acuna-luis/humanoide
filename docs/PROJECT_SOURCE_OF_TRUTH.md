@@ -1,5 +1,13 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — HEAD-PICO-CANDIDATE-20261110: candidato bloqueado y check
+pasivo.** A solicitud del usuario se preparó una revisión de cabeza desde
+PICO/v4; `--check` observó durante 1,001 s el estado requerido y emitió cero
+órdenes, y siete pruebas locales pasaron. Existe un borrador del despacho,
+pero `--run` está bloqueado antes de conectar: modo, entorno y parada no están
+cualificados. No se movió el robot. [Detalle](vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#candidato-de-cabeza-pico-v4--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#head-pico-candidate-20261110).
+
 **10-11-2026 — HEAD-PICO-GEOMETRY-20261110: análisis parcial.** El usuario
 pidió mover la cabeza usando la tarea de HOME y confirmó condiciones físicas.
 El XML instalado y el ensayo histórico apoyan que la tarea ordena sólo cabeza.

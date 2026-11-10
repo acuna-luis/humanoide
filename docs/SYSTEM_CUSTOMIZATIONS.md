@@ -1,5 +1,20 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## HEAD-PICO-CANDIDATE-20261110
+
+**10-11-2026, Europe/Madrid — comprobación pasiva VERIFICADA; ejecutor físico
+PENDIENTE.** El usuario solicitó un ejecutor de cabeza desde PICO. Se agregó
+un comprobador y un borrador bloqueado. No se movió el robot ni se cambió
+controlador, modo, SDK o protecciones.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | XML fijo de cabeza disponible, y posición PICO/v4 observada; revisión de montaje, parada y comportamiento de ArmTask en modo actual pendientes. La documentación anterior está en `a11ff15`: blobs global `5c1451d2be72e39ed6dd80487a08004b30a4da70`, registro `df395e78fc09f8f66f1b6149685f949017c134e6`, teleop `e240169a511b417ecb5b9d22f53044f9a725169f` y puente `e50b9e4873dc816b26c2c66a3344fbd404ff5cde`. |
+| Fuentes en PC | `scripts/vla/head_from_pico_check.py` SHA256 `739f51265af3ea21b272518411015efbd4b8c8bc5224ac117c69f77340303280`; `scripts/vla/runtime/head_from_pico_readonly.py` `33cb4baf7bb62fa0ef02bb4f529936e591c8a31615e5c9a112d3b13dd7e0e5f8`; candidato bloqueado `scripts/vla/runtime/head_from_pico_candidate.py` `9f5109f5517a45875a9830b3923b78a469817609381bf725dc45a7bf4dc932f5`; pruebas `scripts/vla/test_head_from_pico_check.py` `04507b6561fd9e71ad48d43517fbe2030bf35ab40005b1a7e0cebdd7a754dd4f`. Dependen del monitor histórico y helpers existentes; no se modifican. |
+| Aplicación y resultado | `python3 -B scripts/vla/head_from_pico_check.py --check`: lectura temporal ROS sin publicador ni cliente de acción, salida `PICO_HEAD_PASSIVE_ADMISSION_OBSERVED`,1,001s y `movement_commands=0`; no califica movimiento. Proceso temporal ausente en `docker top` posterior. Siete pruebas locales pasaron; `--run` devuelve2 antes de conectar. Revisión independiente corrigió un conjunto de IDs incompatible y un hueco de excepción en el código inalcanzable. Sin log ni captura en archivo; receta y límites en [detalle](vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#candidato-de-cabeza-pico-v4--10-11-2026). |
+| Hallazgos | Perfil PICO v4 instalado SHA256 `01a5ca8acba16bbe136a3bdbcb4a593667d672f8ee9613b98631699fc429b582`: cabezas0/0; brazos L `[0,-0.15,-1.57,-1.57,2.88,0,0]`, R `[0,-0.15,1.57,-1.57,-2.88,0,0]`; `init_reset=true` y12s. Límites de codo yaw declarados ±2,88872rad; margen nominal0,00872rad no acreditado como límite efectivo. Los20 IDs corporales actuales son1001,1002,11001–11004,4001–4007 y5001–5007; ruedas18001/18002. Alias históricos de torso no aparecieron. |
+| Reversión y deuda | No hay configuración persistente nueva en Motion; logs normales pueden registrar la lectura. Revertir selectivamente los cuatro archivos nuevos y documentos frente a `a11ff15` tras comparar cambios posteriores. PENDIENTE: recorrido/montaje v4 y escena, exclusividad continua, efectos de goal desde joystick, supervisión durante aceptación y resolución de aceptación tardía, parada efectiva. `--run` y candidato están bloqueados incondicionalmente; no retirar esa barrera sin resolverlos. |
+
 ## HEAD-PICO-GEOMETRY-20261110
 
 **10-11-2026, Europe/Madrid — revisión parcial OBSERVADA; movimiento

@@ -5,6 +5,56 @@ El usuario pidió crear las piezas que faltan para el piloto. No se enviaron
 órdenes de movimiento ni llamadas a servicios de cambio de controlador. Las
 lecturas son puntuales y no acreditan el estado físico posterior.
 
+## Candidato de cabeza PICO v4 — 10-11-2026
+
+El usuario solicitó un ejecutor nuevo desde la postura actual. Se preparó
+[`head_from_pico_check.py`](../../scripts/vla/head_from_pico_check.py) con
+`--check` pasivo y `--run` bloqueado antes de conectar. El observador usa los
+objetivos de 20 ejes del perfil v4 instalado por nombre, los límites declarados
+de cabeza/brazos, estados de ambas manos, 20 actuadores, baterías, cargador y
+cadencia de paros. Comprueba el hash del XML de cabeza y del YAML v4, inventario
+de controladores, un estado terminal de acción y ausencia observada de
+publicadores SDK. No prueba exclusividad continua, escena, montaje o parada.
+
+El `--check` real devolvió `PICO_HEAD_PASSIVE_ADMISSION_OBSERVED`, 1,001 s
+de observación continua y cero órdenes; `physical_control_qualified=false`.
+Al terminar no se encontró el observador temporal en el contenedor ROS de
+Motion. Siete pruebas locales pasaron; `--run` devolvió 2 antes de conectar.
+La receta reproducible de lectura es:
+
+```bash
+python3 -B scripts/vla/head_from_pico_check.py --help
+python3 -B scripts/vla/head_from_pico_check.py --check
+python3 -B -m unittest discover -s scripts/vla -p 'test_head_from_pico_check.py' -v
+```
+
+El módulo [`head_from_pico_candidate.py`](../../scripts/vla/runtime/head_from_pico_candidate.py)
+contiene un borrador del envío fijo de `ArmTask`, con bloqueo incondicional
+antes de crear un cliente. No es un ejecutor habilitado: la aceptación tarda
+hasta 5 s sin supervisión continua en ese borrador, si llega después no hay
+goal handle para cancelar y una solicitud de cancelación no acredita frenado.
+Quitar el bloqueo sin resolver y probar esos aspectos no habilita la tarea.
+La revisión independiente detectó y corrigió antes del check una incompatibilidad
+de IDs y un hueco de manejo de errores en el borrador inalcanzable.
+
+El YAML PICO instalado fija para ambos codos yaw objetivos ±2,88 rad y límites
+declarados ±2,88872 rad, margen nominal0,00872 rad. Son límites del perfil,
+no se han establecido como límites efectivos del hardware. El monitor anterior
+deja hasta 0,02 rad de deriva a los ejes que no son cabeza; por sí solo no
+garantiza conservar esos límites declarados. Tampoco está verificada la
+cobertura de anticolisión ni la semántica del goal en esta configuración.
+No se envió movimiento, ni se activó teleop, ni se cambió controlador o se
+modificaron el SDK o las protecciones del robot.
+
+En el PC se localizó además un SOP de cambio de efector con vídeo del
+fabricante, `末端执行器更换SOP.zip` SHA256
+`3ffdd77da8f31fc26a1f03e192d5488c006bba6b53dc74502aa0ca136dbbb5d6` en
+`/home/lacuna/Descargas/Lark20261021-084746/末端 urdf/`. Los fotogramas muestran
+una brida próxima a la mano, sin identificar inequívocamente esta unidad o la
+versión EVT3 ni aportar la transformación o cotas reales. Una suscripción
+pasiva de TF en Vision mostró marcos de cámara, sin hallar la transformación de
+mano v4 en la muestra; no demuestra que no exista en otras fuentes.
+
 ## Revisión en postura PICO y solicitud de cabeza — 10-11-2026
 
 El usuario comunicó que había llevado el robot a PICO y autorizó mover la

@@ -1,5 +1,12 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**10-11-2026 — HEAD-PICO-CANDIDATE-20261110.** Nuevo comprobador PICO/v4 pasó
+una lectura pasiva; hay un borrador de la acción fija de cabeza, pero el
+despacho está bloqueado antes de conectar. El check no valida la parada ni
+el montaje. No hubo movimiento, recarga de PICO ni cambio de modo.
+[Detalle](../vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#candidato-de-cabeza-pico-v4--10-11-2026),
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#head-pico-candidate-20261110).
+
 **10-11-2026 — HEAD-PICO-GEOMETRY-20261110.** El usuario solicitó orientar
 cabeza usando la tarea existente y confirmó condiciones físicas. El XML de la
 tarea actual contiene sólo un MetaMove de cabeza; un análisis parcial de 101
