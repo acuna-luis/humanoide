@@ -336,6 +336,19 @@ class LauncherTests(unittest.TestCase):
             compile(source, '<'+name+'>', 'exec')
         self.assertIn('guard_can_cancel=True', guard)
 
+    def test_worker_bundle_keeps_raw_native_stdout_off_json_pipe(self):
+        _, _, source = launcher.source_bundle()
+        needle = ('channel=worker.WorkerChannel(sys.stdin.fileno(),event_fd,'
+                  'payload["session_id"])\n')
+        self.assertEqual(source.count(needle), 1)
+        # Inject a local fake native write after the exact production setup.
+        source = source.replace(needle, needle + 'os.write(1,b"I native simulated log\\n")\n')
+        result = execute_streamed(source, {'session_id':'a'*32})
+        self.assertEqual(result.returncode, 2)
+        rows = [json.loads(line) for line in result.stdout.splitlines()]
+        self.assertEqual([row['event'] for row in rows], ['BRIDGE_READY','worker_error','worker_result'])
+        self.assertIn('I native simulated log', result.stderr)
+
     def test_evidence_retains_exact_bundles_inputs_and_rejects_overwrite(self):
         host, guard, worker, sources = launcher.source_bundle(include_sources=True)
         with tempfile.TemporaryDirectory() as tmp:

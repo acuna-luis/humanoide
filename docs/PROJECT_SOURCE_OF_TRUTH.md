@@ -1,5 +1,22 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-ARCHIVE-PREP-20261110: recuperación selectiva
+preparada, no ejecutada.** El `--check` del archiver identificó el XML,
+marker y lease de la sesión interrumpida sin modificar archivos. La operación
+propuesta archiva XML y marker con recibos y un bloqueo durable de recuperación;
+no envía movimientos. Los archivos originales siguen presentes.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#recuperación-selectiva-preparada--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-archive-prep-20261110).
+
+**10-11-2026 — ARM-PICO-WORKER-JSON-FD-20261110: aislamiento del canal JSON.**
+El worker conserva un descriptor dedicado para eventos y redirige stdout nativo
+a stderr antes de iniciar ROSA. Pasan 78 pruebas locales y una prueba puntual
+de inicialización ROSA aislada en Motion separó JSON y log. Una inicialización
+previa imprimió texto compatible con el fallo, pero la línea
+descartada no se identificó. Sin reintento ni movimiento; XML y marker del
+intento anterior permanecen. [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#aislamiento-del-canal-json-del-worker--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-worker-json-fd-20261110).
+
 **10-11-2026 — ARM-PICO-ATTEMPT-CCFBD5-20261110: intento interrumpido.**
 La tarea nativa de muñeca se copió a Motion, pero el coordinador falló al
 procesar una línea no JSON antes de observar `uuid_request`. El protocolo

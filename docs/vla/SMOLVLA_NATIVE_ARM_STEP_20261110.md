@@ -1,5 +1,69 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Recuperación selectiva preparada — 10-11-2026
+
+**PREPARADA Y COMPROBADA EN LECTURA; NO EJECUTADA.** La utilidad versionada
+`scripts/vla/runtime/archive_failed_pico_wrist_stage.py` está limitada a la
+sesión `ccfbd5afa50744649c4d9982601013ae` y al XML, inode y SHA del receipt.
+No llama servicios ROS de movimiento. Su `--check` bloquea temporalmente el
+lock existente, valida marker, journal sin UUID, lease vencido, XML y la
+actividad observada. El check final devolvió `CHECKED_NO_CHANGES` y estado de
+acción `[4]`, sin Python observado en los dos contenedores. Es una captura
+puntual, no demuestra exclusividad externa ni parada física.
+
+La operación `--archive` está preparada pero no realizada. Escribe un intent
+durable, crea un hardlink privado del XML exacto en su FS y retira su nombre
+original, registra el receipt, vuelve a revisar actividad/journal/marker/lease
+y archiva el marker en el FS host. Después escribe receipt complete durable y
+archiva el intent. El coordinador actualizado rechaza tanto en adquisición como
+con lock retenido cualquier intent de recuperación incompleto. Si hay caída
+entre FS, marker o intent deben mantener bloqueado el lanzador actualizado;
+el nombre original del marker puede faltar y deberá revisarse manualmente.
+Ni esta operación ni su receipt prueban que un servo esté parado.
+
+Reproducción desde el PC con acceso autorizado a Motion. Comprobar primero el
+SHA256 de la fuente y repetir `--check`; ninguna de esas órdenes mueve el robot:
+
+```bash
+sha256sum scripts/vla/runtime/archive_failed_pico_wrist_stage.py
+ssh -T -o StrictHostKeyChecking=yes walker@192.168.11.2 \
+  'python3 -B - --check' < scripts/vla/runtime/archive_failed_pico_wrist_stage.py
+```
+
+SHA esperado: `90504a9ddd2d29a8e48ddd83eba862fea05a3a51a9e543e35c094d70a113b0a1`.
+Para el archivado efectivo, sólo tras revisar la evidencia, los checks y la
+ausencia de otros controles, la misma llamada usa `--archive` en lugar de
+`--check`. Guardar su receipt y registrar el estado antes de volver a probar.
+Si la conexión o cualquier fase falla, no reintentar ni borrar archivos de
+forma automática; inspeccionar ambos FS, el marker y el intent durable.
+
+Pasan 12 tests locales de archiver y 17 del coordinador. La evidencia del
+check final, hashes, backup y límites están en la
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-archive-prep-20261110).
+
+## Aislamiento del canal JSON del worker — 10-11-2026
+
+Tras el `JSONDecodeError` de la sesión interrumpida, el bundle del worker
+conserva un descriptor duplicado exclusivamente para `WorkerChannel` y
+redirige el descriptor 1 a stderr antes de importar o iniciar ROSA. Así, las
+escrituras de bibliotecas nativas al stdout del proceso no se mezclan con los
+eventos JSON enviados al coordinador. `BRIDGE_READY` se emite y vacía antes
+de cambiar los descriptores; la salida nativa queda en el log de stderr.
+
+Pasan 78 pruebas locales, incluidas escrituras simuladas directas al fd 1,
+handshake UUID y cancelación simulada. Una prueba puntual en Motion, con
+`rosa.init()` y cierre sin nodo ni goal, dejó el JSON de prueba sólo en stdout
+y el log nativo en stderr; su evidencia `rosa-fd-isolation-readonly.json` tiene
+SHA256 `1c38a1c6ec9be9923a3e5aab5be001ff51f3e1e943a7e899191f24bcc7f98acd`.
+No ejercita el worker completo ni el despacho. La prueba separada de `rosa.init()`
+mostró una línea de salida compatible con la hipótesis de contaminación, pero
+no identifica el contenido de la línea que se perdió en el intento. Este fix
+no se ha probado físicamente, no acredita frenado ni activa SmolVLA. Las
+fuentes cambiaron: bindings anteriores no identifican esta versión y se debe
+crear y comprobar uno nuevo antes de cualquier uso. El XML y marker del intento
+anterior siguen en Motion; no hubo reintento ni movimiento. Fuentes, backup,
+evidencia y recuperación pendiente: [ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-worker-json-fd-20261110).
+
 ## Intento interrumpido de muñeca — 10-11-2026
 
 La sesión `ccfbd5afa50744649c4d9982601013ae` inició la ruta supervisada de

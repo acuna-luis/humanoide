@@ -1,5 +1,16 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-ARCHIVE-PREP-20261110.** Preparado y comprobado en
+lectura un archivado selectivo del XML y marker de la sesión interrumpida; no
+se ha ejecutado ni reintentado la tarea física. La ausencia puntual de procesos
+no acredita exclusividad ni parada. [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#recuperación-selectiva-preparada--10-11-2026).
+
+**10-11-2026 — ARM-PICO-WORKER-JSON-FD-20261110.** La salida de eventos del
+worker se separó del stdout nativo antes de inicializar ROSA. Pasan 78 pruebas
+locales y una inicialización ROSA aislada en Motion confirmó la separación;
+no hubo reintento ni movimiento y la recuperación del intento previo
+sigue pendiente. [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#aislamiento-del-canal-json-del-worker--10-11-2026).
+
 **10-11-2026 — ARM-PICO-ATTEMPT-CCFBD5-20261110.** Un intento supervisado de
 la tarea estática de muñeca falló después de copiar el XML y antes de observar
 la solicitud de UUID. Lectura posterior inmóvil y operador sin anomalía; el

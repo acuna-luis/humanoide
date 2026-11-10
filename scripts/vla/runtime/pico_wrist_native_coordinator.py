@@ -144,6 +144,14 @@ def ensure_control_root():
         os.close(parent_fd)
 
 
+def require_no_pending_recovery(root):
+    """Incomplete archive intents remain a durable block even without marker."""
+    for path in root.iterdir():
+        # Check the name even for symlinks or unreadable/nonregular files.
+        if re.fullmatch(r'RECOVERY-[0-9a-f]{32}-intent\.json', path.name):
+            raise RuntimeError('recovery_requires_manual_review')
+
+
 def acquire_trial_lock():
     root = GLOBAL_RECEIPT_DIR
     info = root.lstat()
@@ -157,6 +165,7 @@ def acquire_trial_lock():
         marker = root/'PENDING_OR_UNRESOLVED.json'
         if marker.exists() or marker.is_symlink():
             raise RuntimeError('previous_trial_requires_manual_review')
+        require_no_pending_recovery(root)
         return fd
     except BaseException:
         os.close(fd)
@@ -277,6 +286,7 @@ def coordinate(lease, guard_pipe, manifest, urdf_text, transmissions_text,
         marker = GLOBAL_RECEIPT_DIR/'PENDING_OR_UNRESOLVED.json'
         if marker.exists() or marker.is_symlink():
             raise RuntimeError('previous_trial_requires_manual_review')
+        require_no_pending_recovery(GLOBAL_RECEIPT_DIR)
     # The guard's existing lease renewer also checks that this coordinator is
     # making progress. This remains permanently fail-closed after a stall.
     progress = CoordinatorProgress()

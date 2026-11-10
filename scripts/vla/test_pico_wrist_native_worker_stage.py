@@ -6,6 +6,8 @@ from pathlib import Path
 import tempfile
 import threading
 import signal
+import select
+import subprocess
 import time
 import unittest
 from unittest.mock import patch
@@ -46,6 +48,66 @@ class WorkerChannelTests(unittest.TestCase):
         thread.join(2)
         self.assertFalse(thread.is_alive())
         self.assertEqual(errors, [])
+
+    def test_native_fd1_logs_cannot_corrupt_uuid_events_or_targeted_cancel(self):
+        # One local child, no ROS, network, or robot. Real native-state-machine
+        # and WorkerChannel run with a fake transport; raw C-style fd 1 output
+        # must go to stderr while events and UUID handshake remain pure JSON.
+        vla = Path(__file__).resolve().parent
+        code = r'''
+import os,sys
+sys.path[:0]=[sys.argv[1],sys.argv[2],sys.argv[3]]
+import pico_wrist_native_worker as worker
+import scenario1_action_client as native
+import test_scenario1_action_client as fixtures
+fd=worker.isolate_event_stdout()
+channel=worker.WorkerChannel(sys.stdin.fileno(),fd,'a'*32)
+channel.emit(event='stage_receipt',session_id='a'*32)
+os.write(1,b'I2026 native ROSA initialization log\n')
+clock=fixtures.FakeClock()
+class Transport(fixtures.FakeTransport):
+ def send(self,goal):
+  channel.prepare_uuid(fixtures.GOAL_ID)
+  return super().send(goal)
+ def spin(self):
+  os.write(1,b'I2026 native ROSA progress log\n')
+  return super().spin()
+transport=Transport(clock,((.25,fixtures.ACCEPT),))
+rc=native.run_action(transport,'motion',{},3,lambda **row:channel.emit(**row),
+                     interrupted=lambda: 'test_interruption' if transport.sent and clock.value>=.5 else None,
+                     clock=clock,cancel_grace=.5)
+channel.emit(event='test_complete',returncode=rc,canceled=transport.canceled)
+os.close(fd)
+'''
+        process = subprocess.Popen([sys.executable, '-B', '-u', '-c', code,
+                                    str(vla), str(vla/'runtime'), str(vla.parent/'box_handling')],
+                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
+        try:
+            def read_event():
+                self.assertTrue(select.select([process.stdout], [], [], 3)[0], 'event timeout')
+                return json.loads(process.stdout.readline())
+            self.assertEqual(read_event()['event'], 'stage_receipt')
+            request = read_event()
+            self.assertEqual(request['event'], 'uuid_request')
+            self.assertEqual(request['goal_id'], GOAL)
+            process.stdin.write((json.dumps(dict(request,event='uuid_ok'))+'\n').encode())
+            process.stdin.flush()
+            rows = []
+            while True:
+                event = read_event()
+                rows.append(event)
+                if event['event'] == 'test_complete':
+                    break
+            self.assertEqual(process.wait(timeout=3), 0)
+            self.assertEqual(rows[-1]['canceled'], [GOAL])
+            self.assertTrue(any(row.get('event') == 'cancel_requested' and row.get('goal_id') == GOAL
+                                for row in rows))
+            self.assertIn(b'native ROSA initialization log', process.stderr.read())
+            self.assertTrue(all(isinstance(row, dict) for row in rows))
+        finally:
+            if process.poll() is None: process.kill()  # This exact child is local and simulated.
+            process.wait(timeout=3)
+            for stream in (process.stdin,process.stdout,process.stderr): stream.close()
 
     def test_mismatched_uuid_fails_before_send(self):
         errors = []

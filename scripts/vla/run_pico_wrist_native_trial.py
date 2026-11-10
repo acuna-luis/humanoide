@@ -64,14 +64,16 @@ def source_bundle(*, include_sources=False):
         'metamove_head_probe', 'head_from_pico_readonly', 'arm_from_pico_supervised',
         'scenario1_request_ids', 'scenario1_action_client', 'prepare_pico_wrist_native_probe',
         'arm_native_lease_bridge', 'pico_wrist_native_stage', 'pico_wrist_native_worker')})
-    worker += ('import json\nprint(json.dumps({"event":"BRIDGE_READY"}),flush=True)\n'
+    worker += ('import json,os\nprint(json.dumps({"event":"BRIDGE_READY"}),flush=True)\n'
                'payload=json.loads(sys.stdin.readline())\n'
                'worker=sys.modules["pico_wrist_native_worker"]\n'
-               'channel=worker.WorkerChannel(sys.stdin.fileno(),sys.stdout.fileno(),payload["session_id"])\n'
+               'event_fd=worker.isolate_event_stdout()\n'
+               'channel=worker.WorkerChannel(sys.stdin.fileno(),event_fd,payload["session_id"])\n'
                'try:\n rc=worker.run(payload,channel,verified_provenance=globals().get("__pico_verified_stream__"))\n'
                'except BaseException as exc:\n'
                ' channel.emit(event="worker_error",reason=type(exc).__name__+": "+str(exc))\n rc=2\n'
-               'channel.emit(event="worker_result",returncode=rc)\nraise SystemExit(rc)\n')
+               'channel.emit(event="worker_result",returncode=rc)\n'
+               'os.close(event_fd)\nraise SystemExit(rc)\n')
     host = passive.module_code(sources)
     host += ('import json\nprint(json.dumps({"event":"BRIDGE_READY"}),flush=True)\n'
              'payload=json.loads(sys.stdin.readline())\n'

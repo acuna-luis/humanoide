@@ -1,5 +1,34 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-ARCHIVE-PREP-20261110
+
+**10-11-2026, Europe/Madrid — PREPARADO; ARCHIVADO NO EJECUTADO.** El XML,
+marker, lease y registros de la sesión `ccfbd5afa50744649c4d9982601013ae`
+continúan en Motion. No se envió movimiento ni HOME.
+
+| Campo | Registro |
+| --- | --- |
+| Objetivo y destino | Preparar una recuperación selectiva del XML y marker de la sesión interrumpida, sin comandos ROS de movimiento; `scripts/vla/runtime/archive_failed_pico_wrist_stage.py` se ejecuta en Motion host y usa `docker exec` en el contenedor app. La rutina y sus tests son locales, no están instalados en el robot. |
+| Fuentes | Archiver SHA256 `90504a9ddd2d29a8e48ddd83eba862fea05a3a51a9e543e35c094d70a113b0a1`; test `88a2827c6c87d449364f2b3cf529bb842d6d295991173f4b147dd7cbae65a3ef`; `pico_wrist_native_coordinator.py` `5f4af8a8b6f00f7b541b92f35bc3df7daa7fa772f924c8699b65adc06600fe41`. La nueva comprobación bloquea ambos caminos del coordinador si existe intent de recuperación incompleto. |
+| Comportamiento | Con lock cooperativo, valida sesión, journal sin UUID, marker, lease vencido, inode/hash del XML y actividad observada. En `--archive`, escribe intent durable antes de mover el XML por hardlink/unlink en su propio FS; guarda receipt, vuelve a comprobar actividad, journal, marker y lease y archiva el marker en host. Escribe receipt complete durable antes de archivar/retirar el intent. Ante interrupción parcial, marker o intent durable bloquean los lanzadores actualizados; puede faltar literalmente el nombre del marker, por lo que se requiere revisión manual. No hay transacción atómica entre ambos FS. |
+| Verificación | 12 pruebas locales del archiver y 17 del coordinador pasan. `archive-check-final.json` SHA256 `207be0cc6ddd4569b4d973b99f0a7bfb34f6929de3b17a1b1abb653ed576dd70`, en la evidencia del intento, recoge `CHECKED_NO_CHANGES`, XML dev 45/inode 3584590/hash esperado, estado observado `[4]` y ausencia puntual de Python en los dos contenedores. No demuestra exclusividad externa ni parada física. `--archive` aún no se ha ejecutado. |
+| Reversión y continuidad | Backup anterior al cambio tracked desde `5cd6184`: `../Humanoide-vla-evidence/ARM_PICO_ARCHIVE_PREP_20261110/before-5cd6184.tar`, SHA256 `68b55ae0bc665aa5e348c5319ee8df6189715e6a8ceea9b22469ba43f9e59e9e`; backup de documentos locales anteriores a esta ficha `before-docs-working.tar`, SHA256 `26c9d8476cf6392bead56d5abadcd9d0539b65c83390d2d3afb7328f97bf9002`. El archiver/test son archivos nuevos: retirar sólo esos archivos y revertir selectivamente coordinator si se desea. Los cambios de coordinator invalidan bindings anteriores que lo incluyan. Receta y pasos pendientes en [detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#recuperación-selectiva-preparada--10-11-2026). |
+| Deuda | Antes de archivar, verificar nuevamente el check y ausencia de otros controles; conservar evidencias. Si el comando, vínculo, receipt o conexión fallan, no repetir ni borrar automáticamente: inspeccionar ambos FS y el guard durable. Documentar el resultado real y reversión específica antes de cualquier nueva prueba. |
+
+## ARM-PICO-WORKER-JSON-FD-20261110
+
+**10-11-2026, Europe/Madrid — CORRECCIÓN LOCAL PROBADA EN SIMULACIÓN; SIN
+REINTENTO FÍSICO.** El marker y XML del intento interrumpido permanecen en
+Motion; no se han revertido ni se ha enviado una nueva tarea.
+
+| Campo | Registro |
+| --- | --- |
+| Motivo | El coordinador del intento `ccfbd5afa50744649c4d9982601013ae` falló al interpretar una línea no JSON en stdout del worker, descartada antes de registrarla. Una inicialización ROSA separada emitió en fd 1 texto compatible; el contenido exacto perdido sigue sin identificar. Véase `ARM-PICO-ATTEMPT-CCFBD5-20261110`. |
+| Destino y fuentes | PC, `scripts/vla/run_pico_wrist_native_trial.py` SHA256 `eea1d6774bc46faa20e7e552addbd617efbe93da5397ab0ceca82ac1b09ff4a8`; `scripts/vla/runtime/pico_wrist_native_worker.py` `beeb532f41f45b926f1d0f96c896c16b0e5f47799a37cfc0d0fe55d0bd96a9d3`; tests `test_run_pico_wrist_native_trial.py` `845f59e7f64f8c9a41fdbd459155353c03040fa98d59963cab48e3620533c4a2` y `test_pico_wrist_native_worker_stage.py` `87043c99f65aa17849be27c2419d4033f9171e2e0e1ffb998a475279771466c1`. No se modifica SDK ni software instalado en Motion. |
+| Aplicación y verificación | El bundle conserva el pipe de eventos como descriptor duplicado y redirige fd 1 a stderr antes de importar/inicializar ROSA. Pasan 78 pruebas locales, incluida escritura simulada directa en fd 1 durante handshake y cancelación. Una inicialización y cierre aislados de ROSA en Motion, sin nodo ni goal, emitió sólo JSON de prueba en stdout y el log nativo en stderr; evidencia `rosa-fd-isolation-readonly.json` SHA256 `1c38a1c6ec9be9923a3e5aab5be001ff51f3e1e943a7e899191f24bcc7f98acd` en el directorio del intento. No prueba el worker completo ni una tarea física. Los bindings anteriores corresponden a otras fuentes y deben regenerarse/verificarse antes de uso. |
+| Evidencia y reversión | Backup anterior de fuentes/tests y cuatro documentos: `../Humanoide-vla-evidence/ARM_PICO_WORKER_JSON_FD_20261110/before-5cd6184.tar`, SHA256 `8928c22f7f7a4bd8061c2c9cc94feb04dc06ff35d1189a5be7427dabe6473ced`; revertir sólo estos cambios preservando trabajo ajeno. Evidencia del intento y ROSA aislado permanece en `../Humanoide-vla-evidence/PICO_NATIVE_WRIST_TRIAL/run-ccfbd5afa50744649c4d9982601013ae/`. |
+| Deuda | Recuperar selectivamente el estado retenido del intento anterior mediante procedimiento y evidencia antes de cualquier reanudación; no borrar marker o XML por esta corrección. La separación de logs no demuestra cancelación, frenado, geometría ni acción física de SmolVLA. |
+
 ## ARM-PICO-ATTEMPT-CCFBD5-20261110
 
 **10-11-2026, Europe/Madrid — INTENTO FÍSICO INTERRUMPIDO; estado observado

@@ -59,6 +59,27 @@ def require_robot_app_can_read_private_task(proc_root=Path('/proc'), *, worker_u
     return matches[0]
 
 
+def isolate_event_stdout():
+    """Keep the JSON pipe on a private fd and route native fd 1 to stderr.
+
+    Call before importing or initializing ROSA. Native libraries may write to
+    fd 1 directly, so Python-only stdout redirection is insufficient. This
+    changes only this worker's descriptors and never discards a log line.
+    """
+    output = sys.stdout.fileno()
+    error = sys.stderr.fileno()
+    if output != 1 or error != 2:
+        raise RuntimeError('worker_standard_descriptors_unexpected')
+    sys.stdout.flush()
+    event_fd = os.dup(output)
+    try:
+        os.dup2(error, output)
+    except BaseException:
+        os.close(event_fd)
+        raise
+    return event_fd
+
+
 class WorkerChannel:
     def __init__(self, input_fd, output_fd, session_id):
         if not isinstance(session_id, str) or not ID.fullmatch(session_id):
