@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-BALL-ARM-PREVIEW-20261110: revisión offline.**
+Por solicitud de conectar SmolVLA al brazo y mano se preparó un diagnóstico
+sin control que comprueba el mapeo por nombre y evalúa propuestas frente a
+límites aportados explícitamente. Con una observación histórica y límites
+hipotéticos de prueba rechazó cuatro saltos; no son límites del robot ni
+certificación. El puente físico, parada, cambio de controlador SPS y semántica
+de mano siguen pendientes. No se consultó ni movió el robot en esta revisión.
+[Ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-ball-arm-preview-20261110).
+
 **10-11-2026 — SMOLVLA-BALL-BRIDGE-PREP-20261110: preparación parcial.**
 Se auditaron por nombre las propuestas de brazo y las dos grabaciones de mano;
 no se creó un puente físico. El código instalado de manos indica estáticamente

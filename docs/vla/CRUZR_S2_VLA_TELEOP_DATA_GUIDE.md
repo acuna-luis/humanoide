@@ -1,5 +1,11 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — SMOLVLA-BALL-ARM-PREVIEW-20261110.** Preparado diagnóstico
+offline de nombres, edad nominal y propuestas de brazo, con límites externos
+no cualificados. Prueba histórica con umbral hipotético rechazó cuatro
+saltos; no es un puente, trayectoria ni validación física. Mano y parada
+siguen pendientes. [Ficha](../SYSTEM_CUSTOMIZATIONS.md#smolvla-ball-arm-preview-20261110).
+
 **10-11-2026 — SMOLVLA-BALL-BRIDGE-PREP-20261110.** Auditores de propuestas
 y grabaciones preparados y probados offline; no son un puente físico. El
 controlador de manos instalado vincula estáticamente modo5 a posición y modo7

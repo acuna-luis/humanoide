@@ -7,6 +7,19 @@ lecturas son puntuales y no acreditan el estado físico posterior.
 
 ## Brazo y controladores
 
+**Revisión posterior 10-11 — SMOLVLA-BALL-ARM-PREVIEW-20261110.**
+`scripts/vla/ball_arm_preview_guard.py --input RUTA.json` evalúa offline una
+propuesta y estados 20D nombrados con límites y tiempos aportados. Comprueba
+integridad, antigüedad nominal, posición, salto y límites matemáticos de
+duración mínima para una curva hipotética; no emite trayectorias ni órdenes.
+La prueba contra un frame histórico usó reloj sintético y límites hipotéticos,
+incluido salto0,2rad; rechazó cuatro ejes y una diferencia1,167653rad de
+codo. Estos valores no son límites del robot. Sólo se revisa la velocidad de
+los siete ejes derechos, no los otros 13; no evalúa colisión, mano, escena,
+controlador o parada. Ningún resultado autoriza control físico. Entrada y
+reporte privados en `../Humanoide-vla-evidence/20261110_BALL_ARM_PREVIEW_REAL/`;
+[receta reproducible](../../scripts/vla/BALL_ARM_PREVIEW_REPLAY.md).
+
 `scripts/vla/audit_ball_arm_proposals.py --check RUTA/live-run.jsonl` comprueba
 el checkpoint, estructura y secuencia de un resultado shadow y relaciona sus
 siete valores de brazo por nombre con el orden histórico del SDK. `--run` se

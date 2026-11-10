@@ -1,5 +1,20 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-BALL-ARM-PREVIEW-20261110
+
+**10-11-2026, Europe/Madrid — diagnóstico offline VERIFICADO; conexión física
+PENDIENTE.** El usuario solicitó conectar brazo y mano. Se preparó una revisión
+por nombres, sin ROS ni publicador. No se consultó ni movió el robot, y no se
+cambiaron modos o archivos remotos.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo y propósito | Modelo pelota ejecutado en Vision sobre una imagen histórica; shadow en Ada generó propuestas pero no un lazo de control. Parada, handoff SPS y acciones de mano sin cualificar. |
+| Fuentes | `scripts/vla/ball_arm_preview_guard.py` SHA256 `165831b3ed73f7502191518c0b7444e0dd0cd2075791b4c2ecee3be9e854924c`; `scripts/vla/test_ball_arm_preview_guard.py` SHA256 `2cbb57145ec0898f06c779c082fdf807dc14709736260a9893985574cd115e6f`; [receta](../scripts/vla/BALL_ARM_PREVIEW_REPLAY.md) SHA256 `58db949ac7db15a01dc95c33127c50c3656d5aca6a8cf332adf66ebccfc520ed`. Python estándar, `audit_ball_arm_proposals.py`; no importa ROS ni genera órdenes. |
+| Aplicación y prueba | `python3 -B scripts/vla/ball_arm_preview_guard.py --input RUTA.json`; recibe nombres/estado 20D, propuesta7D, reloj y límites explícitos. Siete tests pasan. Frame2 histórico con posiciones/velocidades crudas emparejadas, reloj simulado y umbral hipotético de salto0,2rad: se rechazan cuatro ejes, incluido codo +1,167653rad. Los parámetros no son límites del robot; sólo compara velocidades de siete ejes derechos y no evalúa colisión, control, mano ni parada. Ninguna salida habilita movimiento. |
+| Evidencia y reversión | `../Humanoide-vla-evidence/20261110_BALL_ARM_PREVIEW_REAL/input.json` SHA256 `c11081028f60ec13d17d4565a0b840e80456ef0e35d958565de58e5c8ddfe9ad` y `preview.json` SHA256 `59af8e701a0cdbde5f43cb96df5e7a159cfe78b56eaa624c9e02e7e36046bf6f`. Documentos anteriores en `../Humanoide-vla-evidence/20261110_SMOLVLA_BRIDGE_MAPPING/before-docs/`, índice SHA256 `74bb15d49b78846cea026bcec2261ea1523e2466a5c1da3a2dc4b8f8a674e71e`. Revertir sólo archivos propios y estas entradas tras comparar cambios posteriores; no hay cambios remotos. |
+| Pendiente | Fuente cualificada de límites, frescura extremo a extremo y control exclusivo; handoff y parada física SPS, semántica de mano y detección de fase/posición de agarre; trayectoria y escena. Ada ofrece shadow más rápido que Vision CPU, sin demostrar lazo de control. La petición del usuario autoriza el objetivo pero no sustituye las comprobaciones técnicas y físicas. |
+
 ## SMOLVLA-BALL-BRIDGE-PREP-20261110
 
 **10-11-2026, Europe/Madrid — inferencia histórica ARM64 CPU VERIFICADA;
