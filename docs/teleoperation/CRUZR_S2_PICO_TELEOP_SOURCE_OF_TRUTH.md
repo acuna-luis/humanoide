@@ -1,5 +1,15 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**10-11-2026 — HEAD-PICO-CAMERA-READONLY-20261110.** El usuario indicó que
+había situado el robot en PICO y pidió orientar la cabeza. Una muestra fue
+compatible con PICO y velocidades cero; a continuación los actuadores
+reportaron error cero en una lectura `best_effort`. La imagen recibida sólo
+mostró parte de la mesa, sin pelota identificable; antigüedad absoluta de
+imagen no verificada por relojes. No se movió la cabeza: el ejecutor disponible
+exige HOME y no hay ruta aislada cualificada para manos v4 en PICO. No se
+inició ni recargó teleop. [Detalle](../vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#revisión-en-postura-pico-y-solicitud-de-cabeza--10-11-2026),
+[ficha](../SYSTEM_CUSTOMIZATIONS.md#head-pico-camera-readonly-20261110).
+
 **09-11-2026 — HEAD-PICO-SCRIPT-20261109.** Para la postura física PICO y
 modo joystick solicitados se ha preparado un diagnóstico local en
 `scripts/mover_cabeza_desde_pico.py`, sin control físico: `--run` siempre

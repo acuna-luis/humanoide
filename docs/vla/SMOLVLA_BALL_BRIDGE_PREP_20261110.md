@@ -5,6 +5,42 @@ El usuario pidió crear las piezas que faltan para el piloto. No se enviaron
 órdenes de movimiento ni llamadas a servicios de cambio de controlador. Las
 lecturas son puntuales y no acreditan el estado físico posterior.
 
+## Revisión en postura PICO y solicitud de cabeza — 10-11-2026
+
+El usuario comunicó que había llevado el robot a PICO y autorizó mover la
+cabeza. Lecturas puntuales a las 10:13 CET: 20 ejes corporales y dos ruedas
+con velocidad cero en una muestra, brazos compatibles con la postura PICO
+comunicada; ambas manos con siete ejes y velocidad cero en sus respectivas
+muestras. Baterías 77,5/79,6 %, cargador 0 y paros 0/0. El primer intento de
+`/mc/actuator_state` agotó plazo; a las 10:14:57 CET la lectura `best_effort`
+mostró 20 actuadores corporales y dos ruedas con error 0 y velocidad 0; los
+corporales indicaron status 4663. La postura, velocidades y salud puntuales no
+acreditan comportamiento continuo ni condiciones físicas posteriores.
+
+Controladores de manipulación, mano y chasis aparecían `running`, y los dos
+SDK `initialized`; `/mc/sdk/robot_command` tenía 0 escritores y 2 lectores.
+El último estado de acción recibido era `5` (cancelado); el último registro
+visible indicaba transición de teleoperación a modo joystick. No demuestra
+control exclusivo ni estado posterior. La UI del PC aparecía inactiva, sin
+proceso `pico_control`; no demuestra que nadie use otra interfaz.
+
+Se recibieron cuatro imágenes pasivas durante 3 s desde Vision y se visualizó
+en memoria la última: sólo se aprecia una parte de la mesa, sin distinguir la
+pelota ni identificar el aro con certeza. El sello de origen de la imagen
+corresponde a 10:12:58 CET según el reloj del PC, pero los relojes no se han
+calibrado y no se establece la antigüedad absoluta. No se conservaron píxeles.
+Terminó el colector y `docker top` no mostró el proceso temporal. La lectura
+usó `discover_vision`, `collector_command` y la fuente pasiva versionados en
+`scripts/vla/run_ball_live_shadow.py` y `passive_episode_remote.py`.
+
+No se movió la cabeza: `scripts/mover_cabeza_desde_pico.py --run` bloquea el
+movimiento y el ejecutor físico anterior requiere HOME20D y otra configuración
+de efector. La tarea histórica de cabeza sola no cualifica su recorrido ni
+parada desde PICO/v4. Reactivar la teleoperación puede inicializar también
+brazos y manos; el seguimiento histórico de cabeza no demuestra una vía
+aislada segura. La autorización del usuario existe; la limitación es técnica.
+No se enviaron órdenes, cancelaciones ni cambios de modo.
+
 ## Prueba breve en vivo — 10-11-2026
 
 Tras la petición de acortar las pruebas, a las 10:04 CET se ejecutó la

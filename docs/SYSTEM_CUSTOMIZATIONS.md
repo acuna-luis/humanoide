@@ -1,5 +1,21 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## HEAD-PICO-CAMERA-READONLY-20261110
+
+**10-11-2026, Europe/Madrid — diagnóstico OBSERVADO; movimiento de cabeza y
+ciclo SmolVLA PENDIENTES.** El usuario indicó que colocó el robot en PICO y
+pidió que el agente orientase la cabeza. No se enviaron órdenes ni se
+cambiaron modos; sólo consultas y un colector temporal de imagen.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | Puente de pelota y parada SDK pendientes; usuario indicó condiciones generales correctas y que pasó el robot de HOME a PICO. Documentos previos en `677f6a1`: blobs global `f823c3a937ae65b62f403f5013372eadde0daa7d`, registro `b6844ac7b4d53512193d2b90c6140f1a62db174d`, puente `2fffa1bb08cdfdff049930e5ff9cff272834dbd7`, teleop `22f618e79d4fbb4e12d9dc3e2f476fd8a20fd2fd`. |
+| Lecturas Motion | A las10:13 CET, baterías77,5/79,6%, cargador0 y paros0/0; 20 ejes y dos ruedas con velocidad0 en una muestra, postura compatible con PICO; ambas manos siete ejes y velocidad0 en muestras separadas. A las10:14:57 CET `/mc/actuator_state` con QoS best_effort devolvió20 actuadores con error0, estado4663 y velocidad0; ruedas con error0 y velocidad0. El primer intento sin ese QoS agotó plazo. Lecturas puntuales no prueban salud posterior. |
+| Modo y control | Manipulación, manos y chasis `running`; ambos SDK `initialized`. Topic SDK 0 escritores/2 lectores, último status de acción recibido5; último log visible TeleopMode→JoystickMode. UI PC inactiva y `pico_control` ausente en la lectura. No demuestran exclusividad ni ausencia de operación posterior. Un intento de consulta con tipo ROS estándar falló por ImportError, no constituye resultado; la lectura válida fue ROSA. |
+| Imagen y reversión | Cuatro imágenes recibidas por colector temporal sólo suscriptor en Vision durante3 s; se visualizó en memoria la última, sin distinguir pelota ni identificar aro con certeza. No se guardaron píxeles. El sello de fuente traducido con el reloj del PC da10:12:58 CET, pero relojes no calibrados: antigüedad absoluta desconocida. El colector terminó y no apareció en `docker top`. Sin instalación remota; logs normales pueden reflejar ejecución. Consulta reproducible de datos mediante helpers y recetas de `scripts/collect_estop_available_readonly.py` y `scripts/vla/capture_passive_episode.py`, que guarda datos si se ejecuta. |
+| Deuda | La solicitud de cabeza está autorizada, pero `scripts/mover_cabeza_desde_pico.py --run` rechaza: falta recorrido y parada cualificados desde PICO/v4; el ejecutor histórico exige HOME20D y otro efector. Reactivar PICO puede inicializar brazos/manos. No enviar HOME o recargar teleop automáticamente. Para el ciclo siguen pendientes visibilidad, parada y cesión SDK, control de mano y comprobación física actual. |
+| Reversión documental | Comparar cambios posteriores y revertir selectivamente estas entradas frente a `677f6a1`. Sin configuración remota que revertir. |
+
 ## SMOLVLA-BALL-CYCLE-REVIEW-20261110
 
 **10-11-2026, Europe/Madrid — revisión de secuencia y consulta de catálogo

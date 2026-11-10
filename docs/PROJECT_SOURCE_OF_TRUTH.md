@@ -1,5 +1,14 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — HEAD-PICO-CAMERA-READONLY-20261110: diagnóstico actual.** El
+usuario indicó postura PICO y autorizó orientar la cabeza; no se envió la
+orden por falta de ejecutor cualificado desde PICO/v4. Una lectura puntual
+compatible con PICO mostró reposo y actuadores sin error; la imagen recibida
+no permitió distinguir la pelota, con relojes sin calibrar. No demuestra
+condiciones posteriores. No hubo movimiento ni cambios de modo.
+[Detalle](vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#revisión-en-postura-pico-y-solicitud-de-cabeza--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#head-pico-camera-readonly-20261110).
+
 **10-11-2026 — SMOLVLA-BALL-CYCLE-REVIEW-20261110: análisis rápido.** Sin
 repetir inferencia, las 60 predicciones de entrenamiento muestran un cierre
 prematuro en un tramo y una apertura una muestra posterior a la etiqueta en
