@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-BALL-CYCLE-REVIEW-20261110: análisis rápido.** Sin
+repetir inferencia, las 60 predicciones de entrenamiento muestran un cierre
+prematuro en un tramo y una apertura una muestra posterior a la etiqueta en
+el otro, con umbral exploratorio. No es ciclo cerrado. La consulta de catálogo
+Motion anunció acciones `sps_v4` individuales de mano derecha; efecto desde
+PICO y cancelación PENDIENTES. No se ejecutaron acciones ni se movió el robot.
+[Evaluación](vla/PELOTA_SMOLVLA_PILOTO_20261109.md#análisis-de-secuencia-sin-repetir-inferencia--10-11-2026),
+[mano](vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#consulta-del-catálogo-de-mano--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-ball-cycle-review-20261110).
+
 **10-11-2026 — SMOLVLA-BALL-SHORT-PREVIEW-20261110: prueba breve y
 preparación local.** En una prueba shadow con observaciones de Vision, el
 checkpoint produjo cuatro propuestas en Ada sin órdenes; la mayor diferencia

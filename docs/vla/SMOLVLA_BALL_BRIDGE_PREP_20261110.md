@@ -68,6 +68,44 @@ No reintentar una transición cuyo resultado sea desconocido. La solicitud al
 fabricante de watchdog, deadman y transición SDK segura está en
 [`UBTECH_OPEN_QUESTIONS.md`](../support/UBTECH_OPEN_QUESTIONS.md).
 
+## Consulta del catálogo de mano — 10-11-2026
+
+A las 10:10:23 CET, lectura del servicio de catálogo `/mc/action/list` en el
+contenedor Motion redescubierto `walker-motion.manipulation_robot_app-1`, con
+filtro `v4hand_right` e `include_custom=true`: respuesta `success=true`, seis
+entradas, incluyendo `sps_v4/v4hand_right_open` y `sps_v4/v4hand_right_close`
+como disponibles y de duración 2 s. Es sólo un catálogo: no se llamó al
+servicio de ejecución ni a la acción ArmTask. Disponibilidad no demuestra
+trayectoria libre, exclusividad de mano, efecto en postura PICO o cancelación.
+El reloj observado de Motion marca 17:10:23 y no está calibrado con el PC.
+
+Para reproducir la consulta desde el PC, con acceso habitual a Motion:
+
+```bash
+python3 -B - <<'PY'
+import sys
+sys.path.insert(0, 'scripts')
+from collect_estop_available_readonly import execute
+cmd = '''source /opt/walker/setup.bash; export ROS2CLI_DISABLE_DAEMON=1; timeout 8 rosa service call --no-daemon /mc/action/list mc_task_msgs/srv/GetMnpActionList '{"keyword":"v4hand_right","include_custom":true,"model":"","hand_version":0}' '''
+print(execute('motion', ['docker', 'exec', 'walker-motion.manipulation_robot_app-1', 'bash', '-lc', cmd]))
+PY
+```
+
+Antes de repetir, descubrir de nuevo el nombre del contenedor; la consulta de
+catálogo no ejecuta acciones. Se observó que `/mc/action/exec` es otro
+servicio, de ejecución, y `/mc/manipulation/action` usa `ArmTask`; no se han
+validado ni ejecutado para esta prueba. La demo histórica `demo_ceo.sh`
+documenta un aborto por seguimiento del pulgar; un objetivo de cierre del XML
+no demuestra que el cierre completo sea alcanzable o seguro en esta unidad.
+
+El catálogo también incluía `s2/basic_motion/v4hand_right_open` y `...close`
+de 8 s. El XML instalado `.../config/s2/basic_motion/v4hand_right_open.xml`,
+SHA256 `66516cf99a9298097bbfe7018ddf2a5c1c5c8540236761ce91f0a2e78d35a6b0`,
+ordena primero cuatro dedos a 1,4 rad durante 4 s y después los lleva a cero:
+su nombre no acredita apertura inmediata ni función de parada. Lectura
+estática, no ejecución. Los wrappers de demos usan `/mc/manipulation/action`,
+pero sus resultados no prueban la cancelación física de estos XML específicos.
+
 ## Brazo y controladores
 
 **Revisión posterior 10-11 — SMOLVLA-BALL-ARM-PREVIEW-20261110.**

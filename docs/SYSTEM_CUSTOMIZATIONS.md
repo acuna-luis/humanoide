@@ -1,5 +1,21 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-BALL-CYCLE-REVIEW-20261110
+
+**10-11-2026, Europe/Madrid — revisión de secuencia y consulta de catálogo
+OBSERVADAS; ciclo físico PENDIENTE.** A petición del usuario se evitó repetir
+el entrenamiento o la inferencia. Se analizó la salida ya existente y se
+consultó el catálogo de tareas, sin llamar ejecución o cambiar modos.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | Checkpoint y evaluación de 60 muestras de entrenamiento existentes; 58/60 etiquetas provisionales de mano concordaban con umbral exploratorio. Puente físico, parada y transición de control no cualificados. Documentos previos en `3da35aa`: blobs global `103b665d27fee41ca789797bfe51845bcd07908d`, registro `c45cb86931f43a37149665078d9945e1945324a9`, piloto `ceb800a8bb48be310dac2207e36063df1f1d03b2`. |
+| Datos y receta | Ada `/home/luisacuna/cruzr-smolvla-ball-20261109/eval-pilot-1000/predictions.jsonl` SHA256 `f18e973ee8cbfda96564ef0af723bf6612d5e84e502fb5fc4c6ac78d08e185f6`; no se modificó. Los 60 índices y campos de identificación/tiempo corresponden por orden a `dataset-v2/lerobot-experiment/source_alignment.jsonl`. [Consulta reproducible y transiciones](vla/PELOTA_SMOLVLA_PILOTO_20261109.md#análisis-de-secuencia-sin-repetir-inferencia--10-11-2026). |
+| Resultado | Etiquetas provisionales de mano con umbral exploratorio0,5: falso cierre en frame580 de un tramo y apertura predicha en frame1002 tras etiqueta de apertura en1000 del otro; el resto de las 60 etiquetas coincide. Misma toma y datos de entrenamiento; observaciones grabadas y reinicio por fotograma; no prueba ciclo cerrado, HOME, 20 cm ni éxito físico. |
+| Consulta Motion | A las10:10:23 CET, `/mc/action/list` respondió `success=true` a filtro `v4hand_right`; incluía acciones `sps_v4/v4hand_right_open` y `sps_v4/v4hand_right_close`, ambas disponibles y 2 s. Contenedor redescubierto `walker-motion.manipulation_robot_app-1`. Reloj Motion observado siete horas adelantado, sin calibración. [Consulta reproducible y límites](vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md#consulta-del-catálogo-de-mano--10-11-2026). No se llamó a `/mc/action/exec` ni a ArmTask. |
+| Contexto comunicado | El usuario indica condiciones generales correctas, robot en HOME y que lo lleva a postura PICO. No se infiere la postura o la exclusividad de control posteriores; no se envían comandos automáticos durante el manejo manual. |
+| Reversión y deuda | Cambio persistente sólo documental; comparar y revertir selectivamente estas entradas frente a `3da35aa`. No hay modificaciones de robot o servidor que revertir. Confirmar semántica de ejecución/cancelación de mano y parada y cesión efectiva del SDK; catálogo y mando PICO no certifican parada SDK. Repetir comprobación física antes de cualquier movimiento. |
+
 ## SMOLVLA-BALL-SHORT-PREVIEW-20261110
 
 **10-11-2026, Europe/Madrid — shadow y comprobaciones locales VERIFICADOS;

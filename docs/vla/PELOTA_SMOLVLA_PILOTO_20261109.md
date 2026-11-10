@@ -122,6 +122,44 @@ evaluación independiente, conservar datos por sesión y no atribuir
 generalización al conjunto; definir y validar HOME→zona de agarre y altura de
 20 cm. El entrenamiento offline no autoriza movimiento.
 
+## Análisis de secuencia sin repetir inferencia — 10-11-2026
+
+Para acortar la prueba solicitada se revisó el `predictions.jsonl` ya generado
+por la evaluación sobre las 60 muestras de entrenamiento. Su SHA256 en Ada es
+`f18e973ee8cbfda96564ef0af723bf6612d5e84e502fb5fc4c6ac78d08e185f6`.
+Sus campos `episode_index`, `image_source_frame`, `target[7]` y
+`prediction[7]` permiten ver la secuencia de mano, usando **sólo para este
+análisis** el umbral exploratorio `>= 0,5`:
+
+| Tramo | Etiqueta provisional de mano | Predicción al umbral exploratorio |
+| --- | --- | --- |
+| 579–633, 26 muestras | abierta en frame 580, cerrada desde 583, abierta desde 623 | ya cerrada en 580 (falso cierre), abierta desde 623 |
+| 935–1008, 34 muestras | abierta en frame 936, cerrada desde 956, abierta desde 1000 | abierta en 936, cerrada desde 956, abierta desde 1002; falso cierre en 1000 |
+
+Son observaciones de las mismas demostraciones usadas para entrenar, no una
+evaluación independiente. Cada inferencia se reinició y usó una observación
+grabada, no un estado producido por la acción anterior: no es un ciclo cerrado.
+Los objetivos de mano y el umbral no están cualificados, los tramos no prueban
+HOME ni 20 cm y el primer tramo empieza con la mano cercana a la pelota.
+Esto no demuestra que el robot tome o suelte la pelota ni habilita control.
+
+Receta de consulta de sólo lectura, desde el PC (SSH y servidor disponibles):
+
+```bash
+set -o pipefail
+ssh -p 2649 -o BatchMode=yes -o StrictHostKeyChecking=yes luisacuna@192.168.1.43 \
+  'cat /home/luisacuna/cruzr-smolvla-ball-20261109/eval-pilot-1000/predictions.jsonl' |
+python3 -B -c 'import sys,json,collections
+rows=[json.loads(s) for s in sys.stdin]; groups=collections.defaultdict(list)
+for r in rows: groups[r["episode_index"]].append(r)
+for episode,group in sorted(groups.items()):
+ prev_t=prev_p=None; print("episode",episode,"samples",len(group))
+ for r in group:
+  t=int(r["target"][7]>=0.5); p=int(r["prediction"][7]>=0.5)
+  if t!=prev_t or p!=prev_p or p!=t: print("frame",r["image_source_frame"],"label",t,"prediction_threshold",p,"score",round(r["prediction"][7],4))
+  prev_t,prev_p=t,p'
+```
+
 ## Reversión y respaldo
 
 Fuentes originales y capturas se conservan; retirando exclusivamente las salidas
