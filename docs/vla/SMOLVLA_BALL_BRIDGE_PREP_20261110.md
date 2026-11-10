@@ -47,6 +47,13 @@ monitor y parada efectiva comprobados, trayectoria y límites para PICO/v4.
 
 ## Mano derecha
 
+**Fuentes adicionales 10-11:** el manual SDK documenta posición para siete
+ejes de mano v4; el demo Cruzr inspeccionado contiene seis. Se localizó en
+Descargas un URDF v4 EVT3 articulado con 11 ejes móviles sin relaciones
+`mimic`: no está probado su montaje ni correspondencia con los siete estados.
+Se añadió una secuencia de fases simbólica, sin ROS, órdenes o verificación de
+sensores. Véase [análisis y fuentes](SMOLVLA_MANO_V4_FUENTES_20261110.md).
+
 `scripts/vla/audit_ball_hand_recordings.py RUTA/samples.jsonl` analiza las
 grabaciones originales sin escribirlas. Se contaron 52.754 y 98.944 comandos
 derechos, respectivamente, con siete nombres; todos los arrays de aceleración

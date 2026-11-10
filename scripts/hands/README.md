@@ -1,5 +1,13 @@
 # Demostraciones de manos Cruzr S2
 
+**10-11-2026 — fuentes v4 localizadas.** El manual SDK §5.9.2 documenta
+control de posición para siete ejes, mientras el demo Cruzr del paquete
+inspeccionado enumera seis. Se encontró un URDF v4 EVT3 con 11 articulaciones
+móviles sin `mimic`; su correspondencia con los siete estados, montaje y
+límites en esta unidad siguen pendientes. La inferencia estática de una rama
+interna de corriente no demuestra fuerza, unidades ni control certificado.
+No se envió movimiento. [Detalle](../../docs/vla/SMOLVLA_MANO_V4_FUENTES_20261110.md).
+
 **05-11-2026 — cambio supervisado terminado.** Sesión
 `EFFECTOR-20261105T112001Z-ea4e3075`: respaldos verificados, perfiles SPS
 instalados/cargados, HOME20D y estados de siete ejes por mano verificados.

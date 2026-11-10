@@ -1,5 +1,16 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-HAND-V4-SOURCES-20261110: fuentes y simulación.**
+El manual SDK §5.9.2 documenta control de posición para siete ejes de mano v4;
+el demo Cruzr del paquete sólo contiene seis nombres. En Descargas se localizó
+un URDF v4 EVT3 articulado: 11 articulaciones móviles por mano sin `mimic`,
+frente a siete ejes publicados, sin correspondencia/montaje verificados. Se
+preparó una máquina simbólica que mantiene cierre hasta suelta/apoyo, sin
+órdenes ni sensores validados. La rama interna Current observada antes no
+establece corriente soportada ni unidades. No se movió el robot.
+[Detalle](vla/SMOLVLA_MANO_V4_FUENTES_20261110.md),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-hand-v4-sources-20261110).
+
 **10-11-2026 — SMOLVLA-BALL-ARM-PREVIEW-20261110: revisión offline.**
 Por solicitud de conectar SmolVLA al brazo y mano se preparó un diagnóstico
 sin control que comprueba el mapeo por nombre y evalúa propuestas frente a

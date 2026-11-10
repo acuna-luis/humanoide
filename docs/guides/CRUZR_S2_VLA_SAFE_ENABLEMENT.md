@@ -1,5 +1,13 @@
 # Integración segura del VLA suministrado para Cruzr S2
 
+**10-11-2026 — SMOLVLA-HAND-V4-SOURCES-20261110.** El manual SDK describe
+cambio de autoridad y control de posición v4, pero no demuestra equivalencia
+con los Trigger `motion_sdk` ni parada de una consigna aceptada. El URDF v4
+EVT3 hallado en Descargas tiene 11 juntas móviles que no coinciden literalmente
+con siete estados de la mano; su montaje y acoplamiento no están verificados.
+La lógica de fases preparada sólo simula señales externas. No se habilitó
+control físico. [Detalle](../vla/SMOLVLA_MANO_V4_FUENTES_20261110.md).
+
 **Relevo para la próxima sesión — 2026-09-14:** leer primero el [estado consolidado y secuencia de reanudación](../vla/RELEVO_VLA_20260914.md). HOME→READY→ENTRY está probado por el operador; shadow funciona. TRIAL_02 abortó por timeout al cambiar a SDK, con cero frames y sin acuse; el controlador final es desconocido. Prioridad: consultar controlador y logs antes de reintentar. No repetir ensayos ni asumir estado físico a partir del historial.
 
 

@@ -1,5 +1,22 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-HAND-V4-SOURCES-20261110
+
+**10-11-2026, Europe/Madrid — búsqueda de fuentes y simulación VERIFICADAS;
+conexión física PENDIENTE.** El usuario pidió buscar en documentos locales y
+continuar con la información disponible. Se preparó una política simbólica y
+un auditor de modelo, sin publicación ni movimiento; consultas remotas de
+documentación sólo lectura no modificaron configuración ni llamaron servicios.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | Checkpoint de pelota ejecutado en CPU de Vision con imagen grabada; puente físico y semántica de mano no cualificados. Búsqueda anterior del modelo articulado v4 en Motion había sido acotada, no demostraba su inexistencia en el PC. |
+| Fuentes | PC `scripts/vla/ball_hand_phase_policy.py` SHA256 `3d11600531df00f327ab4d87cb97c04e45d0305c64befb4d3bfc770829a5279f`, test SHA256 `45078be9b113a54ea2b6b3bc265cc24db913ff113eb68eca25756543c2ea089f`; auditor `scripts/vla/audit_vendor_v4_hand_urdf.py` SHA256 `eaaac3c56cc11e48eea5ec94b5ff027747c9073b451329b4fbc368ab02102055`, test SHA256 `9037808d265d205b57dda344e2fb57d83857336abb260b8cfddd299629ea8d96`. Biblioteca estándar; no se modifica SDK ni se copia modelo binario al repo. |
+| Hallazgos | Manual SDK original SHA256 `4cf441de24c0328a7fc4e991f41cbaa17239e9d9eb7bb6a19e8715c0591a30bd`, §5.9.2: perfil SPS y control de posición siete ejes; el demo Cruzr del paquete enumera seis. Traducción local SHA256 `f259295565283268b34bcda6123dd92ae9ed559b54e62161a8a013f347d48842`. ZIP v4 EVT3 `/home/lacuna/Descargas/四代手-URDF.zip` SHA256 `96f957ee0d346b8ff0654e219891ba23ebe5f2a315ca793a83dde9741019e561`: por lado 13 enlaces, 11 juntas móviles, sin mimic; correspondencia con siete ejes y montaje PENDIENTE. |
+| Verificación | Siete tests locales pasaron; auditor de ZIP real confirma estructura y mallas, sin extraer. Política simbólica conserva mano cerrada durante subida/bajada y pide señales externas de agarre, suelta y apoyo; no valida esas señales ni produce comandos. Manual no demuestra que la aceptación SDK sea frenado ni identifica equivalencia con servicios motion_sdk. Sin prueba física. |
+| Evidencia y reversión | Reporte privado `../Humanoide-vla-evidence/20261110_VENDOR_HAND_V4_AUDIT/report.json` SHA256 `bce57966ed663cd83bbbe035633c4bfdd8d1d26e1a74a0a9a418f35c00d9d9f4`. Copia de documentos previos en `../Humanoide-vla-evidence/20261110_SMOLVLA_DOCS_HANDV4/before-docs/`, índice SHA256 `7ae4a1e825cb19218506c0642644d321d1fdfba56849c8e9d2f1398da563082a`. Comparar cambios posteriores y revertir sólo fuentes y entradas de esta ficha; los archivos originales del proveedor y el robot no se modificaron. |
+| Pendiente | Identificar equivalencia URDF↔siete estados, configuración y calibración; verificar límites y trayectorias PICO/v4, señal de posición/agarre/apoyo, exclusividad, handoff SPS y parada efectiva antes de conectar el control. Modelo de corriente interno no sustituye la especificación de posición del manual. |
+
 ## SMOLVLA-BALL-ARM-PREVIEW-20261110
 
 **10-11-2026, Europe/Madrid — diagnóstico offline VERIFICADO; conexión física

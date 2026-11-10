@@ -1,5 +1,12 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — SMOLVLA-HAND-V4-SOURCES-20261110.** Manual SDK: la mano v4
+admite posición y el ejemplo enumera siete nombres; el demo Cruzr inspeccionado
+usa seis. URDF EVT3 de Descargas describe 11 juntas móviles sin acoplamiento
+`mimic`; correspondencia con siete estados y montaje sin verificar. Máquina de
+fases simbólica preparada; no produce órdenes ni verifica sensores. Parada y
+puente físico siguen pendientes. [Detalle](SMOLVLA_MANO_V4_FUENTES_20261110.md).
+
 **10-11-2026 — SMOLVLA-BALL-ARM-PREVIEW-20261110.** Preparado diagnóstico
 offline de nombres, edad nominal y propuestas de brazo, con límites externos
 no cualificados. Prueba histórica con umbral hipotético rechazó cuatro
