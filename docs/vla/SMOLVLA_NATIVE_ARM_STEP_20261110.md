@@ -1,5 +1,27 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Revisión del reloj del lease — 10-11-2026
+
+**REPRODUCIDO OFFLINE CON LECTURA SIMULADA; NO PROBADO EN MOTION.**
+`scenario1_action_client.check_lease(path, now)` recibe `now`, después lee el
+archivo del lease y compara el deadline con ese tiempo anterior a la lectura.
+El puente, worker y coordinador llaman a esta función con un reloj capturado
+antes de que se lea el archivo. Con un plazo inicial de 0,12 s y una lectura simulada de 0,25 s, `check_lease`
+aceptó el lease unos 0,1304 s después de vencer. También se reprodujo en
+`LeaseProxy.synchronize_uuid`: al bloquear la tercera y última lectura con
+canal y staging falsos, retornó normalmente unos 0,1303 s después del plazo.
+Esto puede permitir continuar hacia envío sin lease vigente; no se usaron ROS
+ni red y no se envió ningún goal. No se ha demostrado que ocurriera en 731084
+ni que produjera movimiento físico; el resultado de cancelación sintética no
+resuelve esta limitación.
+
+Se intentó por separado una corrección de la contención del lock, pero se
+descartó por alcance insuficiente y porque dos pruebas de la integración
+pasiva fallaron con el candidato. Se restauraron puente y tests byte a byte;
+no hay cambio productivo. La revisión del lease, el despacho del modelo y el
+comportamiento de cancelación/frenado reales siguen pendientes. El gate físico
+permanece cerrado. [Fuentes y evidencia](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-lease-clock-review-20261110).
+
 ## Cancelación sintética comprobada — 10-11-2026
 
 **VERIFICADO EN MOTION CON SERVIDOR FICTICIO; CERO GOALS FÍSICOS.** Tras la

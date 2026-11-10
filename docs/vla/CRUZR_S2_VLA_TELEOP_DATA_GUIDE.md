@@ -1,5 +1,14 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-LEASE-CLOCK-REVIEW-20261110.** Una lectura bloqueada
+simulada hizo que `check_lease` aceptara un lease vencido; también ocurrió en
+`LeaseProxy.synchronize_uuid` con componentes falsos. Podría continuar hacia
+envío sin lease vigente; no hubo ROS, red o goal físico. No atribuirlo a
+731084 ni darlo por probado en Motion. Se descartó una corrección tentativa del lock y se
+restauraron las fuentes; el gate físico sigue cerrado.
+[Ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-lease-clock-review-20261110),
+[detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#revisión-del-reloj-del-lease--10-11-2026).
+
 **10-11-2026 — SMOLVLA-SYNTHETIC-CANCEL-PASS-20261110.** En Motion pasó el
 watchdog contra un servidor ficticio aislado: cancelación sintética observada,
 status 5 y cero goals físicos. La prueba no demuestra cancelación o frenado

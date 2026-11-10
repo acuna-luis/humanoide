@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-LEASE-CLOCK-REVIEW-20261110: reproducido offline.**
+`check_lease` compara el plazo con un tiempo capturado antes de leer el
+archivo; con lectura bloqueada simulada aceptó un lease ya vencido. También
+se reprodujo en `LeaseProxy.synchronize_uuid` con componentes falsos; podría
+continuar hacia envío sin lease vigente. Sin ROS, red ni goal físico. No se ha
+probado en Motion ni atribuido a 731084. Una corrección tentativa del lock se descartó por alcance insuficiente
+y dos fallos de pruebas pasivas; fuentes productivas restauradas. El gate físico
+continúa cerrado. [Ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-lease-clock-review-20261110),
+[detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#revisión-del-reloj-del-lease--10-11-2026).
+
 **10-11-2026 — SMOLVLA-SYNTHETIC-CANCEL-PASS-20261110: watchdog sintético**
 **verificado en Motion, sin goal físico.** Un servidor ROS ficticio y una copia
 remapeada de guardia observaron caducidad del latido y cancelación del goal
