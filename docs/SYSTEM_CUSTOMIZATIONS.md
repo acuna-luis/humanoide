@@ -1,5 +1,18 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## ARM-PICO-FULL-PASSIVE-20261110
+
+**10-11-2026, Europe/Madrid — integración pasiva OBSERVADA; control físico
+PENDIENTE.** Se crearon procesos y `/tmp` temporales en Motion, retirados tras
+la comprobación; no se instaló tarea, cambió configuración ni envió movimiento.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | `69c5e46`: lanzador candidato con gate y atestación cerrados; verificación parcial guardia/UUID pasiva. |
+| Fuentes | `scripts/vla/check_pico_wrist_full_passive.py` SHA256 `5b9173d3cf645f8c36c152b220ca8210d29f1df01d0de55fbf606ed35a3d3559`; remoto `scripts/vla/runtime/pico_wrist_full_passive_remote.py` `c13292fbdd8ec57ba4a85cf8f924454abd1791c0d9782f28c4d5223c42f21bd0`; test `scripts/vla/test_check_pico_wrist_full_passive.py` `02cc225a3238accf7fcf79fe91d6e60b96f2a7deeb3685c76df1a2a2812f4c63`. Binding `scripts/vla/pico_wrist_review_binding.py` `00a5807312fddc96b9e75b75bbb2f928be6bdc6760cce9a9a887594ce136c75d`, test `317825fd1c369769af32251b21b80285ad19b72822ba66c05b834a3712f5a635`; lanzador `scripts/vla/run_pico_wrist_native_trial.py` `867fd811e53d7c5ca10a3648ff36a857b42f0b29536ab4aac4cbeaa357362d9c`, test `b273991d1b70dbc3c299538cdba51c8df4c999386590c0697c72aedc1842078d`. |
+| Resultado y evidencia | Seis tests del check, seis del binding y ocho del lanzador pasan. Check integrado en Motion pasó con UUID sintético, sin goal: `../Humanoide-vla-evidence/PICO_FULL_PASSIVE_CHECK/check-daed9efa9c0641e0ba656fc2cd077e5a/stdout.jsonl` SHA256 `87de0fd70ad37e96ff0753546a85d94a75204a3bc4754fd5bed63b140313b8fd`, `sources-sha256.json` `c0eef07d763eea02a45afdacf0bc7bd21acb6f23668b902fba18489f2cbb8a0a`. Procesos y directorio temporal ausentes en consulta posterior. |
+| Integridad y deuda | Binding privado `../Humanoide-vla-evidence/PICO_WRIST_REVIEW_BINDING_INTEGRATED_20261110/review-binding.json` SHA256 `5c61f48fa838a96df3a4009fa21a0dcc4dfffe6fb29e581162fd0ec83f9b7ce0`; fuentes y tres entradas coinciden en comparación puntual. Guía vinculada no es aprobación ni revisión independiente. `--run` sigue bloqueado: faltan revisión técnica vinculada, cualificación de geometría/trayectoria y prueba de parada/control. Sin archivos remotos persistentes; revertir código/notas selectivamente frente a `69c5e46`, conservando evidencia o retirándola según necesidad. [Receta y límites](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#comprobación-integrada-pasiva--10-11-2026). |
+
 ## ARM-PICO-SOURCE-BINDING-20261110
 
 **10-11-2026, Europe/Madrid — inventario local de fuentes preparado; revisión

@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+"""Motion-host integration check: PC heartbeat, real guard and read-only worker.
+
+Never starts the wrist coordinator, stages a task, constructs an action goal or
+calls an action server. A synthetic UUID exercises the guard handshake only.
+It does not prove physical braking or qualify VLA control.
+"""
+import json
+import math
+import os
+from pathlib import Path
+import select
+import subprocess
+import sys
+import tempfile
+import time
+import uuid
+
+import arm_from_pico_supervised as arm
+import arm_native_lease_bridge as bridge
+import pico_wrist_docker_launcher as launch
+import pico_wrist_pc_heartbeat as heartbeat
+import prepare_pico_wrist_native_probe as probe
+import scenario1_action_client as native
+
+
+def _worker_line(process, timeout):
+    deadline = time.monotonic() + timeout
+    fd = process.stdout.fileno()
+    os.set_blocking(fd, False)
+    data = bytearray()
+    while time.monotonic() < deadline:
+        readable, _, _ = select.select([fd], [], [], max(0, deadline-time.monotonic()))
+        if not readable:
+            break
+        try:
+            block = os.read(fd, 4097)
+        except BlockingIOError:
+            continue
+        if not block:
+            raise RuntimeError('readonly_worker_closed_without_result')
+        data.extend(block)
+        if len(data) > 4096:
+            raise ValueError('readonly_worker_output_too_large')
+        if b'\n' in data:
+            line, _, rest = bytes(data).partition(b'\n')
+            if rest:
+                raise ValueError('readonly_worker_extra_output')
+            return native.object_json(line.decode('utf-8'))
+    raise TimeoutError('readonly_worker_timeout')
+
+
+def check(payload):
+    required = {'session', 'manifest', 'urdf_text', 'transmissions_text', 'guard_source', 'worker_source'}
+    if not isinstance(payload, dict) or set(payload) != required:
+        raise ValueError('invalid_passive_payload')
+    session = payload['session']
+    arm.validate_preflight(session, 0, dry_run=True)
+    manifest = payload['manifest']
+    probe.validate(manifest, payload['urdf_text'], payload['transmissions_text'])
+    for key in ('guard_source', 'worker_source'):
+        source = payload[key]
+        if not isinstance(source, str) or not 0 < len(source) < 1_000_000:
+            raise ValueError('invalid_' + key)
+        compile(source, '<passive-check-source>', 'exec')
+
+    output = launch.HostOutput(sys.stdout.fileno())
+    pc = guard = worker = pipe = lease = None
+    launch.pc_preflight_handoff(session, output, sys.stdin.fileno())
+    if not output.emit({'event': 'HOST_HEARTBEAT_READY', 'session_id': session['session_id']}):
+        raise RuntimeError('operator_output_unavailable')
+    pc = heartbeat.PcHeartbeat(sys.stdin.fileno(), session['session_id'], output.emit)
+    try:
+        pc.await_ready(3)
+        app, ros = launch.discover_containers()
+        with tempfile.TemporaryDirectory(prefix='pico-full-passive-', dir='/tmp') as directory:
+            try:
+                launch.verify_shared_tmp(directory, app)
+                guard = launch.start_streamed(ros, '/opt/ros/humble/setup.bash',
+                    payload['guard_source'], session, stderr=subprocess.DEVNULL)
+                lease = bridge.GuardLease(directory, manifest['input']['reference_20d'],
+                    lambda: guard.poll() is None and pc.alive() and not output.failed,
+                    session_id=session['session_id'])
+                pipe = bridge.GuardPipe(guard, lease, time.monotonic()-session['age_at_handoff_s'])
+                pipe.await_ready(26)
+                request = {'lease_path': str(lease.path), 'goal': manifest['candidate']['goal']}
+                worker = launch.start_streamed(app, '/opt/walker/setup.bash',
+                    payload['worker_source'], request, stderr=subprocess.DEVNULL)
+                result = _worker_line(worker, 8)
+                expected_keys = {'event', 'fingerprints', 'goal_format_valid', 'lease_fresh', 'monotonic'}
+                if (set(result) != expected_keys or result['event'] != 'NATIVE_READONLY_READY' or
+                        result['fingerprints'] != native.SUPPORTED_NATIVE_CLASSES or
+                        result['goal_format_valid'] is not True or result['lease_fresh'] is not True or
+                        type(result['monotonic']) not in (int, float) or
+                        not math.isfinite(result['monotonic']) or
+                        not 0 <= time.monotonic()-result['monotonic'] <= 1.0):
+                    raise RuntimeError('native_worker_check_failed')
+                if worker.wait(timeout=2) != 0:
+                    raise RuntimeError('native_readonly_worker_failed')
+                # UUID is never passed to ROS or an action client; only the
+                # passive guard receives it through its private pipe.
+                synthetic = str(uuid.uuid4())
+                lease.synchronize_uuid(synthetic, pipe.exchange)
+                if not pc.alive() or not lease.guard_alive() or output.failed:
+                    raise RuntimeError('passive_connection_not_live')
+                native.check_lease(lease.path, time.monotonic())
+                pipe.stop()
+                guard.wait(timeout=4)
+                pipe.thread.join(3)
+                if pipe.thread.is_alive() or guard.returncode != 0 or not lease.failed:
+                    raise RuntimeError('guard_did_not_stop_cleanly')
+                try:
+                    native.check_lease(lease.path, time.monotonic())
+                except RuntimeError:
+                    pass
+                else:
+                    raise RuntimeError('lease_not_revoked')
+                return {'status': 'PASS_PC_HOST_GUARD_READONLY_NATIVE',
+                        'movement_commands': 0, 'action_goals_created': 0,
+                        'physical_control_qualified': False,
+                        'physical_stop_verified': False,
+                        'limitations': ['no real action client or goal',
+                            'no staging or physical motion',
+                            'no cross-container cancellation or braking test']}
+            finally:
+                if pipe is not None:
+                    try: pipe.stop()
+                    except Exception: pass
+                for child in (worker, guard):
+                    if child is not None:
+                        if child.poll() is None:
+                            child.terminate()
+                            try: child.wait(timeout=3)
+                            except subprocess.TimeoutExpired:
+                                child.kill(); child.wait(timeout=3)
+                        for stream in (child.stdin, child.stdout):
+                            if stream is not None:
+                                stream.close()
+    finally:
+        pc.close()
+
+
+if __name__ == '__main__':
+    raise SystemExit('Use the passive wrapper; no physical run exists.')

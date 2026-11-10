@@ -11,6 +11,7 @@ import unittest
 from unittest.mock import patch
 
 import run_pico_wrist_native_trial as launcher
+import pico_wrist_review_binding as binding
 
 
 def execute_streamed(source, payload):
@@ -28,6 +29,7 @@ class LauncherTests(unittest.TestCase):
     def test_controlled_pc_sources_exist_and_are_readable(self):
         sources = launcher.controlled_pc_sources()
         self.assertIn('estop_reader', sources)
+        self.assertIn('review_binding', sources)
         self.assertTrue(all(isinstance(raw, bytes) and raw for raw, _ in sources.values()))
 
     def test_run_blocked_before_file_or_network(self):
@@ -35,6 +37,51 @@ class LauncherTests(unittest.TestCase):
              patch.object(launcher.subprocess, 'Popen', side_effect=AssertionError('must not connect')):
             with contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(launcher.main(['--run', '--physical-confirmed']), 2)
+
+    def test_binding_is_checked_before_passive_robot_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest = root/'manifest.json'; manifest.write_bytes(b'{}')
+            urdf = root/'robot.urdf'; urdf.write_bytes(b'<robot/>\r\n')
+            transmissions = root/'sps.yaml'; transmissions.write_bytes(b'transmissions: {}\n')
+            review = root/'review.txt'; review.write_text('Technical review; no motion approval.\n')
+            retained = root/'binding'
+            with patch.object(binding.probe, 'validate', return_value={}):
+                result = binding.create(retained, manifest, urdf, transmissions, review)
+            args = ['--check', '--binding', str(retained), '--binding-sha256', result['binding_sha256'],
+                    '--manifest', str(manifest), '--urdf', str(urdf), '--transmissions', str(transmissions)]
+            with patch.object(launcher.passive, 'main', return_value=0) as passive, \
+                 contextlib.redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(launcher.main(args), 0)
+                passive.assert_called_once()
+                self.assertIn('BINDING_BYTES_MATCH', output.getvalue())
+            urdf.write_bytes(b'<robot/>\n')  # Same logical XML, different bytes.
+            with patch.object(launcher.passive, 'main', side_effect=AssertionError('must not connect')), \
+                 contextlib.redirect_stderr(io.StringIO()) as error:
+                self.assertEqual(launcher.main(args), 1)
+                self.assertIn('candidate_input_changed', error.getvalue())
+            with patch.object(launcher.passive, 'main', side_effect=AssertionError('must not connect')), \
+                 contextlib.redirect_stderr(io.StringIO()) as error:
+                self.assertEqual(launcher.main(['--check', '--binding', str(retained)]), 1)
+                self.assertIn('binding_digest_and_all_candidate_inputs_required', error.getvalue())
+
+    def test_future_run_path_rejects_changed_binding_before_preflight_or_ssh(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest = root/'manifest.json'; manifest.write_bytes(b'{}')
+            urdf = root/'robot.urdf'; urdf.write_bytes(b'<robot/>')
+            transmissions = root/'sps.yaml'; transmissions.write_bytes(b'transmissions: {}')
+            review = root/'review.txt'; review.write_text('Review with unresolved physical gates.\n')
+            retained = root/'binding'
+            with patch.object(binding.probe, 'validate', return_value={}):
+                result = binding.create(retained, manifest, urdf, transmissions, review)
+                manifest.write_bytes(b'{ }')  # Still JSON, but not the reviewed bytes.
+                with patch.object(launcher.arm, 'physical_release_gate'), \
+                     patch.object(launcher.passive.existing, 'preflight', side_effect=AssertionError('must not connect')), \
+                     patch.object(launcher.subprocess, 'Popen', side_effect=AssertionError('must not connect')):
+                    with self.assertRaisesRegex(ValueError, 'candidate_input_changed:manifest.json'):
+                        launcher.run_candidate(manifest, urdf, transmissions, True,
+                            binding_path=retained, binding_sha256=result['binding_sha256'])
 
     def test_bundles_compile_and_guard_has_independent_cancel_mode(self):
         host, guard, worker = launcher.source_bundle()

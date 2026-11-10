@@ -1,5 +1,45 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Comprobación integrada pasiva — 10-11-2026
+
+Se ejecutó una única comprobación PC→host Motion con desafío y latido,
+guardia ROS2, lease en `/tmp` compartido y proceso de solo lectura en el
+contenedor nativo. Este último contrastó las huellas de las clases ROSA
+instaladas y validó el formato de la meta; un UUID sintético se comunicó
+únicamente al guardia. Resultado `PASS_PC_HOST_GUARD_READONLY_NATIVE`, sin
+crear ni enviar un goal. El guardia creó clientes ROS efímeros para descubrir
+interfaces, pero no llamó a envío ni cancelación. Los procesos y el directorio
+temporal se observaron retirados al finalizar.
+
+Evidencia privada `../Humanoide-vla-evidence/PICO_FULL_PASSIVE_CHECK/check-daed9efa9c0641e0ba656fc2cd077e5a/`:
+`stdout.jsonl` SHA256 `87de0fd70ad37e96ff0753546a85d94a75204a3bc4754fd5bed63b140313b8fd`,
+`sources-sha256.json` `c0eef07d763eea02a45afdacf0bc7bd21acb6f23668b902fba18489f2cbb8a0a`.
+Seis tests locales del comprobador pasan. Su receta es:
+
+```bash
+python3 -B scripts/vla/check_pico_wrist_full_passive.py --check \
+  --manifest ../Humanoide-vla-evidence/PICO_WRIST_PREP_20261110T103237Z_078897/candidate/manifest.json \
+  --urdf ../Humanoide-vla-evidence/PICO_WRIST_PREP_20261110T103237Z_078897/runtime.urdf \
+  --transmissions ../Humanoide-vla-evidence/PICO_WRIST_PREP_20261110T103237Z_078897/transmissions.yaml
+```
+
+También se conectó una comprobación de integridad al lanzador: compara los
+bytes de fuentes/bundles controlados y las tres entradas con una copia local
+vinculada a la guía técnica. Binding privado
+`../Humanoide-vla-evidence/PICO_WRIST_REVIEW_BINDING_INTEGRATED_20261110/`,
+SHA256 `5c61f48fa838a96df3a4009fa21a0dcc4dfffe6fb29e581162fd0ec83f9b7ce0`.
+Seis tests del binding y ocho del lanzador pasan; la comparación puntual
+actual devolvió coincidencia. El texto vinculado es la guía existente, no una
+aprobación ni una revisión independiente; no demuestra identidad del revisor,
+runtime en memoria o firmware. La copia anterior es histórica y no coincide
+con el lanzador modificado.
+
+El cliente ROSA aún no ha ejecutado una meta de esta prueba y no se han probado
+ni staging ni cancelación física. Siguen cerrados el gate físico y la
+atestación de revisión técnica del lanzador; la geometría/montaje de la mano
+v4 y la trayectoria real siguen sin cualificar. Los resultados pasivos no
+habilitan el VLA, no garantizan frenado y no justifican modificar protecciones.
+
 ## Lanzador candidato — 10-11-2026
 
 **Revisión posterior de fuentes:** el lanzador prepara la conservación de

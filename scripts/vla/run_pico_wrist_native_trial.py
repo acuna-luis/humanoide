@@ -81,6 +81,7 @@ def controlled_pc_sources():
     """Snapshot direct project-controlled PC inputs; not the full runtime."""
     paths = {
         'trial_launcher': VLA/'run_pico_wrist_native_trial.py',
+        'review_binding': VLA/'pico_wrist_review_binding.py',
         'bridge_check': VLA/'check_arm_native_bridge_live.py',
         'arm_preflight': VLA/'check_arm_from_pico_supervised.py',
         'head_launcher': VLA/'run_head_from_pico_supervised.py',
@@ -156,7 +157,20 @@ def host_command(sentinel):
             '-o', 'NumberOfPasswordPrompts=1', 'walker@192.168.11.2', shlex.join(remote)]
 
 
-def run_candidate(manifest_path, urdf_path, transmissions_path, physical_confirmed):
+def verify_candidate_binding(binding_path, binding_sha256, manifest_raw, urdf_raw, transmissions_raw,
+                             *, source_snapshot=None, pc_snapshot=None):
+    """Compare exact candidate inputs with a retained review; never authorize motion."""
+    if binding_path is None or binding_sha256 is None:
+        raise ValueError('binding_and_binding_sha256_required')
+    # Local import avoids a module-import cycle: the binding utility calls the
+    # launcher's source snapshot helpers but never dispatches a robot goal.
+    import pico_wrist_review_binding as binding
+    return binding.compare_candidate_inputs(binding_path, binding_sha256, manifest_raw,
+        urdf_raw, transmissions_raw, source_snapshot=source_snapshot, pc_snapshot=pc_snapshot)
+
+
+def run_candidate(manifest_path, urdf_path, transmissions_path, physical_confirmed,
+                  *, binding_path=None, binding_sha256=None):
     # No input, filesystem, process or network operation can precede this gate.
     arm.physical_release_gate()
     if physical_confirmed is not True:
@@ -168,16 +182,21 @@ def run_candidate(manifest_path, urdf_path, transmissions_path, physical_confirm
     urdf = urdf_raw.decode('utf-8')
     transmissions = transmissions_raw.decode('utf-8')
     probe.validate(manifest, urdf, transmissions)
+    source_snapshot = source_bundle(include_sources=True)
+    pc_sources = controlled_pc_sources()
+    verify_candidate_binding(binding_path, binding_sha256, manifest_raw, urdf_raw,
+                             transmissions_raw, source_snapshot=source_snapshot,
+                             pc_snapshot=pc_sources)
     EVIDENCE.mkdir(mode=0o700, parents=True, exist_ok=True)
     token = uuid.uuid4().hex
     outdir = EVIDENCE/('run-'+token); outdir.mkdir(mode=0o700)
     fd = os.open(EVIDENCE, os.O_RDONLY | os.O_DIRECTORY)
     try: os.fsync(fd)
     finally: os.close(fd)
-    host, guard, worker, sources = source_bundle(include_sources=True)
+    host, guard, worker, sources = source_snapshot
     evidence_digest = retain_bundle_evidence(outdir, sources, host, guard, worker,
                                              manifest_raw, urdf_raw, transmissions_raw,
-                                             pc_sources=controlled_pc_sources())
+                                             pc_sources=pc_sources)
     mode, started, _ = passive.existing.preflight()
     session = {'schema':'cruzr_head_pico_preflight_v1', 'task_sha256':passive.existing.ARM_TASK_SHA,
                'pico_sha256':head.admission.PICO_SHA, 'work_mode':mode,
@@ -278,12 +297,16 @@ def main(argv=None):
     parser.add_argument('--manifest', type=Path)
     parser.add_argument('--urdf', type=Path)
     parser.add_argument('--transmissions', type=Path)
+    parser.add_argument('--binding', type=Path,
+                        help='optional local technical-review binding for --check; required for a future run')
+    parser.add_argument('--binding-sha256', help='recorded digest of that binding')
     parser.add_argument('--physical-confirmed', action='store_true',
                         help='operator-reported current physical conditions; never opens the gate')
     args = parser.parse_args(argv)
     if args.run:
         try:
-            result = run_candidate(args.manifest, args.urdf, args.transmissions, args.physical_confirmed)
+            result = run_candidate(args.manifest, args.urdf, args.transmissions, args.physical_confirmed,
+                                   binding_path=args.binding, binding_sha256=args.binding_sha256)
             print(json.dumps(result, ensure_ascii=False, allow_nan=False))
             return 0
         except (RuntimeError, OSError, ValueError, TypeError, subprocess.SubprocessError) as exc:
@@ -291,6 +314,20 @@ def main(argv=None):
             return 2
     if args.physical_confirmed:
         parser.error('--physical-confirmed is only supported with --run')
+    if args.binding is not None or args.binding_sha256 is not None:
+        try:
+            if any(value is None for value in (args.binding, args.binding_sha256,
+                                               args.manifest, args.urdf, args.transmissions)):
+                raise ValueError('binding_digest_and_all_candidate_inputs_required')
+            result = verify_candidate_binding(args.binding, args.binding_sha256,
+                args.manifest.read_bytes(), args.urdf.read_bytes(), args.transmissions.read_bytes())
+            print(json.dumps({'status': 'BINDING_BYTES_MATCH',
+                              'binding_sha256': result['binding_sha256'],
+                              'physical_control_qualified': False,
+                              'movement_commands': 0}, ensure_ascii=False, allow_nan=False), flush=True)
+        except (OSError, RuntimeError, ValueError, TypeError, KeyError) as exc:
+            print('BINDING_CHECK_FAILED: ' + str(exc), file=sys.stderr)
+            return 1
     parameters = ['--check']
     for option, value in (('--manifest', args.manifest), ('--urdf', args.urdf),
                           ('--transmissions', args.transmissions)):

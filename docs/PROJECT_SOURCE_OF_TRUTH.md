@@ -1,5 +1,11 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-FULL-PASSIVE-20261110: integración pasiva completa.**
+PC→Motion, latido, guardia ROS2, lease compartido y huellas ROSA se comprobaron
+con UUID sintético, sin meta ni movimiento. Las fuentes controladas y entradas
+coinciden con una copia vinculada, sin cualificar runtime o autorización física.
+Gate y trayectoria física siguen pendientes. [Ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-full-passive-20261110).
+
 **10-11-2026 — ARM-PICO-SOURCE-BINDING-20261110: integridad de fuentes.**
 El lanzador prepara el registro de bytes de sus fuentes PC controladas y
 bundles; una prueba detectó y corrigió una ruta local. Este registro no es

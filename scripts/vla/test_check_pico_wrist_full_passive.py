@@ -1,0 +1,176 @@
+"""Local pipe tests; no ROS, SSH, task installation or robot movement."""
+import contextlib
+import io
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import time
+import unittest
+import uuid
+from unittest.mock import patch
+
+import check_pico_wrist_full_passive as subject
+sys.path.insert(0, str(Path(__file__).resolve().parent / 'runtime'))
+import pico_wrist_full_passive_remote as remote
+
+
+class FullPassiveTests(unittest.TestCase):
+    def test_run_rejects_before_check_or_network(self):
+        with patch.object(subject, 'check', side_effect=AssertionError('must not connect')), \
+             contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(subject.main(['--run']), 2)
+
+    def test_sources_compile_and_worker_has_no_top_level_action_dispatch(self):
+        import ast
+        host, guard, worker, hashes = subject.source_bundle()
+        for name, code in (('host', host), ('guard', guard), ('worker', worker)):
+            compile(code, '<' + name + '>', 'exec')
+        self.assertIn('pico_wrist_full_passive_remote', hashes)
+        outer = ast.parse(worker)
+        forbidden = {'send_goal_async', 'run_action', 'stage_task', 'call_async'}
+        calls = [node.func.attr for node in ast.walk(outer) if isinstance(node, ast.Call)
+                 and isinstance(node.func, ast.Attribute)]
+        self.assertFalse(forbidden.intersection(calls))
+
+    def test_real_pipes_challenge_response_and_result(self):
+        token = 'a' * 32
+        child_code = '''import json,sys
+token='a'*32
+print(json.dumps({'event':'BRIDGE_READY'}),flush=True)
+print(json.dumps({'event':'HOST_PREFLIGHT_READY','session_id':token,'challenge':'b'*32}),flush=True)
+ack=json.loads(sys.stdin.readline())
+assert ack['session_id']==token and ack['challenge']=='b'*32
+print(json.dumps({'event':'HOST_HEARTBEAT_READY','session_id':token}),flush=True)
+ping={'event':'pc_ping','session_id':token,'sequence':0,'nonce':'c'*32}
+print(json.dumps(ping),flush=True)
+pong=json.loads(sys.stdin.readline())
+assert pong==dict(ping,event='pc_pong')
+print(json.dumps({'status':'PASS_PC_HOST_GUARD_READONLY_NATIVE','movement_commands':0,
+                  'action_goals_created':0,'physical_control_qualified':False}),flush=True)
+'''
+        process = subprocess.Popen([sys.executable, '-B', '-u', '-c', child_code],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                result = subject.drive(process, token, time.monotonic(), Path(directory))
+                self.assertEqual(result['movement_commands'], 0)
+                self.assertEqual(result['action_goals_created'], 0)
+        finally:
+            if process.poll() is None: process.kill(); process.wait()
+            for stream in (process.stdin, process.stdout, process.stderr): stream.close()
+
+    def test_unexpected_session_is_rejected(self):
+        code = ('import json;print(json.dumps({"event":"HOST_PREFLIGHT_READY",'
+                '"session_id":"bad","challenge":"b"*32}),flush=True)')
+        process = subprocess.Popen([sys.executable, '-B', '-u', '-c', code],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
+        try:
+            with tempfile.TemporaryDirectory() as directory, \
+                 self.assertRaisesRegex(ValueError, 'preflight'):
+                subject.drive(process, 'a'*32, time.monotonic(), Path(directory))
+        finally:
+            if process.poll() is None: process.kill(); process.wait()
+            for stream in (process.stdin, process.stdout, process.stderr): stream.close()
+
+    def run_fake_host(self, *, bad_worker=False):
+        token = uuid.uuid4().hex
+        arm = remote.arm
+        session = {'schema':'cruzr_head_pico_preflight_v1', 'task_sha256':arm.TASK_SHA,
+                   'pico_sha256':arm.PICO_SHA, 'work_mode':'joystick',
+                   'operator_confirmed':False, 'controller_status_writers_checked':True,
+                   'age_at_handoff_s':1.0, 'session_id':token, 'mode':'check'}
+        reference = dict(arm.BODY)
+        payload = {'session': session, 'manifest':{'input':{'reference_20d':reference},
+                   'candidate':{'goal':{'task_name':'synthetic','yaml_args':'{}'}}},
+                   'urdf_text':'', 'transmissions_text':'',
+                   'guard_source':'pass', 'worker_source':'pass'}
+
+        class Pc:
+            def __init__(self, *args, **kwargs): pass
+            def await_ready(self, timeout): pass
+            def alive(self): return True
+            def close(self): return True
+
+        class Output:
+            failed = False
+            def __init__(self, fd): pass
+            def emit(self, row): return True
+
+        guard_source = '''import json,select,sys,time
+session=json.loads(sys.argv[1]); pos=json.loads(sys.argv[2]); gid='a'*32
+def send(event,**fields):
+ print(json.dumps(dict(event=event,monotonic=time.monotonic(),goal_uuid=gid,**fields)),flush=True)
+def telemetry():
+ send('telemetry',position=pos,velocity={x:0 for x in pos},estop=0,servo_stop=0)
+telemetry()
+send('pre_dispatch_ready',session_id=session['session_id'],challenge='b'*32)
+ack=json.loads(sys.stdin.readline())
+assert ack['session_id']==session['session_id'] and ack['challenge']=='b'*32
+telemetry()
+send('ARM_GUARD_READY',session_id=session['session_id'],movement_commands=0,physical_control_qualified=False)
+while True:
+ telemetry()
+ readable,_,_=select.select([sys.stdin],[],[],0.05)
+ if not readable: continue
+ line=sys.stdin.readline()
+ if not line: break
+ command=json.loads(line)
+ if command['event']=='stop_guard':
+  send('ARM_GUARD_STOPPED',movement_commands=0,physical_stop_confirmed=False); break
+ assert command['event']=='prepare_goal_uuid'
+ send('goal_uuid_ready',session_id=command['session_id'],guard_id=command['guard_id'],
+      goal_id=command['goal_id'],challenge=command['challenge'])
+'''
+        worker_source = '''import json,sys,time
+path=sys.argv[1]; hashes=json.loads(sys.argv[2])
+lease=json.load(open(path)); assert time.monotonic()<lease['deadline']
+print(json.dumps({'event':'NATIVE_READONLY_READY','fingerprints':hashes,
+ 'goal_format_valid':True,'lease_fresh':True,'monotonic':time.monotonic()}),flush=True)
+'''
+        started = []
+        def start(container, setup, source, data, *, stderr):
+            if container == 'ros':
+                command = [sys.executable, '-u', '-c', guard_source,
+                           json.dumps(data), json.dumps(reference)]
+            else:
+                hashes = {} if bad_worker else remote.native.SUPPORTED_NATIVE_CLASSES
+                command = [sys.executable, '-u', '-c', worker_source,
+                           data['lease_path'], json.dumps(hashes)]
+            child = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.DEVNULL, bufsize=0)
+            started.append(child)
+            return child
+
+        try:
+            with patch.object(remote.launch, 'HostOutput', Output), \
+                 patch.object(remote.launch, 'pc_preflight_handoff'), \
+                 patch.object(remote.launch, 'discover_containers', return_value=('app', 'ros')), \
+                 patch.object(remote.launch, 'verify_shared_tmp'), \
+                 patch.object(remote.launch, 'start_streamed', side_effect=start), \
+                 patch.object(remote.heartbeat, 'PcHeartbeat', Pc), \
+                 patch.object(remote.probe, 'validate'):
+                if bad_worker:
+                    with self.assertRaisesRegex(RuntimeError, 'native_worker_check_failed'):
+                        remote.check(payload)
+                    return None
+                return remote.check(payload)
+        finally:
+            for child in started:
+                if child.poll() is None: child.kill(); child.wait()
+                for stream in (child.stdin, child.stdout):
+                    if stream is not None and not stream.closed: stream.close()
+
+    def test_full_host_guard_and_worker_with_real_local_pipes(self):
+        result = self.run_fake_host()
+        self.assertEqual(result['status'], 'PASS_PC_HOST_GUARD_READONLY_NATIVE')
+        self.assertEqual(result['action_goals_created'], 0)
+        self.assertFalse(result['physical_control_qualified'])
+
+    def test_bad_native_fingerprint_fails_before_uuid_handshake(self):
+        self.run_fake_host(bad_worker=True)
+
+
+if __name__ == '__main__':
+    unittest.main()
