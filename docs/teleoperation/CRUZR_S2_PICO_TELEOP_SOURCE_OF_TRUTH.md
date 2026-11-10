@@ -1,5 +1,16 @@
 # Cruzr S2 + PICO: fuente de verdad de teleoperación
 
+**10-11-2026 ~19:44 — túneles USB caídos por re-enumeración del visor.** El
+kernel registró `usb 1-3: USB disconnect` a las 19:41:49 y nueva enumeración a
+las 19:42:08 con otro idProduct (`00b5` → `00b7`); ADB perdió `reverse 63901` y
+`forward 12345`. No lo causaron los scripts (no reinician ADB USB). Se
+recrearon y se añadió
+[`pico_usb_tunnel_keepalive.sh`](../../scripts/teleoperation/pico_usb_tunnel_keepalive.sh):
+bucle que recrea ambas reglas cuando el visor reaparece; no envía órdenes al
+robot ni reanuda una sesión caída. Ejecutarlo en una terminal aparte durante la
+teleoperación/grabación. Causa exacta de la re-enumeración (reposo, sensor de
+proximidad, cable): PENDIENTE.
+
 **10-11-2026 ~19:45 — cámara del robot en el PICO por USB.** Con el visor
 por USB (control vía `adb reverse` 63901), el vídeo puede ir también por USB:
 `adb -s PA94Y0MGKB070822G forward tcp:12345 tcp:12345` y lanzar con
