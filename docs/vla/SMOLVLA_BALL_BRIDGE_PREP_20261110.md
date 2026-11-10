@@ -5,6 +5,69 @@ El usuario pidió crear las piezas que faltan para el piloto. No se enviaron
 órdenes de movimiento ni llamadas a servicios de cambio de controlador. Las
 lecturas son puntuales y no acreditan el estado físico posterior.
 
+## Prueba breve en vivo — 10-11-2026
+
+Tras la petición de acortar las pruebas, a las 10:04 CET se ejecutó la
+[receta de shadow](../../scripts/vla/SMOLVLA_BALL_LIVE_SHADOW.md) existente
+con `--seconds 5 --fps 1 --max-samples 100`. Los cinco scripts remotos se
+compararon con sus fuentes locales por SHA256; Vision se descubrió de nuevo.
+El checkpoint `e707eea07b58e14b979e78463b94ba75a52b1c18abf8076aebc8aa34ac77f8da`
+produjo cuatro propuestas a partir de cuatro observaciones emparejadas,
+sin descartes en el adaptador ni órdenes. Inferencia: 0,171–0,603 s;
+adaptador PC hasta recepción de la predicción: 0,287–0,741 s, sin transporte
+Vision→PC ni calibración de relojes. La mayor diferencia propuesta−estado
+fue 2,271476 rad (aprox. 130°), no un movimiento ni un límite de seguridad.
+No se conservaron píxeles ni se verificó que la pelota fuese visible. El
+resultado se observó en la salida de esta intervención, no se guardó un log.
+
+El primer intento terminó antes de arrancar el modelo por un error de ruta del
+checkpoint; se corrigió el argumento y el segundo terminó rc0. Después no se
+encontró el contenedor temporal propio en Ada ni el colector en el contenedor
+ROS de Vision. No se llamó a servicios de control ni se cambiaron modos.
+El sistema conserva procesos y registros normales de ejecución; no se guardaron
+datos de la captura en archivos del proyecto o del robot.
+
+## Preparación local posterior — 10-11-2026
+
+Con autorización expresa para modificar los archivos necesarios se añadieron
+dos piezas de revisión. No son un puente físico ni se han instalado en Motion:
+
+* [`ball_arm_trajectory_preview.py`](../../scripts/vla/ball_arm_trajectory_preview.py)
+  produce una interpolación conjunta hipotética sólo si pasan comprobaciones
+  usando límites y tiempos proporcionados por quien la ejecuta, y verifica
+  también la velocidad declarada de las otras 13 articulaciones. Su salida
+  no demuestra colisiones, seguimiento, parada o límites del hardware.
+  [Formato y receta](../../scripts/vla/BALL_ARM_TRAJECTORY_PREVIEW.md).
+* [`ball_hand_bridge_preview.py`](../../scripts/vla/ball_hand_bridge_preview.py)
+  recibe predicciones y señales externas de fase asociadas por hash y sello de
+  imagen. Da etiquetas simbólicas y conserva el cierre hasta la fase de suelta
+  con apoyo declarado; el escalar del modelo no acciona los dedos. La identidad
+  declarada no verifica percepción, frescura ni estado real. No genera ROS,
+  posiciones de dedos, corriente ni comandos.
+
+Pasaron 20 pruebas locales de ambas piezas y sus guardias previos. Las cuatro
+predicciones reales de la prueba breve se pasaron en memoria a la pieza de mano
+con señales externas vacías: cuatro etiquetas `approach/open`, cero comandos.
+Es una comprobación de integración; no observa el agarre ni indica la posición
+real de los dedos. La vista previa de brazo sólo se verificó con datos y límites
+sintéticos, no con una trayectoria real completa ni parámetros validados.
+
+El revisor de mano lee líneas JSON por stdin con `sequence`, `prediction`
+(evento de shadow de ocho valores, sello y hash) y `phase_evidence` (el mismo
+sello y hash, más `signals`). El formato reproducible y ejemplos de las fases
+están en `test_ball_hand_bridge_preview.py`. Las señales deben proceder de una
+fuente externa; ese formato no constituye una interfaz de percepción ni una
+prueba de su veracidad. Uso: `python3 -B scripts/vla/ball_hand_bridge_preview.py`.
+
+La vía SDK existente requiere una transición de controlador cuyo resultado
+histórico quedó incierto tras timeout. `stop()` destruye el publicador, pero no
+demuestra la cancelación de la última consigna ni el frenado. El análisis
+estático indica que, tras un retorno exitoso, se actualizan consignas
+corporales; esa transición tampoco está cualificada como parada.
+No reintentar una transición cuyo resultado sea desconocido. La solicitud al
+fabricante de watchdog, deadman y transición SDK segura está en
+[`UBTECH_OPEN_QUESTIONS.md`](../support/UBTECH_OPEN_QUESTIONS.md).
+
 ## Brazo y controladores
 
 **Revisión posterior 10-11 — SMOLVLA-BALL-ARM-PREVIEW-20261110.**

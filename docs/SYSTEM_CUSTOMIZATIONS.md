@@ -1,5 +1,22 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-BALL-SHORT-PREVIEW-20261110
+
+**10-11-2026, Europe/Madrid — shadow y comprobaciones locales VERIFICADOS;
+puente físico PENDIENTE.** El usuario pidió acortar las pruebas y autorizó
+modificar los archivos necesarios. Se hizo una captura breve pasiva y se
+prepararon dos revisores locales; no hubo movimientos ni cambios de modo.
+
+| Campo | Registro |
+| --- | --- |
+| Estado previo | Inferencia piloto en Ada y en Vision CPU ya demostrada; mano, parada y transición a control SDK sin cualificar. La fuente global y el registro estaban limpios en `e791a7d`; se preservaron sus blobs previos `639f17080cfe95dbb1bb6dfc0590d9d643c4a2a9` y `98ba3aeb22ff628ee2571d84f74274e310cf0831`, y la guía especializada `786acfbc40821ebe146f8912de3845497ec7a7d8`. No se tocaron tres elementos no seguidos preexistentes. |
+| Fuentes locales | `scripts/vla/ball_arm_trajectory_preview.py` SHA256 `009f5096d38f5ebfdb57efbcfe75375c81868b62038b7fda12bf531f6170a9fa`, test `1315f4ebbf2e0c37878fd4236de7847529bc06203b81793522fdac42ae5ab2ac`, [guía](../scripts/vla/BALL_ARM_TRAJECTORY_PREVIEW.md) `a75f87d0a9cc6fae42a25ccba4a971d61dbc924a2509bf4c15c2eb3068a3c40d`; `scripts/vla/ball_hand_bridge_preview.py` `1c222066cc79a5c5a6f4279ad52eaca86107c4c508ee8357c074db581a756e83`, test `985ce44c88e5d747994b116a9c82cd7b2d7e026f65a8672eee3022814dedf293`. Python estándar y guardias de brazo y fases existentes; no se modifica el SDK del proveedor. |
+| Shadow temporal | Vision: colector sólo suscriptor en contenedor ROS descubierto; Ada: contenedor de inferencia temporal sin ROS ni red, checkpoint `e707eea07b58e14b979e78463b94ba75a52b1c18abf8076aebc8aa34ac77f8da`. Se cotejaron cinco fuentes Ada por SHA. [Receta](../scripts/vla/SMOLVLA_BALL_LIVE_SHADOW.md), con `--seconds 5 --fps 1 --max-samples 100`. Intento inicial rechazado por ruta errónea sin iniciar el modelo; segundo rc0. Al terminar no se encontraron contenedor temporal ni colector. No se guardó un log ni píxeles; los resultados figuran en la salida de la intervención y el [detalle](vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md). |
+| Resultado | Cuatro observaciones emparejadas y cuatro predicciones, cero órdenes. Inferencia0,171–0,603 s; adaptador PC a recepción0,287–0,741 s, sin transporte desde Vision ni sincronización de relojes. Máxima diferencia propuesta−estado2,271476rad; no es un movimiento. Visibilidad de pelota no comprobada. Las cuatro predicciones pasadas en memoria al revisor de mano con señales vacías mantuvieron la etiqueta simbólica `approach/open`; no se verificó la posición física. |
+| Aplicación y verificación | Las piezas sólo se usan localmente como documenta la guía; no hay instalación en el robot. Pasaron 20 pruebas de las nuevas piezas y sus guardias, y las ayudas CLI. La curva de brazo se probó con límites sintéticos; la etiqueta de mano depende de señales externas sin validar. Ninguna salida autoriza ejecución física. |
+| Reversión | Las operaciones remotas fueron transitorias; no se instalaron archivos ni configuraciones en Motion o Vision. Para retirar el trabajo local, comparar cambios posteriores y revertir selectivamente los cinco archivos nuevos y estas entradas documentales; la versión anterior de los documentos está en el commit indicado. Los logs normales de servicios pueden registrar la ejecución. |
+| Pendiente | Entender y verificar transición SDK y parada efectiva, autoridad sobre los 20 ejes, límites reales y escena, semántica y control exclusivo de la mano, y señales de fase/agarre/apoyo. Tras ello comprobar de nuevo condiciones físicas y control exclusivo antes de actuar. Cerrar el publicador no certifica frenado. |
+
 ## SMOLVLA-HAND-V4-SOURCES-20261110
 
 **10-11-2026, Europe/Madrid — búsqueda de fuentes y simulación VERIFICADAS;

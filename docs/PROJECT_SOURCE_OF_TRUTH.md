@@ -1,5 +1,16 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — SMOLVLA-BALL-SHORT-PREVIEW-20261110: prueba breve y
+preparación local.** En una prueba shadow con observaciones de Vision, el
+checkpoint produjo cuatro propuestas en Ada sin órdenes; la mayor diferencia
+propuesta−estado fue 2,271476 rad. Se prepararon una vista articular
+hipotética y una máquina de revisión de mano con señales externas; 20 pruebas
+locales pasan. No son un controlador ni validan límites, percepción o parada.
+La salida física sigue PENDIENTE: el backend existente no demuestra frenado al
+destruir el publicador y el cambio de control histórico acabó incierto.
+No se movió el robot. [Detalle](vla/SMOLVLA_BALL_BRIDGE_PREP_20261110.md),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#smolvla-ball-short-preview-20261110).
+
 **10-11-2026 — SMOLVLA-HAND-V4-SOURCES-20261110: fuentes y simulación.**
 El manual SDK §5.9.2 documenta control de posición para siete ejes de mano v4;
 el demo Cruzr del paquete sólo contiene seis nombres. En Descargas se localizó
