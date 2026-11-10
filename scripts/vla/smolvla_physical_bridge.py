@@ -126,11 +126,14 @@ def step_xml(target, duration, hand=None):
             '    </Sequence>\n  </BehaviorTree>\n</root>\n')
 
 
-def plan_chunk(chunk, k, obs, start, *, max_step, envelope, margin):
-    """Objetivos para las k primeras acciones del bloque, recortando cada una
-    respecto a la anterior (la primera respecto al estado observado)."""
+def plan_chunk(chunk, k, obs, start, *, max_step, envelope, margin, offset=0):
+    """Objetivos para k acciones del bloque desde `offset`, recortando cada una
+    respecto a la anterior (la primera respecto al estado observado).
+
+    La acción grabada es la consigna simultánea a la observación (~estado), así
+    que chunk[0] ~ "quedarse"; el movimiento está en chunk[1:] (+0,5 s cada uno)."""
     targets, prev = [], obs
-    for action in chunk[:k]:
+    for action in chunk[offset:offset + k]:
         target = []
         for i, (p, a) in enumerate(zip(prev, action[:7])):
             t = p + max(-max_step, min(max_step, float(a) - p))
@@ -318,14 +321,16 @@ def main():
     p.add_argument('--pins-file', help='JSON local con hashes esperados (checkpoint distinto del piloto)')
     p.add_argument('--chunk-steps', type=int, default=1,
                    help='acciones del bloque ejecutadas por paso (1-8); >1 usa --action-duration-s')
+    p.add_argument('--chunk-offset', type=int, default=1,
+                   help='primera acción del bloque a ejecutar (0 = la simultánea a la observación)')
     p.add_argument('--action-duration-s', type=float, default=0.5,
                    help='duración de cada acción del bloque (cadencia del dataset: 0,5 s a 2 Hz)')
     p.add_argument('--head-pose', help='YAW,PITCH de cabeza antes de empezar (p. ej. -0.49,-0.65)')
     p.add_argument('--start-pose', choices=('pico',), help='llevar el brazo a la postura PICO y abrir la mano antes')
     p.add_argument('--setup-duration-s', type=float, default=5.0)
     args = p.parse_args()
-    if not 1 <= args.chunk_steps <= 8:
-        raise SystemExit('--chunk-steps debe estar en 1-8')
+    if not 1 <= args.chunk_steps <= 8 or not 0 <= args.chunk_offset or args.chunk_offset + args.chunk_steps > 8:
+        raise SystemExit('--chunk-offset + --chunk-steps debe caber en el bloque de 8')
     if args.chunk_steps > 1 and (args.action_duration_s < 0.5 or args.max_step_rad > 0.10):
         raise SystemExit('Con bloques: duración por acción >= 0,5 s y paso <= 0,10 rad')
     if not 1 <= args.seconds <= 240 or not .5 <= args.fps <= 2:
@@ -428,9 +433,11 @@ def main():
             if args.chunk_steps > 1 and not chunk:
                 raise ValueError('el servidor no devuelve bloque (chunk); actualice shadow_live_inference.py en Ada')
             targets = plan_chunk(chunk, args.chunk_steps, obs, start, max_step=args.max_step_rad,
-                                 envelope=args.envelope_rad, margin=args.margin_rad) if chunk else [target]
+                                 envelope=args.envelope_rad, margin=args.margin_rad,
+                                 offset=args.chunk_offset) if chunk else [target]
             target = targets[-1]
-            hand_scalar = (sum(a[7] for a in chunk[:args.chunk_steps]) / args.chunk_steps
+            window = chunk[args.chunk_offset:args.chunk_offset + args.chunk_steps] if chunk else None
+            hand_scalar = (sum(a[7] for a in window) / len(window)
                            if chunk else info['hand_scalar_ignored'])
             hand = gate.update(hand_scalar, info['model_delta']) if gate else None
             log({'event': 'plan', 'hand_command': hand, 'hand_state': gate.state if gate else None, 'step': steps, 'index': row.get('index'),

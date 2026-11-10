@@ -1,0 +1,13 @@
+{
+  "train_manifest_sha256": "32ffa7173e9a837d253ceca7e70228a87f6fefd8ac41b389af33f9bfc83b7c3d",
+  "checkpoint_files": {
+    "model.safetensors": "7ae6fcbc025e2909f9e72c7c1d0c171b2f33eaa38a054c5dffe30e4228eb2f1b",
+    "config.json": "18e3dfe1b659bb87bd0679f75ba365ecf840460dc90466a4cbf98aa36c22fedb",
+    "policy_preprocessor.json": "25fc79195b8f105116fcd8e690c75ae4d28f315512b51f927f93ff90c5a5630e",
+    "policy_postprocessor.json": "f24875ca8641ab68c5aa70b8785537222e2bea90d4a43365a0b9dc0a64cbe6dc",
+    "policy_preprocessor_step_5_normalizer_processor.safetensors": "9532b1043886adb00b59a7771d1e3a6a4836eb4c6031f08d636a918d96fdad93",
+    "policy_postprocessor_step_0_unnormalizer_processor.safetensors": "9532b1043886adb00b59a7771d1e3a6a4836eb4c6031f08d636a918d96fdad93"
+  },
+  "checkpoint": "/home/luisacuna/cruzr-smolvla-ball-20261109/place-3000step/run/checkpoints/003000/pretrained_model",
+  "train": "/home/luisacuna/cruzr-smolvla-ball-20261109/dataset-place-20261110/lerobot-experiment"
+}

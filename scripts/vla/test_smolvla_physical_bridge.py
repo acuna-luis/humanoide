@@ -41,6 +41,13 @@ class PlanChunk(unittest.TestCase):
         self.assertTrue(all(abs(t - s) <= 0.25 + 1e-9 for t, s in zip(targets[-1], obs)))
 
 
+    def test_offset_skips_concurrent_action(self):
+        obs = b.PICO_POSE[:]
+        chunk = [[o + 0.05 * i for o in obs] + [0.1] for i in range(8)]
+        first = b.plan_chunk(chunk, 1, obs, obs, max_step=0.1, envelope=1.3, margin=0.03, offset=1)[0]
+        self.assertAlmostEqual(first[0] - obs[0], 0.05)
+
+
 class HandGateTest(unittest.TestCase):
     def test_close_only_near_and_stay_closed_while_moving(self):
         g = b.HandGate(0.5, 2, 0.15)

@@ -82,20 +82,31 @@ def main(argv=None):
         print(json.dumps({'error': 'inferencia incompleta', 'rc': proc.returncode,
                           'predictions': len(preds), 'rows': len(rows), 'events': events[-3:]}), file=sys.stderr)
         return 1
-    model_err, still_err, hand_ok = [], [], 0
-    per_joint = [[] for _ in R_ARM]
-    for (r, _), e in zip(rows, preds):
-        target = as_list(r['experimental_joint_target7'])
-        state = [as_list(r['state20'])[i] for i in idx]
-        pred = e['prediction']
-        for j in range(7):
-            per_joint[j].append(abs(pred[j] - target[j]))
-        model_err.append(st.mean(abs(a - b) for a, b in zip(pred[:7], target)))
-        still_err.append(st.mean(abs(a - b) for a, b in zip(state, target)))
-        hand_ok += int((pred[7] >= 0.5) == (r['experimental_hand_label'] == 1))
-    result = {'segment': str(args.segment), 'samples': len(rows),
-              'arm_mae_model_rad': st.mean(model_err), 'arm_mae_stay_still_rad': st.mean(still_err),
-              'arm_mae_per_joint_rad': dict(zip(R_ARM, (st.mean(x) for x in per_joint))),
+    # El bloque i del modelo corresponde a la acción del fotograma +0,5*i s (2 Hz).
+    # La acción grabada es la consigna simultánea (~estado), así que se compara
+    # el bloque con el objetivo grabado en ese instante futuro, frente a "no moverse".
+    times = [r['image_source_ns'] for r, _ in rows]
+    horizons = {}
+    for h in range(1, 5):
+        m_err, s_err = [], []
+        for i, ((r, _), e) in enumerate(zip(rows, preds)):
+            if not e.get('chunk'):
+                continue
+            goal_ns = times[i] + int(h * 0.5e9)
+            j = min(range(len(times)), key=lambda k: abs(times[k] - goal_ns))
+            if abs(times[j] - goal_ns) > 0.15e9:
+                continue
+            future = as_list(rows[j][0]['experimental_joint_target7'])
+            state = [as_list(r['state20'])[k] for k in idx]
+            m_err.append(st.mean(abs(a - b) for a, b in zip(e['chunk'][h][:7], future)))
+            s_err.append(st.mean(abs(a - b) for a, b in zip(state, future)))
+        if m_err:
+            horizons['%.1fs' % (h * 0.5)] = {'n': len(m_err), 'mae_model_rad': st.mean(m_err),
+                                              'mae_stay_still_rad': st.mean(s_err),
+                                              'model_better_fraction': sum(a < b for a, b in zip(m_err, s_err)) / len(m_err)}
+    hand_ok = sum(int((e['prediction'][7] >= 0.5) == (r['experimental_hand_label'] == 1))
+                  for (r, _), e in zip(rows, preds))
+    result = {'segment': str(args.segment), 'samples': len(rows), 'horizons': horizons,
               'hand_accuracy': hand_ok / len(rows),
               'hand_label_closed_fraction': sum(r['experimental_hand_label'] == 1 for r, _ in rows) / len(rows),
               'model_sha256': next((e.get('model_sha256') for e in events if e.get('event') == 'ready'), None)}
