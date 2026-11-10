@@ -103,7 +103,127 @@ emit(event='worker_result',returncode=0)
                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
 
 
+def real_worker_with_fake_transport(manifest, lease_path, intent, uid, session, mode='normal'):
+    """Real worker+lease+action state machine; local fake actuator and stage."""
+    payload = {'manifest':manifest, 'urdf_text':urdf(), 'transmissions_text':transmissions(),
+               'lease_path':str(lease_path), 'session_id':session,
+               'intent_path':str(intent), 'intent_uid':uid}
+    code = r'''
+import hashlib,json,os,socket,subprocess,sys,time,types
+sys.path.insert(0, sys.argv[1]);sys.path.insert(0, sys.argv[2]);sys.path.insert(0, sys.argv[3])
+import pico_wrist_native_worker as worker
+import arm_native_lease_bridge as bridge
+payload=json.loads(sys.argv[4]);goal_id=sys.argv[5];mode=sys.argv[6]
+os.environ['HW_TYPE']='cruzr_s2_v1_sps'
+def forbidden(*args,**kwargs): raise AssertionError('network_or_process_forbidden')
+socket.socket.connect=forbidden;socket.create_connection=forbidden;subprocess.Popen=forbidden
+real_sha=hashlib.sha256
+class FakeHash:
+ def hexdigest(self): return payload['manifest']['expected_meta_move_sha256']
+worker.hashlib=types.SimpleNamespace(sha256=lambda raw: FakeHash() if raw==b'fake-vendor' else real_sha(raw))
+original_read=worker.Path.read_bytes
+def read(path):
+ values={worker.URDF_PATH:payload['urdf_text'].encode(),worker.SPS_PATH:payload['transmissions_text'].encode(),worker.META_MOVE_PATH:b'fake-vendor'}
+ return values[str(path)] if str(path) in values else original_read(path)
+worker.Path.read_bytes=read
+worker.require_robot_app_can_read_private_task=lambda: os.geteuid()
+candidate=payload['manifest']['candidate']
+worker.staging.stage_task=lambda *a,**kw: {'status':'STAGED_NOT_LOADED_OR_EXECUTED','runtime_path':candidate['runtime_path'],'sha256':candidate['xml_sha256'],'device':1,'inode':2,'movement_commands':0}
+worker.staging.verify_staged=lambda *a,**kw: True
+class FakeTransport:
+ def __init__(self,lease,exchange,**kwargs): self.lease,self.goal_id,self.rows=lease,None,[]
+ def ready(self): return True
+ def send(self,goal):
+  self.lease.synchronize_uuid(goal_id,None);self.goal_id=goal_id
+  self.rows=[] if mode=='hang' else [{'event':'accepted','goal_id':goal_id,'accepted':True},{'event':'result','goal_id':goal_id,'status':4,'result':{'state':{'state':1101001,'desc':'SUCCEED'}}}]
+  return goal_id
+ def spin(self): time.sleep(.01)
+ def drain(self): rows,self.rows=self.rows,[];return rows
+ def cancel(self): pass
+ def close(self): pass
+bridge.GuardedRosaTransport=FakeTransport
+channel=worker.WorkerChannel(sys.stdin.fileno(),sys.stdout.fileno(),payload['session_id'])
+prov=('worker',payload['session_id'],'b'*64,'c'*64)
+rc=worker.run(payload,channel,verified_provenance=prov)
+channel.emit(event='worker_result',returncode=rc)
+raise SystemExit(rc)
+'''
+    vla = Path(__file__).resolve().parent
+    return subprocess.Popen([sys.executable, '-B', '-u', '-c', code, str(vla), str(vla/'runtime'),
+                             str(vla.parent/'box_handling'), json.dumps(payload), GOAL, mode],
+                            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
+
+
 class CoordinatorTests(unittest.TestCase):
+    def test_real_worker_pc_loss_after_dispatch_cancels_exact_uuid(self):
+        manifest = prep.prepare(state(), urdf(), transmissions())
+        with tempfile.TemporaryDirectory() as directory:
+            control = Path(directory)/'stable-control'
+            control.mkdir(mode=0o700)
+            lease = bridge.GuardLease(directory, manifest['input']['reference_20d'], lambda: True)
+            guard = FakeGuard(lease)
+            processes = []
+            def spawn(path, intent, uid):
+                child = real_worker_with_fake_transport(manifest, path, intent, uid, lease.session_id, 'hang')
+                processes.append(child)
+                return child
+            def event_sink(row):
+                if row.get('event') == 'dispatched':
+                    guard.failure = 'simulated_pc_liveness_lost'
+                return True
+            try:
+                with patch.object(coordinator, 'GLOBAL_RECEIPT_DIR', control):
+                    with self.assertRaisesRegex(RuntimeError, 'guard_lost_during_trial'):
+                        coordinator.coordinate(lease, guard, manifest, urdf(), transmissions(),
+                            spawn, control, timeout=8, event_sink=event_sink,
+                            verified_provenance=('host', lease.session_id, 'b'*64, 'c'*64))
+                self.assertEqual(guard.cancelled, [GOAL])
+                self.assertTrue(lease.failed)
+            finally:
+                guard.close()
+                for process in processes:
+                    if process.poll() is None: process.terminate()  # Local fake child only.
+                    try: process.wait(timeout=3)
+                    except subprocess.TimeoutExpired:
+                        process.kill()  # This exact local test process has no ROS or robot access.
+                        process.wait(timeout=3)
+                    for stream in (process.stdin, process.stdout, process.stderr): stream.close()
+
+    def test_real_worker_and_coordinator_share_exact_uuid_with_simulated_guard(self):
+        manifest = prep.prepare(state(), urdf(), transmissions())
+        with tempfile.TemporaryDirectory() as directory:
+            control = Path(directory)/'stable-control'
+            control.mkdir(mode=0o700)
+            lease = bridge.GuardLease(directory, manifest['input']['reference_20d'], lambda: True)
+            guard = FakeGuard(lease)
+            processes = []
+            def spawn(path, intent, uid):
+                child = real_worker_with_fake_transport(manifest, path, intent, uid, lease.session_id)
+                processes.append(child)
+                return child
+            try:
+                with patch.object(coordinator, 'GLOBAL_RECEIPT_DIR', control):
+                    try:
+                        result = coordinator.coordinate(lease, guard, manifest, urdf(), transmissions(),
+                            spawn, control, timeout=8,
+                            verified_provenance=('host', lease.session_id, 'b'*64, 'c'*64))
+                    except Exception as exc:
+                        detail = processes[0].stderr.read().decode() if processes and processes[0].poll() is not None else ''
+                        raise AssertionError(str(exc)+'; child: '+detail) from exc
+                self.assertEqual(result['goal_id'], GOAL)
+                self.assertEqual(result['status'], 'ACTION_SUCCEEDED_AND_POSTFLIGHT_OBSERVED')
+                rows = [json.loads(line) for line in
+                        (control/('worker-events-'+lease.session_id+'.jsonl')).read_text().splitlines()]
+                self.assertEqual([row['goal_id'] for row in rows if row['event']=='uuid_request'], [GOAL])
+                self.assertEqual([row['goal_id'] for row in rows if row['event']=='dispatched'], [GOAL])
+                self.assertEqual(guard.cancelled, [])
+            finally:
+                guard.close()
+                for process in processes:
+                    if process.poll() is None: process.terminate()
+                    process.wait(timeout=3)
+                    for stream in (process.stdin, process.stdout, process.stderr): stream.close()
+
     def test_progress_timeout_cannot_rearm(self):
         now = [10.0]
         monitor = coordinator.CoordinatorProgress(clock=lambda: now[0])

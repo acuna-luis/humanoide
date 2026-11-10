@@ -472,11 +472,34 @@ def synchronized_client_class(base, to_string, handshake):
 class GuardedRosaTransport(native.RosaTransport):
     """Same pinned ROSA transport as boxes with a pre-send UUID handshake.
 
-    The release gate is checked before importing or initializing ROSA. The
-    current gate always rejects; tests replace it only with fake ROSA modules.
+    A verified worker, its staged task, and a live lease are required before
+    importing ROSA. The UUID handshake remains required before the sole send.
     """
-    def __init__(self, lease, exchange):
-        arm.physical_release_gate()
+    def __init__(self, lease, exchange, *, verified_provenance=None, session_id=None,
+                 urdf_text=None, transmissions_text=None):
+        if verified_provenance is None:
+            arm.physical_release_gate()
+        else:
+            arm.require_verified_stream(verified_provenance, 'worker', session_id)
+            # Only the worker's specific staged task and live shared lease
+            # may construct the native client. The separate UUID handshake is
+            # still required immediately before the send.
+            import pico_wrist_native_worker as worker
+            import pico_wrist_native_stage as staging
+            if (type(lease) is not worker.LeaseProxy or type(lease.channel) is not worker.WorkerChannel
+                    or lease.channel.session_id != session_id or lease.stage_receipt is None):
+                raise ValueError('worker_lease_or_stage_missing')
+            probe.validate(lease.manifest, urdf_text, transmissions_text)
+            staging.verify_staged(lease.manifest, lease.stage_receipt)
+            candidate = lease.manifest.get('candidate', {})
+            if candidate.get('goal') != {'task_name':candidate.get('task_name'), 'yaml_args':'{}'}:
+                raise ValueError('worker_goal_not_staged_task')
+            native.check_lease(lease.path, time.monotonic())
+            if lease.channel.interrupted():
+                raise RuntimeError('worker_interrupted_before_transport')
+        self._wrist_lease = lease
+        self._wrist_goal = json.loads(json.dumps(lease.manifest['candidate']['goal'], allow_nan=False))
+        self._wrist_attempted = False
         import rosa
         from rosa.action_client import ActionClient, ActionClientGoalHandle
         from rosa.base._ActionType import to_string
@@ -504,17 +527,38 @@ class GuardedRosaTransport(native.RosaTransport):
             rosa.shutdown()
             raise
 
+    def send(self, goal):
+        """Permit one attempt of the staged wrist goal, even if send fails."""
+        if self._wrist_attempted or goal != self._wrist_goal:
+            raise ValueError('unexpected_or_repeated_wrist_goal')
+        # Consume the single attempt before any I/O: a raised call can still
+        # have delivered its request, so it must never be repeated.
+        self._wrist_attempted = True
+        import pico_wrist_native_stage as staging
+        staging.verify_staged(self._wrist_lease.manifest, self._wrist_lease.stage_receipt)
+        native.check_lease(self._wrist_lease.path, time.monotonic())
+        if self._wrist_lease.channel.interrupted():
+            raise RuntimeError('worker_interrupted_before_send')
+        return super().send(goal)
+
 
 def run_guarded_once(lease, exchange, manifest, urdf_text, transmissions_text, emit, *,
-                     timeout=15.0, interrupted=lambda: None, after_transport_ready=lambda: None):
-    """Use native action state machine under lease; current gate blocks ROSA.
+                     timeout=15.0, interrupted=lambda: None, after_transport_ready=lambda: None,
+                     verified_provenance=None):
+    """Use the native action state machine for the single guarded wrist task.
 
     The caller must feed fresh guard events concurrently, use a private path
     visible identically from both processes on the same Motion host and permit
-    exactly the validated staged task. These requirements are not implemented
-    by the current PC launcher. No retry or automatic HOME is introduced.
+    exactly the validated staged task. No retry or automatic HOME is introduced;
+    a cancel request is not physical stop confirmation.
     """
-    arm.physical_release_gate()
+    if verified_provenance is None:
+        arm.physical_release_gate()
+    session_id = lease.channel.session_id if verified_provenance is not None else None
+    if verified_provenance is not None:
+        arm.require_verified_stream(verified_provenance, 'worker', session_id)
+        if lease.manifest != manifest:
+            raise ValueError('worker_manifest_mismatch')
     if type(timeout) not in (int, float) or not math.isfinite(timeout) or not 0 < timeout <= 15:
         raise ValueError('invalid_single_trial_timeout')
     probe.validate(manifest, urdf_text, transmissions_text)
@@ -524,7 +568,9 @@ def run_guarded_once(lease, exchange, manifest, urdf_text, transmissions_text, e
     checked_goal = native.validate_goal('motion', json.dumps(goal, allow_nan=False))
     if checked_goal != goal:
         raise ValueError('invalid_goal')
-    transport = GuardedRosaTransport(lease, exchange)
+    transport = GuardedRosaTransport(lease, exchange, verified_provenance=verified_provenance,
+                                     session_id=session_id, urdf_text=urdf_text,
+                                     transmissions_text=transmissions_text)
     try:
         # ROSA initialization may overwrite process signal handlers. The worker
         # reinstalls its callbacks here before the native client can send.

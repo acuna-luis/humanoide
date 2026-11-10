@@ -246,6 +246,52 @@ class HandshakeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'physical_dispatch_blocked'):
             bridge.run_guarded_once(None, None, None, None, None, lambda **row: None)
 
+    def test_fake_lease_cannot_construct_native_transport(self):
+        from types import SimpleNamespace
+        provenance = ('worker', 'a'*32, 'b'*64, 'c'*64)
+        fake = SimpleNamespace(channel=SimpleNamespace(session_id='a'*32), path=None,
+                               stage_receipt={})
+        with self.assertRaisesRegex(ValueError, 'worker_lease_or_stage_missing'):
+            bridge.GuardedRosaTransport(fake, None, verified_provenance=provenance,
+                                        session_id='a'*32)
+
+    def test_transport_rejects_goal_not_equal_to_staged_task_before_rosa(self):
+        import pico_wrist_native_worker as worker
+        import pico_wrist_native_stage as stage
+        in_read, in_write = os.pipe()
+        out_read, out_write = os.pipe()
+        try:
+            channel = worker.WorkerChannel(in_read, out_write, 'a'*32)
+            manifest = {'candidate':{'task_name':'diagnostics/pico_v4_wrist_'+'1'*16,
+                                     'goal':{'task_name':'cruzr/home','yaml_args':'{}'}}}
+            lease = worker.LeaseProxy('/tmp/lease.json', {}, channel, manifest)
+            lease.stage_receipt = {'placeholder':True}
+            with patch.object(stage, 'verify_staged'), patch.object(bridge.probe, 'validate'):
+                with self.assertRaisesRegex(ValueError, 'worker_goal_not_staged_task'):
+                    bridge.GuardedRosaTransport(lease, None,
+                        verified_provenance=('worker','a'*32,'b'*64,'c'*64), session_id='a'*32)
+        finally:
+            for fd in (in_read,in_write,out_read,out_write): os.close(fd)
+
+    def test_only_staged_goal_may_be_attempted_once_even_after_uncertain_send(self):
+        from types import SimpleNamespace
+        import pico_wrist_native_stage as stage
+        goal = {'task_name':'diagnostics/wrist', 'yaml_args':'{}'}
+        lease = SimpleNamespace(manifest={'candidate':{'goal':goal}}, stage_receipt={},
+                                path='/tmp/fake.json', channel=SimpleNamespace(interrupted=lambda: None))
+        transport = object.__new__(bridge.GuardedRosaTransport)
+        transport._wrist_lease, transport._wrist_goal, transport._wrist_attempted = lease, goal, False
+        with patch.object(stage, 'verify_staged'), patch.object(bridge.native, 'check_lease'), \
+             patch.object(bridge.native.RosaTransport, 'send', side_effect=OSError('delivery_unknown')) as send:
+            with self.assertRaisesRegex(ValueError, 'unexpected_or_repeated_wrist_goal'):
+                transport.send({'task_name':'cruzr/home', 'yaml_args':'{}'})
+            send.assert_not_called()
+            with self.assertRaisesRegex(OSError, 'delivery_unknown'):
+                transport.send(dict(goal))
+            with self.assertRaisesRegex(ValueError, 'unexpected_or_repeated_wrist_goal'):
+                transport.send(dict(goal))
+            send.assert_called_once()
+
 
 def simulated_guard(session, mode):
     """Child uses real pipes and monotonic clock but never imports ROS."""

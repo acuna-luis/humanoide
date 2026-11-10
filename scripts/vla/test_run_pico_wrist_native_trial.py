@@ -326,7 +326,7 @@ class LauncherTests(unittest.TestCase):
                 with patch.object(launcher.arm, 'physical_release_gate'), \
                      patch.object(launcher.passive.existing, 'preflight', side_effect=AssertionError('must not connect')), \
                      patch.object(launcher.subprocess, 'Popen', side_effect=AssertionError('must not connect')):
-                    with self.assertRaisesRegex(ValueError, 'candidate_input_changed:manifest.json'):
+                    with self.assertRaisesRegex(RuntimeError, 'verified_pc_context_required'):
                         launcher.run_candidate(manifest, urdf, transmissions, True,
                             binding_path=retained, binding_sha256=result['binding_sha256'])
 

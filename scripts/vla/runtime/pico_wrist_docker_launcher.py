@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Motion-host launcher candidate; physical gate remains closed.
+"""Motion-host launcher for a supervised single-wrist candidate.
 
 Starts a guard in ROS2 and a worker in the native app container only after
-separate release and preflight. No command-line release switch exists. This
+verified bootstrap and preflight. No command-line release switch exists. This
 code has not been exercised on hardware and is not a certified stop mechanism.
 """
 import hashlib
@@ -346,10 +346,13 @@ def pc_preflight_handoff(session, output, input_fd):
     raise TimeoutError('pc_preflight_ack_timeout')
 
 
-def launch(payload):
-    # Closed before Docker, temporary files, staging or any action client.
-    arm.physical_release_gate()
+def launch(payload, *, verified_provenance=None):
+    # Bootstrap verified source, payload and session before executing us.
+    if verified_provenance is None:
+        arm.physical_release_gate()
     session = validate_payload(payload)
+    if verified_provenance is not None:
+        arm.require_verified_stream(verified_provenance, 'host', session['session_id'])
     # This creates only a private, receipted control directory if absent. No
     # automatic rollback; an interrupted creation requires manual review.
     coordinator.ensure_control_root()
@@ -397,7 +400,7 @@ def launch(payload):
         result = coordinator.coordinate(lease, pipe, payload['manifest'], payload['urdf_text'],
                                         payload['transmissions_text'], start_worker,
                                         coordinator.GLOBAL_RECEIPT_DIR, held_lock_fd=lock_fd,
-                                        event_sink=output.emit)
+                                        event_sink=output.emit, verified_provenance=verified_provenance)
         completed = True
         return result
     finally:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Arm supervisor candidate from PICO v4; physical release is blocked.
+"""Arm supervisor for a PICO v4 wrist trial; direct arm dispatch is blocked.
 
 The operator must be at the physical stop. Cancellation is only a request and
 neither this monitor nor receipt of a cancellation proves a physical stop.
@@ -165,6 +165,20 @@ def physical_release_gate():
     raise RuntimeError('physical_dispatch_blocked_unqualified_arm_stop_and_trajectory')
 
 
+def require_verified_stream(provenance, role, session_id):
+    """Require this narrow path's bootstrap evidence, not physical approval.
+
+    This prevents accidental use outside the validated bootstrap in trusted
+    processes; it is not protection against someone controlling Python/SSH.
+    """
+    if (not isinstance(provenance, tuple) or len(provenance) != 4
+            or provenance[0] != role or provenance[1] != session_id
+            or not isinstance(session_id, str) or not re.fullmatch('[0-9a-f]{32}', session_id)
+            or any(not isinstance(x, str) or not re.fullmatch('[0-9a-f]{64}', x)
+                   for x in provenance[2:])):
+        physical_release_gate()
+
+
 class SupervisorHeartbeat:
     """Motion-local watchdog for one supervisor; a timeout is not a stop."""
     def __init__(self, session_id, guard_id):
@@ -213,7 +227,7 @@ def build_trial_args(q):
             'mode': 0, 'durations': [4.0]}
 
 
-def main(preflight, *, dry_run, monitor_only=False, guard_can_cancel=False):
+def main(preflight, *, dry_run, monitor_only=False, guard_can_cancel=False, verified_provenance=None):
     if type(dry_run) is not bool:
         raise ValueError('dry_run_must_be_explicit_boolean')
     if type(monitor_only) is not bool or (monitor_only and not dry_run):
@@ -221,8 +235,8 @@ def main(preflight, *, dry_run, monitor_only=False, guard_can_cancel=False):
     if type(guard_can_cancel) is not bool or (guard_can_cancel and not monitor_only):
         raise ValueError('guard_cancel_requires_continuous_monitor')
     if guard_can_cancel:
-        # Distinct physical gate: a passive --check never obtains this mode.
-        physical_release_gate()
+        # A checked bootstrap may supervise/cancel one UUID, never dispatch.
+        require_verified_stream(verified_provenance, 'guard', preflight.get('session_id'))
     if not dry_run:
         physical_release_gate()
     local_started = time.monotonic()

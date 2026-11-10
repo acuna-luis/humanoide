@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Candidate coordinator for one staged wrist probe; physical gate is closed.
+"""Coordinator for one supervised staged wrist probe.
 
-Dependencies are passed explicitly; the real docker launcher is not implemented.
+Dependencies are passed explicitly by the verified docker launcher.
 No retries, HOME or automatic cleanup. A worker crash after dispatch is an
 uncertain physical state, not a stopped robot. The pre-stage receipt is fsynced
 before the worker is created so a partial task write is never silently lost.
@@ -247,14 +247,17 @@ def check_stationary_targets(manifest, sample, reference):
 
 def coordinate(lease, guard_pipe, manifest, urdf_text, transmissions_text,
                start_worker, evidence_dir, *, timeout=20.0, held_lock_fd=None,
-               event_sink=lambda row: True):
-    """Run one worker under guard; unreachable with the current release gate.
+               event_sink=lambda row: True, verified_provenance=None):
+    """Run one worker under guard for a verified wrist-trial bootstrap.
 
     start_worker must start the reviewed native-container worker and supply its
     payload. The caller must separately perform the physical and hardware
     preflight and attest source/containers. This function never grants those.
     """
-    arm.physical_release_gate()
+    if verified_provenance is None:
+        arm.physical_release_gate()
+    else:
+        arm.require_verified_stream(verified_provenance, 'host', lease.session_id)
     if Path(evidence_dir) != GLOBAL_RECEIPT_DIR:
         raise ValueError('must_use_stable_global_receipt_directory')
     owns_lock = held_lock_fd is None
@@ -282,7 +285,7 @@ def coordinate(lease, guard_pipe, manifest, urdf_text, transmissions_text,
     try:
         result = _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_text,
                                     start_worker, timeout=timeout, event_sink=event_sink,
-                                    progress=progress)
+                                    progress=progress, verified_provenance=verified_provenance)
         # The reader and progress watchdog share this transition: a telemetry
         # sample after progress.stop() must not be mistaken for a runtime fault.
         guard_pipe.prepare_normal_shutdown()
@@ -294,8 +297,11 @@ def coordinate(lease, guard_pipe, manifest, urdf_text, transmissions_text,
 
 
 def _coordinate_locked(lease, guard_pipe, manifest, urdf_text, transmissions_text,
-                       start_worker, *, timeout, event_sink, progress):
-    arm.physical_release_gate()
+                       start_worker, *, timeout, event_sink, progress, verified_provenance=None):
+    if verified_provenance is None:
+        arm.physical_release_gate()
+    else:
+        arm.require_verified_stream(verified_provenance, 'host', lease.session_id)
     if type(timeout) not in (float, int) or not math.isfinite(timeout) or not 0 < timeout <= 20:
         raise ValueError('invalid_coordinator_timeout')
     probe.validate(manifest, urdf_text, transmissions_text)

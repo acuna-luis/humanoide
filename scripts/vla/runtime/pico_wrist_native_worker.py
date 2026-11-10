@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Candidate ROSA worker for one native wrist goal; physical gate stays shut.
+"""ROSA worker for one verified native wrist goal.
 
 It delegates the UUID handshake and lease ownership to the Motion-host
 coordinator. Its output pipe is nonblocking; broken communication becomes an
@@ -27,6 +27,36 @@ ID = re.compile(r'[0-9a-f]{32}\Z')
 URDF_PATH = '/opt/walker/manipulation_platforms/share/manipulation_platforms/config/urdf/cruzr_s2.urdf'
 SPS_PATH = '/opt/walker/config_mc_cruzr_s2_v1_sps/share/config_mc_cruzr_s2_v1_sps/config/ecat_hardware/transmissions.yaml'
 META_MOVE_PATH = '/opt/walker/manipulation_meta_tasks/lib/libmeta_move.so'
+ROBOT_APP_PATH = '/opt/walker/manipulation_task_manager/lib/manipulation_task_manager/robot_app'
+
+
+def require_robot_app_can_read_private_task(proc_root=Path('/proc'), *, worker_uid=None):
+    """Check the staged 0600 XML can be read by the running robot_app.
+
+    The executing worker checks vendor files with its own effective UID before
+    staging. This check addresses the separate reader process, not its future
+    execution, capabilities, mount changes or physical safety.
+    """
+    uid = os.geteuid() if worker_uid is None else worker_uid
+    matches = []
+    for entry in proc_root.iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            if os.readlink(entry/'exe') != ROBOT_APP_PATH:
+                continue
+            status = (entry/'status').read_text(encoding='utf-8')
+            lines = [line for line in status.splitlines() if line.startswith('Uid:')]
+            if len(lines) != 1 or len(lines[0].split()) != 5:
+                raise ValueError('robot_app_uid_not_available')
+            matches.append(int(lines[0].split()[2]))
+        except (FileNotFoundError, ProcessLookupError):
+            continue
+        except PermissionError as exc:
+            raise RuntimeError('robot_app_uid_not_observable') from exc
+    if len(matches) != 1 or matches[0] != uid:
+        raise RuntimeError('robot_app_cannot_read_private_task_or_not_unique')
+    return matches[0]
 
 
 class WorkerChannel:
@@ -119,9 +149,12 @@ class LeaseProxy:
         self.channel.emit(event='worker_finished', session_id=self.channel.session_id)
 
 
-def run(payload, channel):
+def run(payload, channel, *, verified_provenance=None):
     # Check before reading a candidate, importing ROSA or sending anything.
-    arm.physical_release_gate()
+    if verified_provenance is None:
+        arm.physical_release_gate()
+    else:
+        arm.require_verified_stream(verified_provenance, 'worker', channel.session_id)
     if not isinstance(payload, dict) or set(payload) != {
             'manifest', 'urdf_text', 'transmissions_text', 'lease_path', 'session_id', 'intent_path', 'intent_uid'}:
         raise ValueError('invalid_worker_payload')
@@ -147,6 +180,7 @@ def run(payload, channel):
         for path, digest in expected.items():
             if hashlib.sha256(Path(path).read_bytes()).hexdigest() != digest:
                 raise RuntimeError('worker_installed_hash_mismatch:' + path)
+        require_robot_app_can_read_private_task()
         if channel.interrupted(): raise RuntimeError(channel.interrupted())
         native.check_lease(lease.path, time.monotonic())
         receipt = staging.stage_task(manifest, payload['urdf_text'], payload['transmissions_text'],
@@ -162,7 +196,8 @@ def run(payload, channel):
         return bridge.run_guarded_once(lease, None, manifest, payload['urdf_text'],
                                        payload['transmissions_text'], channel.emit,
                                        interrupted=channel.interrupted,
-                                       after_transport_ready=install_handlers)
+                                       after_transport_ready=install_handlers,
+                                       verified_provenance=verified_provenance)
     finally:
         for signum, handler in previous.items():
             signal.signal(signum, handler)

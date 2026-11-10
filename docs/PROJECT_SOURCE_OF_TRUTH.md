@@ -1,5 +1,15 @@
 # Cruzr S2 — fuente de verdad global del proyecto
 
+**10-11-2026 — ARM-PICO-SCOPED-SESSION-20261110: ruta local acotada a una
+muñeca preparada.** El cargador aislado y los bundles enlazan una sesión,
+fuentes, candidato y UUID; el transporte admite una única meta de la tarea
+verificada. 147 tests locales pasan y un check pasivo PC→Motion pasó sin goal.
+El candidato usa una captura reciente, con codos próximos a los límites SPS;
+el margen diagnóstico de 0,002 rad no se cumple. No hay prueba física ni
+control SmolVLA: requiere estado físico vigente y ejecución supervisada.
+[Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#sesión-acotada-de-muñeca--10-11-2026),
+[ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-scoped-session-20261110).
+
 **10-11-2026 — SMOLVLA-PAIRED-NOMINAL-20261110: observaciones y propuestas
 emparejadas con cotejo nominal local.** El relay conserva posiciones y
 velocidades 20D asociadas a cada predicción y, opcionalmente, el conversor

@@ -1,5 +1,11 @@
 # Cruzr S2 v0.2.0: teleoperación, captura de datos y evolución del VLA
 
+**10-11-2026 — ARM-PICO-SCOPED-SESSION-20261110.** Preparada la ruta para una
+sola tarea nativa de muñeca con sesión y UUID vinculados; tests y check pasivo
+pasan. No se ha probado físicamente y no ejecuta SmolVLA. Los codos de la
+captura reciente siguen próximos a sus límites SPS.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#sesión-acotada-de-muñeca--10-11-2026).
+
 **10-11-2026 — SMOLVLA-PAIRED-NOMINAL-20261110.** Un diagnóstico opcional
 asocia la muestra 20D a su predicción y comprueba extremos nominales con datos
 proporcionados. Pasan 33 tests sin robot; el sello del PC no garantiza frescura

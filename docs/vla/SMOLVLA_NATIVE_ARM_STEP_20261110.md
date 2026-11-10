@@ -1,5 +1,55 @@
 # Paso de brazo derecho para SmolVLA mediante MetaMove — 10-11-2026
 
+## Sesión acotada de muñeca — 10-11-2026
+
+**PREPARADA LOCALMENTE; EJECUCIÓN FÍSICA PENDIENTE.** El cargador aislado
+comprueba los bytes del proyecto y los datos retenidos antes de importar el
+ejecutor. Los bootstraps de Motion comprueban fuente, payload y sesión antes
+de ejecutar; guardia, coordinador y worker enlazan el UUID con el lease. El
+cliente nativo comprueba el manifiesto y XML staged, acepta sólo el goal de
+esa tarea y consume un único intento antes de enviar. Ante resultado incierto
+no hay reintento ni HOME automático. Esta cadena asume procesos confiados y
+no autentica frente a quien controle Python o SSH.
+
+El `--run` del cargador puede enviar una única tarea de muñeca si se aporta
+confirmación física actual y pasan los checks; no es una ejecución de
+SmolVLA. El despacho directo `arm.main(dry_run=False)` permanece bloqueado.
+Debe usarse un binding nuevo que corresponda exactamente a las fuentes y
+candidato: la copia histórica no habilita estas fuentes.
+
+Una captura reciente y su candidato están en
+`../Humanoide-vla-evidence/PICO_WRIST_FRESH_20261110T120131Z/`. El XML fija
+los siete ejes derechos desde esa captura y añade 0,01 rad a la muñeca. Los
+codos L/R estaban en `2,879377812660591`/`−2,8787066960658914` rad ante
+límites SPS ±`2,88` rad; extremos nominales dentro, pero no cumplen el margen
+diagnóstico de `0,002` rad. La muestra y margen no garantizan trayectoria,
+geometría de mano v4 ni parada. Antes de mover, verificar de nuevo el estado
+del robot y el despeje real de mano, dedos, antebrazo, mesa, aro y cables, con
+operador junto al paro y sin otro controlador activo.
+
+Pasan 147 tests locales; el check `check-cb9bfa4427c5491fbcc983da3a631ec3`
+pasó PC→Motion con cero goals y sin movimiento. El check no despacha ni prueba
+cancelación o frenado; la prueba conjunta usa guardia/ROSA/staging simulados.
+En lectura de inventario, UID efectivo de app y worker fue 0 y los tres hashes
+de URDF/SPS/MetaMove coincidieron; baterías observadas 54,0/56,3 %. La
+importación aislada y comparación con el binding del candidato pasaron.
+Identidad de fuentes, hashes del candidato,
+backup y punto de reanudación: [ficha](../SYSTEM_CUSTOMIZATIONS.md#arm-pico-scoped-session-20261110).
+
+Para reproducir la importación aislada sin enviar órdenes:
+
+```bash
+python3 -I -B scripts/vla/verified_pico_wrist_pc_loader.py --check \
+  --binding ../Humanoide-vla-evidence/PICO_WRIST_FRESH_20261110T120131Z/binding \
+  --binding-sha256 02045c05a65cbf9681d0ec02480519dc6bdaa85eea8a3687f7c551489e79736e
+```
+
+El binding conserva el documento existente al crearlo, anterior a este
+registro. Su hash acredita esa copia y las fuentes retenidas, no un revisor,
+una condición física o la configuración efectiva en ejecución. El ensayo
+requiere verificación actual y supervisión presencial; no ejecutar el `--run`
+sin esas condiciones.
+
 ## Telemetría emparejada y cotejo nominal — 10-11-2026
 
 **VERIFICADO LOCAL, SIN ÓRDENES.** El adaptador empareja las posiciones
@@ -34,8 +84,9 @@ La salida conserva `physical_control_qualified=false` y
 `physical_commands_sent=0`. El sello PC sólo indica cuándo el adaptador
 procesó el registro; no mide cuánto tardó desde Vision ni calibra relojes.
 No se verifica interpolación real, escena, geometría de mano, fuerza,
-controlador o frenado. El formato y el resultado nominal no habilitan un
-despacho y la guardia debe verificar el estado de nuevo justo antes de éste.
+controlador, frenado ni el orden efectivo del decoder del servidor. El formato
+y el resultado nominal no habilitan un despacho y la guardia debe verificar
+el estado de nuevo justo antes de éste.
 Pasan 33 tests locales y el manifiesto anterior de muñeca sigue recalculando
 igual. Sin inferencia, captura, modificación del robot ni movimiento en esta
 intervención. Rutas, hashes y backup están en la
@@ -43,7 +94,7 @@ intervención. Rutas, hashes y backup están en la
 
 ## Carga verificada de fuentes — 10-11-2026
 
-**Estado: preparado y probado localmente; gate físico cerrado.** El cargador
+**Estado de esta versión histórica: preparado y probado localmente; gate físico cerrado.** El cargador
 `scripts/vla/verified_pico_wrist_pc_loader.py`, ejecutado con Python aislado,
 comprueba el binding, su índice y las copias retenidas antes de compilar e
 importar los módulos Python del proyecto. El bootstrap que genera
@@ -68,10 +119,11 @@ una aprobación ni demuestra la configuración o páginas cargadas en Motion.
 El bootstrap PC que comienza antes de verificarse, el intérprete, las
 bibliotecas y procesos externos, ROS/SDK y el script shell de askpass no quedan
 atestados. La comparación de los bytes tampoco verifica escena o parada.
-Los gates incondicionales y `reviewed_bundle_attestation_not_implemented`
-continúan bloqueando el despacho; queda por integrar una admisión específica
-que vincule tarea, sesión y UUID sin habilitar control directo ni VLA. No se
-instaló ni ejecutó una tarea física ni SmolVLA.
+En esa versión los gates incondicionales y
+`reviewed_bundle_attestation_not_implemented` bloqueaban el despacho. La
+[sesión acotada posterior](#sesión-acotada-de-muñeca--10-11-2026) integra la
+vía de una muñeca sin habilitar control directo ni VLA. No se instaló ni
+ejecutó una tarea física ni SmolVLA.
 
 Reproducción de importación, desde la raíz del repositorio:
 
@@ -87,7 +139,7 @@ receta no conecta al robot ni cambia su postura.
 
 ## Latido y cierre de guardia — 10-11-2026
 
-**Estado: comprobación local completada; gate físico cerrado.** En el modo de
+**Estado de esta versión histórica: comprobación local completada; gate físico cerrado.** En el modo de
 guardia previsto para cancelar por UUID, el monitor incorpora un plazo de
 latido del supervisor, con identificación de sesión y secuencia. El puente
 emite el latido tras muestras válidas y mientras el lease sigue vigente. El

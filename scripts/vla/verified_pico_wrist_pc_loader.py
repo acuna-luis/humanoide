@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Load wrist-trial PC modules from a pinned snapshot before invocation.
 
-Run with ``python3 -I -B``. The check is local; ``--run`` delegates to the
-existing launcher and cannot open its physical gate. The interpreter, this
-bootstrap before it verifies itself, standard/third-party libraries, shell
-helpers, robot runtime and physical environment are outside its guarantee.
+Run with ``python3 -I -B``. ``--check`` is local; ``--run`` delegates to the
+single-wrist launcher with current operator confirmation and its checks. The
+interpreter, bootstrap before its self-check, external libraries, shell helpers,
+robot runtime and physical environment are outside its guarantee. It does not
+enable SmolVLA or direct guard dispatch and cannot certify stopping.
 """
 import argparse
 import contextlib
@@ -95,7 +96,7 @@ def _exact_origin(origin_text, root, relative):
     return expected
 
 
-def checked_snapshot(directory, expected_digest, *, root=ROOT):
+def checked_snapshot(directory, expected_digest, *, root=ROOT, include_artifacts=False):
     """Verify the entire retained snapshot before compiling project modules."""
     if not isinstance(expected_digest, str) or not re.fullmatch('[0-9a-f]{64}', expected_digest):
         raise ValueError('expected_binding_sha256_required')
@@ -177,6 +178,8 @@ def checked_snapshot(directory, expected_digest, *, root=ROOT):
     # errors and ensures the code objects come from the verified byte copies.
     compiled = {name: (compile(raw, origin, 'exec', dont_inherit=True), origin, _sha(raw))
                 for name, (raw, origin) in modules.items()}
+    if include_artifacts:
+        return compiled, files, index_raw, binding_raw
     return compiled
 
 
@@ -207,7 +210,7 @@ class VerifiedFinder(importlib.abc.MetaPathFinder, importlib.abc.Loader):
 
 
 @contextlib.contextmanager
-def verified_pc_environment(modules, *, root=ROOT):
+def verified_pc_environment(modules, *, root=ROOT, artifacts=None):
     """Keep the verified finder active while a caller uses the entrypoint.
 
     Only the caller's verified project modules are covered. Calling an entrypoint
@@ -222,6 +225,7 @@ def verified_pc_environment(modules, *, root=ROOT):
         if name != '__main__' and isinstance(origin, str) and _inside(Path(origin).resolve(), Path(root).resolve()):
             raise RuntimeError('project_module_already_loaded:' + name)
     finder = VerifiedFinder(modules, root)
+    finder.verified_artifacts = artifacts
     sys.meta_path.insert(0, finder)
     try:
         # Import all transitive PC entrypoints even when a particular CLI branch
@@ -256,22 +260,22 @@ def main(argv=None):
     if args.run and not args.physical_confirmed:
         parser.error('--run requires current operator-reported physical conditions')
     try:
-        modules = checked_snapshot(args.binding, args.binding_sha256)
-        with verified_pc_environment(modules) as (entrypoint, finder):
+        modules, files, index_raw, binding_raw = checked_snapshot(
+            args.binding, args.binding_sha256, include_artifacts=True)
+        with verified_pc_environment(modules, artifacts=(files, index_raw, binding_raw)) as (entrypoint, finder):
             if args.check:
                 print(json.dumps({'status': 'VERIFIED_PC_IMPORT_ONLY', 'modules_loaded': sorted(finder.loaded),
                                   'physical_control_qualified': False, 'movement_commands': 0,
                                   'limits': ['bootstrap_and_interpreter_trusted',
                                              'external_dependencies_not_attested',
                                              'no_preflight_or_robot_access',
-                                             'physical_release_gate_remains_closed']}))
+                                  'direct_and_vla_dispatch_blocked']}))
             else:
-                # The existing gate rejects before reading these paths or
-                # contacting the robot. Passing paths does not yet bind the
-                # exact verified candidate bytes to a future live dispatch.
                 result = entrypoint.run_candidate(args.binding/'manifest.json',
                     args.binding/'robot.urdf', args.binding/'transmissions.yaml', True,
-                    binding_path=args.binding, binding_sha256=args.binding_sha256)
+                    binding_path=args.binding, binding_sha256=args.binding_sha256,
+                    verified_pc={'finder':finder, 'files':files, 'index_raw':index_raw,
+                                 'binding_raw':binding_raw})
                 print(json.dumps(result, ensure_ascii=False, allow_nan=False))
         return 0
     except (OSError, ValueError, TypeError, KeyError, RuntimeError, ImportError, SyntaxError) as exc:

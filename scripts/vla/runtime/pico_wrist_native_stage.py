@@ -74,6 +74,8 @@ def stage_task(manifest, urdf_text, transmissions_text, *, intent_path, session_
             fd = os.open(name, flags, 0o600, dir_fd=diagnostic_fd)
             try:
                 info = os.fstat(fd)
+                if info.st_uid != os.geteuid() or not info.st_mode & stat.S_IRUSR:
+                    raise RuntimeError('staged_task_owner_cannot_read')
                 view = memoryview(data)
                 while view:
                     count = os.write(fd, view)
@@ -130,6 +132,7 @@ def verify_staged(manifest, receipt, *, root=probe.TASK_ROOT):
             try:
                 info = os.fstat(fd)
                 if (not stat.S_ISREG(info.st_mode) or
+                        info.st_uid != os.geteuid() or not info.st_mode & stat.S_IRUSR or
                         (info.st_dev, info.st_ino) != (receipt.get('device'), receipt.get('inode'))):
                     raise RuntimeError('staged_file_identity_changed')
                 with os.fdopen(fd, 'rb') as stream:

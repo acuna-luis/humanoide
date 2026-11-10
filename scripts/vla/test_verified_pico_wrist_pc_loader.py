@@ -13,9 +13,52 @@ from unittest.mock import Mock
 
 import pico_wrist_review_binding as binding
 import verified_pico_wrist_pc_loader as loader
+import prepare_pico_wrist_native_probe as probe
+from test_prepare_pico_wrist_native_probe import state, urdf, transmissions
 
 
 class VerifiedPcLoaderTests(unittest.TestCase):
+    def test_valid_isolated_context_reaches_mock_preflight_without_network(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root/'manifest').write_text(json.dumps(probe.prepare(state(), urdf(), transmissions())))
+            (root/'urdf').write_text(urdf())
+            (root/'sps').write_text(transmissions())
+            (root/'review').write_text('Test fixture; no robot access.')
+            bound = root/'bound'
+            info = binding.create(bound, root/'manifest', root/'urdf', root/'sps', root/'review')
+            script = r'''
+import importlib.util,sys
+from pathlib import Path
+from unittest.mock import patch
+spec=importlib.util.spec_from_file_location('trusted_bootstrap',sys.argv[1]);boot=importlib.util.module_from_spec(spec);spec.loader.exec_module(boot)
+modules,files,index_raw,binding_raw=boot.checked_snapshot(sys.argv[2],sys.argv[3],include_artifacts=True)
+with boot.verified_pc_environment(modules,artifacts=(files,index_raw,binding_raw)) as (entry,finder):
+ entry.EVIDENCE=Path(sys.argv[4])/'evidence'
+ context={'finder':finder,'files':files,'index_raw':index_raw,'binding_raw':binding_raw}
+ with patch.object(entry.arm,'physical_release_gate'), \
+      patch.object(entry.passive.existing,'preflight',side_effect=RuntimeError('MOCK_PREFLIGHT_REACHED')), \
+      patch('subprocess.Popen',side_effect=AssertionError('no_process')), \
+      patch('socket.socket.connect',side_effect=AssertionError('no_network')):
+  sys.meta_path.remove(finder)
+  try:
+   try: entry.run_candidate(None,None,None,True,binding_path=Path(sys.argv[2]),binding_sha256=sys.argv[3],verified_pc=context)
+   except RuntimeError as e: assert str(e)=='verified_pc_context_required',str(e)
+   else: raise AssertionError('inactive_finder_accepted')
+  finally: sys.meta_path.insert(0,finder)
+  fake=dict(context,finder=object())
+  try: entry.run_candidate(None,None,None,True,binding_path=Path(sys.argv[2]),binding_sha256=sys.argv[3],verified_pc=fake)
+  except RuntimeError as e: assert str(e)=='verified_pc_context_required',str(e)
+  else: raise AssertionError('wrong_finder_accepted')
+  try: entry.run_candidate(Path(sys.argv[2])/'manifest.json',Path(sys.argv[2])/'robot.urdf',Path(sys.argv[2])/'transmissions.yaml',True,binding_path=Path(sys.argv[2]),binding_sha256=sys.argv[3],verified_pc=context)
+  except RuntimeError as e: assert str(e)=='MOCK_PREFLIGHT_REACHED',str(e)
+  else: raise AssertionError('missing_preflight')
+'''
+            result = subprocess.run([sys.executable,'-I','-B','-c',script,
+                str(Path(loader.__file__).resolve()),str(bound),info['binding_sha256'],str(root)],
+                capture_output=True,text=True,timeout=15)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def create_binding(self, root):
         root = Path(root)
         for name, data in (('manifest', '{}'), ('urdf', '<robot/>'),
@@ -116,13 +159,13 @@ assert finder not in sys.meta_path
             raise RuntimeError('physical_dispatch_blocked')
         entrypoint.run_candidate.side_effect = blocked
         @contextlib.contextmanager
-        def environment(_modules):
+        def environment(_modules, *, artifacts=None):
             active.append(True)
             try:
                 yield entrypoint, object()
             finally:
                 active.pop()
-        with patch.object(loader, 'checked_snapshot', return_value={}), \
+        with patch.object(loader, 'checked_snapshot', return_value=({}, {}, b'index', b'binding')), \
              patch.object(loader, 'verified_pc_environment', environment):
             rc = loader.main(['--run', '--physical-confirmed', '--binding', '/bound',
                               '--binding-sha256', 'a'*64])
@@ -130,10 +173,13 @@ assert finder not in sys.meta_path
         args, kwargs = entrypoint.run_candidate.call_args
         self.assertEqual(args[:4], (Path('/bound/manifest.json'), Path('/bound/robot.urdf'),
                                     Path('/bound/transmissions.yaml'), True))
-        self.assertEqual(kwargs, {'binding_path': Path('/bound'), 'binding_sha256': 'a'*64})
+        self.assertEqual(kwargs['binding_path'], Path('/bound'))
+        self.assertEqual(kwargs['binding_sha256'], 'a'*64)
+        self.assertEqual(kwargs['verified_pc']['index_raw'], b'index')
+        self.assertEqual(kwargs['verified_pc']['binding_raw'], b'binding')
         self.assertEqual(active, [])
 
-    def test_real_run_hits_closed_gate_without_starting_a_process_or_network(self):
+    def test_invalid_bound_candidate_rejects_before_network(self):
         with tempfile.TemporaryDirectory() as tmp:
             directory, digest = self.create_binding(tmp)
             script = r'''
@@ -154,7 +200,7 @@ assert code == 1
                                      str(Path(loader.__file__).resolve()), str(directory), digest],
                                     capture_output=True, text=True, timeout=15)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn('physical_dispatch_blocked', result.stderr)
+            self.assertIn('invalid_bundle_input', result.stderr)
             self.assertNotIn('process_started', result.stderr)
             self.assertNotIn('network_started', result.stderr)
 

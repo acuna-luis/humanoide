@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Candidate PC launcher for one native wrist probe; physical gate is closed.
+"""Supervised PC launcher for one native wrist probe.
 
---check delegates to the integrated passive test. --run rejects before any
-file or network access. Source bundles are prepared for review only. The remote
-launcher has not been validated on the robot and cannot certify physical STOP.
+--check delegates to the integrated passive test. --run requires the isolated
+verified loader and current operator confirmation. The remote launcher has not
+been validated on the robot and cannot certify physical STOP.
 """
 import argparse
 import hashlib
@@ -58,7 +58,8 @@ def source_bundle(*, include_sources=False):
     guard += ('import json\nprint(json.dumps({"event":"BRIDGE_READY"}),flush=True)\n'
               'session=json.loads(sys.stdin.readline())\n'
               'raise SystemExit(sys.modules["arm_from_pico_supervised"].main('
-              'session,dry_run=True,monitor_only=True,guard_can_cancel=True))\n')
+              'session,dry_run=True,monitor_only=True,guard_can_cancel=True,'
+              'verified_provenance=globals().get("__pico_verified_stream__")))\n')
     worker = passive.module_code({n: sources[n] for n in (
         'metamove_head_probe', 'head_from_pico_readonly', 'arm_from_pico_supervised',
         'scenario1_request_ids', 'scenario1_action_client', 'prepare_pico_wrist_native_probe',
@@ -67,14 +68,14 @@ def source_bundle(*, include_sources=False):
                'payload=json.loads(sys.stdin.readline())\n'
                'worker=sys.modules["pico_wrist_native_worker"]\n'
                'channel=worker.WorkerChannel(sys.stdin.fileno(),sys.stdout.fileno(),payload["session_id"])\n'
-               'try:\n rc=worker.run(payload,channel)\n'
+               'try:\n rc=worker.run(payload,channel,verified_provenance=globals().get("__pico_verified_stream__"))\n'
                'except BaseException as exc:\n'
                ' channel.emit(event="worker_error",reason=type(exc).__name__+": "+str(exc))\n rc=2\n'
                'channel.emit(event="worker_result",returncode=rc)\nraise SystemExit(rc)\n')
     host = passive.module_code(sources)
     host += ('import json\nprint(json.dumps({"event":"BRIDGE_READY"}),flush=True)\n'
              'payload=json.loads(sys.stdin.readline())\n'
-             'print(json.dumps(sys.modules["pico_wrist_docker_launcher"].launch(payload),'
+             'print(json.dumps(sys.modules["pico_wrist_docker_launcher"].launch(payload,verified_provenance=globals().get("__pico_verified_stream__")),'
              'allow_nan=False),flush=True)\n')
     if include_sources:
         return host, guard, worker, sources
@@ -352,14 +353,29 @@ class SuccessEvidence:
 
 
 def run_candidate(manifest_path, urdf_path, transmissions_path, physical_confirmed,
-                  *, binding_path=None, binding_sha256=None):
-    # No input, filesystem, process or network operation can precede this gate.
-    arm.physical_release_gate()
+                  *, binding_path=None, binding_sha256=None, verified_pc=None):
+    # Only the isolated loader that imported this module from verified bytes
+    # may use this one-wrist path. This is not a VLA control authorization.
+    if (not isinstance(verified_pc, dict) or set(verified_pc) != {'finder','files','index_raw','binding_raw'}
+            or verified_pc['finder'] is not globals().get('__loader__')):
+        arm.physical_release_gate()
+        raise RuntimeError('verified_pc_context_required')
+    finder = verified_pc['finder']
+    try:
+        retained = finder.verified_artifacts
+        candidate_code = finder.modules['run_pico_wrist_native_trial'][0]
+        bound_entrypoint = any(item is run_candidate.__code__ for item in candidate_code.co_consts)
+        same_artifacts = (len(retained) == 3 and retained[0] is verified_pc['files'] and
+                          retained[1] is verified_pc['index_raw'] and retained[2] is verified_pc['binding_raw'])
+    except (AttributeError, KeyError, TypeError):
+        bound_entrypoint = same_artifacts = False
+    if (not sys.flags.isolated or finder not in sys.meta_path or not bound_entrypoint or not same_artifacts):
+        raise RuntimeError('verified_pc_context_required')
     if physical_confirmed is not True:
         raise RuntimeError('current_physical_confirmation_required')
-    manifest_raw = manifest_path.read_bytes()
-    urdf_raw = urdf_path.read_bytes()
-    transmissions_raw = transmissions_path.read_bytes()
+    files = verified_pc['files']
+    manifest_raw, urdf_raw, transmissions_raw = (files['manifest.json'], files['robot.urdf'],
+                                                 files['transmissions.yaml'])
     manifest = json.loads(manifest_raw)
     urdf = urdf_raw.decode('utf-8')
     transmissions = transmissions_raw.decode('utf-8')
@@ -371,10 +387,12 @@ def run_candidate(manifest_path, urdf_path, transmissions_path, physical_confirm
                                      pc_snapshot=pc_sources)
     # Re-read and authenticate the same index bytes before using the expected
     # digests; a later file replacement cannot choose the transmitted source.
-    index_raw = (binding_path/'bundle-evidence.json').read_bytes()
+    index_raw = verified_pc['index_raw']
     if hashlib.sha256(index_raw).hexdigest() != bound['bundle_evidence_sha256']:
         raise ValueError('bundle_evidence_index_changed_during_handoff')
     binding_hashes = json.loads(index_raw)['sha256']
+    if hashlib.sha256(verified_pc['binding_raw']).hexdigest() != binding_sha256:
+        raise ValueError('verified_pc_binding_mismatch')
     EVIDENCE.mkdir(mode=0o700, parents=True, exist_ok=True)
     token = uuid.uuid4().hex
     outdir = EVIDENCE/('run-'+token); outdir.mkdir(mode=0o700)
@@ -400,10 +418,8 @@ def run_candidate(manifest_path, urdf_path, transmissions_path, physical_confirm
     env = dict(os.environ, CRUZR_INTERNAL_ASKPASS='1', SSH_ASKPASS=str(ROOT/'scripts/cruzr_recover_to_home.sh'),
                SSH_ASKPASS_REQUIRE='force', DISPLAY=os.environ.get('DISPLAY', ':0'))
     verify_bundle_evidence(outdir, evidence_digest)
-    # Evidence retention is not an independent review of these exact bytes.
-    # Keep a separate fail-closed gate until a reviewed attestation protocol
-    # binds this digest and the complete PC/runtime dependencies.
-    raise RuntimeError('reviewed_bundle_attestation_not_implemented')
+    # Hashes cover project bytes only; they do not attest external libraries,
+    # physical clearance, robot runtime or braking.
     if hashlib.sha256(host.encode('utf-8')).hexdigest() != binding_hashes['bundle-host.py']:
         raise ValueError('reviewed_host_source_mismatch')
     encoded_payload = json.dumps(payload, allow_nan=False).encode('utf-8')
@@ -521,7 +537,7 @@ def main(argv=None):
                         help='optional local technical-review binding for --check; required for a future run')
     parser.add_argument('--binding-sha256', help='recorded digest of that binding')
     parser.add_argument('--physical-confirmed', action='store_true',
-                        help='operator-reported current physical conditions; never opens the gate')
+                        help='current operator-reported physical conditions; other checks remain required')
     args = parser.parse_args(argv)
     if args.run:
         try:

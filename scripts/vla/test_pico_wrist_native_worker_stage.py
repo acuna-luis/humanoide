@@ -102,7 +102,7 @@ class WorkerChannelTests(unittest.TestCase):
         transport.spin = spin
         rows = []
         def guarded(_lease, _exchange, _manifest, _urdf, _trans, _emit, *, interrupted,
-                    after_transport_ready):
+                    after_transport_ready, verified_provenance=None):
             # Simulate rosa.init replacing the worker's handler; the hook must
             # restore it before the fake action is sent.
             signal.signal(signal.SIGTERM, lambda signum, frame: None)
@@ -112,6 +112,7 @@ class WorkerChannelTests(unittest.TestCase):
         with patch.object(worker.arm, 'physical_release_gate'), \
              patch.dict(os.environ, {'HW_TYPE':'cruzr_s2_v1_sps'}), \
              patch.object(worker.Path, 'read_bytes', return_value=raw), \
+             patch.object(worker, 'require_robot_app_can_read_private_task'), \
              patch.object(worker.native, 'check_lease'), \
              patch.object(worker.staging, 'stage_task', return_value={}), \
              patch.object(worker.bridge, 'run_guarded_once', side_effect=guarded):
@@ -123,6 +124,17 @@ class WorkerChannelTests(unittest.TestCase):
 
 
 class StageTests(unittest.TestCase):
+    def test_private_task_requires_same_effective_uid(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            proc = Path(tmp)
+            app = proc/'65'
+            app.mkdir()
+            (app/'exe').symlink_to(worker.ROBOT_APP_PATH)
+            (app/'status').write_text('Name:\trobot_app\nUid:\t10\t20\t20\t20\n')
+            self.assertEqual(worker.require_robot_app_can_read_private_task(proc, worker_uid=20), 20)
+            with self.assertRaisesRegex(RuntimeError, 'robot_app_cannot_read'):
+                worker.require_robot_app_can_read_private_task(proc, worker_uid=0)
+
     def test_additive_stage_and_no_overwrite(self):
         bundle = prep.prepare(state(), urdf(), transmissions())
         with tempfile.TemporaryDirectory() as directory:
@@ -174,7 +186,7 @@ class StageTests(unittest.TestCase):
                                  intent_path=intent, session_id='b'*32, intent_owner_uid=os.geteuid())
             self.assertFalse((Path(directory)/'diagnostics').exists())
 
-    def test_app_uid_may_differ_but_expected_intent_owner_is_enforced(self):
+    def test_expected_intent_owner_and_staged_owner_are_enforced(self):
         bundle = prep.prepare(state(), urdf(), transmissions())
         with tempfile.TemporaryDirectory() as directory:
             intent = coordinator.durable_intent(directory, bundle, 'a'*32)
@@ -183,11 +195,8 @@ class StageTests(unittest.TestCase):
                 stage.stage_task(bundle, urdf(), transmissions(), root=directory,
                                  intent_path=intent, session_id='a'*32, intent_owner_uid=owner+1)
             self.assertFalse((Path(directory)/'diagnostics').exists())
-            # Simulate the app worker running as a different effective UID;
-            # ownership is matched against the explicitly supplied host UID.
-            with patch.object(stage.os, 'geteuid', return_value=owner+1):
-                result = stage.stage_task(bundle, urdf(), transmissions(), root=directory,
-                                          intent_path=intent, session_id='a'*32, intent_owner_uid=owner)
+            result = stage.stage_task(bundle, urdf(), transmissions(), root=directory,
+                                      intent_path=intent, session_id='a'*32, intent_owner_uid=owner)
             self.assertTrue(Path(result['runtime_path']).is_file())
 
 

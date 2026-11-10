@@ -121,5 +121,10 @@ def build_bootstrap(source_size, sentinel, expected_source_sha256,
                 return getattr(self.original, name)
 
         sys.stdin = ReplayStdin(sys.stdin, text)
+        # The verified bundle entrypoint receives this tuple from the trusted
+        # bootstrap only after both byte strings and the session were checked.
+        # It is not authentication against a party controlling Python/SSH.
+        __pico_verified_stream__ = (CONFIG['role'], CONFIG['session_id'],
+                                    CONFIG['source_sha256'], CONFIG['payload_sha256'])
         exec(compile(source, '<verified-pico-stream>', 'exec'))
         ''')

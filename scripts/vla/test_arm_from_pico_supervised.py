@@ -23,6 +23,17 @@ def sample():
 
 
 class ArmMonitorTests(unittest.TestCase):
+    def test_wrist_guard_requires_matching_bootstrap_role_and_session(self):
+        good = ('guard', 'a'*32, 'b'*64, 'c'*64)
+        arm.require_verified_stream(good, 'guard', 'a'*32)
+        for evidence in (None, ('worker', 'a'*32, 'b'*64, 'c'*64),
+                         ('guard', 'd'*32, 'b'*64, 'c'*64),
+                         ('guard', 'a'*32, 'bad', 'c'*64)):
+            with self.assertRaisesRegex(RuntimeError, 'physical_dispatch_blocked'):
+                arm.require_verified_stream(evidence, 'guard', 'a'*32)
+        with self.assertRaisesRegex(RuntimeError, 'physical_dispatch_blocked'):
+            arm.main({'session_id':'a'*32}, dry_run=False, verified_provenance=good)
+
     def test_lowered_head_and_pico_are_required(self):
         row = sample()
         self.assertEqual(arm.check_body(row)['head_pitch_joint'], -.43)
