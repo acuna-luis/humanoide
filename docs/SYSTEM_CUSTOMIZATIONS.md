@@ -1,5 +1,19 @@
 # Registro de adaptaciones del sistema Cruzr S2
 
+## SMOLVLA-PHYSICAL-PLACE-20261111
+
+**11-11-2026 ~11:57 Europe/Madrid — PROBADO FÍSICAMENTE: modelo nuevo
+`place-3000step` (aro → aro), 48 ciclos de 4 acciones SUCCEED, sin aborto.**
+El propietario confirmó en el momento persona en paro, zona despejada, pelota en
+el primer aro, sin PICO/web; cargador desconectado según preflight.
+
+| Campo | Registro |
+| --- | --- |
+| Fuente PC | `scripts/vla/smolvla_physical_bridge.py` SHA256 `2e487eaeccf935a550ae9c53622b196d951198a8e9fa1f8c72334f4d33b4a528`; modelo y pins en `docs/vla/SMOLVLA_PELOTA_ARO_20261110.md`. |
+| Cambios en Motion | `config/diagnostics/svla_20261111T105703/` (`setup.xml` con cabeza + brazo PICO + mano abierta, y un XML `Sequence` por ciclo) en `walker-motion.manipulation_robot_app-1`; el dry-run `run-20261111T105517` no crea XML. Reversión como en SMOLVLA-PHYSICAL-BRIDGE-20261110. |
+| Resultado | Preparación SUCCEED 7,2 s; 48/48 ciclos SUCCEED, error de seguimiento máx. 3,2 mrad; el brazo inició la aproximación y quedó oscilando en una postura intermedia; mano nunca cerró. Registro `../Humanoide-vla-evidence/SMOLVLA_PHYSICAL_BRIDGE/run-20261111T105703/bridge.jsonl` SHA256 `490a6da2133d4bbb5ffaf374193d1494d1c9116a80f4a23c38067532e7273a8e`. |
+| Estado dejado | Brazo quieto en `[-0.154,-0.110,+1.334,-1.084,-2.869,+0.029,-0.090]`, cabeza bajada (−0,49/−0,65), mano abierta; no se envió HOME. |
+
 ## SMOLVLA-PHYSICAL-GRASP-20261110
 
 **10-11-2026 ~19:03 Europe/Madrid — PROBADO FÍSICAMENTE: intento de agarre

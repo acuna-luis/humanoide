@@ -142,11 +142,12 @@ idénticos al repositorio); la carpeta del piloto no se tocó.
 - Evidencia: `../Humanoide-vla-evidence/20261110_VLA_BALL_PLACE_PREP/`
   (`heldout_eval_place_3000step_horizons.json`, `train_eval_place_3000step_horizons.json`).
 
-## 7. Prueba física
+## 7. Prueba física (11-11-2026, ~11:57 hora PC / 17:57 hora robot) — VERIFICADO
 
-PENDIENTE. Al intentar el dry-run (20:3x) el enlace Ethernet `eno1` estaba DOWN
-y Motion/Vision no respondían (cable o robot apagado); no se envió nada.
-Comando previsto (tras preflight y confirmación física del operador):
+Tras reconectar Ethernet: el preflight detectó una teleoperación PICO activa
+(meta de manipulación en estado 2) y se negó a mover; el operador salió de
+teleop. Dry-run correcto (`run-20261111T105517`). El operador confirmó persona en
+paro, zona despejada, pelota en el primer aro y segundo vacío, sin PICO/web.
 
 ```bash
 R=/home/luisacuna/cruzr-smolvla-ball-20261109
@@ -159,3 +160,26 @@ python3 -B scripts/vla/smolvla_physical_bridge.py --hand --max-steps 60 --second
   --envelope-rad 1.3 --jump-abort-rad 0.08 --fps 2 --settle-s 1.0 \
   --hand-confirm 1 --grasp-near-rad 0.2 --head-pose=-0.49,-0.65 --start-pose pico
 ```
+
+Resultado (`../Humanoide-vla-evidence/SMOLVLA_PHYSICAL_BRIDGE/run-20261111T105703/bridge.jsonl`,
+SHA256 `490a6da2…3a8e`):
+
+- Preparación (cabeza a −0,49/−0,65 + brazo PICO + mano abierta) SUCCEED en 7,2 s.
+- Modelo cargado con los hashes del pins (`7ae6fcbc…2f1b`); 429 observaciones,
+  0 descartadas.
+- **48 ciclos de 4 acciones, 48/48 SUCCEED** (~3,9 s cada uno); se detuvo al
+  agotarse los 240 s del shadow. Error de seguimiento máximo 3,2 mrad; sin abortos.
+- Movimiento: el primer ciclo inició la aproximación (hombro pitch −0,23, hombro
+  yaw −0,29, codo roll +0,40 rad); después el brazo **se quedó oscilando**
+  alrededor de esa postura intermedia (desviación máxima desde el inicio
+  0,63 rad; el bloque de cada ciclo avanza y luego retrocede, neto ≈ 0). Las
+  demos llegaban a ~1,18 rad.
+- Mano: abierta al inicio; escalar de cierre máximo 0,21 (<0,5), **nunca cerró**.
+- Interpretación: la cadena grabación → entrenamiento → servidor → puente →
+  robot funciona de extremo a extremo con un modelo nuevo; la política, con 3
+  demos, no sabe continuar desde la postura alcanzada (fuera de la distribución
+  memorizada). Coherente con la evaluación offline de §6. Siguiente paso: más
+  demostraciones (§8 del documento de entrada) y reentrenar desde `smolvla_base`.
+- Estado dejado: brazo quieto en `[-0.154,-0.110,+1.334,-1.084,-2.869,+0.029,-0.090]`,
+  cabeza bajada (−0,49/−0,65), mano abierta, pelota sin tocar según el
+  registro; no se envió HOME.
