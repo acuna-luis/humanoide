@@ -208,19 +208,19 @@ no acredita exclusividad ni parada. [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.m
 **10-11-2026 — ARM-PICO-WORKER-JSON-FD-20261110.** La salida de eventos del
 worker se separó del stdout nativo antes de inicializar ROSA. Pasan 78 pruebas
 locales y una inicialización ROSA aislada en Motion confirmó la separación;
-no hubo reintento ni movimiento y la recuperación del intento previo
-sigue pendiente. [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#aislamiento-del-canal-json-del-worker--10-11-2026).
+no hubo reintento ni movimiento y el intento previo se archivó después.
+[Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#aislamiento-del-canal-json-del-worker--10-11-2026).
 
 **10-11-2026 — ARM-PICO-ATTEMPT-CCFBD5-20261110.** Un intento supervisado de
 la tarea estática de muñeca falló después de copiar el XML y antes de observar
 la solicitud de UUID. Lectura posterior inmóvil y operador sin anomalía; el
-envío no se demuestra directamente. Quedan XML y marcador para revisión, sin
+envío no se demuestra directamente. XML y marker se archivaron después, sin
 reintento ni HOME automático. No es ejecución física de SmolVLA.
 [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#intento-interrumpido-de-muñeca--10-11-2026).
 
 **10-11-2026 — ARM-PICO-SCOPED-SESSION-20261110.** Preparada la ruta para una
 sola tarea nativa de muñeca con sesión y UUID vinculados; tests y check pasivo
-pasan. No se ha probado físicamente y no ejecuta SmolVLA. Los codos de la
+pasan. No se ha verificado movimiento y no ejecuta SmolVLA. Los codos de la
 captura reciente siguen próximos a sus límites SPS.
 [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#sesión-acotada-de-muñeca--10-11-2026).
 
@@ -232,14 +232,14 @@ del origen y no hay autorización o prueba de movimiento.
 
 **10-11-2026 — ARM-PICO-VERIFIED-LOAD-20261110.** Se preparó la verificación
 previa a imports y ejecución de bundles, con 71 tests y un check pasivo sin
-goals. Los gates siguen cerrados y queda pendiente conectar la admisión para
-una tarea de muñeca; no es ejecución física de SmolVLA.
+goals. En esa versión los gates seguían cerrados; la vía posterior de muñeca
+está registrada arriba y no es ejecución física de SmolVLA.
 [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#carga-verificada-de-fuentes--10-11-2026).
 
 **10-11-2026 — ARM-PICO-GUARD-HEARTBEAT-20261110.** Se preparó latido y
 cierre vigilado; 89 tests locales y un check pasivo pasan.
-El check no prueba latido activo ni cancelación física; el ejecutor sigue en
-implementación y permanece bloqueado. Gate cerrado.
+El check no prueba latido activo ni cancelación física; el ejecutor estaba
+bloqueado en esa versión. La vía posterior de muñeca está registrada arriba.
 [Detalle](SMOLVLA_NATIVE_ARM_STEP_20261110.md#latido-y-cierre-de-guardia--10-11-2026).
 
 **10-11-2026 — SMOLVLA-ARMTASK-ARGS-STATIC-20261110.** Un análisis estático

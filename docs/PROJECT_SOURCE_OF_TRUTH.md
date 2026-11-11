@@ -278,7 +278,7 @@ a stderr antes de iniciar ROSA. Pasan 78 pruebas locales y una prueba puntual
 de inicialización ROSA aislada en Motion separó JSON y log. Una inicialización
 previa imprimió texto compatible con el fallo, pero la línea
 descartada no se identificó. Sin reintento ni movimiento; XML y marker del
-intento anterior permanecen. [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#aislamiento-del-canal-json-del-worker--10-11-2026),
+intento anterior fueron archivados después. [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#aislamiento-del-canal-json-del-worker--10-11-2026),
 [ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-worker-json-fd-20261110).
 
 **10-11-2026 — ARM-PICO-ATTEMPT-CCFBD5-20261110: intento interrumpido.**
@@ -286,8 +286,8 @@ La tarea nativa de muñeca se copió a Motion, pero el coordinador falló al
 procesar una línea no JSON antes de observar `uuid_request`. El protocolo
 revisado sugiere que no se envió una meta sin el ACK, pero no es una prueba
 directa. La lectura posterior mostró las articulaciones inmóviles y el
-operador no observó movimiento ni anomalía. XML, marcador, lease y registro
-siguen presentes; no reintentar ni enviar HOME automáticamente.
+operador no observó movimiento ni anomalía. XML y marker se archivaron después;
+no reintentar ni enviar HOME automáticamente.
 [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#intento-interrumpido-de-muñeca--10-11-2026),
 [ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-attempt-ccfbd5-20261110).
 
@@ -296,8 +296,8 @@ muñeca preparada.** El cargador aislado y los bundles enlazan una sesión,
 fuentes, candidato y UUID; el transporte admite una única meta de la tarea
 verificada. 147 tests locales pasan y un check pasivo PC→Motion pasó sin goal.
 El candidato usa una captura reciente, con codos próximos a los límites SPS;
-el margen diagnóstico de 0,002 rad no se cumple. No hay prueba física ni
-control SmolVLA: requiere estado físico vigente y ejecución supervisada.
+el margen diagnóstico de 0,002 rad no se cumple. No hay movimiento de muñeca
+verificado ni control SmolVLA: requiere estado físico vigente y supervisión.
 [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#sesión-acotada-de-muñeca--10-11-2026),
 [ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-scoped-session-20261110).
 
@@ -314,8 +314,8 @@ autoriza movimiento ni demuestra trayectoria, agarre o parada. Sin órdenes.
 El cargador aislado comprueba las fuentes Python retenidas antes de importarlas;
 los bootstraps verifican fuente, payload y sesión antes de ejecutar código.
 Pasan 71 tests y un check pasivo sin goals; el check no ejercita el despacho
-físico. La ejecución de muñeca y SmolVLA sigue bloqueada; faltan integrar la
-admisión específica y completar la atestación. El bootstrap, intérprete,
+físico. En esa versión la ejecución de muñeca y SmolVLA seguía bloqueada; la
+vía posterior de muñeca se registra arriba y no habilita SmolVLA. El bootstrap, intérprete,
 dependencias externas y estado físico no quedan acreditados por los hashes.
 [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#carga-verificada-de-fuentes--10-11-2026),
 [ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-verified-load-20261110).
@@ -324,8 +324,8 @@ dependencias externas y estado físico no quedan acreditados por los hashes.
 comprobada localmente.** Se añadió un latido del supervisor y se reforzó el cierre
 cuando el estado de la guardia es incierto. En esta versión
 pasaron 89 tests y un check pasivo sin goal; éste no ejercita ni acredita el
-latido activo ni la cancelación física. El ejecutor sigue bloqueado: falta
-vincular los bytes efectivamente cargados a la sesión. Gate físico cerrado.
+latido activo ni la cancelación física. En esa versión el ejecutor seguía
+bloqueado; la vía posterior de muñeca se registra arriba.
 [Detalle](vla/SMOLVLA_NATIVE_ARM_STEP_20261110.md#latido-y-cierre-de-guardia--10-11-2026),
 [ficha](SYSTEM_CUSTOMIZATIONS.md#arm-pico-guard-heartbeat-20261110).
 
